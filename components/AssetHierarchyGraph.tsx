@@ -256,7 +256,7 @@ function DetailsPanel({ node, onClose }: { node: AnyFlowNode | null; onClose: ()
   const d = node.data as AnyNodeData;
 
   return (
-    <div className="absolute right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-20 flex flex-col">
+    <div className="absolute bottom-0 md:top-0 right-0 h-[60vh] md:h-full w-full md:w-96 bg-white border-t md:border-t-0 md:border-l border-slate-200 shadow-2xl overflow-y-auto z-25 flex flex-col rounded-t-2xl md:rounded-t-none transition-all duration-350">
       {d.kind === 'location' ? (
         <LocationDetail data={d} onClose={onClose} />
       ) : (
@@ -293,7 +293,7 @@ function LocationDetail({ data, onClose }: { data: LocationNodeData; onClose: ()
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 size-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-sm transition-colors"
+            className="shrink-0 size-11 md:size-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-500 text-base md:text-sm transition-all shadow-3xs"
           >
             ✕
           </button>
@@ -403,7 +403,7 @@ function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => vo
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 size-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-sm transition-colors"
+            className="shrink-0 size-11 md:size-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-500 text-base md:text-sm transition-all shadow-3xs"
           >
             ✕
           </button>
@@ -542,31 +542,31 @@ function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => vo
 
 function StatsBar({ stats }: { stats: GraphStats }) {
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-md z-10 pointer-events-none whitespace-nowrap">
-      <div className="flex items-center gap-1.5 text-xs">
-        <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: LOCATION_COLOR }} />
-        <span className="text-slate-500">Locations</span>
+    <div className="absolute top-18 md:top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto flex items-center gap-3.5 bg-white border border-slate-200 rounded-xl px-3.5 py-2 md:px-4 md:py-2.5 shadow-md z-10 pointer-events-auto overflow-x-auto whitespace-nowrap scrollbar-none max-w-[calc(100vw-32px)] md:max-w-none">
+      <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+        <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: LOCATION_COLOR }} />
+        <span className="text-slate-500 font-medium">Locations</span>
         <span className="font-bold text-slate-900">{stats.totalLocations}</span>
       </div>
-      <div className="w-px h-4 bg-slate-200" />
-      <div className="flex items-center gap-1.5 text-xs">
-        <div className="size-2 rounded-full bg-slate-400" />
-        <span className="text-slate-500">Assets</span>
+      <div className="w-px h-4 bg-slate-200 flex-shrink-0" />
+      <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+        <div className="size-2.5 rounded-full bg-slate-400 shrink-0" />
+        <span className="text-slate-500 font-medium">Assets</span>
         <span className="font-bold text-slate-900">{stats.totalAssets}</span>
       </div>
       {Object.entries(stats.byStatus).map(([status, count]) => (
-        <div key={status} className="flex items-center gap-1.5 text-xs">
-          <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[status] ?? '#9ca3af' }} />
-          <span className="text-slate-500">{status.replace(/_/g, ' ')}</span>
+        <div key={status} className="flex items-center gap-1.5 text-xs flex-shrink-0">
+          <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[status] ?? '#9ca3af' }} />
+          <span className="text-slate-500 font-medium">{status.replace(/_/g, ' ')}</span>
           <span className="font-bold text-slate-900">{count}</span>
         </div>
       ))}
       {stats.withOpenWOs > 0 && (
         <>
-          <div className="w-px h-4 bg-slate-200" />
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="w-px h-4 bg-slate-200 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
             <span>⚠️</span>
-            <span className="text-slate-500">Open WOs</span>
+            <span className="text-slate-500 font-medium">Open WOs</span>
             <span className="font-bold text-slate-900">{stats.withOpenWOs}</span>
           </div>
         </>
@@ -579,8 +579,8 @@ function StatsBar({ stats }: { stats: GraphStats }) {
 
 function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-10 shadow-md min-w-56">
-      <svg className="size-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="absolute top-4 left-4 right-4 md:right-auto z-10 flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 h-11 md:h-10 shadow-md md:w-80">
+      <svg className="size-4.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
       <input
@@ -588,10 +588,10 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
         placeholder="Search locations & assets…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 text-sm text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
+        className="flex-1 text-sm text-slate-800 bg-transparent outline-none placeholder:text-slate-400 h-full"
       />
       {value && (
-        <button onClick={() => onChange('')} className="text-slate-400 hover:text-slate-600 text-sm shrink-0 transition-colors">✕</button>
+        <button onClick={() => onChange('')} className="text-slate-400 hover:text-slate-600 text-sm shrink-0 transition-colors size-9 flex items-center justify-center">✕</button>
       )}
     </div>
   );

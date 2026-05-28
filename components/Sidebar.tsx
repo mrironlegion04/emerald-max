@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import clsx from 'clsx'
+import { motion } from 'motion/react'
 import {
   Home,
   Box,
@@ -42,73 +43,73 @@ const navItems = [
   {
     label: 'Dashboard',
     href: '/dashboard',
-    icon: <Home className="w-5 h-5" />,
+    icon: <Home className="w-4.5 h-4.5" />,
   },
   {
     label: 'To Do',
     href: '/to-do',
-    icon: <CheckSquare className="w-5 h-5" />,
+    icon: <CheckSquare className="w-4.5 h-4.5" />,
   },
   {
     label: 'Assets',
     href: '/assets',
     exact: false,
-    icon: <Building2 className="w-5 h-5" />,
+    icon: <Building2 className="w-4.5 h-4.5" />,
   },
   {
     label: 'Asset Explorer',
     href: '/asset-explorer',
-    icon: <FolderTree className="w-5 h-5" />,
+    icon: <FolderTree className="w-4.5 h-4.5" />,
   },
   {
     label: 'Meters',
     href: '/meters',
-    icon: <Gauge className="w-5 h-5" />,
+    icon: <Gauge className="w-4.5 h-4.5" />,
   },
   {
     label: 'Work Orders',
     href: '/work-orders',
-    icon: <ClipboardList className="w-5 h-5" />,
+    icon: <ClipboardList className="w-4.5 h-4.5" />,
   },
   {
     label: 'Preventive Maint.',
     href: '/preventive-maintenance',
-    icon: <Calendar className="w-5 h-5" />,
+    icon: <Calendar className="w-4.5 h-4.5" />,
   },
   {
     label: 'Schedule',
     href: '/schedule',
-    icon: <Clock className="w-5 h-5" />,
+    icon: <Clock className="w-4.5 h-4.5" />,
   },
   {
     label: 'Calendar',
     href: '/calendar',
-    icon: <Calendar className="w-5 h-5" />,
+    icon: <Calendar className="w-4.5 h-4.5" />,
   },
   {
     label: 'Inventory',
     href: '/inventory',
-    icon: <Box className="w-5 h-5" />,
+    icon: <Box className="w-4.5 h-4.5" />,
   },
   {
     label: 'Requests',
     href: '/requests',
-    icon: <MessageSquare className="w-5 h-5" />,
+    icon: <MessageSquare className="w-4.5 h-4.5" />,
   },
   {
     label: 'Reports',
     href: '/reports',
-    icon: <BarChart3 className="w-5 h-5" />,
+    icon: <BarChart3 className="w-4.5 h-4.5" />,
   },
   {
     label: 'Maintenance Report',
     href: '/reports/maintenance',
-    icon: <BarChart3 className="w-5 h-5" />,
+    icon: <BarChart3 className="w-4.5 h-4.5" />,
   },
   {
     label: 'SLA Breach Reports',
     href: '/sla-breach-reports',
-    icon: <BarChart3 className="w-5 h-5" />,
+    icon: <BarChart3 className="w-4.5 h-4.5" />,
   },
 ]
 
@@ -117,12 +118,12 @@ const managerItems = [
   {
     label: 'Bulk Import',
     href: '/import',
-    icon: <Upload className="w-5 h-5" />,
+    icon: <Upload className="w-4.5 h-4.5" />,
   },
   {
     label: 'Teams',
     href: '/teams',
-    icon: <Users className="w-5 h-5" />,
+    icon: <Users className="w-4.5 h-4.5" />,
   },
 ]
 
@@ -131,26 +132,26 @@ const adminItems = [
   {
     label: 'Users',
     href: '/users',
-    icon: <Users className="w-5 h-5" />,
+    icon: <Users className="w-4.5 h-4.5" />,
   },
   {
     label: 'Sites Overview',
     href: '/sites',
-    icon: <Globe className="w-5 h-5" />,
+    icon: <Globe className="w-4.5 h-4.5" />,
   },
   {
     label: 'SLA Policies',
     href: '/sla-policies',
-    icon: <Shield className="w-5 h-5" />,
+    icon: <Shield className="w-4.5 h-4.5" />,
   },
   {
     label: 'Audit Log',
     href: '/audit-log',
-    icon: <Shield className="w-5 h-5" />,
+    icon: <Shield className="w-4.5 h-4.5" />,
   },
 ]
 
-// Visible to ADMIN and MANAGER: Settings section
+// Settings section for ADMIN + MANAGER
 const settingsItems = [
   {
     label: 'Checklist Templates',
@@ -197,9 +198,9 @@ const settingsItems = [
 ]
 
 const roleColors: Record<string, string> = {
-  ADMIN: 'bg-purple-100 text-purple-700',
-  MANAGER: 'bg-blue-100 text-blue-700',
-  TECHNICIAN: 'bg-green-100 text-green-700',
+  ADMIN: 'bg-indigo-50 border-indigo-100 text-indigo-700',
+  MANAGER: 'bg-blue-50 border-blue-100 text-blue-700',
+  TECHNICIAN: 'bg-emerald-50 border-emerald-100 text-emerald-700',
 }
 
 export default function Sidebar({ user, onClose, isMobile }: { user: User; onClose?: () => void; isMobile?: boolean }) {
@@ -220,22 +221,22 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   }
 
   return (
-    <aside className="w-full h-full bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-      {/* Logo */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+    <aside className="w-full h-full bg-white border-r border-slate-200 flex flex-col flex-shrink-0 shadow-xs">
+      {/* Brand Header */}
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-linear-to-b from-slate-50/20 to-white">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Settings className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/30">
+            <Settings className="w-5 h-5 text-white animate-spin-slow" />
           </div>
           <div>
-            <p className="font-bold text-gray-900 text-sm leading-tight">EMERALD MAX</p>
-            <p className="text-xs text-gray-400">Maintenance System</p>
+            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD MAX</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maintenance System</p>
           </div>
         </div>
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-950 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200"
             aria-label="Close sidebar"
           >
             <X className="w-5 h-5" />
@@ -243,125 +244,182 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {/* QR Scan Button - Prominent for mobile technicians */}
+      {/* Navigation list */}
+      <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto scrollbar-thin select-none">
+        {/* Modern styled QR Scan Link */}
         <Link
           href="/scan"
           onClick={onClose}
-          className={clsx('sidebar-link justify-center text-blue-600 hover:bg-blue-50 border-2 border-blue-200 mb-3', { active: isActive('/scan') })}
+          className={clsx(
+            'sidebar-link justify-center bg-blue-50/40 text-blue-600 border border-blue-200/60 hover:bg-blue-50 mb-3.5 shadow-3xs',
+            { '!bg-blue-600 !text-white !border-blue-700': isActive('/scan') }
+          )}
         >
-          <QrCode className="w-5 h-5" />
-          <span className="font-semibold">Scan QR</span>
+          <QrCode className="w-4.5 h-4.5" />
+          <span className="font-bold">Scan Asset QR</span>
         </Link>
 
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
-          Main
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 mt-1">
+          Menu
         </p>
 
-        {navItems.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onClose}
-            className={clsx('sidebar-link', { active: isActive(item.href) })}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </Link>
-        ))}
-
-        {/* Manager + Admin section */}
-        {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
-          <>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-5 mb-2">
-              Management
-            </p>
-            {managerItems.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={clsx('sidebar-link', { active: isActive(item.href) })}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </>
-        )}
-
-        {/* Admin only section */}
-        {user.role === 'ADMIN' && (
-          <>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-5 mb-2">
-              Admin
-            </p>
-            {adminItems.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={clsx('sidebar-link', { active: isActive(item.href) })}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </>
-        )}
-          {/* Settings section — ADMIN + MANAGER */}
-          {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
-            <>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-5 mb-2">
-                Settings
-              </p>
-              {settingsItems
-                .filter(item => !item.adminOnly || user.role === 'ADMIN')
-                .map(item => (
+        <div className="space-y-1">
+          {navItems.map(item => {
+            const active = isActive(item.href)
+            return (
+              <div key={item.href} className="relative">
+                {active && (
+                  <motion.div 
+                    layoutId="activeSideIndicator"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-lg z-10"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
                 <Link
-                  key={item.href}
                   href={item.href}
                   onClick={onClose}
-                  className={clsx('sidebar-link text-sm', { active: isActive(item.href) })}
+                  className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
                 >
-                  {item.icon}
-                  <span>{item.label}</span>
+                  <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
                 </Link>
-              ))}
-            </>
-          )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Manager/Admin controls */}
+        {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
+          <>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+              Management
+            </p>
+            <div className="space-y-1">
+              {managerItems.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <div key={item.href} className="relative">
+                    {active && (
+                      <motion.div 
+                        layoutId="activeSideIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-lg z-10"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
+                    >
+                      <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Admin controls */}
+        {user.role === 'ADMIN' && (
+          <>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+              Privileged controls
+            </p>
+            <div className="space-y-1">
+              {adminItems.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <div key={item.href} className="relative">
+                    {active && (
+                      <motion.div 
+                        layoutId="activeSideIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-lg z-10"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
+                    >
+                      <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Global Settings */}
+        {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
+          <>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+              Enterprise Settings
+            </p>
+            <div className="space-y-1">
+              {settingsItems
+                .filter(item => !item.adminOnly || user.role === 'ADMIN')
+                .map(item => {
+                  const active = isActive(item.href)
+                  return (
+                    <div key={item.href} className="relative">
+                      {active && (
+                        <motion.div 
+                          layoutId="activeSideIndicator"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-lg z-10"
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        className={clsx('sidebar-link group text-sm', { 'active !bg-blue-50/70': active })}
+                      >
+                        <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </div>
+                  )
+                })}
+            </div>
+          </>
+        )}
       </nav>
 
-      {/* User info + logout */}
-      <div className="border-t border-gray-100 p-3">
-        <div className="flex items-center gap-3 px-2 py-2 mb-1">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-blue-700 font-semibold text-xs">
-              {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-            </span>
+      {/* User Session Footer */}
+      <div className="border-t border-slate-200/80 p-4 bg-slate-50/50">
+        <div className="flex items-center gap-3 px-2 py-2 mb-2 bg-white rounded-xl border border-slate-200/50 p-2 shadow-3xs select-none">
+          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center flex-shrink-0 font-bold border border-blue-200 shadow-3xs">
+            {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-            <span className={clsx('badge text-xs', roleColors[user.role])}>
-              {user.role}
-            </span>
+            <p className="text-sm font-bold text-slate-800 truncate leading-tight">{user.name}</p>
+            <div className="mt-1 flex">
+              <span className={clsx('badge !px-1.5 !py-0.2 border text-[10px] font-bold tracking-wide rounded-md', roleColors[user.role])}>
+                {user.role}
+              </span>
+            </div>
           </div>
         </div>
+
         <Link
           href="/profile"
           onClick={onClose}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors font-semibold"
         >
-          <Settings className="w-4 h-4" />
-          My Profile
+          <Settings className="w-3.5 h-3.5" />
+          My Security Settings
         </Link>
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors font-semibold active:scale-[0.98]"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-3.5 h-3.5" />
           {loggingOut ? 'Signing out...' : 'Sign out'}
         </button>
       </div>

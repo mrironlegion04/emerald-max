@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { Calendar, Tag, ChevronRight } from 'lucide-react'
 import BulkWOActions from './BulkWOActions'
+import Badge, { workOrderStatusVariant, priorityVariant } from './Badge'
 
 interface WorkOrder {
   id: string
@@ -31,45 +34,19 @@ export default function WorkOrdersTable({
   statusLabels,
 }: WorkOrdersTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
 
-  // Premium Badge functions
+  // Centralized Badge components rendering
   const getPriorityBadge = (priority: string) => {
-    const map: Record<string, { bg: string; text: string; dot: string }> = {
-      LOW: { bg: 'bg-emerald-50 border-emerald-110', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-      MEDIUM: { bg: 'bg-amber-50 border-amber-110', text: 'text-amber-700', dot: 'bg-amber-500' },
-      HIGH: { bg: 'bg-orange-50 border-orange-110', text: 'text-orange-755', dot: 'bg-orange-500' },
-      CRITICAL: { bg: 'bg-rose-50 border-rose-110 pb-0.5', text: 'text-rose-700', dot: 'bg-rose-500 shadow-sm shadow-rose-205' },
-    }
-    const cls = map[priority] ?? { bg: 'bg-slate-50 border-slate-110', text: 'text-slate-700', dot: 'bg-slate-500' }
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide border ${cls.bg} ${cls.text}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
-        {priority}
-      </span>
-    )
+    return <Badge label={priority} variant={priorityVariant(priority)} />
   }
 
-  const getStatusBadge = (status: string, label: string) => {
-    const map: Record<string, { bg: string; text: string; dot: string }> = {
-      OPEN: { bg: 'bg-indigo-50 border-indigo-110', text: 'text-indigo-700', dot: 'bg-indigo-500' },
-      IN_PROGRESS: { bg: 'bg-blue-50 border-blue-110', text: 'text-blue-700', dot: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)] animate-pulse' },
-      ON_HOLD: { bg: 'bg-amber-50 border-amber-110', text: 'text-amber-700', dot: 'bg-amber-500' },
-      COMPLETED: { bg: 'bg-emerald-50 border-emerald-110', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-      CANCELLED: { bg: 'bg-slate-100 border-slate-200', text: 'text-slate-600', dot: 'bg-slate-400' },
-    }
-    const cls = map[status] ?? { bg: 'bg-slate-55 border-slate-200', text: 'text-slate-700', dot: 'bg-slate-400' }
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide border ${cls.bg} ${cls.text}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
-        {label}
-      </span>
-    )
+  const getStatusBadge = (status: string) => {
+    return <Badge label={statusLabels[status] || status} variant={workOrderStatusVariant(status)} />
   }
 
   // Handle both Date and string dueDate
   const formatDate = (date: Date | string | null): string => {
-    if (!date) return '—'
+    if (!date) return 'No due date'
     const d = typeof date === 'string' ? new Date(date) : date
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
   }
@@ -88,8 +65,7 @@ export default function WorkOrdersTable({
     }
   }
 
-  const handleBulkAction = async (action: string, payload: any) => {
-    setLoading(true)
+  const handleBulkAction = async (action: string, payload: Record<string, unknown>) => {
     try {
       const response = await fetch('/api/work-orders/bulk', {
         method: 'POST',
@@ -124,8 +100,6 @@ export default function WorkOrdersTable({
       setSelectedIds([])
     } catch (error) {
       throw error
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -142,7 +116,8 @@ export default function WorkOrdersTable({
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={handleSelectAll}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  title="Select all rows"
                 />
               </th>
               <th>WO #</th>
@@ -156,81 +131,106 @@ export default function WorkOrdersTable({
             </tr>
           </thead>
           <tbody>
-              {workOrders.map(wo => {
+            {workOrders.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="text-center py-8 text-slate-400 font-semibold italic">
+                  No work orders found matching the filter criteria.
+                </td>
+              </tr>
+            ) : (
+              workOrders.map(wo => {
                 const overdue =
                   wo.dueDate &&
                   new Date(wo.dueDate) < new Date() &&
                   !['COMPLETED', 'CANCELLED'].includes(wo.status)
 
                 return (
-                  <tr key={wo.id} className={`premium-tr-hover border-b border-slate-100/60 transition-colors ${overdue ? 'bg-rose-50/10' : ''}`}>
+                  <tr 
+                    key={wo.id} 
+                    className={`premium-tr-hover border-b border-slate-100/60 transition-colors ${overdue ? 'bg-rose-50/15' : ''}`}
+                  >
                     <td className="px-4 py-3.5">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(wo.id)}
                         onChange={() => toggleSelect(wo.id)}
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        title={`Select work order ${wo.woNumber}`}
                       />
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className="font-mono text-xs bg-slate-100/80 border border-slate-200/50 text-slate-705 px-2.5 py-1 rounded-lg font-bold">
+                      <span className="font-mono text-xs bg-slate-100/90 border border-slate-200/50 text-slate-700 px-2.5 py-1 rounded-lg font-extrabold">
                         {wo.woNumber}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 max-w-xs">
-                      <span onClick={() => { window.location.href = `/work-orders/${wo.id}` }} className="font-semibold text-slate-905 truncate block cursor-pointer hover:text-blue-600 transition-colors">
+                      <Link 
+                        href={`/work-orders/${wo.id}`} 
+                        className="font-bold text-slate-900 truncate block hover:text-blue-600 transition-colors"
+                      >
                         {wo.title}
-                      </span>
-                      <p className="text-[11px] leading-tight text-slate-450 mt-0.5 font-medium">{typeLabels[wo.type] ?? wo.type}</p>
+                      </Link>
+                      <p className="text-[11px] leading-tight text-slate-400 mt-0.5 font-bold flex items-center gap-1 uppercase tracking-wider">
+                        <Tag className="w-3 h-3" />
+                        {typeLabels[wo.type] ?? wo.type}
+                      </p>
                     </td>
                     <td className="px-4 py-3.5">
                       {wo.asset ? (
-                        <a href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs">
+                        <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-bold text-xs">
                           {wo.asset.name}
-                        </a>
+                        </Link>
                       ) : (
-                        <span className="text-slate-400 font-normal">—</span>
+                        <span className="text-slate-400 font-normal select-none">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       {wo.team ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50/80 text-purple-700 border border-purple-100 rounded-full text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50/80 text-purple-700 border border-purple-100 rounded-full text-xs font-bold leading-none select-none">
                           👥 {wo.team.name}
                         </span>
                       ) : wo.assignedTo?.name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 border border-blue-50/80 rounded-full text-xs font-semibold">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 border border-blue-100/40 rounded-full text-xs font-bold leading-none select-none">
                           👤 {wo.assignedTo.name}
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-xs italic">Unassigned</span>
+                        <span className="text-slate-400 text-xs italic select-none font-semibold">Unassigned</span>
                       )}
                     </td>
-                    <td className={`px-4 py-3.5 text-xs whitespace-nowrap ${overdue ? 'font-bold text-red-600' : 'text-slate-600 font-medium'}`}>
+                    <td className={`px-4 py-3.5 text-xs whitespace-nowrap select-none ${overdue ? 'font-bold text-red-600' : 'text-slate-600 font-semibold'}`}>
                       {overdue ? (
-                        <span className="inline-flex items-center gap-1">
-                          ⚠️ {formatDate(wo.dueDate)}
+                        <span className="inline-flex items-center gap-1 bg-rose-50 border border-rose-100 text-rose-700 px-2.5 py-1 rounded-full animate-pulse font-extrabold text-[11px]">
+                          ⚠️ OVERDUE - {formatDate(wo.dueDate)}
                         </span>
                       ) : (
-                        formatDate(wo.dueDate)
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDate(wo.dueDate)}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       {getPriorityBadge(wo.priority)}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      {getStatusBadge(wo.status, statusLabels[wo.status])}
+                      {getStatusBadge(wo.status)}
                     </td>
                     <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                      <a href={`/work-orders/${wo.id}`} className="inline-flex items-center justify-center px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-100 rounded-xl text-xs font-semibold text-slate-650 transition-all shadow-xs active:scale-95">
+                      <Link 
+                        href={`/work-orders/${wo.id}`} 
+                        className="inline-flex items-center gap-1.5 justify-center px-3.5 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/50 rounded-xl text-xs font-bold text-slate-600 transition-all shadow-3xs active:scale-95"
+                      >
                         View
-                      </a>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
                     </td>
                   </tr>
                 )
-              })}
-            </tbody>
-          </table>
-        </div>
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <BulkWOActions
         selectedIds={selectedIds}

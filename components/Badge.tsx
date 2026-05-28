@@ -1,15 +1,15 @@
 import clsx from 'clsx'
 
-type BadgeVariant = 'green' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'
+export type BadgeVariant = 'green' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'
 
-const variantMap: Record<BadgeVariant, string> = {
-  green:  'bg-green-100 text-green-700',
-  blue:   'bg-blue-100 text-blue-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  red:    'bg-red-100 text-red-700',
-  purple: 'bg-purple-100 text-purple-700',
-  gray:   'bg-gray-100 text-gray-600',
-  orange: 'bg-orange-100 text-orange-700',
+const variantMap: Record<BadgeVariant, { bg: string; text: string; border: string; dot: string }> = {
+  green:  { bg: 'bg-emerald-50/70', text: 'text-emerald-700', border: 'border-emerald-200/40', dot: 'bg-emerald-500' },
+  blue:   { bg: 'bg-blue-50/70', text: 'text-blue-700', border: 'border-blue-200/40', dot: 'bg-blue-500' },
+  yellow: { bg: 'bg-amber-50/75', text: 'text-amber-700', border: 'border-amber-200/50', dot: 'bg-amber-500' },
+  red:    { bg: 'bg-rose-50/70', text: 'text-rose-700', border: 'border-rose-200/40', dot: 'bg-rose-500' },
+  purple: { bg: 'bg-purple-50/70', text: 'text-purple-700', border: 'border-purple-200/40', dot: 'bg-purple-500' },
+  gray:   { bg: 'bg-slate-100/70', text: 'text-slate-650', border: 'border-slate-200/50', dot: 'bg-slate-400' },
+  orange: { bg: 'bg-orange-50/70', text: 'text-orange-700', border: 'border-orange-200/40', dot: 'bg-orange-500' },
 }
 
 interface BadgeProps {
@@ -18,9 +18,11 @@ interface BadgeProps {
 }
 
 export default function Badge({ label, variant = 'gray' }: BadgeProps) {
+  const styles = variantMap[variant] || variantMap.gray
   return (
-    <span className={clsx('badge', variantMap[variant])}>
-      {label}
+    <span className={clsx('badge select-none', styles.bg, styles.text, styles.border)}>
+      <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', styles.dot)} />
+      <span className="leading-none">{label}</span>
     </span>
   )
 }

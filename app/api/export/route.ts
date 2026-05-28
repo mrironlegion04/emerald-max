@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         const queue = [assetId]
         while (queue.length > 0) {
           const currentId = queue.shift()!
-          const children = allAssets.filter(a => a.parentId === currentId)
+          const children = allAssets.filter((a: { id: string; parentId: string | null }) => a.parentId === currentId)
           for (const child of children) {
             if (!subAssetIds.has(child.id)) {
               subAssetIds.add(child.id)

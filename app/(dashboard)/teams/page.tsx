@@ -432,9 +432,29 @@ export default function TeamsPage() {
               )}
 
               {/* Team Header */}
-              <div className="p-5 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900 text-sm leading-tight">{selectedTeam.name}</h3>
-                <p className="text-xs text-slate-500 font-semibold mt-1">{selectedTeam.trade}</p>
+              <div className="p-5 border-b border-slate-100 flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-slate-900 text-sm leading-tight truncate">{selectedTeam.name}</h3>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">{selectedTeam.trade}</p>
+                </div>
+                {!selectedTeam.isDeleted && (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => startEdit(selectedTeam)}
+                      disabled={saving}
+                      className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 border border-blue-150 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all shadow-3xs cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleArchiveTeam(selectedTeam.id)}
+                      disabled={saving}
+                      className="text-red-650 hover:text-red-800 font-bold text-xs bg-red-50 border border-red-150 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all shadow-3xs cursor-pointer"
+                    >
+                      Archive
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Team Stats */}

@@ -3,13 +3,13 @@ import clsx from 'clsx'
 type BadgeVariant = 'green' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'
 
 const variantMap: Record<BadgeVariant, string> = {
-  green:  'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
-  blue:   'bg-blue-50 text-blue-700 border border-blue-200/60',
-  yellow: 'bg-amber-50 text-amber-800 border border-amber-200/60',
-  red:    'bg-red-50 text-red-700 border border-red-200/60',
-  purple: 'bg-purple-50 text-purple-700 border border-purple-200/60',
-  gray:   'bg-slate-50 text-slate-600 border border-slate-200',
-  orange: 'bg-orange-50 text-orange-700 border border-orange-200/60',
+  green:  'bg-green-100 text-green-700',
+  blue:   'bg-blue-100 text-blue-700',
+  yellow: 'bg-yellow-100 text-yellow-700',
+  red:    'bg-red-100 text-red-700',
+  purple: 'bg-purple-100 text-purple-700',
+  gray:   'bg-gray-100 text-gray-600',
+  orange: 'bg-orange-100 text-orange-700',
 }
 
 interface BadgeProps {

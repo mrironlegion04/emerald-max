@@ -58,91 +58,109 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
   }
 
   return (
-    <div className="space-y-3 mb-5">
-      <div className="flex flex-wrap gap-3">
+    <div className="space-y-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-stretch lg:items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="relative col-span-1 sm:col-span-2 lg:flex-1 lg:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search schedules..."
             defaultValue={searchParams.get('search') ?? ''}
             onChange={e => update('search', e.target.value)}
-            className="input-field pl-9 text-sm"
+            className="input-field pl-9 text-sm w-full bg-white font-medium text-slate-805 shadow-3xs"
           />
         </div>
 
-        <select value={searchParams.get('frequency') ?? ''} onChange={e => update('frequency', e.target.value)} className="input-field w-auto text-sm">
+        <select 
+          value={searchParams.get('frequency') ?? ''} 
+          onChange={e => update('frequency', e.target.value)} 
+          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors"
+        >
           {freqOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        <select value={searchParams.get('isActive') ?? ''} onChange={e => update('isActive', e.target.value)} className="input-field w-auto text-sm">
+        <select 
+          value={searchParams.get('isActive') ?? ''} 
+          onChange={e => update('isActive', e.target.value)} 
+          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors"
+        >
           <option value="">All statuses</option>
           <option value="true">Active only</option>
           <option value="false">Inactive only</option>
         </select>
 
-        <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
+        <label className="flex items-center gap-2 px-3.5 py-2.5 bg-white border border-slate-205 rounded-xl text-xs font-bold text-slate-650 cursor-pointer hover:bg-slate-50 transition-colors shadow-3xs select-none">
           <input
             type="checkbox"
             checked={searchParams.get('overdueOnly') === 'true'}
             onChange={e => update('overdueOnly', e.target.checked ? 'true' : '')}
-            className="w-4 h-4 text-red-600 rounded"
+            className="w-4.5 h-4.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
           />
           Overdue only
         </label>
 
-        <button
-          onClick={() => setShowAdvanced(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-            showAdvanced || hasAdvanced
-              ? 'bg-blue-50 border-blue-300 text-blue-700'
-              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-          }`}
-        >
-          <Filter className="w-4 h-4" />
-          Advanced
-          {hasAdvanced && <span className="w-2 h-2 bg-blue-600 rounded-full" />}
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-        </button>
-
-        {canExport && (
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 col-span-1 sm:col-span-2 lg:col-span-1">
           <button
-            onClick={doExport}
-            disabled={exporting}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
+            onClick={() => setShowAdvanced(v => !v)}
+            className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95 cursor-pointer flex-1 lg:flex-none shadow-3xs ${
+              showAdvanced || hasAdvanced
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-slate-202 text-slate-600 hover:bg-slate-50'
+            }`}
           >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export CSV'}
+            <Filter className="w-3.5 h-3.5" />
+            Advanced
+            {hasAdvanced && <span className="w-1.5 h-1.5 bg-blue-650 rounded-full" />}
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
           </button>
-        )}
 
-        {hasAnyFilter && (
-          <button onClick={() => router.push(pathname)}
-            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1">
-            <X className="w-3.5 h-3.5" /> Clear all
-          </button>
+          {canExport && (
+            <button
+              onClick={doExport}
+              disabled={exporting}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-202 bg-white text-slate-655 hover:bg-slate-50 text-xs font-bold transition-all active:scale-95 cursor-pointer flex-1 lg:flex-none shadow-3xs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+          )}
+
+          {hasAnyFilter && (
+            <button 
+              onClick={() => router.push(pathname)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3.5 py-2 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-1 lg:flex-none"
+            >
+              <X className="w-3.5 h-3.5" /> Clear all
+            </button>
+          )}
+        </div>
+
+        {isPending && (
+          <span className="text-xs text-slate-400 font-semibold self-center animate-pulse xl:ml-2 col-span-1 sm:col-span-2 lg:col-span-1">
+            Updating list...
+          </span>
         )}
-        {isPending && <span className="text-xs text-gray-400 self-center">Filtering...</span>}
       </div>
 
       {showAdvanced && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Advanced Filters</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-4.5 space-y-4 shadow-3xs">
+          <p className="text-xs font-bold text-slate-550 uppercase tracking-widest">Advanced Filters</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Asset</label>
-              <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field text-sm">
+              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Asset</label>
+              <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field text-sm cursor-pointer bg-white">
                 <option value="">All assets</option>
                 {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Due From</label>
+              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Due From</label>
               <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Due To</label>
+              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Due To</label>
               <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field text-sm" />
             </div>
           </div>

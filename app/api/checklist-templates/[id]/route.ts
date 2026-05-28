@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // Replace all items and update tag associations atomically
-    const template = await prisma.$transaction(async (tx) => {
+    const template = await prisma.$transaction(async (tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) => {
       await tx.checklistTemplateItem.deleteMany({ where: { templateId: id } })
       return tx.checklistTemplate.update({
         where: { id },

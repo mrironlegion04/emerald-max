@@ -120,7 +120,7 @@ export default async function PMPage({
       />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="stat-card flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
             <ClipboardList className="w-5 h-5 text-blue-600" />
@@ -172,7 +172,8 @@ export default async function PMPage({
         />
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop & Larger Tablets View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
@@ -259,6 +260,115 @@ export default async function PMPage({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile & Smaller Tablets Card View */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {schedules.map((s: any) => {
+              const days    = daysUntil(s.nextDueDate)
+              const overdue = s.isActive && days < 0
+              const dueSoon = s.isActive && days >= 0 && days <= 7
+
+              let dueBadge: React.ReactNode
+              if (!s.isActive)    dueBadge = <Badge label="Inactive"                                   variant="gray" />
+              else if (overdue)   dueBadge = <Badge label={`${Math.abs(days)}d overdue`}               variant="red" />
+              else if (dueSoon)   dueBadge = <Badge label={days === 0 ? 'Due today' : `Due in ${days}d`} variant="yellow" />
+              else                dueBadge = <Badge label={`In ${days}d`}                              variant="green" />
+
+              return (
+                <div key={s.id} className="p-4.5 flex flex-col gap-3.5 hover:bg-slate-50/40 transition-colors">
+                  {/* Title & Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/preventive-maintenance/${s.id}`} className="font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 block truncate">
+                        {s.title}
+                      </Link>
+                      {s.description && (
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{s.description}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 select-none">
+                      {dueBadge}
+                    </div>
+                  </div>
+
+                  {/* High Density metadata metrics */}
+                  <div className="border-t border-slate-105/60 pt-3.5 grid grid-cols-2 gap-3.5 text-xs">
+                    {/* Location Scope & Asset */}
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asset / Target</span>
+                      {s.asset ? (
+                        <div className="min-w-0">
+                          <Link href={`/assets/${s.asset.id}`} className="text-blue-600 font-extrabold hover:underline truncate block">
+                            {s.asset.name}
+                          </Link>
+                          {s.asset.location?.name && (
+                            <span className="text-[11px] text-slate-500 block truncate font-medium mt-0.5">📍 {s.asset.location.name}</span>
+                          )}
+                        </div>
+                      ) : s.location ? (
+                        <div className="min-w-0">
+                          <span className="text-slate-900 font-extrabold block truncate">
+                            {s.location.name}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block truncate mt-0.5">
+                            {s.locationScope === 'ALL_ASSETS' ? 'All Assets Scope' : 'General Maint.'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 font-medium">—</span>
+                      )}
+                    </div>
+
+                    {/* Frequency */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurrence</span>
+                      <span className="text-slate-700 font-bold flex items-center gap-1.5">
+                        🔄 Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}
+                      </span>
+                    </div>
+
+                    {/* Checklist linked count */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checklists</span>
+                      {s.checklistTemplates && s.checklistTemplates.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[11px] font-bold" title={s.checklistTemplates.map((ct: any) => ct.template.name).join(', ')}>
+                          📋 {s.checklistTemplates.length} Task List{(s.checklistTemplates.length !== 1) ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-medium">—</span>
+                      )}
+                    </div>
+
+                    {/* Next Due Date */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Next Due date</span>
+                      <span className={`font-bold flex items-center gap-1 ${overdue ? 'text-red-600' : 'text-slate-800'}`}>
+                        📅 {fmt(s.nextDueDate)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Touch optimized quick actions */}
+                  <div className="flex items-center gap-2.5 w-full pt-1">
+                    <Link
+                      href={`/preventive-maintenance/${s.id}`}
+                      className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-705 text-xs font-bold rounded-xl transition-all border border-slate-200"
+                    >
+                      View Schedule
+                    </Link>
+                    {canEdit && (
+                      <Link
+                        href={`/preventive-maintenance/${s.id}/edit`}
+                        className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all border border-blue-100"
+                      >
+                        Edit Schedule
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* Pagination controls */}

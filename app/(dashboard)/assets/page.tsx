@@ -156,7 +156,8 @@ export default async function AssetsPage({
         />
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop & Larger Tablets View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
@@ -254,6 +255,113 @@ export default async function AssetsPage({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile & Tablet Tactile Assets List View */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {assets.map((asset: AssetWithRelations) => (
+              <div 
+                key={asset.id} 
+                className={`p-4.5 flex flex-col gap-3.5 transition-colors ${asset.isDeleted ? 'opacity-85 bg-red-50/20' : 'hover:bg-slate-50/40'}`}
+              >
+                {/* Upper Body Area */}
+                <div className="flex items-start gap-4">
+                  {/* Aspect Ratio Sized Image Container */}
+                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-50 border border-slate-200/80 flex-shrink-0 flex items-center justify-center shadow-3xs">
+                    {asset.imageUrl ? (
+                      <img
+                        src={asset.imageUrl}
+                        alt={asset.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Package className="w-6 h-6 text-slate-400" />
+                    )}
+                  </div>
+
+                  {/* High Density Info Area */}
+                  <div className="min-w-0 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link 
+                        href={`/assets/${asset.id}`} 
+                        className="font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 truncate"
+                      >
+                        {asset.name}
+                      </Link>
+                      
+                      {/* Asset Status Badge */}
+                      <div className="flex-shrink-0 select-none">
+                        {asset.isDeleted ? (
+                          <Badge label="Deleted" variant="red" />
+                        ) : (
+                          <Badge
+                            label={statusLabels[asset.status] ?? asset.status}
+                            variant={assetStatusVariant(asset.status)}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Manufacturer or details */}
+                    {asset.manufacturer && (
+                      <p className="text-xs text-slate-400 mt-0.5 leading-none">
+                        {asset.manufacturer}{asset.model ? ` · ${asset.model}` : ''}
+                      </p>
+                    )}
+
+                    {/* Meta location & code tags */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="font-mono text-[10px] bg-slate-100 text-slate-705 px-2 py-0.5 rounded border border-slate-200/40 font-extrabold">
+                        {asset.assetCode}
+                      </span>
+                      {asset.location?.name && (
+                        <span className="text-[10px] text-slate-500 font-semibold bg-blue-50/50 border border-blue-100/30 px-1.5 py-0.5 rounded">
+                          📍 {asset.location.name}
+                        </span>
+                      )}
+                      {asset.category?.name && (
+                        <span className="text-[10px] text-slate-500 font-semibold bg-purple-50/50 border border-purple-100/30 px-1.5 py-0.5 rounded">
+                          📁 {asset.category.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lower Metrics & CTA Buttons Area (Touch Target sizes) */}
+                <div className="border-t border-slate-105/60 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 select-none">
+                  {/* Count Tags */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-slate-500 bg-slate-100/90 border border-slate-205 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      🔧 {asset._count?.workOrders ?? 0} Work Order{(asset._count?.workOrders ?? 0) !== 1 ? 's' : ''}
+                    </span>
+                    {viewMode === 'hierarchy' && (asset._count?.children ?? 0) > 0 && (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-blue-700 bg-blue-50/70 border border-blue-100/50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        🌿 {asset._count?.children} Sub-asset{(asset._count?.children ?? 0) !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Immediate touchable targets for detailed action */}
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    <Link
+                      href={`/assets/${asset.id}`}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-705 text-xs font-bold rounded-xl transition-all border border-slate-200"
+                    >
+                      View Details
+                    </Link>
+                    {canEdit && (
+                      <Link
+                        href={`/assets/${asset.id}/edit`}
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all border border-blue-100"
+                      >
+                        Edit Asset
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Pagination controls */}

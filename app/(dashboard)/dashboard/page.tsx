@@ -188,7 +188,7 @@ export default async function DashboardPage() {
                 </Link>
               </div>
               <div className="divide-y divide-gray-50">
-                {stats.overduePM.map(pm => {
+                {stats.overduePM.map((pm: any) => {
                   const targetName = pm.asset?.name ?? pm.location?.name ?? 'General'
                   return (
                     <Link key={pm.id} href={`/preventive-maintenance/${pm.id}`}
@@ -201,7 +201,7 @@ export default async function DashboardPage() {
                     </Link>
                   )
                 })}
-                {stats.dueSoonPM.map(pm => {
+                {stats.dueSoonPM.map((pm: any) => {
                   const targetName = pm.asset?.name ?? pm.location?.name ?? 'General'
                   return (
                     <Link key={pm.id} href={`/preventive-maintenance/${pm.id}`}
@@ -230,7 +230,7 @@ export default async function DashboardPage() {
               <div className="py-8 text-center text-sm text-gray-400">No critical items</div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {stats.criticalWorkOrders.map(wo => (
+                {stats.criticalWorkOrders.map((wo: any) => (
                   <Link key={wo.id} href={`/work-orders/${wo.id}`}
                     className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />

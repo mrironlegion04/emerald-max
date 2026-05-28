@@ -21,6 +21,8 @@ interface AssetWithRelations {
   isDeleted: boolean
   createdAt: Date
   updatedAt: Date
+  manufacturer?: string | null
+  model?: string | null
   category?: { id: string; name: string } | null
   location?: { id: string; name: string } | null
   _count?: { workOrders: number; children: number } | null
@@ -220,16 +222,16 @@ export default async function AssetsPage({
                     </td>
                     {viewMode === 'hierarchy' && (
                       <td className="px-4 py-3 text-gray-600">
-                        {asset._count.children > 0 ? (
+                        {(asset._count?.children ?? 0) > 0 ? (
                           <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
-                            {asset._count.children}
+                            {asset._count?.children}
                           </span>
                         ) : (
                           '—'
                         )}
                       </td>
                     )}
-                    <td className="px-4 py-3 text-gray-600">{asset._count.workOrders}</td>
+                    <td className="px-4 py-3 text-gray-600">{asset._count?.workOrders ?? 0}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
                         <Link

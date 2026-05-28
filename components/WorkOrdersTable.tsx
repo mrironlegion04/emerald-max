@@ -33,26 +33,38 @@ export default function WorkOrdersTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Inline variant logic to avoid passing functions from server component
-  const getStatusVariant = (status: string): string => {
-    const map: Record<string, string> = {
-      OPEN: 'bg-purple-100 text-purple-700',
-      IN_PROGRESS: 'bg-blue-100 text-blue-700',
-      ON_HOLD: 'bg-yellow-100 text-yellow-700',
-      COMPLETED: 'bg-green-100 text-green-700',
-      CANCELLED: 'bg-gray-100 text-gray-700',
+  // Premium Badge functions
+  const getPriorityBadge = (priority: string) => {
+    const map: Record<string, { bg: string; text: string; dot: string }> = {
+      LOW: { bg: 'bg-emerald-50 border-emerald-110', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+      MEDIUM: { bg: 'bg-amber-50 border-amber-110', text: 'text-amber-700', dot: 'bg-amber-500' },
+      HIGH: { bg: 'bg-orange-50 border-orange-110', text: 'text-orange-755', dot: 'bg-orange-500' },
+      CRITICAL: { bg: 'bg-rose-50 border-rose-110 pb-0.5', text: 'text-rose-700', dot: 'bg-rose-500 shadow-sm shadow-rose-205' },
     }
-    return map[status] ?? 'bg-gray-100 text-gray-700'
+    const cls = map[priority] ?? { bg: 'bg-slate-50 border-slate-110', text: 'text-slate-700', dot: 'bg-slate-500' }
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide border ${cls.bg} ${cls.text}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+        {priority}
+      </span>
+    )
   }
 
-  const getPriorityVariant = (priority: string): string => {
-    const map: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-700',
-      MEDIUM: 'bg-yellow-100 text-yellow-700',
-      HIGH: 'bg-orange-100 text-orange-700',
-      CRITICAL: 'bg-red-100 text-red-700',
+  const getStatusBadge = (status: string, label: string) => {
+    const map: Record<string, { bg: string; text: string; dot: string }> = {
+      OPEN: { bg: 'bg-indigo-50 border-indigo-110', text: 'text-indigo-700', dot: 'bg-indigo-500' },
+      IN_PROGRESS: { bg: 'bg-blue-50 border-blue-110', text: 'text-blue-700', dot: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)] animate-pulse' },
+      ON_HOLD: { bg: 'bg-amber-50 border-amber-110', text: 'text-amber-700', dot: 'bg-amber-500' },
+      COMPLETED: { bg: 'bg-emerald-50 border-emerald-110', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+      CANCELLED: { bg: 'bg-slate-100 border-slate-200', text: 'text-slate-600', dot: 'bg-slate-400' },
     }
-    return map[priority] ?? 'bg-gray-100 text-gray-700'
+    const cls = map[status] ?? { bg: 'bg-slate-55 border-slate-200', text: 'text-slate-700', dot: 'bg-slate-400' }
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide border ${cls.bg} ${cls.text}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+        {label}
+      </span>
+    )
   }
 
   // Handle both Date and string dueDate
@@ -151,60 +163,65 @@ export default function WorkOrdersTable({
                   !['COMPLETED', 'CANCELLED'].includes(wo.status)
 
                 return (
-                  <tr key={wo.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
+                  <tr key={wo.id} className={`premium-tr-hover border-b border-slate-100/60 transition-colors ${overdue ? 'bg-rose-50/10' : ''}`}>
+                    <td className="px-4 py-3.5">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(wo.id)}
                         onChange={() => toggleSelect(wo.id)}
-                        className="w-4 h-4 border-gray-300 rounded text-blue-600"
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="font-mono text-xs bg-slate-100/80 border border-slate-200/50 text-slate-705 px-2.5 py-1 rounded-lg font-bold">
                         {wo.woNumber}
                       </span>
                     </td>
-                    <td className="px-4 py-3 max-w-xs">
-                      <p className="font-medium text-gray-900 truncate">{wo.title}</p>
-                      <p className="text-xs text-gray-400">{typeLabels[wo.type] ?? wo.type}</p>
+                    <td className="px-4 py-3.5 max-w-xs">
+                      <span onClick={() => { window.location.href = `/work-orders/${wo.id}` }} className="font-semibold text-slate-905 truncate block cursor-pointer hover:text-blue-600 transition-colors">
+                        {wo.title}
+                      </span>
+                      <p className="text-[11px] leading-tight text-slate-450 mt-0.5 font-medium">{typeLabels[wo.type] ?? wo.type}</p>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       {wo.asset ? (
-                        <a href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:underline text-xs">
+                        <a href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs">
                           {wo.asset.name}
                         </a>
                       ) : (
-                        <span className="text-gray-500">—</span>
+                        <span className="text-slate-400 font-normal">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
                       {wo.team ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50/80 text-purple-700 border border-purple-100 rounded-full text-xs font-semibold">
                           👥 {wo.team.name}
                         </span>
                       ) : wo.assignedTo?.name ? (
-                        <span className="text-gray-600 text-xs">{wo.assignedTo.name}</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 border border-blue-50/80 rounded-full text-xs font-semibold">
+                          👤 {wo.assignedTo.name}
+                        </span>
                       ) : (
-                        <span className="text-gray-500 text-xs">Unassigned</span>
+                        <span className="text-slate-400 text-xs italic">Unassigned</span>
                       )}
                     </td>
-                    <td className={`px-4 py-3 text-xs ${overdue ? 'font-bold text-red-600' : 'text-gray-600'}`}>
-                      {formatDate(wo.dueDate)}
-                      {overdue && ' ⚠️'}
+                    <td className={`px-4 py-3.5 text-xs whitespace-nowrap ${overdue ? 'font-bold text-red-600' : 'text-slate-600 font-medium'}`}>
+                      {overdue ? (
+                        <span className="inline-flex items-center gap-1">
+                          ⚠️ {formatDate(wo.dueDate)}
+                        </span>
+                      ) : (
+                        formatDate(wo.dueDate)
+                      )}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${getPriorityVariant(wo.priority)}`}>
-                        {wo.priority}
-                      </span>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      {getPriorityBadge(wo.priority)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${getStatusVariant(wo.status)}`}>
-                        {statusLabels[wo.status]}
-                      </span>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      {getStatusBadge(wo.status, statusLabels[wo.status])}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <a href={`/work-orders/${wo.id}`} className="text-blue-600 hover:underline text-xs">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <a href={`/work-orders/${wo.id}`} className="inline-flex items-center justify-center px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-100 rounded-xl text-xs font-semibold text-slate-650 transition-all shadow-xs active:scale-95">
                         View
                       </a>
                     </td>

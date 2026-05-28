@@ -15,20 +15,20 @@ interface Props {
 // Valid transitions from each status
 const transitions: Record<string, { value: string; label: string; color: string }[]> = {
   OPEN: [
-    { value: 'IN_PROGRESS', label: 'Start work',   color: 'bg-blue-600 hover:bg-blue-700 text-white' },
-    { value: 'CANCELLED',   label: 'Cancel WO',    color: 'bg-gray-200 hover:bg-gray-300 text-gray-700' },
+    { value: 'IN_PROGRESS', label: 'Start work',   color: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md font-bold' },
+    { value: 'CANCELLED',   label: 'Cancel WO',    color: 'bg-slate-100 hover:bg-slate-205 text-slate-700 border border-slate-200/50 font-semibold' },
   ],
   IN_PROGRESS: [
-    { value: 'COMPLETED',   label: 'Mark complete', color: 'bg-green-600 hover:bg-green-700 text-white' },
-    { value: 'ON_HOLD',     label: 'Put on hold',   color: 'bg-yellow-500 hover:bg-yellow-600 text-white' },
+    { value: 'COMPLETED',   label: 'Mark complete', color: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md font-bold' },
+    { value: 'ON_HOLD',     label: 'Put on hold',   color: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100 shadow-md font-bold' },
   ],
   ON_HOLD: [
-    { value: 'IN_PROGRESS', label: 'Resume work',   color: 'bg-blue-600 hover:bg-blue-700 text-white' },
-    { value: 'CANCELLED',   label: 'Cancel WO',     color: 'bg-gray-200 hover:bg-gray-300 text-gray-700' },
+    { value: 'IN_PROGRESS', label: 'Resume work',   color: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md font-bold' },
+    { value: 'CANCELLED',   label: 'Cancel WO',     color: 'bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-200 font-semibold' },
   ],
   COMPLETED:  [],
   CANCELLED:  [
-    { value: 'OPEN',        label: 'Re-open WO',    color: 'bg-gray-200 hover:bg-gray-300 text-gray-700' },
+    { value: 'OPEN',        label: 'Re-open WO',    color: 'bg-slate-100 hover:bg-slate-200 text-slate-705 border border-slate-200 font-semibold' },
   ],
 }
 
@@ -138,16 +138,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId 
 
   if (available.length === 0 && currentStatus === 'COMPLETED') {
     return (
-      <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-        <CheckCircle className="w-4 h-4" />
-        Work order completed
+      <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50/50 border border-emerald-150 px-4 py-3 rounded-xl text-xs font-bold shadow-xs">
+        <CheckCircle className="w-4 h-4 text-emerald-500" />
+        Work Order Completed Successfully
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-rose-650 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl font-bold">{error}</p>}
 
       {/* Face Verification Modal */}
       {showFaceVerification && (
@@ -168,34 +168,37 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId 
 
       {/* Completion form */}
       {showComplete && (
-        <div className="space-y-2 p-3 bg-green-50 rounded-lg border border-green-100">
-          <p className="text-xs font-medium text-green-800">Complete this work order</p>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-3 p-4 bg-emerald-50/35 rounded-xl border border-emerald-100 shadow-inner-light">
+          <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Complete this work order</p>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Labor hours</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Labor hours</label>
               <input type="number" min="0" step="0.5" value={laborHours}
                 onChange={e => setLaborHours(e.target.value)}
-                placeholder="0.0" className="input-field text-sm" />
+                placeholder="0.0" className="input-field text-xs bg-white border-slate-200" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Labor cost ($)</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Labor cost ($)</label>
               <input type="number" min="0" step="0.01" value={laborCost}
                 onChange={e => setLaborCost(e.target.value)}
-                placeholder="0.00" className="input-field text-sm" />
+                placeholder="0.00" className="input-field text-xs bg-white border-slate-200" />
             </div>
           </div>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Completion notes (optional)..."
-            className="input-field text-sm resize-none w-full" rows={2} />
-          <div className="flex gap-2">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="What actions were taken to resolve this?"
+              className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
+          </div>
+          <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
             <button onClick={handleConfirmCompletion} disabled={loading}
-              className="btn-primary text-sm flex-1">
+              className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
               {loading ? 'Completing...' : 'Confirm complete'}
             </button>
             <button onClick={() => {
               setShowComplete(false)
               setFaceVerificationSucceeded(false)
-            }} className="btn-secondary text-sm">
+            }} className="btn-secondary text-xs font-bold py-2 px-4 border-slate-200 flex-1">
               Cancel
             </button>
           </div>
@@ -207,7 +210,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId 
         <div className="flex flex-col gap-2">
           {available.map(t => (
             <button key={t.value} onClick={() => doTransition(t.value)} disabled={loading}
-              className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${t.color}`}>
+              className={`w-full py-2.5 px-4 rounded-xl text-xs transition-all tracking-wide disabled:opacity-50 cursor-pointer ${t.color}`}>
               {loading ? 'Updating...' : t.label}
             </button>
           ))}

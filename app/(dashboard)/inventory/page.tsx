@@ -122,7 +122,7 @@ export default async function InventoryPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {parts.map(part => {
+                {parts.map((part: any) => {
                   return (
                     <tr key={part.id} className={`hover:bg-gray-50 transition-colors ${part.isDeleted ? 'opacity-50 bg-red-50' : ''}`}>
                       <td className="px-4 py-3">

@@ -42,7 +42,7 @@
   }
 
   .stat-card {
-    @apply premium-card flex items-start gap-4;
+    @apply bg-white border border-slate-200/60 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.015)] p-5 sm:p-6 transition-all duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-start gap-4;
   }
 
   /* Responsive Tables utilities */

@@ -161,7 +161,7 @@ export default async function PMDetailPage({
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 text-sm mb-3">Attached checklists</h2>
               <div className="space-y-2">
-                {schedule.checklistTemplates.map(ct => (
+                {schedule.checklistTemplates.map((ct: any) => (
                   <div key={ct.template.id} className="p-3 border border-gray-150 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
                     <p className="text-xs font-semibold text-gray-800">{ct.template.name}</p>
                     {ct.template.description && (

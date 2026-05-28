@@ -61,39 +61,41 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
   const isClosed = ['COMPLETED','CANCELLED'].includes(woStatus)
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
-      <div className="px-5 py-4 border-b border-gray-100">
-        <h2 className="font-semibold text-gray-900 text-sm">
+    <div className="premium-card p-0 overflow-hidden border border-slate-200/50 shadow-sm flex flex-col">
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 className="font-bold text-slate-805 text-sm tracking-tight flex items-center gap-1.5">
           Comments
-          <span className="ml-2 text-gray-400 font-normal">({comments.length})</span>
+          <span className="text-xs bg-slate-100/80 text-slate-500 font-bold px-2 py-0.5 rounded-full">
+            {comments.length}
+          </span>
         </h2>
       </div>
 
       {/* Comments list */}
-      <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+      <div className="divide-y divide-slate-100/60 max-h-80 overflow-y-auto bg-white">
         {loading && (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">Loading...</div>
+          <div className="px-5 py-8 text-center text-xs text-slate-400 font-medium">Loading comments...</div>
         )}
         {!loading && comments.length === 0 && (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">
-            No comments yet — be the first to add one.
+          <div className="px-5 py-10 text-center text-xs text-slate-400 font-medium">
+            No comments yet — be the first to start the conversation.
           </div>
         )}
         {comments.map(c => (
-          <div key={c.id} className="px-5 py-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-700 font-semibold text-xs">
+          <div key={c.id} className="px-5 py-4 hover:bg-slate-50/10 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 border border-blue-200/50 shadow-xs">
+                <span className="text-blue-700 font-bold text-[10px] tracking-wider">
                   {c.authorName.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                 </span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{c.authorName}</span>
-              <span className={`badge text-xs ${roleColors[c.authorRole] ?? 'bg-gray-100 text-gray-600'}`}>
+              <span className="text-xs font-bold text-slate-800">{c.authorName}</span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${roleColors[c.authorRole] ?? 'bg-slate-100 text-slate-600'}`}>
                 {c.authorRole}
               </span>
-              <span className="text-xs text-gray-400 ml-auto">{fmtDateTime(c.createdAt)}</span>
+              <span className="text-[10px] font-medium text-slate-400 ml-auto">{fmtDateTime(c.createdAt)}</span>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed pl-8 whitespace-pre-wrap">{c.content}</p>
+            <p className="text-xs text-slate-650 leading-relaxed pl-8 whitespace-pre-wrap">{c.content}</p>
           </div>
         ))}
         <div ref={bottomRef} />
@@ -101,18 +103,18 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
 
       {/* Post comment */}
       {!isClosed && (
-        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-          <form onSubmit={post} className="space-y-2">
+        <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/55">
+          <form onSubmit={post} className="space-y-3">
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
-              placeholder="Add a comment, update, or question..."
-              className="input-field resize-none text-sm w-full"
+              placeholder="Add an update or question about this work order..."
+              className="input-field resize-none text-xs w-full min-h-[50px] bg-white border-slate-200"
               rows={2}
             />
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-red-650 bg-red-50 px-2 py-1 rounded border border-red-100">{error}</p>}
             <div className="flex justify-end">
-              <button type="submit" disabled={posting || !content.trim()} className="btn-primary text-sm">
+              <button type="submit" disabled={posting || !content.trim()} className="btn-primary text-xs py-2 px-4 shadow-sm shadow-blue-50">
                 {posting ? 'Posting...' : 'Post comment'}
               </button>
             </div>

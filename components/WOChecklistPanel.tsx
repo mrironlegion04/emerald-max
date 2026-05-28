@@ -336,58 +336,64 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <h2 className="font-semibold text-gray-900 text-sm">Checklists</h2>
+    <div className="premium-card p-0 overflow-hidden border border-slate-200/50 shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/10">
+        <div className="flex items-center gap-2.5">
+          <h2 className="font-bold text-slate-805 text-sm tracking-tight">Checklists</h2>
           {totalItems > 0 && (
-            <span className="text-xs text-gray-400">{checkedItems}/{totalItems} completed</span>
+            <span className="text-[11px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full">
+              {checkedItems}/{totalItems} completed
+            </span>
           )}
         </div>
         {!isClosed && !adding && (
-          <button onClick={() => setAdding(true)} className="text-xs text-blue-600 hover:underline font-medium">+ Add checklist</button>
+          <button onClick={() => setAdding(true)} className="text-xs text-blue-600 hover:text-blue-850 hover:underline font-bold transition">
+            + Add checklist
+          </button>
         )}
       </div>
 
       {/* Progress bar */}
       {totalItems > 0 && (
-        <div className="px-5 py-3 border-b border-gray-50">
+        <div className="px-5 py-3.5 border-b border-slate-100/60 bg-white">
           <div className="flex items-center gap-3">
-            <div className="flex-1 bg-gray-100 rounded-full h-2">
-              <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+            <div className="flex-1 bg-slate-100 rounded-full h-2">
+              <div className="h-2 rounded-full bg-emerald-500 transition-all shadow-xs" style={{ width: `${pct}%` }} />
             </div>
-            <span className="text-xs font-medium text-gray-600 w-9 text-right">{pct}%</span>
+            <span className="text-xs font-bold text-slate-705 w-9 text-right">{pct}%</span>
           </div>
         </div>
       )}
 
       {/* Add checklist form */}
       {adding && (
-        <form onSubmit={addChecklist} className="px-5 py-4 border-b border-blue-100 bg-blue-50/50 space-y-3">
+        <form onSubmit={addChecklist} className="px-5 py-4 border-b border-slate-100 bg-blue-50/30 space-y-4">
           <div>
-            <label className="text-xs text-gray-600 mb-1 block font-medium">Checklist title</label>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 block">Checklist title</label>
             <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
-              className="input-field text-sm" placeholder="e.g. Safety checks" required />
+              className="input-field text-xs bg-white border-slate-200" placeholder="e.g. Safety checks" required />
           </div>
           <div>
-            <label className="text-xs text-gray-600 mb-1 block font-medium">Items (one per line)</label>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 block">Items (one per line)</label>
             <textarea value={newLabels} onChange={e => setNewLabels(e.target.value)}
-              className="input-field text-sm resize-none" rows={4}
+              className="input-field text-xs bg-white border-slate-200 resize-none font-sans" rows={4}
               placeholder={"Check oil level\nInspect belts\nTest pressure relief valve"} />
           </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="btn-primary text-sm">{saving ? 'Adding...' : 'Add checklist'}</button>
-            <button type="button" onClick={() => { setAdding(false); setError('') }} className="btn-secondary text-sm">Cancel</button>
+          {error && <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-2 py-1.5 rounded">{error}</p>}
+          <div className="flex gap-2 pt-1.5">
+            <button type="submit" disabled={saving} className="btn-primary text-2xs py-2 px-4 shadow-sm font-bold">
+              {saving ? 'Adding...' : 'Add checklist'}
+            </button>
+            <button type="button" onClick={() => { setAdding(false); setError('') }} className="btn-secondary text-2xs py-2 px-4 font-bold">Cancel</button>
           </div>
         </form>
       )}
 
       {/* Checklists — flat asset-grouped rendering */}
       {lists.length === 0 && !adding ? (
-        <div className="py-10 text-center text-sm text-gray-400 font-medium">No checklists added</div>
+        <div className="py-12 text-center text-xs text-slate-400 font-medium bg-white">No checklists added</div>
       ) : (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-slate-100 bg-white">
           {lists.map(list => {
             const listPct = list.items.length > 0
               ? Math.round((list.items.filter(i => isItemComplete(i)).length / list.items.length) * 100)
@@ -396,19 +402,19 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
             const assetGroups = groupItemsByAsset(list.items)
 
             return (
-              <div key={list.id} className="px-5 py-4">
+              <div key={list.id} className="px-5 py-4 first:pt-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-800">{list.title}</span>
-                    <span className="text-xs text-gray-400 font-medium">
+                    <span className="text-sm font-bold text-slate-800">{list.title}</span>
+                    <span className="text-xs bg-slate-50 border border-slate-100 font-semibold px-2 py-0.5 rounded-full text-slate-500">
                       {list.items.filter(i => isItemComplete(i)).length}/{list.items.length}
                     </span>
                     {listPct === 100 && list.items.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-2xs font-semibold border border-green-100">Done</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">Done</span>
                     )}
                   </div>
                   {!isClosed && (
-                    <button onClick={() => deleteChecklist(list.id)} className="text-gray-300 hover:text-red-500 transition-colors">
+                    <button onClick={() => deleteChecklist(list.id)} className="text-slate-300 hover:text-rose-600 transition-colors p-1 hover:bg-slate-50 rounded-lg">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -419,9 +425,9 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
                   <div className="space-y-4">
                     {assetGroups.map(group => (
                       <div key={group.assetName}>
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 mb-2">
                           <Package className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-                          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             {group.assetName}
                           </span>
                         </div>
@@ -432,7 +438,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 py-2 font-medium">No items in this checklist</p>
+                  <p className="text-xs text-slate-400 py-2 font-medium">No items in this checklist</p>
                 )}
               </div>
             )

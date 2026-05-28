@@ -88,49 +88,51 @@ export default async function WorkOrderDetailPage({
   const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-1">
-        <Link href="/work-orders" className="text-sm text-gray-400 hover:text-gray-600">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <div className="mb-2">
+        <Link href="/work-orders" className="text-xs font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1.5 uppercase tracking-wider">
           ← Back to work orders
         </Link>
       </div>
 
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium capitalize">
-          {scopeLabels[getWOScope(wo)]}
-        </span>
-        {(wo.assets?.length ?? 0) > 0 && (
-          <span className="text-xs text-gray-400">
-            {wo.assets.length} asset{wo.assets.length !== 1 ? 's' : ''}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+            {scopeLabels[getWOScope(wo)]}
           </span>
-        )}
-      </div>
+          {(wo.assets?.length ?? 0) > 0 && (
+            <span className="text-[11px] text-slate-400 font-semibold tracking-tight">
+              {wo.assets.length} asset{wo.assets.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
 
-      <PageHeader
-        title={wo.title}
-        subtitle={`${wo.woNumber} · ${typeLabels[wo.type] ?? wo.type}`}
-        action={
-          <div className="flex gap-2">
-              <Link href={`/work-orders/${wo.id}/print`} className="btn-secondary text-sm flex items-center gap-2">
-                <Printer className="w-4 h-4" />
+        <PageHeader
+          title={wo.title}
+          subtitle={`${wo.woNumber} · ${typeLabels[wo.type] ?? wo.type}`}
+          action={
+            <div className="flex items-center gap-2 mt-4 sm:mt-0">
+              <Link href={`/work-orders/${wo.id}/print`} className="btn-secondary text-xs flex items-center gap-1.5 py-2 px-3.5 border-slate-200 font-bold hover:bg-slate-50 transition shadow-xs">
+                <Printer className="w-4 h-4 text-slate-500" />
                 Print
               </Link>
               {canEdit && (
-                <Link href={`/work-orders/${wo.id}/edit`} className="btn-secondary text-sm">
+                <Link href={`/work-orders/${wo.id}/edit`} className="btn-secondary text-xs py-2 px-3.5 border-slate-200 font-bold hover:bg-slate-50 transition shadow-xs">
                   Edit work order
                 </Link>
               )}
             </div>
-        }
-      />
+          }
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN */}
-        <div className="space-y-5">
+        <div className="space-y-6">
           {/* Status card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900 text-sm">Status</h2>
+          <div className="premium-card p-5 border border-slate-200/50 shadow-sm">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight">Status</h2>
               <Badge label={statusLabels[wo.status]} variant={workOrderStatusVariant(wo.status)} />
             </div>
             <WOStatusActions
@@ -140,9 +142,9 @@ export default async function WorkOrderDetailPage({
               userId={user?.userId ?? ''}
             />
             {wo.slaBreached && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-xs font-semibold text-red-700">⚠️ SLA BREACHED</p>
-                <p className="text-xs text-red-600 mt-1">Response or resolution time exceeded</p>
+              <div className="mt-4 p-3 bg-rose-50 border border-rose-150 rounded-xl">
+                <p className="text-xs font-bold text-rose-700 uppercase tracking-wider">⚠️ SLA BREACHED</p>
+                <p className="text-xs text-rose-600 mt-1 font-medium leading-relaxed">Response or resolution time exceeded.</p>
               </div>
             )}
           </div>
@@ -151,49 +153,49 @@ export default async function WorkOrderDetailPage({
           <TimerPanel woId={wo.id} woStatus={wo.status} />
 
           {/* Details */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-gray-900 text-sm mb-4">Details</h2>
-            <dl className="space-y-3">
+          <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+            <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-4 pb-2 border-b border-slate-100">Details</h2>
+            <dl className="space-y-3.5">
               {[
-                { label: 'WO number',   value: wo.woNumber },
+                { label: 'WO number',   value: <span className="font-mono text-xs">{wo.woNumber}</span> },
                 { label: 'Type',        value: typeLabels[wo.type] },
                 { label: 'Priority',    value: (
                   <Badge label={priorityLabels[wo.priority]} variant={priorityVariant(wo.priority)} />
                 )},
                 { label: 'Asset(s)',       value: wo.assets && wo.assets.length > 1 ? (
-                  <div className="flex flex-wrap gap-1 justify-end">
+                  <div className="flex flex-wrap gap-1.5 justify-end">
                     {wo.assets.map(wa => (
-                      <Link key={wa.asset.id} href={`/assets/${wa.asset.id}`} className="text-blue-600 hover:underline text-xs">
+                      <Link key={wa.asset.id} href={`/assets/${wa.asset.id}`} className="text-blue-600 hover:text-blue-805 hover:underline text-xs font-bold">
                         {wa.asset.name}
                       </Link>
                     ))}
                   </div>
                 ) : wo.asset ? (
-                  <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:underline text-xs">
+                  <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-850 hover:underline text-xs font-bold">
                     {wo.asset.name}
                   </Link>
                 ) : '—' },
                 { label: 'Location',    value: wo.asset?.location?.name ?? '—' },
                 { label: 'Assigned to', value: wo.team ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-medium">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
                     👥 {wo.team.name} ({wo.team.trade})
                   </span>
                 ) : wo.assignedTo?.name ? (
                   wo.assignedTo.name
                 ) : (
-                  'Unassigned'
+                  <span className="text-slate-400 italic">Unassigned</span>
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
                 { label: 'Due date',    value: (
-                  <span className={isOverdue ? 'text-red-600 font-semibold' : ''}>
+                  <span className={isOverdue ? 'text-rose-650 font-bold' : ''}>
                     {isOverdue ? '⚠ ' : ''}{fmtDateTime(wo.dueDate)}
                   </span>
                 )},
                 { label: 'Started',     value: fmtDateTime(wo.startedAt) },
                 { label: 'Completed',   value: fmtDateTime(wo.completedAt) },
                 { label: 'Completed by', value: wo.completedBy ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold">
                     ✓ {wo.completedBy.name}
                   </span>
                 ) : '—' },
@@ -201,64 +203,64 @@ export default async function WorkOrderDetailPage({
                   label: 'Issue',
                   value: (
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <code className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{wo.issue.code}</code>
-                      <span className="text-xs text-violet-700 font-medium">{wo.issue.title}</span>
+                      <code className="text-[10px] font-bold font-mono bg-slate-105 border border-slate-200 text-slate-650 px-1.5 py-0.5 rounded">{wo.issue.code}</code>
+                      <span className="text-xs text-violet-750 font-bold">{wo.issue.title}</span>
                     </span>
                   ),
                 }] : wo.customIssue ? [{
                   label: 'Issue',
                   value: (
                     <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs text-amber-700 font-medium">{wo.customIssue}</span>
+                      <span className="text-xs text-amber-705 font-bold">{wo.customIssue}</span>
                     </span>
                   ),
                 }] : []),
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center gap-4">
-                  <dt className="text-xs text-gray-400 flex-shrink-0">{row.label}</dt>
-                  <dd className="text-xs text-gray-900 font-medium text-right">{row.value}</dd>
+                  <dt className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{row.label}</dt>
+                  <dd className="text-xs text-slate-800 font-bold text-right">{row.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
 
           {/* Cost summary */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-gray-900 text-sm mb-3">Cost summary</h2>
-            <div className="space-y-2">
+          <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+            <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-3 pb-2 border-b border-slate-100">Cost summary</h2>
+            <div className="space-y-3.5">
               {[
                 { label: 'Labor hours', value: wo.laborHours ? `${wo.laborHours} hrs` : '—' },
                 { label: 'Labor cost',  value: fmtCurrency(wo.laborCost) },
                 { label: 'Parts cost',  value: fmtCurrency(wo.partsCost) },
               ].map(r => (
-                <div key={r.label} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{r.label}</span>
-                  <span className="font-medium text-gray-900">{r.value}</span>
+                <div key={r.label} className="flex justify-between items-center text-xs">
+                  <span className="text-slate-450 font-semibold uppercase tracking-wider">{r.label}</span>
+                  <span className="font-bold text-slate-750">{r.value}</span>
                 </div>
               ))}
-              <div className="border-t border-gray-100 pt-2 flex justify-between text-sm">
-                <span className="font-semibold text-gray-700">Total cost</span>
-                <span className="font-bold text-gray-900">{fmtCurrency(totalCost || null)}</span>
+              <div className="border-t border-slate-100 pt-3.5 flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-650 uppercase tracking-wide">Total cost</span>
+                <span className="text-sm font-extrabold text-slate-900">{fmtCurrency(totalCost || null)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* RIGHT COLUMN */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-6">
           {/* Description */}
           {wo.description && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-2">Description</h2>
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{wo.description}</p>
+            <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-2 pb-2 border-b border-slate-100">Description</h2>
+              <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-wrap">{wo.description}</p>
             </div>
           )}
 
           {/* Notes */}
           {wo.notes && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-2">Technician notes</h2>
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{wo.notes}</p>
+            <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-2 pb-2 border-b border-slate-100">Technician notes</h2>
+              <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-wrap">{wo.notes}</p>
             </div>
           )}
 

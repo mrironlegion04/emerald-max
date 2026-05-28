@@ -140,16 +140,22 @@ export default function ReportsDashboard({ userRole }: { userRole: string }) {
   return (
     <div className="space-y-6">
       {/* Period selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500 font-medium">Period:</span>
-        {[3, 6, 12].map(m => (
-          <button key={m} onClick={() => setMonths(m)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              months === m ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {m} months
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 border border-slate-200/90 rounded-2xl shadow-3xs">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Analysis Window</span>
+        </div>
+        <div className="flex bg-slate-100 p-1.5 rounded-xl self-start sm:self-auto shadow-inner border border-slate-150">
+          {[3, 6, 12].map(m => (
+            <button key={m} onClick={() => setMonths(m)}
+              className={`px-4.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                months === m 
+                  ? 'bg-blue-600 text-white shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/50'
+              }`}>
+              {m} Months
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* KPI grid */}

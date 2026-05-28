@@ -3,6 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useTransition, useState } from 'react'
 import { Search, Filter, X, Download, ChevronDown } from 'lucide-react'
+import FilterDrawer from './FilterDrawer'
 
 interface Asset { id: string; name: string; assetCode: string | null }
 
@@ -27,6 +28,7 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
   const [isPending, startTransition] = useTransition()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const update = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -35,8 +37,10 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
   }, [router, pathname, searchParams])
 
   const advancedKeys = ['assetId','dueDateFrom','dueDateTo']
+  const filterKeys   = ['frequency','isActive','overdueOnly', ...advancedKeys]
   const hasAdvanced  = advancedKeys.some(k => searchParams.get(k))
-  const hasAnyFilter = ['search','frequency','isActive','overdueOnly', ...advancedKeys].some(k => searchParams.get(k))
+  const activeCount  = filterKeys.filter(k => !!searchParams.get(k)).length
+  const hasAnyFilter = ['search', ...filterKeys].some(k => searchParams.get(k))
 
   async function doExport() {
     setExporting(true)
@@ -57,12 +61,164 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
     } finally { setExporting(false) }
   }
 
+  const handleClearAll = () => {
+    router.push(pathname)
+  }
+
+  const filterInputs = (
+    <div className="space-y-4 font-sans text-sm">
+      <div id="drawer-pm-freq" className="space-y-1.5">
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Frequency</label>
+        <select value={searchParams.get('frequency') ?? ''} onChange={e => update('frequency', e.target.value)} className="input-field w-full text-sm bg-white">
+          {freqOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
+      <div id="drawer-pm-status" className="space-y-1.5">
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+        <select value={searchParams.get('isActive') ?? ''} onChange={e => update('isActive', e.target.value)} className="input-field w-full text-sm bg-white">
+          <option value="">All statuses</option>
+          <option value="true">Active only</option>
+          <option value="false">Inactive only</option>
+        </select>
+      </div>
+
+      <div id="drawer-pm-asset" className="space-y-1.5">
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Asset</label>
+        <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field w-full text-sm bg-white">
+          <option value="">All assets</option>
+          {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
+        </select>
+      </div>
+
+      <div id="drawer-pm-from" className="space-y-1.5">
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due From</label>
+        <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field w-full text-sm bg-white" />
+      </div>
+
+      <div id="drawer-pm-to" className="space-y-1.5">
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due To</label>
+        <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field w-full text-sm bg-white" />
+      </div>
+
+      <div id="drawer-pm-overdue" className="pt-3 border-t border-dashed border-slate-150">
+        <label className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer select-none font-medium">
+          <input
+            type="checkbox"
+            checked={searchParams.get('overdueOnly') === 'true'}
+            onChange={e => update('overdueOnly', e.target.checked ? 'true' : '')}
+            className="w-5 h-5 text-red-600 rounded border-slate-300"
+          />
+          Overdue Only
+        </label>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-3 mb-5">
-      <div className="flex flex-wrap gap-3">
-        {/* Search */}
+    <div id="pm-filters-container" className="mb-6 space-y-4">
+      {/* 1. MOBILE RESPONSIVE pm filters */}
+      <div id="pm-filters-mobile" className="flex md:hidden flex-col gap-2.5">
+        <div className="flex gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search schedules..."
+              defaultValue={searchParams.get('search') ?? ''}
+              onChange={e => update('search', e.target.value)}
+              className="input-field pl-9 text-sm w-full bg-white shadow-3xs"
+            />
+          </div>
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className={`flex items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 shadow-3xs focus:outline-none ${
+              activeCount > 0 ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-650'
+            }`}
+          >
+            <Filter className="w-5 h-5" />
+            {activeCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-white text-blue-700 rounded-full">
+                {activeCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-dashed border-slate-150 pt-2">
+          {canExport && (
+            <button
+              onClick={doExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-655 hover:bg-slate-50 text-xs font-bold bg-white"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+          )}
+
+          {hasAnyFilter && (
+            <button onClick={handleClearAll} className="text-xs text-rose-600 font-bold px-3 py-1.5 bg-rose-50 rounded-lg transition-colors flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> Clear All
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. TABLET RESPONSIVE HYBRID ROW (md to lg) */}
+      <div id="pm-filters-tablet" className="hidden md:flex lg:hidden flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/85 p-3.5 rounded-2xl shadow-3xs">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search schedules..."
+              defaultValue={searchParams.get('search') ?? ''}
+              onChange={e => update('search', e.target.value)}
+              className="input-field pl-9 text-sm bg-slate-50/50"
+            />
+          </div>
+          <select value={searchParams.get('frequency') ?? ''} onChange={e => update('frequency', e.target.value)} className="input-field w-36 text-sm bg-white">
+            <option value="">Frequencies</option>
+            {freqOptions.slice(1).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-bold transition-all shadow-3xs ${
+              activeCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-650'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            <span>More Filters</span>
+            {activeCount > 0 && <span className="text-xs bg-blue-600 text-white rounded-full px-1.5 font-bold">{activeCount}</span>}
+          </button>
+
+          {canExport && (
+            <button
+              onClick={doExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-slate-650 hover:bg-slate-50 text-sm font-bold bg-white"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              {exporting ? 'Exporting...' : 'Export'}
+            </button>
+          )}
+
+          {hasAnyFilter && (
+            <button onClick={handleClearAll} className="text-xs text-slate-500 font-bold px-3 py-2 rounded-lg hover:bg-slate-100 flex items-center gap-1">
+              <X className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 3. DESKTOP ENTERPRISE-STYLE INLINE ROW */}
+      <div id="pm-filters-desktop" className="hidden lg:flex flex-wrap gap-3 p-4 bg-white border border-slate-200/90 rounded-2xl shadow-3xs items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search schedules..."
@@ -82,27 +238,27 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
           <option value="false">Inactive only</option>
         </select>
 
-        <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
+        <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-750 cursor-pointer hover:bg-slate-50 select-none shadow-3xs">
           <input
             type="checkbox"
             checked={searchParams.get('overdueOnly') === 'true'}
             onChange={e => update('overdueOnly', e.target.checked ? 'true' : '')}
-            className="w-4 h-4 text-red-600 rounded"
+            className="w-4 h-4 text-red-600 rounded border-slate-350 focus:ring-red-500"
           />
           Overdue only
         </label>
 
         <button
           onClick={() => setShowAdvanced(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-bold transition-all shadow-3xs ${
             showAdvanced || hasAdvanced
-              ? 'bg-blue-50 border-blue-300 text-blue-700'
-              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+              ? 'bg-blue-50 border-blue-200 text-blue-700'
+              : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
           }`}
         >
           <Filter className="w-4 h-4" />
-          Advanced
-          {hasAdvanced && <span className="w-2 h-2 bg-blue-600 rounded-full" />}
+          <span>Advanced</span>
+          {hasAdvanced && <span className="w-2 h-2 bg-blue-650 rounded-full" />}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
         </button>
 
@@ -110,44 +266,54 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
           <button
             onClick={doExport}
             disabled={exporting}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-655 hover:bg-slate-50 text-sm font-bold transition-all shadow-3xs"
           >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export CSV'}
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
           </button>
         )}
 
         {hasAnyFilter && (
-          <button onClick={() => router.push(pathname)}
-            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1">
+          <button onClick={handleClearAll}
+            className="text-sm text-slate-500 hover:text-slate-800 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1 font-bold">
             <X className="w-3.5 h-3.5" /> Clear all
           </button>
         )}
-        {isPending && <span className="text-xs text-gray-400 self-center">Filtering...</span>}
+        {isPending && <span className="text-xs text-slate-400 self-center font-bold">Filtering...</span>}
       </div>
 
       {showAdvanced && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Advanced Filters</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Asset</label>
-              <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field text-sm">
+        <div id="pm-filters-desktop-advanced" className="bg-blue-50/50 border border-blue-100/70 rounded-2xl p-4.5 space-y-3.5 shadow-3xs hidden lg:block">
+          <p className="text-xs font-black text-blue-700 uppercase tracking-wider">Advanced Schedule Filters</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-550">Asset</label>
+              <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field text-sm bg-white">
                 <option value="">All assets</option>
                 {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Due From</label>
-              <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field text-sm" />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-550">Due From</label>
+              <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field text-sm bg-white" />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Due To</label>
-              <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field text-sm" />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-550">Due To</label>
+              <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field text-sm bg-white" />
             </div>
           </div>
         </div>
       )}
+
+      <FilterDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title="Schedule Filters"
+        activeCount={activeCount}
+        onClear={handleClearAll}
+      >
+        {filterInputs}
+      </FilterDrawer>
     </div>
   )
 }

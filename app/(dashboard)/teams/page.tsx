@@ -308,33 +308,31 @@ export default function TeamsPage() {
                           </span>
                         </div>
                       </div>
-                      {selectedTeam?.id === team.id && (
-                        <div className="flex gap-2.5 ml-4 flex-shrink-0">
-                          {!team.isDeleted && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); startEdit(team); }}
-                              className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 border border-blue-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {!team.isDeleted ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleArchiveTeam(team.id); }}
-                              className="text-red-650 hover:text-red-800 font-bold text-xs bg-red-50 border border-red-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
-                            >
-                              Archive
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleRestoreTeam(team.id); }}
-                              className="text-emerald-700 hover:text-emerald-900 font-bold text-xs bg-emerald-50 border border-emerald-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
-                            >
-                              Restore
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex gap-2 ml-4 flex-shrink-0">
+                        {!team.isDeleted && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startEdit(team); }}
+                            className="text-blue-605 hover:text-blue-800 font-bold text-xs bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-150 px-2.5 py-1 rounded-lg shadow-3xs transition-all active:scale-95"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {!team.isDeleted ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleArchiveTeam(team.id); }}
+                            className="text-red-650 hover:text-red-800 font-bold text-xs bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-red-150 px-2.5 py-1 rounded-lg shadow-3xs transition-all active:scale-95"
+                          >
+                            Archive
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRestoreTeam(team.id); }}
+                            className="text-emerald-700 hover:text-emerald-900 font-bold text-xs bg-emerald-50 border border-emerald-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

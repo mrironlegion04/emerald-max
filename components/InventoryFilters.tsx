@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useTransition } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 export default function InventoryFilters() {
   const router      = useRouter()
@@ -18,22 +18,36 @@ export default function InventoryFilters() {
 
   const hasFilters = !!searchParams.get('search')
 
+  const handleClearAll = () => {
+    router.push(pathname)
+  }
+
   return (
-    <div className="flex flex-wrap gap-3 mb-5">
-      <div className="relative flex-1 min-w-[200px] max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" placeholder="Search parts..."
+    <div id="inventory-filters-container" className="mb-6 flex flex-wrap gap-3 items-center">
+      <div className="relative flex-1 min-w-[240px] max-w-md">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+        <input 
+          type="text" 
+          placeholder="Search inventory parts by name or SKU..."
           defaultValue={searchParams.get('search') ?? ''}
           onChange={e => update('search', e.target.value)}
-          className="input-field pl-9 text-sm" />
+          className="input-field pl-10.5 text-sm w-full bg-white shadow-3xs" 
+        />
       </div>
+      
       {hasFilters && (
-        <button onClick={() => router.push(pathname)}
-          className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-          Clear filters
+        <button 
+          onClick={handleClearAll}
+          className="text-xs text-rose-600 font-bold px-3 py-2 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors flex items-center gap-1 active:scale-97"
+        >
+          <X className="w-3.5 h-3.5" /> Clear search
         </button>
       )}
-      {isPending && <span className="text-xs text-gray-400 self-center">Filtering...</span>}
+      
+      {isPending && (
+        <span className="text-xs text-slate-400 font-medium animate-pulse ml-2">Searching...</span>
+      )}
     </div>
   )
 }
+

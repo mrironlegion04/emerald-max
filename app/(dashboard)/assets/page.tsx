@@ -155,7 +155,7 @@ export default async function AssetsPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {assets.map(asset => (
+                {assets.map((asset: any) => (
                   <tr key={asset.id} className={`hover:bg-gray-50 transition-colors ${asset.isDeleted ? 'opacity-50 bg-red-50' : ''}`}>
                     <td className="px-4 py-3">
                       {asset.imageUrl ? (

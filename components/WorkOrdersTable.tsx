@@ -36,23 +36,23 @@ export default function WorkOrdersTable({
   // Inline variant logic to avoid passing functions from server component
   const getStatusVariant = (status: string): string => {
     const map: Record<string, string> = {
-      OPEN: 'bg-purple-100 text-purple-700',
-      IN_PROGRESS: 'bg-blue-100 text-blue-700',
-      ON_HOLD: 'bg-yellow-100 text-yellow-700',
-      COMPLETED: 'bg-green-100 text-green-700',
-      CANCELLED: 'bg-gray-100 text-gray-700',
+      OPEN: 'bg-blue-50 text-blue-700 border border-blue-200/60',
+      IN_PROGRESS: 'bg-amber-50 text-amber-800 border border-amber-200/60',
+      ON_HOLD: 'bg-orange-50 text-orange-700 border border-orange-200/60',
+      COMPLETED: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60',
+      CANCELLED: 'bg-slate-50 text-slate-600 border border-slate-200',
     }
-    return map[status] ?? 'bg-gray-100 text-gray-700'
+    return map[status] ?? 'bg-slate-50 text-slate-600 border border-slate-200'
   }
 
   const getPriorityVariant = (priority: string): string => {
     const map: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-700',
-      MEDIUM: 'bg-yellow-100 text-yellow-700',
-      HIGH: 'bg-orange-100 text-orange-700',
-      CRITICAL: 'bg-red-100 text-red-700',
+      LOW: 'bg-slate-50 text-slate-600 border border-slate-200',
+      MEDIUM: 'bg-blue-50 text-blue-700 border border-blue-200/60',
+      HIGH: 'bg-orange-50 text-orange-700 border border-orange-200/60',
+      CRITICAL: 'bg-red-50 text-red-700 border border-red-200/60',
     }
-    return map[priority] ?? 'bg-gray-100 text-gray-700'
+    return map[priority] ?? 'bg-slate-50 text-slate-600 border border-slate-200'
   }
 
   // Handle both Date and string dueDate
@@ -76,7 +76,7 @@ export default function WorkOrdersTable({
     }
   }
 
-  const handleBulkAction = async (action: string, payload: any) => {
+  const handleBulkAction = async (action: string, payload: Record<string, unknown>) => {
     setLoading(true)
     try {
       const response = await fetch('/api/work-orders/bulk', {

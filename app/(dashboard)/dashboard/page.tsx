@@ -137,21 +137,21 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent WOs — spans 2 cols */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900 text-sm">Recent work orders</h2>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 shadow-xs">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-900 text-sm">Recent work orders</h2>
             <Link href="/work-orders" className="text-xs text-blue-600 hover:underline font-medium">View all</Link>
           </div>
           {stats.recentWorkOrders.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">No work orders yet</div>
+            <div className="py-12 text-center text-sm text-slate-400">No work orders yet</div>
           ) : (
-            <div className="divide-y divide-gray-50">
-              {stats.recentWorkOrders.map(wo => (
+            <div className="divide-y divide-slate-100">
+              {stats.recentWorkOrders.map((wo: any) => (
                 <Link key={wo.id} href={`/work-orders/${wo.id}`}
-                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{wo.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {wo.woNumber}{wo.asset ? ` · ${wo.asset.name}` : ''}{wo.team ? ` · 👥 ${wo.team.name}` : wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
                     </p>
                   </div>
@@ -171,33 +171,33 @@ export default async function DashboardPage() {
           {(stats.overduePM.length > 0 || stats.dueSoonPM.length > 0) && (
             <div className="bg-white rounded-xl border border-orange-200">
               <div className="flex items-center justify-between px-5 py-4 border-b border-orange-100">
-                <h2 className="font-semibold text-gray-900 text-sm">PM alerts</h2>
+                <h2 className="font-semibold text-slate-900 text-sm">PM alerts</h2>
                 <Link href="/preventive-maintenance" className="text-xs text-blue-600 hover:underline font-medium">
                   View all
                 </Link>
               </div>
-              <div className="divide-y divide-gray-50">
-                {stats.overduePM.map(pm => {
+              <div className="divide-y divide-slate-100">
+                {stats.overduePM.map((pm: any) => {
                   const targetName = pm.asset?.name ?? pm.location?.name ?? 'General'
                   return (
                     <Link key={pm.id} href={`/preventive-maintenance/${pm.id}`}
-                      className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                      className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
                       <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{pm.title}</p>
+                        <p className="text-sm font-semibold text-slate-900 truncate">{pm.title}</p>
                         <p className="text-xs text-red-500">{targetName} · {daysAgo(pm.nextDueDate)}d overdue</p>
                       </div>
                     </Link>
                   )
                 })}
-                {stats.dueSoonPM.map(pm => {
+                {stats.dueSoonPM.map((pm: any) => {
                   const targetName = pm.asset?.name ?? pm.location?.name ?? 'General'
                   return (
                     <Link key={pm.id} href={`/preventive-maintenance/${pm.id}`}
-                      className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                      className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
                       <div className="w-2 h-2 bg-yellow-400 rounded-full mt-1.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{pm.title}</p>
+                        <p className="text-sm font-semibold text-slate-900 truncate">{pm.title}</p>
                         <p className="text-xs text-yellow-600">{targetName} · Due {fmt(pm.nextDueDate)}</p>
                       </div>
                     </Link>
@@ -208,24 +208,24 @@ export default async function DashboardPage() {
           )}
 
           {/* Critical WOs */}
-          <div className="bg-white rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900 text-sm">Critical & urgent</h2>
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h2 className="font-semibold text-slate-900 text-sm">Critical & urgent</h2>
               {stats.criticalWorkOrders.length > 0 && (
-                <span className="badge bg-red-100 text-red-700">{stats.criticalWorkOrders.length}</span>
+                <span className="badge bg-red-50 text-red-700 border border-red-200/50">{stats.criticalWorkOrders.length}</span>
               )}
             </div>
             {stats.criticalWorkOrders.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">No critical items</div>
+              <div className="py-8 text-center text-sm text-slate-400">No critical items</div>
             ) : (
-              <div className="divide-y divide-gray-50">
-                {stats.criticalWorkOrders.map(wo => (
+              <div className="divide-y divide-slate-100">
+                {stats.criticalWorkOrders.map((wo: any) => (
                   <Link key={wo.id} href={`/work-orders/${wo.id}`}
-                    className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                    className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
                     <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
-                      <p className="text-xs text-gray-400">{wo.asset?.name ?? 'No asset'}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{wo.title}</p>
+                      <p className="text-xs text-slate-400">{wo.asset?.name ?? 'No asset'}</p>
                     </div>
                   </Link>
                 ))}

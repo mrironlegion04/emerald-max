@@ -57,8 +57,8 @@ export default async function PartDetailPage({
 
   if (!part) notFound()
 
-  const totalUsed   = part.usedInWorkOrders.reduce((s, u) => s + u.quantity, 0)
-  const totalSpend  = part.usedInWorkOrders.reduce((s, u) => s + u.quantity * (u.unitCost ?? part.unitCost ?? 0), 0)
+  const totalUsed   = part.usedInWorkOrders.reduce((s: number, u: any) => s + u.quantity, 0)
+  const totalSpend  = part.usedInWorkOrders.reduce((s: number, u: any) => s + u.quantity * (u.unitCost ?? part.unitCost ?? 0), 0)
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -189,7 +189,7 @@ export default async function PartDetailPage({
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {part.usedInWorkOrders.map(use => (
+                {part.usedInWorkOrders.map((use: any) => (
                   <Link key={use.id} href={`/work-orders/${use.workOrder.id}`}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex-1 min-w-0">

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         select: { id: true, name: true, parentId: true },
       })
 
-      const enriched = results.map((loc: any) => {
+      const enriched = results.map(loc => {
         let breadcrumb = loc.path
         if (!breadcrumb) {
           // compute from flat list (no extra DB calls)

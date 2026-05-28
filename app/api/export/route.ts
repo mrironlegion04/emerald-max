@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
       ]
-      const rows = wos.map((w: any) => [
+      const rows = wos.map(w => [
         w.woNumber, w.title, w.type, w.status, w.priority,
         w.asset?.name ?? '', w.asset?.assetCode ?? '',
         w.assignedTo?.name ?? '', w.team?.name ?? '', w.createdBy?.name ?? '',
@@ -143,11 +143,11 @@ export async function GET(request: NextRequest) {
         'Title','Description','Trigger','Frequency','Interval','Next Due',
         'Asset','Asset Code','Location','Checklist Template','Active','Created At',
       ]
-      const rows = schedules.map((s: any) => [
+      const rows = schedules.map(s => [
         s.title, s.description ?? '',
         s.triggerType, s.frequency, s.interval, fmt(s.nextDueDate),
         s.asset?.name ?? '', s.asset?.assetCode ?? '', s.asset?.location?.name ?? s.location?.name ?? '',
-        s.checklistTemplates.map((ct: any) => ct.template.name).join('; ') || '',
+        s.checklistTemplates.map(ct => ct.template.name).join('; ') || '',
         s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
       ])
       csv = toCSV(headers, rows)
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
         'Asset Code','Name','Status','Category','Location','Manufacturer','Model',
         'Serial Number','Purchase Date','Purchase Cost','Work Orders','Created At',
       ]
-      const rows = assets.map((a: any) => [
+      const rows = assets.map(a => [
         a.assetCode, a.name, a.status,
         a.category?.name ?? '', a.location?.name ?? '',
         a.manufacturer ?? '', a.model ?? '', a.serialNumber ?? '',
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
         'Part Number','Name','Description','Unit',
         'Unit Cost','Times Used','Created At',
       ]
-      const rows = parts.map((p: any) => [
+      const rows = parts.map(p => [
         p.partNumber, p.name, p.description ?? '',
         p.unit,
         p.unitCost ?? '',
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10000 })
       filename = `audit-log-${new Date().toISOString().slice(0,10)}.csv`
       const headers = ['Date','Action','Entity','Entity Name','User','Email','Changes']
-      const rows = logs.map((l: any) => [
+      const rows = logs.map(l => [
         fmt(l.createdAt), l.action, l.entity, l.entityName,
         l.userName ?? '', l.userEmail ?? '', l.changes ?? '',
       ])

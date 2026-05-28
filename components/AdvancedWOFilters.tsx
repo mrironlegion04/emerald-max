@@ -94,132 +94,106 @@ export default function AdvancedWOFilters({ technicians, teams, assets, canExpor
   }
 
   return (
-    <div className="space-y-4 mb-6">
-      {/* Basic responsive filter grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-stretch lg:items-center gap-3">
+    <div className="space-y-3 mb-5">
+      {/* Basic filter row */}
+      <div className="flex flex-wrap gap-3">
         {/* Search */}
-        <div className="relative col-span-1 sm:col-span-2 lg:flex-1 lg:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search work orders..."
             defaultValue={searchParams.get('search') ?? ''}
             onChange={e => update('search', e.target.value)}
-            className="input-field pl-9 text-sm w-full bg-white font-medium text-slate-800 shadow-3xs"
+            className="input-field pl-9 text-sm"
           />
         </div>
 
-        <select 
-          value={searchParams.get('status') ?? ''} 
-          onChange={e => update('status', e.target.value)} 
-          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors"
-        >
+        <select value={searchParams.get('status') ?? ''} onChange={e => update('status', e.target.value)} className="input-field w-auto text-sm">
           {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        <select 
-          value={searchParams.get('priority') ?? ''} 
-          onChange={e => update('priority', e.target.value)} 
-          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors"
-        >
+        <select value={searchParams.get('priority') ?? ''} onChange={e => update('priority', e.target.value)} className="input-field w-auto text-sm">
           {priorityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        <select 
-          value={searchParams.get('type') ?? ''} 
-          onChange={e => update('type', e.target.value)} 
-          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors"
-        >
+        <select value={searchParams.get('type') ?? ''} onChange={e => update('type', e.target.value)} className="input-field w-auto text-sm">
           {typeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        <select 
-          value={searchParams.get('assignedToId') ?? ''} 
-          onChange={e => updateWithConflictCheck('assignedToId', e.target.value)} 
-          className="input-field text-sm cursor-pointer bg-white font-semibold text-slate-705 shadow-3xs hover:border-slate-300 transition-colors col-span-1 sm:col-span-2 lg:col-span-1"
-        >
+        <select value={searchParams.get('assignedToId') ?? ''} onChange={e => updateWithConflictCheck('assignedToId', e.target.value)} className="input-field w-auto text-sm">
           <option value="">All assignees</option>
           {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
 
-        {/* Advanced & utility actions */}
-        <div className="flex flex-wrap items-center gap-2.5 col-span-1 sm:col-span-2 lg:col-span-1">
-          {/* Advanced toggle */}
+        {/* Advanced toggle */}
+        <button
+          onClick={() => setShowAdvanced(v => !v)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+            showAdvanced || hasAdvanced
+              ? 'bg-blue-50 border-blue-300 text-blue-700'
+              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Filter className="w-4 h-4" />
+          Advanced
+          {hasAdvanced && <span className="w-2 h-2 bg-blue-600 rounded-full" />}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Export with current filters */}
+        {canExport && (
           <button
-            onClick={() => setShowAdvanced(v => !v)}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95 cursor-pointer flex-1 lg:flex-none shadow-3xs ${
-              showAdvanced || hasAdvanced
-                ? 'bg-blue-50 border-blue-300 text-blue-700'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+            onClick={doExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
           >
-            <Filter className="w-3.5 h-3.5" />
-            Advanced
-            {hasAdvanced && <span className="w-1.5 h-1.5 bg-blue-650 rounded-full" />}
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+            <Download className="w-4 h-4" />
+            {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
-
-          {/* Export with current filters */}
-          {canExport && (
-            <button
-              onClick={doExport}
-              disabled={exporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-650 hover:bg-slate-50 text-xs font-bold transition-all active:scale-95 cursor-pointer flex-1 lg:flex-none shadow-3xs"
-            >
-              <Download className="w-3.5 h-3.5" />
-              {exporting ? 'Exporting...' : 'Export CSV'}
-            </button>
-          )}
-
-          {hasAnyFilter && (
-            <button 
-              onClick={() => router.push(pathname)}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3.5 py-2 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-1 lg:flex-none"
-            >
-              <X className="w-3.5 h-3.5" /> Clear all
-            </button>
-          )}
-        </div>
-
-        {isPending && (
-          <span className="text-xs text-slate-400 font-semibold self-center animate-pulse xl:ml-2 col-span-1 sm:col-span-2 lg:col-span-1">
-            Updating list...
-          </span>
         )}
+
+        {hasAnyFilter && (
+          <button onClick={() => router.push(pathname)}
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1">
+            <X className="w-3.5 h-3.5" /> Clear all
+          </button>
+        )}
+        {isPending && <span className="text-xs text-gray-400 self-center">Filtering...</span>}
       </div>
 
       {/* Advanced filter panel */}
       {showAdvanced && (
-        <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-4.5 space-y-4 shadow-3xs">
-          <p className="text-xs font-bold text-slate-550 uppercase tracking-widest">Advanced Filters</p>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-4">
+          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Advanced Filters</p>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
             {/* Date Filters */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Due From</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Due From</label>
               <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field text-sm" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Due To</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Due To</label>
               <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field text-sm" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Created From</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Created From</label>
               <input type="date" value={searchParams.get('createdFrom') ?? ''} onChange={e => update('createdFrom', e.target.value)} className="input-field text-sm" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">Created To</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Created To</label>
               <input type="date" value={searchParams.get('createdTo') ?? ''} onChange={e => update('createdTo', e.target.value)} className="input-field text-sm" />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">By Team</label>
-              <select value={searchParams.get('teamId') ?? ''} onChange={e => updateWithConflictCheck('teamId', e.target.value)} className="input-field text-sm cursor-pointer">
+              <label className="block text-xs font-medium text-gray-600 mb-1">By Team</label>
+              <select value={searchParams.get('teamId') ?? ''} onChange={e => updateWithConflictCheck('teamId', e.target.value)} className="input-field text-sm">
                 <option value="">All teams</option>
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.trade})</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-420 uppercase tracking-wider mb-1">By Asset</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">By Asset</label>
               <AssetTreeSelect
                 assets={assets}
                 value={searchParams.get('assetId') ?? ''}

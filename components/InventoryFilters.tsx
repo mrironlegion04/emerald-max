@@ -19,21 +19,21 @@ export default function InventoryFilters() {
   const hasFilters = !!searchParams.get('search')
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
-      <div className="relative flex-1 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input type="text" placeholder="Search parts by name or part #..."
+    <div className="flex flex-wrap gap-3 mb-5">
+      <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input type="text" placeholder="Search parts..."
           defaultValue={searchParams.get('search') ?? ''}
           onChange={e => update('search', e.target.value)}
-          className="input-field pl-9 text-sm w-full bg-white font-medium text-slate-805 shadow-3xs" />
+          className="input-field pl-9 text-sm" />
       </div>
       {hasFilters && (
         <button onClick={() => router.push(pathname)}
-          className="text-xs font-bold text-slate-550 hover:text-slate-800 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 transition-all cursor-pointer active:scale-95 self-start sm:self-auto">
+          className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
           Clear filters
         </button>
       )}
-      {isPending && <span className="text-xs font-semibold text-slate-400 animate-pulse self-center">Filtering...</span>}
+      {isPending && <span className="text-xs text-gray-400 self-center">Filtering...</span>}
     </div>
   )
 }

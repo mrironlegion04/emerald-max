@@ -131,13 +131,12 @@ export async function POST(request: NextRequest) {
           const childId = assetMap.get(row.asset_code)
           if (!childId) continue // skipped due to error in Pass 1
 
-          let parentId: string | undefined = assetMap.get(row.parent_asset_code)
+          let parentId = assetMap.get(row.parent_asset_code)
           if (!parentId) {
             const parentAsset = await prisma.asset.findUnique({ where: { assetCode: row.parent_asset_code } })
             if (parentAsset) {
-              const pId = parentAsset.id
-              parentId = pId
-              assetMap.set(row.parent_asset_code, pId)
+              parentId = parentAsset.id
+              assetMap.set(row.parent_asset_code, parentId)
             }
           }
 

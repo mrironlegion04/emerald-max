@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ── 3. Build Location nodes ──────────────────────────────────────────────
-    const locationNodes = locations.map((loc) => ({
+    const locationNodes = locations.map((loc: any) => ({
       id: `loc-${loc.id}`,
       type: 'locationNode',
       position: { x: 0, y: 0 },
@@ -63,15 +63,15 @@ export async function GET(request: NextRequest) {
         address: loc.address ?? undefined,
         path: loc.path ?? undefined,
         parentId: loc.parentId ? `loc-${loc.parentId}` : undefined,
-        childLocations: loc.children.map((c) => ({ id: `loc-${c.id}`, name: c.name })),
-        assets: loc.assets.map((a) => ({ id: `asset-${a.id}`, name: a.name, status: a.status })),
+        childLocations: loc.children.map((c: any) => ({ id: `loc-${c.id}`, name: c.name })),
+        assets: loc.assets.map((a: any) => ({ id: `asset-${a.id}`, name: a.name, status: a.status })),
         assetCount: loc.assets.length,
         childLocationCount: loc.children.length,
       },
     }));
 
     // ── 4. Build Asset nodes ─────────────────────────────────────────────────
-    const assetNodes = assets.map((asset) => ({
+    const assetNodes = assets.map((asset: any) => ({
       id: `asset-${asset.id}`,
       type: 'assetNode',
       position: { x: 0, y: 0 },
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Location → child location edges (solid indigo-ish)
-    locations.forEach((loc) => {
+    locations.forEach((loc: any) => {
       if (loc.parentId) {
         edges.push({
           id: `e-loc-${loc.parentId}-${loc.id}`,
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Asset → child asset edges (solid slate)
-    assets.forEach((asset) => {
+    assets.forEach((asset: any) => {
       if (asset.parentId) {
         edges.push({
           id: `e-asset-${asset.parentId}-${asset.id}`,
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         totalAssets: assetNodes.length,
         totalLocations: locationNodes.length,
-        rootCount: allNodes.filter((n) => !n.data.parentId).length,
+        rootCount: allNodes.filter((n: any) => !n.data.parentId).length,
         timestamp: new Date().toISOString(),
       },
     });

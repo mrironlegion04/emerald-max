@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   // Shape into calendar events
   const events = [
-    ...workOrders.map(wo => ({
+    ...workOrders.map((wo: any) => ({
       id:       wo.id,
       type:     'wo' as const,
       title:    wo.title,
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       woType:   wo.type,
       href:     `/work-orders/${wo.id}`,
     })),
-    ...pmSchedules.map(pm => ({
+    ...pmSchedules.map((pm: any) => ({
       id:       pm.id,
       type:     'pm' as const,
       title:    pm.title,

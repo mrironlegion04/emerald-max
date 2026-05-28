@@ -63,7 +63,7 @@ export async function POST(
       return NextResponse.json({ error: 'Cannot add meters to a deleted asset' }, { status: 400 })
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // If isPrimary requested, unset existing primary
       if (data.isPrimary) {
         await tx.meter.updateMany({

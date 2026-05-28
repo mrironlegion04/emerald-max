@@ -78,7 +78,7 @@ export async function PUT(
       }
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // If setting as primary, unset existing primary on this asset
       if (data.isPrimary && data.isPrimary !== existing.isPrimary) {
         await tx.meter.updateMany({

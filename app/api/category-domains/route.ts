@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     await prisma.$transaction([
       prisma.categoryDomain.deleteMany({ where: { categoryId } }),
       prisma.categoryDomain.createMany({
-        data: domainIds.map(domainId => ({ categoryId, domainId })),
+        data: domainIds.map((domainId: string) => ({ categoryId, domainId })),
         skipDuplicates: true,
       }),
     ])
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       where: { categoryId },
       include: { domain: true },
     })
-    return NextResponse.json(links.map(l => l.domain))
+    return NextResponse.json(links.map((l: any) => l.domain))
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 })

@@ -44,7 +44,7 @@ export default async function EditWorkOrderPage({
 
   if (!wo) notFound()
 
-  const selectedAssetIds = wo.assets.map(a => a.assetId)
+  const selectedAssetIds = wo.assets.map((a: any) => a.assetId)
 
   const initialData = {
     title:           wo.title,

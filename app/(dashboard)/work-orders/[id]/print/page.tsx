@@ -152,7 +152,7 @@ export default async function WorkOrderPrintPage({
               </tr>
             </thead>
             <tbody>
-              {wo.partsUsed.map(p => {
+              {wo.partsUsed.map((p: any) => {
                 const unitCost = p.unitCost ?? p.part.unitCost ?? 0
                 const total = unitCost * p.quantity
                 return (
@@ -174,11 +174,11 @@ export default async function WorkOrderPrintPage({
         <div className="mb-8 pb-8 border-b border-gray-300">
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Checklists</h3>
           <div className="space-y-4">
-            {wo.checklists.map(list => (
+            {wo.checklists.map((list: any) => (
               <div key={list.id}>
                 <h4 className="font-semibold text-gray-900 text-sm mb-2">{list.title}</h4>
                 <ul className="space-y-1">
-                  {list.items.map(item => (
+                  {list.items.map((item: any) => (
                     <li key={item.id} className="text-sm text-gray-700 flex items-start gap-2">
                       <span className="font-bold">{item.isChecked ? '✓' : '☐'}</span>
                       <span>{item.label}</span>

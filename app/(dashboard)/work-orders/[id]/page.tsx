@@ -164,7 +164,7 @@ export default async function WorkOrderDetailPage({
                 )},
                 { label: 'Asset(s)',       value: wo.assets && wo.assets.length > 1 ? (
                   <div className="flex flex-wrap gap-1.5 justify-end">
-                    {wo.assets.map(wa => (
+                    {wo.assets.map((wa: any) => (
                       <Link key={wa.asset.id} href={`/assets/${wa.asset.id}`} className="text-blue-600 hover:text-blue-805 hover:underline text-xs font-bold">
                         {wa.asset.name}
                       </Link>
@@ -267,7 +267,7 @@ export default async function WorkOrderDetailPage({
           {/* Parts used */}
           <WOPartsPanel
             woId={wo.id}
-            partsUsed={wo.partsUsed.map(p => ({
+            partsUsed={wo.partsUsed.map((p: any) => ({
               id: p.id,
               partId: p.partId,
               name: p.part.name,
@@ -275,7 +275,7 @@ export default async function WorkOrderDetailPage({
               quantity: p.quantity,
               unitCost: p.unitCost ?? p.part.unitCost ?? 0,
             }))}
-            allParts={allParts.map(p => ({
+            allParts={allParts.map((p: any) => ({
               id: p.id,
               name: p.name,
               partNumber: p.partNumber,
@@ -287,7 +287,7 @@ export default async function WorkOrderDetailPage({
           />
           <SubtasksPanel
             woId={wo.id}
-            initialSubtasks={wo.subtasks.map(s => ({
+            initialSubtasks={wo.subtasks.map((s: any) => ({
               id: s.id,
               title: s.title,
               description: s.description,
@@ -303,16 +303,16 @@ export default async function WorkOrderDetailPage({
               createdBy: s.createdBy,
             }))}
             woStatus={wo.status}
-            allUsers={allUsers.map(u => ({ id: u.id, name: u.name, email: u.email }))}
-            allTeams={allTeams.map(t => ({ id: t.id, name: t.name, trade: t.trade }))}
+            allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
+            allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name, trade: t.trade }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
           />
           <WOChecklistPanel
             woId={wo.id}
-            initialChecklists={wo.checklists.map(c => ({
+            initialChecklists={wo.checklists.map((c: any) => ({
               id: c.id,
               title: c.title,
-              items: c.items.map(i => ({
+              items: c.items.map((i: any) => ({
                 id: i.id,
                 label: i.label,
                 type: i.type,

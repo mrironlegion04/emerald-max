@@ -131,7 +131,7 @@ export async function POST(
     if (body.readings && Array.isArray(body.readings)) {
       const { readings } = bulkSchema.parse(body)
 
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx: any) => {
         const created: Array<{ id: string; value: number; status: string }> = []
 
         for (const r of readings) {
@@ -220,7 +220,7 @@ export async function POST(
       return NextResponse.json({ error: validation.warnings[0] }, { status: 400 })
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const reading = await tx.meterReading.create({
         data: {
           value,

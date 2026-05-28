@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (template.parts.length > 0) {
       await prisma.assetPart.createMany({
-        data: template.parts.map(tp => ({
+        data: template.parts.map((tp: any) => ({
           assetId: id,
           partId: tp.partId,
           expectedQuantity: tp.expectedQuantity

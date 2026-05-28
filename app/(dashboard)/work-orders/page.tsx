@@ -58,7 +58,7 @@ async function getWorkOrders(filters: SearchParams) {
     const queue = [filters.assetId]
     while (queue.length > 0) {
       const currentId = queue.shift()!
-      const children = allAssets.filter(a => a.parentId === currentId)
+      const children = allAssets.filter((a: any) => a.parentId === currentId)
       for (const child of children) {
         if (!subAssetIds.has(child.id)) {
           subAssetIds.add(child.id)
@@ -130,7 +130,7 @@ export default async function WorkOrdersPage({
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const overdueCount = workOrders.filter(
-    wo => wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED','CANCELLED'].includes(wo.status)
+    (wo: any) => wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED','CANCELLED'].includes(wo.status)
   ).length
   
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)

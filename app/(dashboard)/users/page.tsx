@@ -106,7 +106,7 @@ export default async function UsersPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {users.map(u => (
+            {users.map((u: any) => (
               <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -114,7 +114,7 @@ export default async function UsersPage({
                       <span className="text-blue-700 font-semibold text-xs">
                         {u.name
                           .split(' ')
-                          .map(n => n[0])
+                          .map((n: string) => n[0])
                           .join('')
                           .slice(0, 2)
                           .toUpperCase()}
@@ -220,15 +220,15 @@ export default async function UsersPage({
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Admins</p>
-          <p className="text-2xl font-bold text-purple-600">{users.filter(u => u.role === 'ADMIN').length}</p>
+          <p className="text-2xl font-bold text-purple-600">{users.filter((u: any) => u.role === 'ADMIN').length}</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Active Users</p>
-          <p className="text-2xl font-bold text-green-600">{users.filter(u => u.isActive).length}</p>
+          <p className="text-2xl font-bold text-green-600">{users.filter((u: any) => u.isActive).length}</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 mb-1">Technicians</p>
-          <p className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'TECHNICIAN').length}</p>
+          <p className="text-2xl font-bold text-blue-600">{users.filter((u: any) => u.role === 'TECHNICIAN').length}</p>
         </div>
       </div>
     </div>

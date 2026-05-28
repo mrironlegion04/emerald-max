@@ -1,0 +1,57 @@
+Feed Mill slitting knife problem.
+Dust seal temperature issue.
+Rotor union seal leak.
+Hopper door seal failure.
+Ram cylinder seal failure.
+Lub/process oil count low.
+Oil scale Weight variation.
+Carbon scale weight variation.
+Conveyor scale not zero.
+TCU safety valve failed.
+Drop door failed to open and close.
+Latch cylinder not closing.
+Dump mill slitting knife problem.
+Dump mill blender roller problem.
+Surge mill blender roller problem.
+Surge mill slitting knife problem.
+Feed mill blender roller problem.
+Accumulator pressure low.
+ABB main motor temperature high.
+Cooling tower pump not working.
+Carbon diverter not working.
+Daybin high pressure.
+Carbon line chock.
+Mill to mill conveyor belt cut.
+Mill to mill conveyor bearing damaged.
+Dip tank recirculation pump not working.
+Dip tank weight roll bearing damaged.
+Transverse conveyor belt cut.
+Wigwag shaft broken.
+Wigwag chain cut.
+Dip tank hugger belt cut.
+Take away conveyor strip belt damaged
+Dip tank steel belt cut.
+Slotting bar damaged.
+Mill rotor union water leak.
+Hopper door not closing.
+Drum roll bearing failure.
+Slab feeder belt cut.
+Charging conveyor belt damaged.
+Weighing conveyor belt damaged.
+Charging conveyor roller bearing failure.
+Weighing conveyor roller bearing failure.
+Charging Conveyor roller shaft cut.
+Weighing Conveyor roller shaft cut.
+Screw feeder valve open/close problem.
+Carbon not discharged.
+TCU temperature high.
+Mixer bearing temperature high.
+HPP oil temperature high
+Lube oil no flow
+Process oil no flow
+6 meter wigwag shaft broken.
+Hopper door rubber stuck up.
+Ram rubber stuck-up.
+Crumb hoist not working.
+K2 crane safety limit triggered.
+K2 crane hoist not working.

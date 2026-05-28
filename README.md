@@ -1,11 +1,21 @@
-<div align="center">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 
-  <h1>Built with AI Studio</h2>
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+<!-- NEW -->
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+sudo apt install avahi-daemon
+sudo apt install avahi-daemon
 
-</div>
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
+systemctl status avahi-daemon
+
+sudo hostnamectl set-hostname skynet
+sudo nano /etc/hosts
+sudo reboot
+
+
+
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp

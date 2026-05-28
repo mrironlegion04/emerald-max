@@ -1,0 +1,11 @@
+{
+  "name": "CMMS",
+  "description": "Enterprise Computerized Maintenance Management System with assets tracking, work orders, domain permissions, attachment uploads, issues mapping, and preventive maintenance scheduling.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

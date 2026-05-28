@@ -1,0 +1,896 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  TECHNICIAN
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum WorkOrderStatus {
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum SubtaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderType {
+  BREAKDOWN
+  PREVENTIVE
+  PREDICTIVE
+}
+
+enum LocationScope {
+  ALL_ASSETS      // "All Assets in this Location" - checklist mode
+  GENERAL         // "None / General Maintenance" - location-only ticket
+}
+
+enum PMFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+enum PMTriggerType {
+  TIME
+  METER
+}
+
+enum MeterType {
+  RUNTIME
+  DISTANCE
+  CYCLE
+  TEMPERATURE
+  PRESSURE
+  CUSTOM
+}
+
+enum ReadingSource {
+  MANUAL
+  IOT
+  IMPORT
+}
+
+enum ReadingStatus {
+  VALID
+  SUSPECT
+  REJECTED
+}
+
+enum MeterEventType {
+  READING_CREATED
+  THRESHOLD_REACHED
+  PM_TRIGGERED
+  VALIDATION_WARNING
+  VALIDATION_ERROR
+  STATUS_CHANGED
+}
+
+// ── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(TECHNICIAN)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Profile fields
+  phone        String?
+  bio          String?
+  department   String?
+  assignedLocationId String?
+
+  // Performance tracking
+  totalAssignedWOs   Int     @default(0)
+  totalCompletedWOs  Int     @default(0)
+  averageRating      Float   @default(0)
+  lastActiveAt       DateTime?
+
+  // Face verification fields
+  hasFaceVerification Boolean @default(false)
+  facePhotoUrl        String?
+  lastFaceVerifyAt    DateTime?
+
+  assignedWorkOrders    WorkOrder[]             @relation("AssignedTo")
+  createdWorkOrders     WorkOrder[]             @relation("CreatedBy")
+  completedWorkOrders   WorkOrder[]             @relation("WOCompletedBy")
+  reviewedRequests      MaintenanceRequest[]    @relation("RequestReviewer")
+  notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
+  teamMembers           TeamMember[]            @relation("TeamMembers")
+  assignedSubtasks      Subtask[]               @relation("SubtaskAssignedTo")
+  completedSubtasks     Subtask[]               @relation("SubtaskCompletedBy")
+  createdSubtasks       Subtask[]               @relation("SubtaskCreatedBy")
+  skills                UserSkill[]              @relation("UserSkills")
+  ownedAssets           Asset[]
+  createdAssets         Asset[]                 @relation("AssetCreatedBy")
+  createdParts          Part[]                  @relation("PartCreatedBy")
+  createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
+
+  @@map("users")
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userSkills UserSkill[] @relation("SkillUsers")
+
+  @@map("skills")
+}
+
+model UserSkill {
+  id        String   @id @default(cuid())
+  userId    String
+  skillId   String
+  proficiencyLevel String @default("INTERMEDIATE") // BASIC, INTERMEDIATE, EXPERT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation("UserSkills", fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation("SkillUsers", fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  parentId  String?
+  path      String?  // cached breadcrumb: "Plant A › Building 2 › Line 3"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent    Location?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children  Location[] @relation("LocationHierarchy")
+  assets    Asset[]
+  workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
+  maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
+  checklistTemplates ChecklistTemplate[] @relation("ChecklistTemplateLocations")
+
+  @@map("locations")
+}
+
+model AssetCategory {
+  id        String   @id @default(cuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  parent   AssetCategory?  @relation("AssetCategoryHierarchy", fields: [parentId], references: [id])
+  children AssetCategory[] @relation("AssetCategoryHierarchy")
+  assets   Asset[]
+  domains  CategoryDomain[]
+  checklistTemplates ChecklistTemplate[] @relation("ChecklistTemplateCategories")
+  slaPolicies        SLAPolicy[]
+
+  @@map("asset_categories")
+}
+
+model AssetType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets Asset[]
+
+  @@map("asset_types")
+}
+
+model Asset {
+  id                String      @id @default(cuid())
+  name              String
+  assetCode         String?     @unique
+  description       String?
+  status            AssetStatus @default(ACTIVE)
+  serialNumber      String?
+  model             String?
+  manufacturer      String?
+  purchaseDate      DateTime?
+  purchaseCost      Float?
+  assetType         String?    // legacy free-text (kept for backward compat)
+  assetTypeId       String?
+  criticality       String?
+  customFields      Json?
+  // Warranty fields (Part 7)
+  warrantyExpiry    DateTime?
+  warrantyNotes     String?
+  // Meter-based PM fields
+  meterUnit         String?
+  currentMeterValue Float?
+  // Maintenance metrics
+  mttrMinutes       Int      @default(0)  // Mean Time To Repair (in minutes)
+  mtbfDays          Float    @default(0)  // Mean Time Between Failures (in days)
+  totalFailures     Int      @default(0)
+  lastFailureDate   DateTime?
+  lastRepairDate    DateTime?
+  totalRepairTime   Int      @default(0)  // cumulative minutes
+  // Hierarchy (Part 7)
+  parentId          String?
+  parent            Asset?      @relation("AssetHierarchy", fields: [parentId], references: [id])
+  children          Asset[]     @relation("AssetHierarchy")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  locationId String?
+  location   Location?      @relation(fields: [locationId], references: [id])
+  categoryId String?
+  category   AssetCategory? @relation(fields: [categoryId], references: [id])
+  assetTypeRel AssetType?   @relation(fields: [assetTypeId], references: [id], onDelete: SetNull)
+  ownerId    String?
+  owner      User?          @relation(fields: [ownerId], references: [id])
+  createdById String?
+  createdBy  User?          @relation("AssetCreatedBy", fields: [createdById], references: [id])
+
+  workOrders           WorkOrder[]
+  workOrderAssets      WorkOrderAsset[]
+  maintenanceSchedules MaintenanceSchedule[]
+  meters               Meter[]
+  meterReadings        MeterReading[]
+  attachments          Attachment[]          @relation("AssetAttachments")
+  assetParts           AssetPart[]           @relation("AssetToAssetPart")
+  checklistItems       WOChecklistItem[]
+  checklistTemplates   ChecklistTemplate[]   @relation("ChecklistTemplateAssets")
+
+  // Soft-delete (archive) support
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  deletedBy  String?
+  restoredAt DateTime?
+  restoredBy String?
+
+  // Primary asset image
+  imageUrl  String?
+  imageName String?
+
+  @@map("assets")
+}
+
+model Meter {
+  id        String    @id @default(cuid())
+  name      String
+  meterType MeterType @default(CUSTOM)
+  unit      String
+  description String?
+  isPrimary Boolean   @default(false)
+  allowDecrease  Boolean @default(false)
+  maxDeltaPerDay Float?
+  minDeltaPerDay Float?
+  lastValue    Float?
+  lastReadingAt DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assetId String
+  asset   Asset   @relation(fields: [assetId], references: [id])
+  readings MeterReading[]
+  events   MeterEvent[]
+  maintenanceSchedules MaintenanceSchedule[]
+
+  @@index([assetId, isPrimary])
+  @@index([assetId, deletedAt])
+  @@map("meters")
+}
+
+model MeterEvent {
+  id        String        @id @default(cuid())
+  eventType MeterEventType
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now())
+
+  meterId   String
+  meter     Meter         @relation(fields: [meterId], references: [id])
+  readingId String?
+  reading   MeterReading? @relation(fields: [readingId], references: [id])
+
+  @@index([meterId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("meter_events")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  trade       String // e.g. Electrical, HVAC, Plumbing
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members             TeamMember[]
+  workOrders          WorkOrder[]
+  subtasksAssigned    Subtask[]           @relation("SubtasksAssignedToTeam")
+
+  // Soft-delete (archive) support
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  deletedBy  String?
+  restoredAt DateTime?
+  restoredBy String?
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("TeamMembers", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model WorkOrder {
+  id          String            @id @default(cuid())
+  woNumber    String            @unique
+  title       String
+  description String?
+  type        WorkOrderType     @default(BREAKDOWN)
+  status      WorkOrderStatus   @default(OPEN)
+  priority    WorkOrderPriority @default(MEDIUM)
+  dueDate     DateTime?
+  startedAt   DateTime?
+  respondedAt DateTime?
+  completedAt DateTime?
+  laborHours  Float?
+  laborCost   Float?
+  partsCost   Float?
+  notes       String?
+
+  otherProblemDescription String?
+  hasCustomProblemDescription Boolean @default(false)
+
+  // Timer fields
+  timerStartedAt      DateTime?
+  timerPausedAt       DateTime?
+  timerElapsedSeconds Int     @default(0)
+  isTimerActive       Boolean @default(false)
+
+  // SLA fields
+  slaBreached          Boolean @default(false)
+  isMandatorySignature Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assetId      String?
+  asset        Asset?  @relation(fields: [assetId], references: [id])
+  locationId   String?
+  location     Location? @relation("WorkOrdersAtLocation", fields: [locationId], references: [id])
+  locationScope LocationScope? // null for asset-based WOs, set for location-based WOs
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
+  teamId       String?
+  team         Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdBy    User?   @relation("CreatedBy", fields: [createdById], references: [id])
+  completedById String?
+  completedBy  User?   @relation("WOCompletedBy", fields: [completedById], references: [id])
+  completionType String @default("ASSIGNED") // "ASSIGNED" | "ADMIN_OVERRIDE" | "MANAGER_OVERRIDE"
+  issueId      String?
+  issue        Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  customIssue  String?   // free-text when user picks "Other"
+
+  maintenanceScheduleId String?
+  maintenanceSchedule   MaintenanceSchedule? @relation("PMScheduleWorkOrders", fields: [maintenanceScheduleId], references: [id])
+
+  partsUsed     WorkOrderPart[]
+  comments      WorkOrderComment[]
+  subtasks      Subtask[]
+  checklists    WOChecklist[]
+  requests      MaintenanceRequest[]
+  attachments   Attachment[]        @relation("WOAttachments")
+  breachHistory SLABreachHistory[]  @relation("SLABreachHistory")
+  assets        WorkOrderAsset[]
+
+  @@index([issueId, createdAt])
+  @@map("work_orders")
+}
+
+model WorkOrderAsset {
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  source    String?   // "DIRECT" | "LOCATION_SCOPE"
+  createdAt DateTime @default(now())
+
+  @@id([workOrderId, assetId])
+  @@map("work_order_assets")
+}
+
+// ── Issue System ─────────────────────────────────────────────────────────────
+
+model MaintenanceDomain {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  issues     IssueDomain[]
+  categories CategoryDomain[]
+
+  @@map("maintenance_domains")
+}
+
+model Issue {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  title     String
+  severity  IssueSeverity @default(MEDIUM)
+  isActive  Boolean       @default(true)
+  isGlobal  Boolean       @default(false)
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  domains    IssueDomain[]
+  workOrders WorkOrder[]
+
+  @@index([isActive, isGlobal, sortOrder])
+  @@map("issues")
+}
+
+model IssueDomain {
+  issueId  String
+  domainId String
+
+  issue  Issue             @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  domain MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, domainId])
+  @@map("issue_domains")
+}
+
+model CategoryDomain {
+  categoryId String
+  domainId   String
+
+  category AssetCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  domain   MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, domainId])
+  @@map("category_domains")
+}
+
+model Part {
+  id          String   @id @default(cuid())
+  name        String
+  partNumber  String   @unique
+  description String?
+  unitCost    Float?
+  unit        String   @default("pcs")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("PartCreatedBy", fields: [createdById], references: [id])
+
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  deletedBy  String?
+  restoredAt DateTime?
+  restoredBy String?
+
+  usedInWorkOrders WorkOrderPart[]
+  attachments      Attachment[]    @relation("PartAttachments")
+  assetParts       AssetPart[]     @relation("PartToAssetPart")
+  bomTemplateParts BOMTemplatePart[] @relation("PartToBOMTemplatePart")
+
+  @@map("parts")
+}
+
+model WorkOrderPart {
+  id       String @id @default(cuid())
+  quantity Int
+  unitCost Float?
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  partId      String
+  part        Part      @relation(fields: [partId], references: [id])
+
+  @@map("work_order_parts")
+}
+
+model AssetPart {
+  assetId String
+  asset   Asset @relation("AssetToAssetPart", fields: [assetId], references: [id], onDelete: Cascade)
+  partId  String
+  part    Part  @relation("PartToAssetPart", fields: [partId], references: [id], onDelete: Cascade)
+
+  expectedQuantity Int @default(1)
+
+  @@id([assetId, partId])
+  @@map("asset_parts")
+}
+
+model BOMTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parts       BOMTemplatePart[]
+
+  @@map("bom_templates")
+}
+
+model BOMTemplatePart {
+  templateId  String
+  template    BOMTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  partId      String
+  part        Part        @relation("PartToBOMTemplatePart", fields: [partId], references: [id], onDelete: Cascade)
+  
+  expectedQuantity Int @default(1)
+
+  @@id([templateId, partId])
+  @@map("bom_template_parts")
+}
+
+model MaintenanceSchedule {
+  id            String        @id @default(cuid())
+  title         String
+  description   String?
+  triggerType   PMTriggerType @default(TIME)
+  frequency     PMFrequency
+  interval      Int           @default(1)
+  nextDueDate   DateTime
+  meterInterval      Float?
+  meterUnit          String?
+  meterId            String?
+  meter              Meter?             @relation(fields: [meterId], references: [id], onDelete: SetNull)
+  lastTriggeredValue Float?
+  isActive           Boolean            @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  assetId             String?
+  asset               Asset?             @relation(fields: [assetId], references: [id])
+  locationId          String?
+  location            Location?          @relation("PMSchedulesAtLocation", fields: [locationId], references: [id])
+  locationScope       LocationScope?
+  workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
+  createdById         String?
+  createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
+  checklistTemplates  MaintenanceScheduleChecklist[] @relation("PMScheduleChecklists")
+
+  @@map("maintenance_schedules")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entity     String
+  entityId   String
+  entityName String
+  changes    String?
+  userId     String?
+  userName   String?
+  userEmail  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model WorkOrderComment {
+  id          String    @id @default(cuid())
+  content     String
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  authorId    String?
+  authorName  String
+  authorRole  String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("work_order_comments")
+}
+
+model Subtask {
+  id            String          @id @default(cuid())
+  title         String
+  description   String?
+  status        SubtaskStatus   @default(PENDING)
+  priority      WorkOrderPriority @default(MEDIUM)
+  dueDate       DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  workOrderId   String
+  workOrder     WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  assignedToId  String?
+  assignedTo    User?           @relation("SubtaskAssignedTo", fields: [assignedToId], references: [id])
+  assignedTeamId String?
+  assignedTeam  Team?           @relation("SubtasksAssignedToTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+  completedById String?
+  completedBy   User?           @relation("SubtaskCompletedBy", fields: [completedById], references: [id])
+  completionType String @default("ASSIGNED") // "ASSIGNED" | "ADMIN_OVERRIDE" | "MANAGER_OVERRIDE"
+  createdById   String?
+  createdBy     User?           @relation("SubtaskCreatedBy", fields: [createdById], references: [id])
+
+  @@index([workOrderId])
+  @@index([assignedToId])
+  @@index([assignedTeamId])
+  @@index([completedById])
+  @@map("subtasks")
+}
+
+// ── Part 7 new models ────────────────────────────────────────────────────────
+
+model MaintenanceRequest {
+  id              String        @id @default(cuid())
+  title           String
+  description     String
+  location        String?
+  requesterName   String
+  requesterEmail  String?
+  requesterPhone  String?
+  priority        String        @default("MEDIUM")
+  status          RequestStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  reviewedById String?
+  reviewedBy   User?      @relation("RequestReviewer", fields: [reviewedById], references: [id])
+  workOrderId  String?
+  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  @@map("maintenance_requests")
+}
+
+model WOChecklist {
+  id          String    @id @default(cuid())
+  title       String
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  items WOChecklistItem[]
+
+  @@map("wo_checklists")
+}
+
+model WOChecklistItem {
+  id          String      @id @default(cuid())
+  label       String
+  type        String      @default("CHECKBOX")
+  isChecked   Boolean     @default(false)
+  isMandatory Boolean     @default(false)
+  stringValue String?
+  options     String[]
+  checkedAt   DateTime?
+  checkedBy   String?
+  sortOrder   Int         @default(0)
+  checklistId String
+  checklist   WOChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  assetId     String?
+  asset       Asset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@map("wo_checklist_items")
+}
+
+model SLAPolicy {
+  id               String            @id @default(cuid())
+  name             String
+  priority         WorkOrderPriority?
+  assetCategoryId  String?
+  assetCategory    AssetCategory?    @relation(fields: [assetCategoryId], references: [id], onDelete: SetNull)
+  responseTarget   Int               // minutes until first response
+  resolutionTarget Int               // minutes until resolution
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@map("sla_policies")
+}
+
+model SLABreachHistory {
+  id                 String            @id @default(cuid())
+  workOrderId        String
+  workOrder          WorkOrder         @relation("SLABreachHistory", fields: [workOrderId], references: [id], onDelete: Cascade)
+  slaPolicy          String            // Name of the policy that was breached
+  breachType         String            // "RESPONSE" or "RESOLUTION"
+  targetMinutes      Int               // How many minutes target was
+  actualMinutes      Int               // How many minutes actually taken
+  breachedAt         DateTime          @default(now())
+  alertSentAt        DateTime?         // When the breach alert email was sent
+  createdAt          DateTime          @default(now())
+
+  @@index([workOrderId])
+  @@index([breachedAt])
+  @@map("sla_breach_history")
+}
+
+model Attachment {
+  id           String    @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  uploadedById String?
+  uploadedBy   String?
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime? // For presigned URLs
+
+  workOrderId String?
+  workOrder   WorkOrder? @relation("WOAttachments", fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  assetId String?
+  asset   Asset?  @relation("AssetAttachments", fields: [assetId], references: [id], onDelete: Cascade)
+
+  partId String?
+  part   Part?   @relation("PartAttachments", fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([assetId])
+  @@index([partId])
+  @@map("attachments")
+}
+
+model MeterReading {
+  id          String        @id @default(cuid())
+  value       Float
+  readingDate DateTime
+  notes       String?
+  source      ReadingSource @default(MANUAL)
+  status      ReadingStatus @default(VALID)
+  createdAt   DateTime      @default(now())
+
+  meterId String
+  meter   Meter  @relation(fields: [meterId], references: [id])
+
+  assetId      String
+  asset        Asset  @relation(fields: [assetId], references: [id])
+  recordedById String?
+  recordedBy   String?
+
+  events MeterEvent[]
+
+  @@index([meterId, readingDate])
+  @@index([assetId, readingDate])
+  @@index([readingDate])
+  @@map("meter_readings")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String
+  entityId  String?
+  href      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ── Checklist Templates ───────────────────────────────────────────────────────
+
+model ChecklistTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       ChecklistTemplateItem[]
+  pmSchedules MaintenanceScheduleChecklist[] @relation("PMTemplateChecklists")
+
+  locations   Location[]         @relation("ChecklistTemplateLocations")
+  categories  AssetCategory[]    @relation("ChecklistTemplateCategories")
+  assets      Asset[]            @relation("ChecklistTemplateAssets")
+
+  @@map("checklist_templates")
+}
+
+model ChecklistTemplateItem {
+  id          String            @id @default(cuid())
+  label       String
+  type        String            @default("CHECKBOX")
+  isMandatory Boolean           @default(false)
+  options     String[]
+  sortOrder   Int               @default(0)
+  templateId  String
+  template    ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_template_items")
+}
+
+model MaintenanceScheduleChecklist {
+  scheduleId  String
+  schedule    MaintenanceSchedule @relation("PMScheduleChecklists", fields: [scheduleId], references: [id], onDelete: Cascade)
+  templateId  String
+  template    ChecklistTemplate   @relation("PMTemplateChecklists", fields: [templateId], references: [id], onDelete: Cascade)
+  sortOrder   Int                 @default(0)
+
+  @@id([scheduleId, templateId])
+  @@map("maintenance_schedule_checklists")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+

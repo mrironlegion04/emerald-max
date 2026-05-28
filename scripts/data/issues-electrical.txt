@@ -1,0 +1,60 @@
+Power cut problem.
+VCB overload Trip
+Sub station Yard fuse failure.
+Compressor trip fault
+Cooling tower recirculation pump trip fault.
+Cooling tower mill 1 pump trip fault.
+Cooling tower mill 2 pump trip fault.
+Cooling tower TCU line pump trip fault.
+Cooling tower Fan trip fault.
+Mill 1 Emergency stop fault active.
+Mill 1 VFD over load trip fault.
+Mill 1 blender motor trip fault.
+Mill 1 greasing pump trip fault.
+Mill 1 to mill 3 belt conveyor motor trip fault.
+Mill 2 Emergency stop fault active.
+Mill 2 VFD over load trip fault.
+Mill 2 blender motor trip fault.
+Mill 2 greasing pump trip fault.
+Mill 1 to mill 2 sheet out belt conveyor motor trip fault.
+Mill 3 Emergency stop fault active.
+Mill 3 VFD over load trip fault.
+Mill 3 blender motor trip fault.
+Mill 3 greasing pump trip fault.
+Mill 2 dump to mill 3 sheet out belt conveyor motor trip fault.
+Batch off main conveyor motor drive trip.
+Batch off system Emergency stop failure.
+Batch off recirculation pump trip
+Batch off HMI driver trip fault.
+Mill1 roller temperature high due cooling line pump air lock.
+Mill2 roller temperature high due cooling line pump air lock.
+Mill3 roller temperature high due cooling line pump air lock.
+HF unit main motor winding temperature high fault.
+HF unit main motor VFD drive trip fault.
+HF unit feed door open fault.
+HF unit feed door close fault.
+HF unit drop door open fault.
+HF unit drop door close fault.
+RTD temperature high fault in water side dust seal
+RTD temperature high fault in water side bearing
+RTD temperature high fault in drive side dust seal
+RTD temperature high fault in drive side Bearing.
+Dust seal process oil pump fault.
+Lubrication oil transfer pump fault.
+Rubber weighing conveyor drive trip fault.
+Slab feed conveyor forward / reverse failure fault.
+OIL weighing unit oil transfer pump 1 &amp; 1 trip fault.
+Carbon unloading day bin motor VFD drive trip fault.
+Carbon unloading station weighing scale non zero error.
+Rubber loading station weighing scale non-zero error.
+Oil weighing scale unit scale Non-Zero error.
+Carbon loading area – day bin line cleaning problem.
+Carbon loading area – diverter 1,2,3,4,5,6,7 – open feedback fault.
+Carbon loading area – diverter 1,2,3,4,5,6,7 – close feedback fault.
+Carbon loading area – day bin line conveying problem.
+Carbon loading area PLC offline fault in scada
+Carbon loading area – blow tank circulation blower motor trip fault.
+Carbon unloading area recirculation blower trip fault.
+Lift main motor drive trip fault.
+Lift door close limit switch open fault
+Hoist 12 mtr – main motor trip fault.

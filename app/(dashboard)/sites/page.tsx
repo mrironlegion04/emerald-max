@@ -41,35 +41,35 @@ export default async function SitesPage() {
   // Recursive helper to get all sub-location IDs under a location (including itself)
   function getDescendantIds(locId: string, allLocs: typeof locations): string[] {
     const ids = [locId]
-    const children = allLocs.filter(l => l.parentId === locId)
+    const children = allLocs.filter((l: any) => l.parentId === locId)
     for (const child of children) {
       ids.push(...getDescendantIds(child.id, allLocs))
     }
     return ids
   }
 
-  const buildSiteStats = (assets: typeof locations[0]['assets']) => {
-    const allWOs = assets.flatMap(a => a.workOrders)
+  const buildSiteStats = (assets: any) => {
+    const allWOs = assets.flatMap((a: any) => a.workOrders)
     const now    = new Date()
     return {
       assetCount:     assets.length,
-      activeAssets:   assets.filter(a => a.status === 'ACTIVE').length,
-      openWOs:        allWOs.filter(w => ['OPEN','IN_PROGRESS'].includes(w.status)).length,
-      overdueWOs:     allWOs.filter(w => ['OPEN','IN_PROGRESS'].includes(w.status) && w.dueDate && new Date(w.dueDate) < now).length,
-      criticalWOs:    allWOs.filter(w => w.priority === 'CRITICAL' && ['OPEN','IN_PROGRESS'].includes(w.status)).length,
-      completedWOs:   allWOs.filter(w => w.status === 'COMPLETED').length,
-      totalCost:      allWOs.filter(w => w.status === 'COMPLETED').reduce((s,w) => s + (w.laborCost??0) + (w.partsCost??0), 0),
+      activeAssets:   assets.filter((a: any) => a.status === 'ACTIVE').length,
+      openWOs:        allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status)).length,
+      overdueWOs:     allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status) && w.dueDate && new Date(w.dueDate) < now).length,
+      criticalWOs:    allWOs.filter((w: any) => w.priority === 'CRITICAL' && ['OPEN','IN_PROGRESS'].includes(w.status)).length,
+      completedWOs:   allWOs.filter((w: any) => w.status === 'COMPLETED').length,
+      totalCost:      allWOs.filter((w: any) => w.status === 'COMPLETED').reduce((s: number, w: any) => s + (w.laborCost??0) + (w.partsCost??0), 0),
     }
   }
 
-  const parentLocations = locations.filter(loc => !loc.parentId)
+  const parentLocations = locations.filter((loc: any) => !loc.parentId)
 
   const sites = [
-    ...parentLocations.map(loc => {
+    ...parentLocations.map((loc: any) => {
       const descendantIds = getDescendantIds(loc.id, locations)
       const combinedAssets = locations
-        .filter(l => descendantIds.includes(l.id))
-        .flatMap(l => l.assets)
+        .filter((l: any) => descendantIds.includes(l.id))
+        .flatMap((l: any) => l.assets)
 
       return {
         id: loc.id,
@@ -82,11 +82,11 @@ export default async function SitesPage() {
   ]
 
   const totals = {
-    assets:    sites.reduce((s, l) => s + l.assetCount, 0),
-    openWOs:   sites.reduce((s, l) => s + l.openWOs, 0),
-    overdue:   sites.reduce((s, l) => s + l.overdueWOs, 0),
-    critical:  sites.reduce((s, l) => s + l.criticalWOs, 0),
-    cost:      sites.reduce((s, l) => s + l.totalCost, 0),
+    assets:    sites.reduce((s: number, l: any) => s + l.assetCount, 0),
+    openWOs:   sites.reduce((s: number, l: any) => s + l.openWOs, 0),
+    overdue:   sites.reduce((s: number, l: any) => s + l.overdueWOs, 0),
+    critical:  sites.reduce((s: number, l: any) => s + l.criticalWOs, 0),
+    cost:      sites.reduce((s: number, l: any) => s + l.totalCost, 0),
   }
 
   return (
@@ -101,7 +101,7 @@ export default async function SitesPage() {
           { label: 'Overdue',        value: totals.overdue,           color: totals.overdue > 0 ? 'text-red-700' : 'text-green-700' },
           { label: 'Critical open',  value: totals.critical,          color: totals.critical > 0 ? 'text-red-700' : 'text-gray-700' },
           { label: 'Total maint. cost', value: fmtc(totals.cost),    color: 'text-purple-700' },
-        ].map(s => (
+        ].map((s: any) => (
           <div key={s.label} className="stat-card">
             <p className="text-xs text-gray-500">{s.label}</p>
             <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
@@ -112,7 +112,7 @@ export default async function SitesPage() {
 
       {/* Per-site cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-        {sites.map(site => (
+        {sites.map((site: any) => (
           <div key={site.id} className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-start justify-between mb-4">
               <div>

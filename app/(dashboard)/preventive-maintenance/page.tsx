@@ -88,16 +88,16 @@ export default async function PMPage({
     }),
   ])
 
-  const overdueCount  = schedules.filter(s => s.isActive && new Date(s.nextDueDate) < new Date()).length
-  const dueSoonCount  = schedules.filter(s => {
+  const overdueCount  = schedules.filter((s: any) => s.isActive && new Date(s.nextDueDate) < new Date()).length
+  const dueSoonCount  = schedules.filter((s: any) => {
     const d = daysUntil(s.nextDueDate)
     return s.isActive && d >= 0 && d <= 7
   }).length
-  const activeCount   = schedules.filter(s => s.isActive).length
+  const activeCount   = schedules.filter((s: any) => s.isActive).length
 
   const generateableIds = schedules
-    .filter(s => s.isActive && daysUntil(s.nextDueDate) <= 0)
-    .map(s => s.id)
+    .filter((s: any) => s.isActive && daysUntil(s.nextDueDate) <= 0)
+    .map((s: any) => s.id)
   
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
   const queryString = new URLSearchParams(params as Record<string, string>)
@@ -186,7 +186,7 @@ export default async function PMPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {schedules.map(s => {
+                {schedules.map((s: any) => {
                   const days    = daysUntil(s.nextDueDate)
                   const overdue = s.isActive && days < 0
                   const dueSoon = s.isActive && days >= 0 && days <= 7
@@ -231,7 +231,7 @@ export default async function PMPage({
                       </td>
                       <td className="px-4 py-3">
                         {s.checklistTemplates && s.checklistTemplates.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium" title={s.checklistTemplates.map(ct => ct.template.name).join(', ')}>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium" title={s.checklistTemplates.map((ct: any) => ct.template.name).join(', ')}>
                             ✅ {s.checklistTemplates.length} checklist{s.checklistTemplates.length !== 1 ? 's' : ''}
                           </span>
                         ) : (

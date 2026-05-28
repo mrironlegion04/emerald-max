@@ -61,7 +61,7 @@ export default async function RequestsPage({
     prisma.maintenanceRequest.count({ where })
   ])
 
-  const pendingReviewCount = allRequestsForStats.filter(r => r.status === 'PENDING').length
+  const pendingReviewCount = allRequestsForStats.filter((r: any) => r.status === 'PENDING').length
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
   const queryString = new URLSearchParams(params as Record<string, string>)
   queryString.delete('page')
@@ -95,7 +95,7 @@ export default async function RequestsPage({
       ) : (
         <>
           <div className="space-y-3">
-            {requests.map(req => (
+            {requests.map((req: any) => (
               <div key={req.id} className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">

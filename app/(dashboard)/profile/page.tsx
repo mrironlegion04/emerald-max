@@ -57,7 +57,7 @@ export default async function UserProfilePage() {
               <span className="text-2xl font-bold text-blue-600">
                 {dbUser.name
                   .split(' ')
-                  .map(n => n[0])
+                  .map((n: string) => n[0])
                   .join('')
                   .slice(0, 2)
                   .toUpperCase()}
@@ -143,7 +143,7 @@ export default async function UserProfilePage() {
         <h2 className="font-semibold text-gray-900 mb-4 text-sm">Skills & Competencies</h2>
         {dbUser.skills.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {dbUser.skills.map(us => (
+            {dbUser.skills.map((us: any) => (
               <div key={us.id} className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

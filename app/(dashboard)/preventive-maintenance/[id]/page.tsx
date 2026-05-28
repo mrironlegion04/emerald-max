@@ -216,7 +216,7 @@ export default async function PMDetailPage({
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {workOrders.map(wo => (
+                {workOrders.map((wo: any) => (
                   <Link
                     key={wo.id}
                     href={`/work-orders/${wo.id}`}

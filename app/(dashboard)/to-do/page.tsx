@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge from '@/components/Badge'
-import { WorkOrderStatus, SubtaskStatus } from '@prisma/client'
 import {
   CheckCircle2, Clock, AlertCircle, Zap, Check,
   ListChecks, Users, Inbox, ArrowRight, CalendarDays,
@@ -120,15 +119,15 @@ export default async function ToDoPage() {
   })
   if (!userWithTeam) redirect('/login')
 
-  const userTeams = userWithTeam.teamMembers.map((tm) => ({ id: tm.team.id, name: tm.team.name }))
-  const userTeamIds = userTeams.map((t) => t.id)
+  const userTeams = userWithTeam.teamMembers.map((tm: any) => ({ id: tm.team.id, name: tm.team.name }))
+  const userTeamIds = userTeams.map((t: any) => t.id)
 
   const woOrder = [{ priority: 'desc' as const }, { dueDate: 'asc' as const }]
 
   // ── Active statuses ───────────────────────────────────────────────────────
   // NOTE: using typed arrays to ensure proper compatibility with Prisma types
-  const ACTIVE_WO: WorkOrderStatus[] = ['OPEN', 'IN_PROGRESS', 'ON_HOLD']
-  const ACTIVE_ST: SubtaskStatus[]   = ['PENDING', 'IN_PROGRESS']
+  const ACTIVE_WO: any[] = ['OPEN', 'IN_PROGRESS', 'ON_HOLD']
+  const ACTIVE_ST: any[]   = ['PENDING', 'IN_PROGRESS']
 
   // ════════════════════════════════════════════════════════════════════════
   // ① MY WOs — directly assigned to me personally
@@ -190,8 +189,8 @@ export default async function ToDoPage() {
     : []
 
   // Exclude WOs that are already in "My Tasks" (assigned personally to me)
-  const myWOIds = new Set(myWOs.map((w) => w.id))
-  const teamWOs = rawTeamWOs.filter((wo) => !myWOIds.has(wo.id))
+  const myWOIds = new Set(myWOs.map((w: any) => w.id))
+  const teamWOs = rawTeamWOs.filter((wo: any) => !myWOIds.has(wo.id))
 
   // ════════════════════════════════════════════════════════════════════════
   // ④ TEAM SUBTASKS — assignedTeamId is one of my teams
@@ -220,15 +219,15 @@ export default async function ToDoPage() {
     : []
 
   // Exclude subtasks already in "My Subtasks"
-  const mySTIds = new Set(mySubtasks.map((s) => s.id))
-  const teamSubtasks = rawTeamSubtasks.filter((st) => !mySTIds.has(st.id))
+  const mySTIds = new Set(mySubtasks.map((s: any) => s.id))
+  const teamSubtasks = rawTeamSubtasks.filter((st: any) => !mySTIds.has(st.id))
 
   // ════════════════════════════════════════════════════════════════════════
   // ⑤ OPEN POOL — no assignee, not in any of my teams
   // ════════════════════════════════════════════════════════════════════════
   const openPoolWhere = {
     assignedToId: null,
-    status: { in: ['OPEN', 'IN_PROGRESS'] as WorkOrderStatus[] },
+    status: { in: ['OPEN', 'IN_PROGRESS'] as any[] },
     ...(userTeamIds.length > 0
       ? {
           OR: [
@@ -273,10 +272,10 @@ export default async function ToDoPage() {
   })
 
   // ── Group per-team ─────────────────────────────────────────────────────
-  const teamSections = userTeams.map((team) => ({
+  const teamSections = userTeams.map((team: any) => ({
     team,
-    wos:      teamWOs.filter((wo) => wo.team?.id === team.id),
-    subtasks: teamSubtasks.filter((st) => st.assignedTeam?.id === team.id),
+    wos:      teamWOs.filter((wo: any) => wo.team?.id === team.id),
+    subtasks: teamSubtasks.filter((st: any) => st.assignedTeam?.id === team.id),
   }))
 
   // ── Stats ──────────────────────────────────────────────────────────────
@@ -286,7 +285,7 @@ export default async function ToDoPage() {
   const myTotal    = myWOs.length + mySubtasks.length
 
   const teamTotal   = teamWOs.length + teamSubtasks.length
-  const teamOverdue = teamSections.reduce((acc, ts) => {
+  const teamOverdue = teamSections.reduce((acc: number, ts: any) => {
     const wC = categorize(ts.wos)
     const sC = categorize(ts.subtasks)
     return acc + wC.overdue.length + sC.overdue.length
@@ -518,9 +517,9 @@ export default async function ToDoPage() {
       </Section>
 
       {/* ══ SECTION 2: ONE SECTION PER TEAM ══ */}
-      {teamSections.map(({ team, wos, subtasks }) => {
+      {teamSections.map(({ team, wos, subtasks }: any) => {
         const wC = categorize(wos)
-        const sC = categorize(subtasks.map((s) => ({ ...s, dueDate: s.dueDate ?? s.workOrder.dueDate })))
+        const sC = categorize(subtasks.map((s: any) => ({ ...s, dueDate: s.dueDate ?? s.workOrder.dueDate })))
         const secOverdue = wC.overdue.length + sC.overdue.length
         const secTotal   = wos.length + subtasks.length
         return (
@@ -557,7 +556,7 @@ export default async function ToDoPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {openPoolWOs.map((wo) => <WOCard key={wo.id} wo={wo} />)}
+              {openPoolWOs.map((wo: any) => <WOCard key={wo.id} wo={wo} />)}
             </div>
             {hasMoreOpen && (
               <div className="mt-5 flex justify-center">
@@ -583,7 +582,7 @@ export default async function ToDoPage() {
           viewAll={{ href: `/work-orders?status=COMPLETED&assignedToId=${user.userId}`, label: 'View all completed' }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {myCompletedWOs.map((wo) => (
+            {myCompletedWOs.map((wo: any) => (
               <Link key={wo.id} href={`/work-orders/${wo.id}`}
                 className="group flex flex-col rounded-xl border border-green-200 bg-green-50/40 p-4 gap-3 hover:shadow-sm transition-all opacity-80 hover:opacity-100">
                 <div className="flex items-center gap-2">

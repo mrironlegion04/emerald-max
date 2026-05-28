@@ -29,7 +29,7 @@ export default async function DomainsPage({
       include: { _count: { select: { issues: true, categories: true } } },
       skip,
       take: ITEMS_PER_PAGE,
-    }).then(domains => domains.map(d => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true }))),
+    }).then((domains: any) => domains.map((d: any) => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true }))),
     prisma.maintenanceDomain.count(),
   ])
 

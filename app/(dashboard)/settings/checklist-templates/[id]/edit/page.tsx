@@ -54,7 +54,7 @@ export default async function EditChecklistTemplatePage({
         initialData={{
           name:       template.name,
           description:template.description ?? '',
-          items:      template.items.map(i => ({
+          items:      template.items.map((i: any) => ({
             id:          i.id,
             label:       i.label,
             type:        i.type,
@@ -62,9 +62,9 @@ export default async function EditChecklistTemplatePage({
             options:     i.options,
             sortOrder:   i.sortOrder,
           })),
-          assetIds:    template.assets.map(a => a.id),
-          categoryIds: template.categories.map(c => c.id),
-          locationIds: template.locations.map(l => l.id),
+          assetIds:    template.assets.map((a: any) => a.id),
+          categoryIds: template.categories.map((c: any) => c.id),
+          locationIds: template.locations.map((l: any) => l.id),
         }}
         assets={assets}
         locations={locations}

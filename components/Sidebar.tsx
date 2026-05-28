@@ -28,6 +28,7 @@ import {
   AlertCircle,
   CheckSquare,
   Gauge,
+  X,
 } from 'lucide-react'
 
 interface User {
@@ -201,7 +202,7 @@ const roleColors: Record<string, string> = {
   TECHNICIAN: 'bg-green-100 text-green-700',
 }
 
-export default function Sidebar({ user }: { user: User }) {
+export default function Sidebar({ user, onClose, isMobile }: { user: User; onClose?: () => void; isMobile?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -219,16 +220,27 @@ export default function Sidebar({ user }: { user: User }) {
   }
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+    <aside className="w-full h-full bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Settings className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 text-sm leading-tight">EMERALD MAX</p>
+            <p className="text-xs text-gray-400">Maintenance System</p>
+          </div>
         </div>
-        <div>
-          <p className="font-bold text-gray-900 text-sm leading-tight">EMERALD MAX</p>
-          <p className="text-xs text-gray-400">Maintenance System</p>
-        </div>
+        {isMobile && onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-950 rounded-lg transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -236,6 +248,7 @@ export default function Sidebar({ user }: { user: User }) {
         {/* QR Scan Button - Prominent for mobile technicians */}
         <Link
           href="/scan"
+          onClick={onClose}
           className={clsx('sidebar-link justify-center text-blue-600 hover:bg-blue-50 border-2 border-blue-200 mb-3', { active: isActive('/scan') })}
         >
           <QrCode className="w-5 h-5" />
@@ -250,6 +263,7 @@ export default function Sidebar({ user }: { user: User }) {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onClose}
             className={clsx('sidebar-link', { active: isActive(item.href) })}
           >
             {item.icon}
@@ -267,6 +281,7 @@ export default function Sidebar({ user }: { user: User }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={clsx('sidebar-link', { active: isActive(item.href) })}
               >
                 {item.icon}
@@ -286,6 +301,7 @@ export default function Sidebar({ user }: { user: User }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={clsx('sidebar-link', { active: isActive(item.href) })}
               >
                 {item.icon}
@@ -306,6 +322,7 @@ export default function Sidebar({ user }: { user: User }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={onClose}
                   className={clsx('sidebar-link text-sm', { active: isActive(item.href) })}
                 >
                   {item.icon}
@@ -333,6 +350,7 @@ export default function Sidebar({ user }: { user: User }) {
         </div>
         <Link
           href="/profile"
+          onClick={onClose}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
         >
           <Settings className="w-4 h-4" />

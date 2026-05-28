@@ -46,8 +46,8 @@ export default function BottomNav({ user }: Props) {
   return (
     <>
       {/* Mobile bottom navigation (only visible on small screens) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-        <div className="flex items-center justify-around h-20">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] z-40">
+        <div className="flex items-center justify-around h-16">
           {navItems.map(item => {
             const Icon = item.icon
             const active = isActive(item.href)
@@ -55,13 +55,13 @@ export default function BottomNav({ user }: Props) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center w-16 h-16 text-xs font-medium transition-colors ${
+                className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${
                   active
-                    ? 'text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'text-blue-600 bg-blue-50/50 font-semibold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}>
-                <Icon className="w-5 h-5 mb-1" />
-                <span className="text-xs">{item.label}</span>
+                <Icon className="w-5 h-5 mb-0.5" />
+                <span className="text-[10px] tracking-wide">{item.label}</span>
               </Link>
             )
           })}
@@ -70,23 +70,25 @@ export default function BottomNav({ user }: Props) {
           <div className="relative">
             <button
               onClick={() => setMoreOpen(!moreOpen)}
-              className="flex flex-col items-center justify-center w-16 h-16 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              <MoreHorizontal className="w-5 h-5 mb-1" />
-              <span className="text-xs">More</span>
+              className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${
+                moreOpen ? 'text-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-800'
+              }`}>
+              <MoreHorizontal className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] tracking-wide">More</span>
             </button>
 
             {/* Dropdown menu */}
             {moreOpen && (
-              <div className="absolute bottom-full right-0 bg-white border border-gray-200 rounded-lg shadow-lg mb-2 w-48">
+              <div className="absolute bottom-full right-0 bg-white border border-slate-100 rounded-xl shadow-xl mb-3 w-48 overflow-hidden py-1">
                 {moreItems.map(item => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setMoreOpen(false)}
-                    className={`block px-4 py-2 text-sm font-medium border-b border-gray-100 last:border-0 ${
+                    className={`block px-4 py-2.5 text-xs font-medium border-b border-slate-50 last:border-0 ${
                       isActive(item.href)
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-blue-50 text-blue-600 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
                     }`}>
                     {item.label}
                   </Link>
@@ -98,7 +100,7 @@ export default function BottomNav({ user }: Props) {
       </nav>
 
       {/* Padding for bottom nav on mobile */}
-      <div className="md:hidden h-20" />
+      <div className="md:hidden h-16" />
     </>
   )
 }

@@ -6,6 +6,17 @@ import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Bad
 import Link from 'next/link'
 import { Building2, ClipboardList, Clock, CheckCircle, Users } from 'lucide-react'
 
+interface RecentWO {
+  id: string
+  title: string
+  woNumber: string
+  priority: string
+  status: string
+  asset?: { name: string } | null
+  team?: { name: string } | null
+  assignedTo?: { name: string } | null
+}
+
 async function getDashboardStats() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -104,7 +115,7 @@ export default async function DashboardPage() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatCard title="Total assets" value={stats.totalAssets}
           subtitle={`${stats.activeAssets} active`} color="blue"
           icon={<Building2 className="w-5 h-5" />}
@@ -124,7 +135,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Team stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         <StatCard title="Teams" value={stats.totalTeams}
           subtitle="active trade teams" color="purple"
           icon={<Users className="w-5 h-5" />}
@@ -146,7 +157,7 @@ export default async function DashboardPage() {
             <div className="py-12 text-center text-sm text-gray-400">No work orders yet</div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {stats.recentWorkOrders.map(wo => (
+              {stats.recentWorkOrders.map((wo: RecentWO) => (
                 <Link key={wo.id} href={`/work-orders/${wo.id}`}
                   className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0">

@@ -121,30 +121,29 @@ export default function WorkOrdersTable({
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-4 py-3 w-8">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 border-gray-300 rounded text-blue-600"
-                  />
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">WO #</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Title</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Asset</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Assigned to</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Due date</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Priority</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
+      <div className="responsive-table-container">
+        <table className="premium-table">
+          <thead>
+            <tr>
+              <th className="px-4 py-3.5 w-10">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
+              <th>WO #</th>
+              <th>Title</th>
+              <th>Asset</th>
+              <th>Assigned to</th>
+              <th>Due date</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
               {workOrders.map(wo => {
                 const overdue =
                   wo.dueDate &&
@@ -215,7 +214,6 @@ export default function WorkOrdersTable({
             </tbody>
           </table>
         </div>
-      </div>
 
       <BulkWOActions
         selectedIds={selectedIds}

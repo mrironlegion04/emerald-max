@@ -9,6 +9,23 @@ import AssetFilters from '@/components/AssetFilters'
 import ExportButton from '@/components/ExportButton'
 import AssetViewToggle from '@/components/AssetViewToggle'
 
+interface AssetWithRelations {
+  id: string
+  name: string
+  assetCode: string
+  status: string
+  imageUrl?: string | null
+  categoryId?: string | null
+  locationId?: string | null
+  parentId?: string | null
+  isDeleted: boolean
+  createdAt: Date
+  updatedAt: Date
+  category?: { id: string; name: string } | null
+  location?: { id: string; name: string } | null
+  _count?: { workOrders: number; children: number } | null
+}
+
 interface SearchParams {
   search?: string
   status?: string
@@ -155,7 +172,7 @@ export default async function AssetsPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {assets.map(asset => (
+                {assets.map((asset: AssetWithRelations) => (
                   <tr key={asset.id} className={`hover:bg-gray-50 transition-colors ${asset.isDeleted ? 'opacity-50 bg-red-50' : ''}`}>
                     <td className="px-4 py-3">
                       {asset.imageUrl ? (

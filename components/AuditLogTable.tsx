@@ -92,66 +92,115 @@ export default function AuditLogTable() {
         <span className="text-sm text-gray-400 self-center ml-auto">{total} events</span>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Table & Mobile Cards */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-sm text-gray-400">Loading...</div>
+          <div className="py-16 text-center text-sm text-slate-400 font-medium">Loading activity logs...</div>
         ) : logs.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-400">No audit events found</div>
+          <div className="py-16 text-center text-sm text-slate-400 font-medium">No audit events found</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">When</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Action</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Entity</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Record</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">User</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {logs.map(log => {
-                  const changes = formatChanges(log.changes)
-                  const isExpanded = expanded === log.id
-                  return (
-                    <Fragment key={log.id}>
-                      <tr className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(log.createdAt)}</td>
-                        <td className="px-4 py-3">
-                          <Badge label={log.action} variant={ACTION_VARIANTS[log.action] ?? 'gray'} />
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">{log.entity}</td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-gray-900">{log.entityName}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-xs font-medium text-gray-700">{log.userName ?? '—'}</p>
-                          {log.userEmail && <p className="text-xs text-gray-400">{log.userEmail}</p>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {changes && (
-                            <button onClick={() => setExpanded(isExpanded ? null : log.id)}
-                              className="text-xs text-blue-600 hover:underline">
-                              {isExpanded ? 'Hide' : 'Changes'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                      {isExpanded && changes && (
-                        <tr className="bg-blue-50">
-                          <td colSpan={6} className="px-4 py-3">
-                            <pre className="text-xs text-blue-800 font-mono whitespace-pre-wrap">{changes}</pre>
+          <>
+            {/* Mobile/Tablet Card View (md:hidden) */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {logs.map(log => {
+                const changes = formatChanges(log.changes)
+                const isExpanded = expanded === log.id
+                return (
+                  <div key={log.id} className="p-4.5 space-y-3 hover:bg-slate-50/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono text-slate-400 font-medium">{fmt(log.createdAt)}</span>
+                      <Badge label={log.action} variant={ACTION_VARIANTS[log.action] ?? 'gray'} />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{log.entity}</span>
+                        <span className="text-slate-350">•</span>
+                        <span className="text-sm font-semibold text-slate-900">{log.entityName}</span>
+                      </div>
+                      <div className="flex flex-col text-xs text-slate-500">
+                        <span className="font-semibold text-slate-700">{log.userName ?? 'System'}</span>
+                        {log.userEmail && <span className="text-slate-400 font-medium">{log.userEmail}</span>}
+                      </div>
+                    </div>
+                    {changes && (
+                      <div>
+                        <button
+                          onClick={() => setExpanded(isExpanded ? null : log.id)}
+                          className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-semibold active:scale-95 transition-all"
+                        >
+                          {isExpanded ? 'Hide Changes' : 'Show Changes'}
+                          <span>{isExpanded ? '▲' : '▼'}</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/60 overflow-hidden">
+                            <pre className="text-[11px] text-slate-700 font-mono whitespace-pre-wrap leading-relaxed">{changes}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop Table View (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="text-left px-5 py-3.5 font-bold text-slate-500 text-xs uppercase tracking-wider">When</th>
+                    <th className="text-left px-5 py-3.5 font-bold text-slate-500 text-xs uppercase tracking-wider">Action</th>
+                    <th className="text-left px-5 py-3.5 font-bold text-slate-500 text-xs uppercase tracking-wider">Entity</th>
+                    <th className="text-left px-5 py-3.5 font-bold text-slate-500 text-xs uppercase tracking-wider">Record</th>
+                    <th className="text-left px-5 py-3.5 font-bold text-slate-500 text-xs uppercase tracking-wider">User</th>
+                    <th className="px-5 py-3.5"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {logs.map(log => {
+                    const changes = formatChanges(log.changes)
+                    const isExpanded = expanded === log.id
+                    return (
+                      <Fragment key={log.id}>
+                        <tr className="hover:bg-slate-50/40 transition-colors">
+                          <td className="px-5 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">{fmt(log.createdAt)}</td>
+                          <td className="px-5 py-3.5">
+                            <Badge label={log.action} variant={ACTION_VARIANTS[log.action] ?? 'gray'} />
+                          </td>
+                          <td className="px-5 py-3.5 text-xs text-slate-500 font-semibold uppercase tracking-wider">{log.entity}</td>
+                          <td className="px-5 py-3.5">
+                            <p className="text-sm font-semibold text-slate-900">{log.entityName}</p>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <p className="text-xs font-semibold text-slate-700">{log.userName ?? '—'}</p>
+                            {log.userEmail && <p className="text-xs text-slate-400 font-medium">{log.userEmail}</p>}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            {changes && (
+                              <button onClick={() => setExpanded(isExpanded ? null : log.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer">
+                                {isExpanded ? 'Hide details' : 'View changes'}
+                              </button>
+                            )}
                           </td>
                         </tr>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {isExpanded && changes && (
+                          <tr className="bg-slate-50/50">
+                            <td colSpan={6} className="px-5 py-4.5 border-t border-b border-dashed border-slate-200">
+                              <div className="p-4 bg-white rounded-xl border border-slate-200/60 shadow-3xs max-w-3xl">
+                                <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Audit Log Diffs</h4>
+                                <pre className="text-xs text-slate-650 font-mono whitespace-pre-wrap leading-relaxed">{changes}</pre>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

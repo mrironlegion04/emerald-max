@@ -87,9 +87,9 @@ export default function GlobalMetersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={search}
@@ -98,97 +98,162 @@ export default function GlobalMetersPage() {
             className="input-field text-sm pl-9"
           />
         </div>
-        <select
-          value={filterType}
-          onChange={e => setFilterType(e.target.value)}
-          className="input-field text-sm max-w-[160px]"
-        >
-          <option value="">All types</option>
-          {types.map(t => (
-            <option key={t} value={t}>{typeLabels[t] || t}</option>
-          ))}
-        </select>
-        <span className="text-xs text-gray-400">
-          {filtered.length} of {meters.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <select
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            className="input-field text-sm max-w-[160px] cursor-pointer pointer-events-auto flex-1 font-semibold text-slate-700 bg-white"
+          >
+            <option value="">All types</option>
+            {types.map(t => (
+              <option key={t} value={t}>{typeLabels[t] || t}</option>
+            ))}
+          </select>
+          <span className="text-xs text-slate-400 font-semibold bg-slate-50 border border-slate-200 px-2.5 py-2.5 rounded-xl whitespace-nowrap shadow-3xs">
+            {filtered.length} of {meters.length}
+          </span>
+        </div>
       </div>
 
       {error && (
-        <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
+        <div className="text-xs text-red-650 bg-red-50/50 border border-red-150 rounded-xl px-4 py-3 mb-5 font-semibold">
           {error}
         </div>
       )}
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">Loading meters...</div>
+        <div className="text-center py-16 text-slate-400 text-sm font-medium">Loading meters...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl">
-          <Gauge className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">
+        <div className="text-center py-16 border border-slate-200 border-dashed rounded-2xl bg-slate-50/20">
+          <Gauge className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p className="text-sm text-slate-400 font-semibold">
             {meters.length === 0 ? 'No meters configured yet' : 'No meters match your filters'}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Meter</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asset</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Value</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Readings</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last reading</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map(meter => (
-                <tr key={meter.id} className="hover:bg-blue-50/50 transition-colors">
-                  <td className="px-5 py-3">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
+          {/* Mobile/Tablet Card Layout */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {filtered.map(meter => (
+              <div key={meter.id} className="p-4.5 space-y-3 hover:bg-slate-50/25 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 pr-2">
                     <Link
                       href={`/assets/${meter.assetId}/meters/${meter.id}`}
-                      className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                      className="font-bold text-slate-900 text-sm hover:text-blue-600 truncate flex items-center gap-1.5"
                     >
                       {meter.name}
                       {meter.isPrimary && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-150 shadow-3xs">
                           Primary
                         </span>
                       )}
                     </Link>
-                  </td>
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/assets/${meter.assetId}`}
-                      className="text-sm text-gray-700 hover:text-blue-600"
-                    >
-                      {meter.asset?.name ?? '—'}
-                    </Link>
-                    <p className="text-xs text-gray-400 font-mono">{meter.asset?.assetCode}</p>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    <div className="flex items-center gap-1 mt-1 text-xs text-slate-600 font-semibold">
+                      <span>Asset:</span>
+                      <Link
+                        href={`/assets/${meter.assetId}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline truncate"
+                      >
+                        {meter.asset?.name ?? '—'}
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                       typeColors[meter.meterType] || typeColors.CUSTOM
                     }`}>
                       {typeLabels[meter.meterType] || meter.meterType}
                     </span>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {meter.lastValue?.toLocaleString() ?? '—'}
-                    </p>
-                    <p className="text-xs text-gray-400">{meter.unit}</p>
-                  </td>
-                  <td className="px-5 py-3 text-right text-sm text-gray-500">
-                    {meter._count.readings}
-                  </td>
-                  <td className="px-5 py-3 text-right text-xs text-gray-400">
-                    {formatDate(meter.lastReadingAt)}
-                  </td>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 py-1.5 px-3 bg-slate-50/60 border border-slate-100 rounded-xl text-center">
+                  <div>
+                    <span className="text-slate-400 font-bold block uppercase tracking-wider text-[8px]">Value</span>
+                    <span className="text-slate-800 text-xs font-bold leading-tight block mt-0.5">
+                      {meter.lastValue?.toLocaleString() ?? '—'} <span className="text-[10px] text-slate-400 font-normal">{meter.unit}</span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block uppercase tracking-wider text-[8px]">Readings</span>
+                    <span className="text-slate-800 text-xs font-mono font-bold leading-tight block mt-0.5">
+                      {meter._count.readings}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block uppercase tracking-wider text-[8px]">Last Raw</span>
+                    <span className="text-slate-600 text-[10px] font-semibold tracking-tight leading-tight block mt-1 hover:text-slate-900 truncate">
+                      {formatDate(meter.lastReadingAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Responsive Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-150 bg-slate-50/50">
+                  <th className="text-left px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Meter</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Asset</th>
+                  <th className="text-left px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                  <th className="text-right px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Current Value</th>
+                  <th className="text-right px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Readings</th>
+                  <th className="text-right px-5 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Timestamp</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map(meter => (
+                  <tr key={meter.id} className="hover:bg-slate-50/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/assets/${meter.assetId}/meters/${meter.id}`}
+                        className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-850"
+                      >
+                        {meter.name}
+                        {meter.isPrimary && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 border border-amber-150 text-amber-700 shadow-3xs uppercase tracking-wider">
+                            Primary
+                          </span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/assets/${meter.assetId}`}
+                        className="text-sm font-semibold text-slate-700 hover:text-blue-600"
+                      >
+                        {meter.asset?.name ?? '—'}
+                      </Link>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">{meter.asset?.assetCode}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
+                        typeColors[meter.meterType] || typeColors.CUSTOM
+                      }`}>
+                        {typeLabels[meter.meterType] || meter.meterType}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <p className="text-sm font-bold text-slate-900 leading-none">
+                        {meter.lastValue?.toLocaleString() ?? '—'}
+                      </p>
+                      <p className="text-xs text-slate-400 font-semibold mt-1">{meter.unit}</p>
+                    </td>
+                    <td className="px-5 py-4 text-right text-sm font-mono font-bold text-slate-600">
+                      {meter._count.readings}
+                    </td>
+                    <td className="px-5 py-4 text-right text-xs font-semibold text-slate-400">
+                      {formatDate(meter.lastReadingAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

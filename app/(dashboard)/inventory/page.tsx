@@ -110,43 +110,90 @@ export default async function InventoryPage({
           }
         />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
+          {/* Mobile/Tablet Card View */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {parts.map((part: any) => {
+              return (
+                <div key={part.id} className={`p-4.5 space-y-3.5 hover:bg-slate-50/20 transition-colors ${part.isDeleted ? 'opacity-60 bg-red-50/30' : ''}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-slate-950 text-sm leading-snug">{part.name}</p>
+                      {part.description && (
+                        <p className="text-xs text-slate-500 font-medium mt-1 truncate max-w-sm">{part.description}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <span className="font-mono text-[11px] font-bold bg-slate-100 border border-slate-200/60 text-slate-650 px-2.5 py-0.5 rounded-lg whitespace-nowrap">
+                        Ref: {part.partNumber}
+                      </span>
+                      {(part as any).isDeleted && <Badge label="Deleted" variant="red" />}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-dashed border-slate-100">
+                    <div className="text-xs font-semibold text-slate-500">
+                      Unit Cost: <span className="font-bold text-slate-800 font-mono text-sm">{fmtCurrency(part.unitCost)}</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <Link
+                        href={`/inventory/${part.id}`}
+                        className="text-xs text-slate-500 hover:text-blue-600 font-bold active:scale-95 transition-all"
+                      >
+                        View Stock
+                      </Link>
+                      {canEdit && !(part as any).isDeleted && (
+                        <Link
+                          href={`/inventory/${part.id}/edit`}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-bold active:scale-95 transition-all"
+                        >
+                          Configure
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Part</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Part #</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Unit cost</th>
-                  <th className="px-4 py-3"></th>
+                <tr className="border-b border-slate-150 bg-slate-50/50">
+                  <th className="text-left px-5 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Part details</th>
+                  <th className="text-left px-5 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Reference Code #</th>
+                  <th className="text-left px-5 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Estimated Unit Cost</th>
+                  <th className="px-5 py-4"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-100">
                 {parts.map((part: any) => {
                   return (
-                    <tr key={part.id} className={`hover:bg-gray-50 transition-colors ${part.isDeleted ? 'opacity-50 bg-red-50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{part.name}</p>
+                    <tr key={part.id} className={`hover:bg-slate-50/40 transition-colors ${part.isDeleted ? 'opacity-55 bg-rose-50/30' : ''}`}>
+                      <td className="px-5 py-4">
+                        <p className="font-bold text-slate-900 block leading-tight">{part.name}</p>
                         {part.description && (
-                          <p className="text-xs text-gray-400 truncate max-w-xs">{part.description}</p>
+                          <p className="text-xs text-slate-400 font-medium mt-1 truncate max-w-sm">{part.description}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          <span className="font-mono text-xs font-bold bg-slate-50 border border-slate-205 text-slate-650 px-2.5 py-1 rounded-lg shadow-3xs">
                             {part.partNumber}
                           </span>
                           {(part as any).isDeleted && <Badge label="Deleted" variant="red" />}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-sm">{fmtCurrency(part.unitCost)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 justify-end">
+                      <td className="px-5 py-4 font-mono font-bold text-slate-700">{fmtCurrency(part.unitCost)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3 justify-end">
                           <Link href={`/inventory/${part.id}`}
-                            className="text-xs text-blue-600 hover:underline font-medium">View</Link>
+                            className="text-xs text-blue-600 hover:text-blue-805 font-bold">View</Link>
                           {canEdit && !(part as any).isDeleted && (
                             <Link href={`/inventory/${part.id}/edit`}
-                              className="text-xs text-gray-500 hover:underline font-medium">Edit</Link>
+                              className="text-xs text-slate-500 hover:text-slate-805 font-bold">Edit</Link>
                           )}
                         </div>
                       </td>
@@ -159,28 +206,28 @@ export default async function InventoryPage({
 
           {/* Pagination controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between p-5 border-t border-gray-100">
-              <div className="text-sm text-gray-600">
-                Page <span className="font-semibold">{page}</span> of <span className="font-semibold">{totalPages}</span>
+            <div className="flex items-center justify-between p-5 border-t border-slate-100 bg-slate-50/25">
+              <div className="text-xs text-slate-500 font-medium">
+                Page <span className="font-bold text-slate-800">{page}</span> of <span className="font-bold text-slate-800">{totalPages}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page=1'} className="btn-secondary text-sm">
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page=1'} className="btn-secondary !text-xs py-1.5 px-3">
                     ← First
                   </Link>
                 )}
                 {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page - 1}`} className="btn-secondary text-sm">
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page - 1}`} className="btn-secondary !text-xs py-1.5 px-3">
                     ← Previous
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page + 1}`} className="btn-secondary text-sm">
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page + 1}`} className="btn-secondary !text-xs py-1.5 px-3">
                     Next →
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${totalPages}`} className="btn-secondary text-sm">
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${totalPages}`} className="btn-secondary !text-xs py-1.5 px-3">
                     Last →
                   </Link>
                 )}

@@ -102,23 +102,23 @@ export default function CalendarView() {
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />Critical</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
         {/* Calendar grid */}
-        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-gray-100">
+          <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/20">
             {DAYS.map(d => (
-              <div key={d} className="py-2.5 text-center text-xs font-medium text-gray-400">{d}</div>
+              <div key={d} className="py-2.5 text-center text-xs font-bold text-slate-400 select-none uppercase tracking-wider">{d}</div>
             ))}
           </div>
 
           {/* Cells */}
           {loading ? (
-            <div className="py-20 text-center text-sm text-gray-400">Loading...</div>
+            <div className="py-24 text-center text-sm font-semibold text-slate-400">Fetching scheduled events...</div>
           ) : (
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 border-l border-t border-transparent select-none">
               {grid.map((day, idx) => {
-                if (!day) return <div key={`empty-${idx}`} className="min-h-24 border-b border-r border-gray-50 bg-gray-50/30" />
+                if (!day) return <div key={`empty-${idx}`} className="min-h-12 md:min-h-24 bg-slate-50/20 border-slate-100" />
                 const dk    = dateKey(day)
                 const dayEvts = eventsForDay(day)
                 const isToday = dk === todayKey
@@ -126,21 +126,29 @@ export default function CalendarView() {
                 return (
                   <div key={dk}
                     onClick={() => setSelected(isSel ? null : dk)}
-                    className={`min-h-24 p-1.5 border-b border-r border-gray-100 cursor-pointer transition-colors ${
-                      isSel ? 'bg-blue-50' : isToday ? 'bg-amber-50/60' : 'hover:bg-gray-50'
+                    className={`min-h-13 md:min-h-24 p-1 md:p-2 cursor-pointer transition-all hover:bg-slate-50/50 ${
+                      isSel ? 'bg-blue-50/60 border-2 border-blue-500/80 shadow-3xs' : isToday ? 'bg-amber-50/40' : ''
                     }`}>
-                    <div className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
-                      isToday ? 'bg-blue-600 text-white' : 'text-gray-700'
-                    }`}>{day}</div>
-                    <div className="space-y-0.5">
+                    <div className="flex md:flex-row flex-col items-center justify-between md:mb-1.5 gap-0.5">
+                      <div className={`text-xs font-bold w-5.5 h-5.5 flex items-center justify-center rounded-full ${
+                        isToday ? 'bg-blue-600 text-white shadow-3xs' : 'text-slate-700'
+                      }`}>{day}</div>
+                      {/* Compact dot layout for mobile viewports */}
+                      {dayEvts.length > 0 && (
+                        <span className="flex md:hidden items-center justify-center w-1.5 h-1.5 rounded-full bg-blue-505 bg-blue-600 shadow-3xs animate-pulse-subtle" />
+                      )}
+                    </div>
+                    
+                    {/* Event details - only on larger screens */}
+                    <div className="hidden md:block space-y-1">
                       {dayEvts.slice(0,3).map(ev => (
-                        <div key={ev.id} className="flex items-center gap-1 overflow-hidden">
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityDot[ev.type === 'pm' ? 'SCHEDULED' : ev.priority] ?? 'bg-gray-400'}`} />
-                          <span className="text-xs text-gray-600 truncate leading-tight">{ev.title}</span>
+                        <div key={ev.id} className="flex items-center gap-1.5 p-1 rounded hover:bg-white/80 transition-all border border-transparent hover:border-slate-150">
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityDot[ev.type === 'pm' ? 'SCHEDULED' : ev.priority] ?? 'bg-slate-400'}`} />
+                          <span className="text-[10px] font-bold text-slate-755 truncate leading-tight">{ev.title}</span>
                         </div>
                       ))}
                       {dayEvts.length > 3 && (
-                        <span className="text-xs text-gray-400">+{dayEvts.length - 3} more</span>
+                        <div className="text-[9px] font-bold text-slate-420 pl-3">+{dayEvts.length - 3} others</div>
                       )}
                     </div>
                   </div>
@@ -151,29 +159,31 @@ export default function CalendarView() {
         </div>
 
         {/* Side panel - selected day events */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 p-4.5 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] flex flex-col">
           {!selected ? (
-            <div className="text-center py-12">
-              <p className="text-sm text-gray-400">Click a day to see its events</p>
+            <div className="text-center py-12 flex-1 flex flex-col justify-center items-center">
+              <span className="w-10 h-10 rounded-full bg-slate-50 border border-slate-150 flex items-center justify-center text-slate-400 font-medium text-lg mb-2">📅</span>
+              <p className="text-xs font-bold text-slate-420 uppercase tracking-wider">No Day Selected</p>
+              <p className="text-[11px] text-slate-400 font-medium max-w-[180px] mt-1">Tap any calendar date to view scheduled maintenance and work orders.</p>
             </div>
           ) : (
             <>
-              <h3 className="font-semibold text-gray-900 text-sm mb-3">
-                {new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric'}).format(new Date(selected + 'T12:00:00'))}
+              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3 pb-2 border-b border-dashed border-slate-150">
+                {new Intl.DateTimeFormat('en-US',{weekday:'long',month:'short',day:'numeric'}).format(new Date(selected + 'T12:00:00'))}
               </h3>
               {selectedEvents.length === 0 ? (
-                <p className="text-sm text-gray-400">No events this day</p>
+                <div className="py-10 text-center text-xs font-medium text-slate-400">No events scheduled for this date.</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5 max-h-[420px] overflow-y-auto">
                   {selectedEvents.map(ev => (
                     <Link key={ev.id} href={ev.href}
-                      className={`block p-3 rounded-lg border text-xs transition-colors hover:opacity-80 ${statusColor[ev.status] ?? 'bg-gray-50 border-gray-200 text-gray-700'}`}>
-                      <p className="font-semibold leading-tight">{ev.title}</p>
-                      {ev.subtitle && <p className="mt-0.5 opacity-70">{ev.subtitle}</p>}
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${priorityDot[ev.priority] ?? 'bg-gray-400'}`} />
-                        <span>{ev.type === 'pm' ? 'PM due' : ev.status.replace('_',' ')}</span>
-                        {ev.type === 'wo' && <span>· {ev.priority}</span>}
+                      className={`block p-3 rounded-xl border text-xs transition-all hover:translate-y-[-1px] shadow-3xs active:scale-98 ${statusColor[ev.status] ?? 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                      <p className="font-bold leading-snug">{ev.title}</p>
+                      {ev.subtitle && <p className="mt-0.5 text-[10px] opacity-80 font-medium truncate">{ev.subtitle}</p>}
+                      <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-black/5">
+                        <span className={`w-2 h-2 rounded-full border border-black/10 shadow-3xs ${priorityDot[ev.priority] ?? 'bg-slate-400'}`} />
+                        <span className="text-[9px] font-bold uppercase tracking-wider">{ev.type === 'pm' ? 'PM task due' : ev.status.replace('_',' ')}</span>
+                        {ev.type === 'wo' && <span className="text-[9px] text-black/40 font-bold ml-auto">{ev.priority}</span>}
                       </div>
                     </Link>
                   ))}

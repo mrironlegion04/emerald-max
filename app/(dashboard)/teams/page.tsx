@@ -273,47 +273,47 @@ export default function TeamsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Teams List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className={`lg:col-span-2 ${selectedTeam && !showNewTeamForm && !editingTeam ? 'hidden lg:block' : 'block'}`}>
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
             {teams.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <p>No teams yet. Create your first team to get started.</p>
+              <div className="p-12 text-center text-slate-400 font-medium">
+                <p>No teams configured yet. Create your first operational team to start mapping assignments.</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-slate-100">
                 {teams.map(team => (
                   <div
                     key={team.id}
                     onClick={() => setSelectedTeam(team)}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedTeam?.id === team.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'
-                    } ${team.isDeleted ? 'opacity-50 bg-red-50' : ''}`}
+                    className={`p-4.5 cursor-pointer transition-colors ${
+                      selectedTeam?.id === team.id ? 'bg-blue-50/50 border-l-4 border-l-blue-600' : 'hover:bg-slate-50/30'
+                    } ${team.isDeleted ? 'opacity-50 bg-red-50/40' : ''}`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{team.name}</h3>
-                        <p className="text-sm text-gray-600">{team.trade}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-slate-900 text-sm truncate leading-snug">{team.name}</h3>
+                        <p className="text-xs text-slate-500 font-semibold mt-0.5">{team.trade}</p>
                         {team.description && (
-                          <p className="text-xs text-gray-500 mt-1">{team.description}</p>
+                          <p className="text-xs text-slate-400 mt-1 truncate max-w-xl">{team.description}</p>
                         )}
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           {team.isDeleted && (
                             <Badge label="Deleted" variant="red" />
                           )}
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          <span className="text-[11px] font-bold bg-slate-100 text-slate-650 px-2 py-0.5 rounded-md">
                             {team.members.length} member{team.members.length !== 1 ? 's' : ''}
                           </span>
-                          <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">
+                          <span className="text-[11px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">
                             {team.workOrders?.length || 0} WO{team.workOrders?.length !== 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
                       {selectedTeam?.id === team.id && (
-                        <div className="flex gap-2 ml-4">
+                        <div className="flex gap-2.5 ml-4 flex-shrink-0">
                           {!team.isDeleted && (
                             <button
                               onClick={(e) => { e.stopPropagation(); startEdit(team); }}
-                              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                              className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 border border-blue-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
                             >
                               Edit
                             </button>
@@ -321,14 +321,14 @@ export default function TeamsPage() {
                           {!team.isDeleted ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleArchiveTeam(team.id); }}
-                              className="text-red-600 hover:text-red-700 font-medium text-sm"
+                              className="text-red-650 hover:text-red-800 font-bold text-xs bg-red-50 border border-red-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
                             >
                               Archive
                             </button>
                           ) : (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRestoreTeam(team.id); }}
-                              className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                              className="text-emerald-700 hover:text-emerald-900 font-bold text-xs bg-emerald-50 border border-emerald-150 px-2.5 py-1 rounded-lg shadow-3xs hover:shadow-2xs transition-all active:scale-95"
                             >
                               Restore
                             </button>
@@ -344,30 +344,30 @@ export default function TeamsPage() {
         </div>
 
         {/* Team Details */}
-        <div>
+        <div className={`lg:col-span-1 ${selectedTeam || showNewTeamForm || editingTeam ? 'block' : 'hidden lg:block'}`}>
           {showNewTeamForm || editingTeam ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-              <h3 className="font-semibold text-gray-900">
-                {editingTeam ? 'Edit team' : 'New team'}
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] p-5 space-y-4">
+              <h3 className="font-bold text-slate-900 text-sm">
+                {editingTeam ? 'Edit team configuration' : 'Configure new team'}
               </h3>
-              <form onSubmit={editingTeam ? handleUpdateTeam : handleCreateTeam} className="space-y-3">
+              <form onSubmit={editingTeam ? handleUpdateTeam : handleCreateTeam} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Team name *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Team name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="input-field text-sm"
+                    className="input-field"
                     placeholder="e.g. Electrical Team"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Trade *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Trade / Specialization *</label>
                   <select
                     value={formData.trade}
                     onChange={e => setFormData({ ...formData, trade: e.target.value })}
-                    className="input-field text-sm"
+                    className="input-field cursor-pointer pointer-events-auto"
                     required
                   >
                     <option value="">— Select trade —</option>
@@ -375,7 +375,7 @@ export default function TeamsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description (Optional)</label>
                   <textarea
                     value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -399,68 +399,79 @@ export default function TeamsPage() {
               </form>
             </div>
           ) : selectedTeam ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">
+              {/* Back to list button for mobile viewports */}
+              <div className="p-3 border-b border-slate-100 lg:hidden bg-slate-50/50 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTeam(null)}
+                  className="inline-flex items-center gap-2 text-xs font-bold text-slate-650 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 bg-white shadow-3xs active:scale-95 transition-all cursor-pointer"
+                >
+                  ← Back to all teams
+                </button>
+              </div>
+
               {/* Deleted banner */}
               {selectedTeam.isDeleted && (
-                <div className="bg-red-50 border-b border-red-200 p-4 flex items-center justify-between">
+                <div className="bg-rose-50 border-b border-rose-150 p-4.5 space-y-3.5">
                   <div>
-                    <p className="text-sm font-semibold text-red-700">This team has been archived</p>
-                    <p className="text-xs text-red-600 mt-0.5">
+                    <p className="text-xs font-bold text-rose-800 uppercase tracking-wider">Archived Team</p>
+                    <p className="text-xs text-rose-700 font-medium leading-relaxed mt-1">
                       Archived on {selectedTeam.deletedAt ? new Date(selectedTeam.deletedAt).toLocaleDateString() : 'Unknown date'}
-                      — it is hidden from active views but all work orders and history are preserved.
+                      . Historic records and assignments are kept, but the team will not show in active dispatcher selections.
                     </p>
                   </div>
                   <button
                     onClick={() => handleRestoreTeam(selectedTeam.id)}
                     disabled={saving}
-                    className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                    className="btn-success !text-xs py-1.5 px-3.5"
                   >
-                    {saving ? 'Restoring...' : 'Restore team'}
+                    {saving ? 'Restoring...' : 'Restore Team'}
                   </button>
                 </div>
               )}
 
               {/* Team Header */}
-              <div className="p-5 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">{selectedTeam.name}</h3>
-                <p className="text-xs text-gray-600 mt-1">{selectedTeam.trade}</p>
+              <div className="p-5 border-b border-slate-100">
+                <h3 className="font-bold text-slate-900 text-sm leading-tight">{selectedTeam.name}</h3>
+                <p className="text-xs text-slate-500 font-semibold mt-1">{selectedTeam.trade}</p>
               </div>
 
               {/* Team Stats */}
-              <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 border-b border-gray-100">
-                <div>
-                  <p className="text-2xl font-semibold text-gray-900">{memberCount}</p>
-                  <p className="text-xs text-gray-600">Member{memberCount !== 1 ? 's' : ''}</p>
+              <div className="grid grid-cols-2 gap-3.5 p-4.5 bg-slate-50/50 border-b border-slate-100">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-3xs">
+                  <p className="text-xl font-bold text-slate-900 leading-none">{memberCount}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">Member{memberCount !== 1 ? 's' : ''}</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-semibold text-blue-600">{woCount}</p>
-                  <p className="text-xs text-gray-600">Work order{woCount !== 1 ? 's' : ''}</p>
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200/60 shadow-3xs">
+                  <p className="text-xl font-bold text-blue-600 leading-none">{woCount}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">Work order{woCount !== 1 ? 's' : ''}</p>
                 </div>
               </div>
 
               {/* Members List */}
-              <div className="p-5 space-y-3">
+              <div className="p-5 space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm text-gray-900">Members</h4>
+                  <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider">Members</h4>
                   {!selectedTeam.isDeleted && !showMemberForm && (
                     <button
                       onClick={() => { setShowMemberForm(true); setSelectedUserId(''); }}
-                      className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-100/10 hover:text-blue-800 text-blue-600 font-bold active:scale-95 transition-all"
                     >
-                      + Add
+                      + Add Member
                     </button>
                   )}
                 </div>
 
                 {!selectedTeam.isDeleted && showMemberForm && (
-                  <form onSubmit={handleAddMember} className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                  <form onSubmit={handleAddMember} className="space-y-2 p-3.5 bg-slate-50 border border-slate-150 rounded-xl">
                     <select
                       value={selectedUserId}
                       onChange={e => setSelectedUserId(e.target.value)}
-                      className="input-field text-xs"
+                      className="input-field text-xs cursor-pointer pointer-events-auto"
                       required
                     >
-                      <option value="">— Select user —</option>
+                      <option value="">— Select operator —</option>
                       {availableUsers.map(u => (
                         <option key={u.id} value={u.id}>
                           {u.name} ({u.role})
@@ -468,13 +479,13 @@ export default function TeamsPage() {
                       ))}
                     </select>
                     <div className="flex gap-2">
-                      <button type="submit" disabled={saving || !selectedUserId} className="btn-primary text-xs flex-1">
+                      <button type="submit" disabled={saving || !selectedUserId} className="btn-primary !text-xs py-1.5 flex-1 shadow-3xs">
                         Add
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowMemberForm(false)}
-                        className="btn-secondary text-xs flex-1"
+                        className="btn-secondary !text-xs py-1.5 flex-1 shadow-3xs"
                       >
                         Cancel
                       </button>
@@ -482,23 +493,24 @@ export default function TeamsPage() {
                   </form>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-72 overflow-y-auto">
                   {selectedTeam.members.length === 0 ? (
-                    <p className="text-xs text-gray-500">No members yet</p>
+                    <p className="text-xs text-slate-400 font-medium py-2">This team has no active members.</p>
                   ) : (
                     selectedTeam.members.map(member => (
                       <div
                         key={member.id}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3.5 bg-slate-50/70 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors"
                       >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{member.user.name}</p>
-                          <p className="text-xs text-gray-600">{member.user.email}</p>
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-slate-900 truncate">{member.user.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium truncate">{member.user.email}</p>
                         </div>
                         {!selectedTeam.isDeleted && (
                           <button
                             onClick={() => handleRemoveMember(member.user.id)}
-                            className="text-red-600 hover:text-red-700 text-xs"
+                            className="text-slate-400 hover:text-red-650 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 active:scale-95 transition-all flex-shrink-0 cursor-pointer text-xs"
+                            title="Remove Member"
                           >
                             ✕
                           </button>
@@ -510,8 +522,9 @@ export default function TeamsPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-8 text-center">
-              <p className="text-sm text-gray-500">Select a team to view details</p>
+            <div className="bg-slate-50/50 rounded-2xl border border-slate-250 border-dashed p-10 text-center select-none">
+              <p className="text-sm font-semibold text-slate-500">No team selected</p>
+              <p className="text-xs text-slate-400 mt-1">Select a team from the list to view active members, trade focus, and assigned work orders.</p>
             </div>
           )}
         </div>

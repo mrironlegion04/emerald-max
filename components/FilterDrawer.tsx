@@ -36,7 +36,7 @@ export default function FilterDrawer({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div id="filter-drawer-portal" className="fixed inset-0 z-50 flex justify-end">
+        <div id="filter-drawer-portal" className="fixed inset-0 z-[100] flex justify-end">
           {/* Backdrop Overlay */}
           <motion.div
             id="filter-drawer-overlay"
@@ -90,7 +90,7 @@ export default function FilterDrawer({
             {/* Sticky Actions Footer */}
             <div
               id="filter-drawer-footer"
-              className="p-4 border-t border-slate-150 bg-slate-50/80 flex items-center justify-between gap-3"
+              className="p-4 pb-8 sm:pb-4 border-t border-slate-150 bg-slate-50/80 flex items-center justify-between gap-3"
             >
               {onClear ? (
                 <button

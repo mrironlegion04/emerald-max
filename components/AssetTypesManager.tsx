@@ -128,11 +128,9 @@ export default function AssetTypesManager({ initialTypes }: Props) {
             <span>Add Type</span>
           </button>
         </div>
-      </div>
-
-      {/* Form Slide-over Drawer */}
+      </div>      {/* Form Slide-over Drawer */}
       {showForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex justify-end animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex justify-end animate-in fade-in duration-200">
           {/* Backdrop Click */}
           <div className="absolute inset-0" onClick={cancel} />
           
@@ -158,7 +156,7 @@ export default function AssetTypesManager({ initialTypes }: Props) {
               {/* Scrollable Body */}
               <div className="p-5 overflow-y-auto flex-1 space-y-4">
                 {error && (
-                  <div className="flex gap-2.5 p-3.5 bg-red-50/70 px-4 rounded-xl border border-red-100 text-sm text-red-700">
+                  <div className="flex gap-2.5 p-3.5 bg-red-55/7 px-4 rounded-xl border border-red-100 text-sm text-red-700">
                     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>{error}</span>
                   </div>
@@ -184,7 +182,7 @@ export default function AssetTypesManager({ initialTypes }: Props) {
               </div>
 
               {/* Footer */}
-              <div className="p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
+              <div className="p-5 pb-8 sm:pb-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
                 <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-sm text-xs">
                   Cancel
                 </button>

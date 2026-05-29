@@ -311,7 +311,7 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: Prop
 
           {/* Form Slide-over Drawer */}
           {showForm && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex justify-end animate-in fade-in duration-200">
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex justify-end animate-in fade-in duration-200">
               {/* Backdrop Click */}
               <div className="absolute inset-0" onClick={cancel} />
               
@@ -365,7 +365,7 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: Prop
                   </div>
 
                   {/* Footer */}
-                  <div className="p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
+                  <div className="p-5 pb-8 sm:pb-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
                     <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-sm text-xs">
                       Cancel
                     </button>

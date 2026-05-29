@@ -15,7 +15,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 border-b border-slate-205/30 pb-4 select-none"
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7 border-b border-slate-200/50 pb-4 select-none"
     >
       <div className="min-w-0">
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl font-sans leading-tight">

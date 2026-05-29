@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import {
   Plus, Pencil, Trash2, AlertCircle, X, Check,
-  FolderTree, ChevronRight, ChevronDown, Search, Layers,
+  FolderTree, ChevronRight, ChevronDown, Search, Layers, LayoutGrid
 } from 'lucide-react'
 
 interface Category {
@@ -235,285 +235,303 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header row */}
-      <div className="flex items-center gap-3">
+    <div className="space-y-6">
+      {/* Search and Title Row */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 group">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search categories…"
+            placeholder="Search classification hierarchies by name or full path…"
             className="input-field pl-10 text-sm"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors" />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-sm text-gray-500 flex-shrink-0">
-          <FolderTree className="w-4 h-4" />
-          <span>{categories.length} total</span>
-        </div>
+        <div className="flex items-center justify-between sm:justify-start gap-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200/50 flex-shrink-0">
+            <FolderTree className="w-3.5 h-3.5 text-slate-400" />
+            <span>{categories.length} total categories</span>
+          </div>
 
-        <button onClick={() => openAdd()} className="btn-primary flex items-center gap-2 flex-shrink-0">
-          <Plus className="w-4 h-4" />
-          Add Category
-        </button>
+          <button onClick={() => openAdd()} className="btn-primary flex items-center gap-2 flex-shrink-0 w-full sm:w-auto shadow-sm">
+            <Plus className="w-4 h-4" />
+            <span>Add Category</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search hint */}
       {trimmedSearch && (
-        <p className="text-xs text-gray-400">
-          Showing {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{trimmedSearch}&rdquo;
+        <p className="text-xs text-slate-400">
+          Showing {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} matched &ldquo;{trimmedSearch}&rdquo;
         </p>
       )}
 
-      {/* Add / Edit form */}
+      {/* Form Editor Panel */}
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-xl border border-blue-200 p-5 space-y-4 shadow-sm"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">
-              {editingId ? 'Edit Category' : 'Add Category'}
-            </h3>
-            <button type="button" onClick={cancel} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {error && (
-            <div className="flex gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formName}
-                onChange={e => setFormName(e.target.value)}
-                className="input-field"
-                placeholder="e.g. Mechanical, Pump, Centrifugal Pump"
-                required
-                autoFocus
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Parent category <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <select
-                value={formParentId}
-                onChange={e => setFormParentId(e.target.value)}
-                className="input-field"
+        <div className="p-5 sm:p-6 bg-slate-50/50 rounded-2xl border border-blue-105 border-blue-200 shadow-sm animate-in fade-in duration-200">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
+              <h3 className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
+                <span className="w-1.5 h-3 bg-indigo-600 rounded-full"></span>
+                {editingId ? 'Edit Configuration Category' : 'Create New Asset Category'}
+              </h3>
+              <button 
+                type="button" 
+                onClick={cancel} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-150 transition-colors"
               >
-                <option value="">— Root level (no parent) —</option>
-                {parentOptions.map(opt => (
-                  <option key={opt.id} value={opt.id}>
-                    {'  '.repeat(opt.depth)}{opt.depth > 0 ? '↳ ' : ''}{opt.name}
-                  </option>
-                ))}
-              </select>
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          </div>
 
-          <div className="flex gap-3">
-            <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              {loading ? 'Saving…' : editingId ? 'Save changes' : 'Add Category'}
-            </button>
-            <button type="button" onClick={cancel} className="btn-secondary">
-              Cancel
-            </button>
-          </div>
-        </form>
+            {error && (
+              <div className="flex gap-2.5 p-3.5 bg-red-55/7 px-4 rounded-xl border border-red-100 text-sm text-red-700 animate-shake">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Category Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={e => setFormName(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g., Mechanical, Centrifugal Pump, Boiler"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Parent Category <span className="text-slate-400 font-normal">(optional nesting)</span>
+                </label>
+                <select
+                  value={formParentId}
+                  onChange={e => setFormParentId(e.target.value)}
+                  className="input-field bg-white"
+                >
+                  <option value="">— Root Level Category —</option>
+                  {parentOptions.map(opt => (
+                    <option key={opt.id} value={opt.id}>
+                      {'\u00A0\u00A0'.repeat(opt.depth)}{opt.depth > 0 ? '↳ ' : ''}{opt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-2xs">
+                Cancel
+              </button>
+              <button type="submit" disabled={loading} className="btn-primary py-2 px-4 shadow-sm flex items-center gap-1.5 font-semibold">
+                <Check className="w-4 h-4" />
+                <span>{loading ? 'Saving…' : editingId ? 'Save Changes' : 'Create Category'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
-      {/* Tree / Search results list */}
+      {/* Trees Container */}
       {displayFlat.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
-          <FolderTree className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+        <div className="bg-white rounded-2xl border border-dashed border-slate-250 py-16 px-4 text-center">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <FolderTree className="w-6 h-6 text-indigo-600" />
+          </div>
+          <p className="text-slate-700 font-bold text-base">{trimmedSearch ? 'No categories matched' : 'Asset hierarchy map is empty'}</p>
+          <p className="text-slate-400 text-sm mt-1 mb-5 max-w-sm mx-auto">
+            {trimmedSearch 
+              ? 'Try adapting your subcategory search parameters.' 
+              : 'Add broad classifications like "Mechanical Equipment" and bundle specialized subdivisions underneath.'}
+          </p>
           {trimmedSearch ? (
-            <>
-              <p className="text-gray-500 font-medium">No categories match &ldquo;{trimmedSearch}&rdquo;</p>
-              <button onClick={() => setSearch('')} className="text-sm text-blue-600 hover:underline mt-1">
-                Clear search
-              </button>
-            </>
+            <button onClick={() => setSearch('')} className="btn-secondary text-xs font-bold py-1.5 px-3">
+              Clear filters
+            </button>
           ) : (
-            <>
-              <p className="text-gray-500 font-medium">No categories yet</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Add root categories like &ldquo;Mechanical&rdquo;, then nest sub-categories under them.
-              </p>
-            </>
+            <button onClick={() => openAdd()} className="btn-primary font-semibold">
+              <Plus className="w-4 h-4" /> Add Root Category
+            </button>
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-          {displayFlat.map(cat => {
-            const childCount = cat._count?.children ?? categories.filter(c => c.parentId === cat.id).length
-            const assetCount = cat._count?.assets ?? 0
-            const hasChildren = childCount > 0
-            const isCollapsed = collapsed.has(cat.id)
-            const pathStr = buildPath(categories, cat.id)
+        <div className="responsive-table-container">
+          <div className="divide-y divide-slate-105/40 divide-slate-100">
+            {displayFlat.map(cat => {
+              const childCount = cat._count?.children ?? categories.filter(c => c.parentId === cat.id).length
+              const assetCount = cat._count?.assets ?? 0
+              const hasChildren = childCount > 0
+              const isCollapsed = collapsed.has(cat.id)
+              const pathStr = buildPath(categories, cat.id)
 
-            return (
-              <div key={cat.id}>
-                <div
-                  className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group"
-                  style={{ paddingLeft: `${16 + cat.depth * 24}px` }}
-                >
-                  {/* Collapse toggle */}
-                  {!trimmedSearch && hasChildren ? (
-                    <button
-                      onClick={() => toggleCollapse(cat.id)}
-                      className="text-gray-400 hover:text-gray-600 flex-shrink-0 -ml-1"
-                      title={isCollapsed ? 'Expand' : 'Collapse'}
-                    >
-                      {isCollapsed
-                        ? <ChevronRight className="w-4 h-4" />
-                        : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  ) : cat.depth > 0 ? (
-                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
-                  ) : (
-                    <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0" />
-                  )}
-
-                  {/* Name + path */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{cat.name}</p>
-                    {trimmedSearch && cat.depth > 0 && (
-                      <p className="text-xs text-indigo-500 truncate">{pathStr}</p>
-                    )}
-                  </div>
-
-                  {/* Counts */}
-                  <div className="flex items-center gap-2">
-                    {hasChildren && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                        {childCount} sub-{childCount === 1 ? 'category' : 'categories'}
-                      </span>
-                    )}
-                    {assetCount > 0 && (
-                      <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
-                        {assetCount} asset{assetCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      title="Assign domains"
-                      onClick={() => toggleDomainPanel(cat.id)}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        expandedDomains.has(cat.id)
-                          ? 'text-violet-600 bg-violet-50'
-                          : 'text-gray-400 hover:text-violet-600 hover:bg-violet-50'
-                      }`}
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      title="Add sub-category"
-                      onClick={() => openAdd(cat.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      title="Edit"
-                      onClick={() => openEdit(cat)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      title="Delete"
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Domain assignment panel */}
-                {expandedDomains.has(cat.id) && (
-                  <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border-t border-violet-100"
-                    style={{ paddingLeft: `${28 + cat.depth * 24}px` }}
+              return (
+                <div key={cat.id} className="relative group/row">
+                  <div
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50/50 transition-colors"
+                    style={{ paddingLeft: `${Math.max(16, 16 + cat.depth * 20)}px` }}
                   >
-                    <Layers className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
-                    <span className="text-xs text-violet-600 font-medium flex-shrink-0">Domains:</span>
-                    {domains.length === 0 ? (
-                      <span className="text-xs text-gray-400">No domains yet — <a href="/settings/domains" className="underline hover:text-blue-600">add in Settings</a></span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {domains.map(d => {
-                          const active = (domainMap[cat.id] ?? []).includes(d.id)
-                          return (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => toggleDomain(cat.id, d.id)}
-                              disabled={savingDomains.has(cat.id)}
-                              className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors ${
-                                active
-                                  ? 'bg-violet-600 border-violet-600 text-white'
-                                  : 'bg-white border-gray-300 text-gray-600 hover:border-violet-400'
-                              }`}
-                            >
-                              {d.name}
-                            </button>
-                          )
-                        })}
-                        {savingDomains.has(cat.id) && (
-                          <span className="text-xs text-violet-400 animate-pulse ml-1">Saving…</span>
+                    
+                    {/* Prefix and Title Column */}
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      {/* Collapse indicator chevron buttons */}
+                      {!trimmedSearch && hasChildren ? (
+                        <button
+                          onClick={() => toggleCollapse(cat.id)}
+                          className="text-slate-400 hover:text-slate-700 p-1 -m-1 focus:outline-none flex-shrink-0"
+                          title={isCollapsed ? 'Expand subcategory' : 'Collapse subcategory'}
+                        >
+                          {isCollapsed
+                            ? <ChevronRight className="w-4 h-4 text-slate-500 bg-slate-100 hover:bg-slate-200 rounded p-0.5" />
+                            : <ChevronDown className="w-4 h-4 text-indigo-600 bg-indigo-50 rounded p-0.5" />}
+                        </button>
+                      ) : cat.depth > 0 ? (
+                        <div className="text-slate-300 font-light text-xs self-center flex-shrink-0 select-none mr-1.5">↳</div>
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-blue-500 self-center flex-shrink-0 mr-1" />
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-bold text-slate-800 leading-snug tracking-tight">{cat.name}</span>
+                        {trimmedSearch && cat.depth > 0 && (
+                          <p className="text-3xs font-semibold text-indigo-600 uppercase tracking-widest mt-0.5">{pathStr}</p>
                         )}
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
 
-                {/* Inline delete error */}
-                {deleteErrors[cat.id] && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-sm text-red-700">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1">{deleteErrors[cat.id]}</span>
-                    <button
-                      onClick={() => setDeleteErrors(prev => ({ ...prev, [cat.id]: '' }))}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Numeric indicators and button panels */}
+                    <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
+                      {hasChildren && (
+                        <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/50 font-bold px-2 py-0.5 rounded text-3xs">
+                          {childCount} sub-{childCount === 1 ? 'category' : 'categories'}
+                        </span>
+                      )}
+                      
+                      {assetCount > 0 ? (
+                        <span className="inline-flex items-center bg-indigo-55/7 text-indigo-700 border border-indigo-100/50 font-bold px-2 py-0.5 rounded text-3xs">
+                          {assetCount} asset{assetCount !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center bg-slate-50 text-slate-400 border border-slate-200/20 px-2 py-0.5 rounded text-3xs">
+                          0 assets
+                        </span>
+                      )}
+
+                      {/* Hover action bars */}
+                      <div className="flex items-center gap-1 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity duration-155 ml-1">
+                        <button
+                          title="Assign Maintenance Domains"
+                          onClick={() => toggleDomainPanel(cat.id)}
+                          className={`p-1.5 rounded-lg border transition-all ${
+                            expandedDomains.has(cat.id)
+                              ? 'text-violet-700 bg-violet-100/80 border-violet-200'
+                              : 'text-slate-400 hover:text-violet-600 hover:bg-violet-50 hover:border-violet-100 border-transparent'
+                          }`}
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          title="Add nested subcategory"
+                          onClick={() => openAdd(cat.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          title="Edit Category"
+                          onClick={() => openEdit(cat)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          title="Delete Category"
+                          onClick={() => handleDelete(cat.id, cat.name)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-100 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
+
+                  {/* Domain Assignment Tray */}
+                  {expandedDomains.has(cat.id) && (
+                    <div 
+                      className="p-3 bg-violet-50/45 border-y border-violet-100/50 flex flex-col md:flex-row items-stretch md:items-center gap-3.5 animate-in slide-in-from-top-1 duration-150"
+                      style={{ paddingLeft: `${Math.max(28, 28 + cat.depth * 20)}px` }}
+                    >
+                      <div className="flex items-center gap-2 flex-shrink-0 text-violet-700 font-bold text-xs select-none">
+                        <Layers className="w-3.5 h-3.5 text-violet-500" />
+                        <span>Assigned Domains:</span>
+                      </div>
+
+                      {domains.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No domains configured. Register domains first under <a href="/settings/domains" className="underline hover:text-indigo-700 font-semibold text-slate-600">Domains Settings</a>.</p>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {domains.map(d => {
+                            const active = (domainMap[cat.id] ?? []).includes(d.id)
+                            return (
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => toggleDomain(cat.id, d.id)}
+                                disabled={savingDomains.has(cat.id)}
+                                className={`px-2.5 py-1 rounded-full text-3xs font-extrabold tracking-wider uppercase border transition-all ${
+                                  active
+                                    ? 'bg-violet-600 border-violet-600 text-white shadow-3xs'
+                                    : 'bg-white border-slate-250 text-slate-600 hover:border-violet-300'
+                                }`}
+                              >
+                                {d.name}
+                              </button>
+                            )
+                          })}
+                          {savingDomains.has(cat.id) && (
+                            <span className="text-3xs font-bold text-violet-400 animate-pulse ml-1 tracking-wider uppercase">Syncing…</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Inline Delete Errors */}
+                  {deleteErrors[cat.id] && (
+                    <div className="flex items-center gap-2.5 px-4 py-2 bg-red-50 text-xs text-red-700 border-t border-red-100/50">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
+                      <span className="flex-1 font-medium">{deleteErrors[cat.id]}</span>
+                      <button onClick={() => setDeleteErrors(prev => ({ ...prev, [cat.id]: '' }))} className="p-0.5 rounded text-red-400 hover:bg-red-100 hover:text-red-700">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
       {displayFlat.length > 0 && !showForm && !trimmedSearch && (
-        <p className="text-xs text-gray-400 text-center">
-          Click <strong>▶</strong> to collapse a group · Hover any row and click <strong>+</strong> to add a sub-category
+        <p className="text-center text-xs text-slate-400 tracking-normal leading-relaxed mt-2 select-none">
+          Click <span className="bg-slate-100 px-1 py-0.5 rounded border border-slate-200">▶</span> to expand lists · Hover rows to access quick <span className="font-semibold text-slate-600">+ Subcategory</span> triggers.
         </p>
       )}
     </div>

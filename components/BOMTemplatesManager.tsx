@@ -2,11 +2,36 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Edit2, Wrench, X, Check, ClipboardCheck, ArrowLeft, Search } from 'lucide-react'
+import { Plus, Trash2, Edit2, Wrench, X, Check, ClipboardCheck, ArrowLeft, Search, Layers } from 'lucide-react'
 
-export default function BOMTemplatesManager({ initialTemplates, allParts }: any) {
+interface Part {
+  id: string
+  name: string
+  partNumber?: string | null
+}
+
+interface TemplatePart {
+  partId: string
+  expectedQuantity: number
+  part: Part
+}
+
+interface BOMTemplate {
+  id: string
+  name: string
+  description?: string | null
+  parts: TemplatePart[]
+  _count: { parts: number }
+}
+
+interface Props {
+  initialTemplates: BOMTemplate[]
+  allParts: Part[]
+}
+
+export default function BOMTemplatesManager({ initialTemplates, allParts }: Props) {
   const router = useRouter()
-  const [templates, setTemplates] = useState(initialTemplates)
+  const [templates, setTemplates] = useState<BOMTemplate[]>(initialTemplates)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [managingId, setManagingId] = useState<string | null>(null)
@@ -22,7 +47,7 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: any)
   const [selPart, setSelPart] = useState('')
   const [qty, setQty] = useState('1')
 
-  function openEdit(t: any) {
+  function openEdit(t: BOMTemplate) {
     setEditingId(t.id)
     setName(t.name)
     setDescription(t.description || '')
@@ -56,9 +81,9 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: any)
       if (res.ok) {
         const data = await res.json()
         if (isEdit) {
-          setTemplates((prev: any[]) => prev.map((t: any) => t.id === editingId ? { ...t, name: data.name, description: data.description } : t))
+          setTemplates((prev: BOMTemplate[]) => prev.map((t: BOMTemplate) => t.id === editingId ? { ...t, name: data.name, description: data.description } : t))
         } else {
-          setTemplates((prev: any[]) => [...prev, { ...data, parts: [], _count: { parts: 0 } }])
+          setTemplates((prev: BOMTemplate[]) => [...prev, { ...data, parts: [], _count: { parts: 0 } }])
         }
         cancel()
         router.refresh()
@@ -71,7 +96,7 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: any)
   async function deleteTemplate(id: string, tName: string) {
     if (!confirm(`Are you sure you want to delete template "${tName}"?`)) return
     await fetch(`/api/bom-templates/${id}`, { method: 'DELETE' })
-    setTemplates(templates.filter((t: any) => t.id !== id))
+    setTemplates(templates.filter((t: BOMTemplate) => t.id !== id))
     router.refresh()
   }
 
@@ -86,7 +111,7 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: any)
       })
       if (res.ok) {
         const newPart = await res.json()
-        setTemplates((prev: any[]) => prev.map((t: any) => 
+        setTemplates((prev: BOMTemplate[]) => prev.map((t: BOMTemplate) => 
           t.id === managingId 
             ? { ...t, parts: [...t.parts, newPart], _count: { parts: t._count.parts + 1 } }
             : t
@@ -103,204 +128,317 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: any)
 
   async function removePart(templateId: string, partId: string) {
     await fetch(`/api/bom-templates/${templateId}/parts/${partId}`, { method: 'DELETE' })
-    setTemplates((prev: any[]) => prev.map((t: any) => 
+    setTemplates((prev: BOMTemplate[]) => prev.map((t: BOMTemplate) => 
       t.id === templateId 
-        ? { ...t, parts: t.parts.filter((p: any) => p.partId !== partId), _count: { parts: t._count.parts - 1 } }
+        ? { ...t, parts: t.parts.filter((p: TemplatePart) => p.partId !== partId), _count: { parts: t._count.parts - 1 } }
         : t
     ))
     router.refresh()
   }
 
-  const activeTemplate = templates.find((t: any) => t.id === managingId)
+  const activeTemplate = templates.find((t: BOMTemplate) => t.id === managingId)
 
-  const filteredTemplates = templates.filter((t: any) =>
+  const filteredTemplates = templates.filter((t: BOMTemplate) =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {managingId && activeTemplate ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <button onClick={() => setManagingId(null)} className="text-sm text-gray-500 hover:text-gray-800 mb-4 flex items-center gap-1">
-            <ArrowLeft className="w-4 h-4" /> Back to templates
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-6">
+          {/* Back button link */}
+          <button 
+            onClick={() => setManagingId(null)} 
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200/60 px-3 py-1.5 rounded-lg"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> 
+            <span>Back to templates</span>
           </button>
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">{activeTemplate.name}</h2>
-              {activeTemplate.description && <p className="text-sm text-gray-500 mt-1">{activeTemplate.description}</p>}
+
+          {/* Active Title and Actions */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+            <div className="min-w-0">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <span>{activeTemplate.name}</span>
+              </h2>
+              {activeTemplate.description ? (
+                <p className="text-sm text-slate-500 mt-1 sm:mt-1.5 leading-relaxed">{activeTemplate.description}</p>
+              ) : (
+                <p className="text-sm text-slate-400 italic mt-1 sm:mt-1.5">No description specified for this BOM library template.</p>
+              )}
             </div>
-            <button onClick={() => setAddingPart(true)} className="btn-primary text-sm flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Part
+            <button 
+              onClick={() => setAddingPart(true)} 
+              className="btn-primary text-sm flex items-center gap-2 flex-shrink-0"
+            >
+              <Plus className="w-4 h-4" /> 
+              <span>Add Part to BOM</span>
             </button>
           </div>
 
+          {/* Adding Part Form Drawer */}
           {addingPart && (
-            <form onSubmit={addPartToTemplate} className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-xs font-medium text-gray-700 block mb-1">Part</label>
-                <select value={selPart} onChange={e => setSelPart(e.target.value)} required className="input-field text-sm bg-white">
-                  <option value="">Select a part...</option>
-                  {allParts.filter((p: any) => !activeTemplate.parts.some((tp: any) => tp.partId === p.id)).map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.partNumber})</option>
+            <form 
+              onSubmit={addPartToTemplate} 
+              className="p-5 bg-blue-50/40 border border-blue-100/80 rounded-2xl flex flex-col md:flex-row items-stretch md:items-end gap-4 shadow-2xs animate-in slide-in-from-top-2 duration-200"
+            >
+              <div className="flex-1 min-w-0">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1.5">Select Catalog Part</label>
+                <select 
+                  value={selPart} 
+                  onChange={e => setSelPart(e.target.value)} 
+                  required 
+                  className="input-field text-sm bg-white"
+                >
+                  <option value="">Choose matching part...</option>
+                  {allParts.filter((p: Part) => !activeTemplate.parts.some((tp: TemplatePart) => tp.partId === p.id)).map((p: Part) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.partNumber ? `(${p.partNumber})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div className="w-24">
-                <label className="text-xs font-medium text-gray-700 block mb-1">Qty</label>
-                <input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} required className="input-field text-sm bg-white" />
+              <div className="w-full md:w-32">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block mb-1.5">Required Qty</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value={qty} 
+                  onChange={e => setQty(e.target.value)} 
+                  required 
+                  className="input-field text-sm bg-white" 
+                />
               </div>
-              <div className="flex gap-2">
-                <button type="submit" disabled={saving} className="btn-primary text-sm">Add</button>
-                <button type="button" onClick={() => setAddingPart(false)} className="btn-secondary text-sm">Cancel</button>
+              <div className="flex gap-2 justify-end">
+                <button type="submit" disabled={saving || !selPart} className="btn-primary text-sm font-semibold whitespace-nowrap">
+                  {saving ? 'Adding...' : 'Add to BOM'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setAddingPart(false)} 
+                  className="btn-secondary text-sm font-semibold whitespace-nowrap"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           )}
 
+          {/* Associated Part Listings */}
           {activeTemplate.parts.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-200 rounded-lg bg-gray-50">
-              <Wrench className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              No parts added to this template yet.
+            <div className="text-center py-14 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <Wrench className="w-5 h-5 text-slate-400" />
+              </div>
+              <p className="text-slate-700 font-bold">No registered parts</p>
+              <p className="text-slate-400 text-sm mt-1 mb-4">Add the standard bill of material parts required for this asset template.</p>
+              <button onClick={() => setAddingPart(true)} className="btn-primary text-xs py-2 px-3.5 shadow-xs font-semibold">
+                <Plus className="w-3.5 h-3.5" /> Associate First Part
+              </button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-              {activeTemplate.parts.map((tp: any) => (
-                <div key={tp.partId} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors group">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{tp.part.name}</p>
-                    <p className="text-xs text-gray-500">{tp.part.partNumber}</p>
+            <div className="responsive-table-container">
+              <div className="divide-y divide-slate-150/60">
+                {activeTemplate.parts.map((tp: TemplatePart) => (
+                  <div key={tp.partId} className="flex items-center justify-between gap-4 px-4 py-3.5 hover:bg-slate-50/60 transition-colors group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{tp.part.name}</p>
+                      {tp.part.partNumber && (
+                        <p className="text-xs font-mono font-bold text-slate-400 mt-0.5">{tp.part.partNumber}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-105/20 px-3 py-1 rounded-full">
+                        Qty: {tp.expectedQuantity}
+                      </span>
+                      <button 
+                        onClick={() => removePart(activeTemplate.id, tp.partId)} 
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
+                        title="Remove part standard association"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">Qty: {tp.expectedQuantity}</span>
-                    <button onClick={() => removePart(activeTemplate.id, tp.partId)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-3">
+          {/* Main List Mode */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1 group">
               <input
                 type="text"
-                placeholder="Search templates..."
+                placeholder="Search BOM templates by name or classification description…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="input-field pl-10 text-sm"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors" />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 text-sm text-gray-500 flex-shrink-0">
-              <ClipboardCheck className="w-4 h-4" />
-              <span>{templates.length} total</span>
-            </div>
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200/50 flex-shrink-0">
+                <Layers className="w-3.5 h-3.5 text-slate-400" />
+                <span>{templates.length} total libraries</span>
+              </div>
 
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2 flex-shrink-0">
-              <Plus className="w-4 h-4" />
-              Add Template
-            </button>
+              <button onClick={openAdd} className="btn-primary flex items-center gap-2 flex-shrink-0 w-full sm:w-auto shadow-sm">
+                <Plus className="w-4 h-4" />
+                <span>Add Template</span>
+              </button>
+            </div>
           </div>
 
           {searchQuery.trim() && (
-            <p className="text-xs text-gray-400">
-              Showing {filteredTemplates.length} result{filteredTemplates.length !== 1 ? 's' : ''} for &ldquo;{searchQuery.trim()}&rdquo;
+            <p className="text-xs text-slate-400">
+              Showing {filteredTemplates.length} result{filteredTemplates.length !== 1 ? 's' : ''} matching &ldquo;{searchQuery.trim()}&rdquo;
             </p>
           )}
 
+          {/* Form Create/Edit Dialog */}
           {showForm && (
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-blue-200 p-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">{editingId ? 'Edit BOM Template' : 'Add BOM Template'}</h3>
-                <button type="button" onClick={cancel} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Template name <span className="text-red-500">*</span>
-                </label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} required className="input-field" placeholder="e.g. Standard HVAC Unit" autoFocus />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} className="input-field" rows={2} placeholder="Brief description of when to use this template..." />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
-                  <Check className="w-4 h-4" />
-                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Save template'}
-                </button>
-                <button type="button" onClick={cancel} className="btn-secondary">Cancel</button>
-              </div>
-            </form>
+            <div className="p-5 sm:p-6 bg-slate-50/55 rounded-2xl border border-blue-100 shadow-sm animate-in fade-in duration-150">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
+                  <h3 className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
+                    <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                    {editingId ? 'Edit BOM Template properties' : 'Create Bill of Materials (BOM) Template'}
+                  </h3>
+                  <button 
+                    type="button" 
+                    onClick={cancel} 
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-150 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                      Template Name <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={name} 
+                      onChange={e => setName(e.target.value)} 
+                      required 
+                      className="input-field font-semibold" 
+                      placeholder="e.g., Standard HVAC Unit-A BOM" 
+                      autoFocus 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Description</label>
+                    <textarea 
+                      value={description} 
+                      onChange={e => setDescription(e.target.value)} 
+                      className="input-field resize-none min-h-[75px]" 
+                      rows={2} 
+                      placeholder="Brief description of when or on which equipment assets to apply this template..." 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
+                  <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-2xs">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving || !name.trim()} className="btn-primary py-2 px-4 shadow-sm flex items-center gap-1.5 font-semibold">
+                    <Check className="w-4 h-4" />
+                    <span>{saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Template'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
+          {/* Table view */}
           {templates.length === 0 ? (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
-              <ClipboardCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No BOM templates yet</p>
-              <p className="text-gray-400 text-sm mt-1">Create templates to quickly assign common parts to multiple assets.</p>
+            <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-16 px-4 text-center">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                <ClipboardCheck className="w-6 h-6 text-blue-600" />
+              </div>
+              <p className="text-slate-700 font-bold text-base">No BOM templates exist</p>
+              <p className="text-slate-400 text-sm mt-1 mb-5 max-w-sm mx-auto">Create lists of commonly pre-packaged repair parts to easily assign them to complex HVAC systems or pumps.</p>
+              <button onClick={openAdd} className="btn-primary font-semibold">
+                <Plus className="w-4 h-4" /> Add First BOM Template
+              </button>
             </div>
           ) : filteredTemplates.length === 0 ? (
-            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
-              <ClipboardCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No templates match &ldquo;{searchQuery.trim()}&rdquo;</p>
-              <button onClick={() => setSearchQuery('')} className="text-sm text-blue-600 hover:underline mt-1">
-                Clear search
+            <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-14 px-4 text-center">
+              <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-705 text-slate-700 font-bold">No templates found</p>
+              <p className="text-slate-400 text-sm mt-1">Try adapting your template search terms.</p>
+              <button onClick={() => setSearchQuery('')} className="text-sm font-bold text-blue-600 hover:text-blue-700 mt-2 transition-colors">
+                Clear filter Query
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-              {filteredTemplates.map((t: any) => (
-                <div key={t.id} className="flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors group">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
-                    {t.description && <p className="text-xs text-gray-500 truncate mt-0.5">{t.description}</p>}
+            <div className="responsive-table-container">
+              <div className="divide-y divide-slate-100">
+                {filteredTemplates.map((t: BOMTemplate) => (
+                  <div key={t.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 hover:bg-slate-50/70 transition-colors group">
+                    {/* Information Column */}
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-800 leading-snug truncate">{t.name}</p>
+                        {t.description ? (
+                          <p className="text-xs text-slate-500 mt-1 leading-normal">{t.description}</p>
+                        ) : (
+                          <p className="text-xs text-slate-400 mt-0.5 italic">No notes or description added</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Metrics and Actions Column */}
+                    <div className="flex items-center gap-3.5 self-end sm:self-auto flex-shrink-0">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100/50">
+                        <Wrench className="w-3 h-3 text-blue-500" />
+                        <span>{t._count.parts} Parts</span>
+                      </span>
+
+                      <div className="flex items-center gap-1.5 pl-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
+                        <button
+                          onClick={() => setManagingId(t.id)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-3xs"
+                        >
+                          Manage Parts
+                        </button>
+                        <button
+                          onClick={() => openEdit(t)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200/50"
+                          title="Edit template fields"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteTemplate(t.id, t.name)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50/7 transition-colors border border-transparent hover:border-red-200/30"
+                          title="Delete template"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <Wrench className="w-3 h-3" />
-                      {t._count.parts} Parts
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                    <button
-                      onClick={() => setManagingId(t.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
-                    >
-                      Manage Parts
-                    </button>
-                    <button
-                      onClick={() => openEdit(t)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                      title="Edit template details"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteTemplate(t.id, t.name)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Delete template"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </>

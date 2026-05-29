@@ -369,12 +369,12 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-bold text-sm text-slate-800 tracking-tight leading-snug">{issue.title}</span>
                         {!issue.isActive && (
-                          <span className="inline-flex items-center gap-1 bg-slate-150 text-slate-600 px-2 py-0.5 rounded-full text-3xs font-bold border border-slate-250">
+                          <span className="inline-flex items-center gap-1 bg-slate-150 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold border border-slate-250">
                             <EyeOff className="w-2.5 h-2.5" /> INACTIVE
                           </span>
                         )}
                         {issue.isGlobal && (
-                          <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-3xs font-bold border border-sky-100">
+                          <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-sky-100">
                             <Globe className="w-2.5 h-2.5 text-sky-500" /> GLOBAL
                           </span>
                         )}
@@ -383,19 +383,19 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                       {/* Display Associated Domains */}
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5 md:mt-2">
                         {issue.severity && (
-                          <span className={`inline-flex items-center px-2 py-0.5 border text-3xs font-bold tracking-wider uppercase rounded ${severityStyles[issue.severity] || 'bg-slate-150 text-slate-600 border-slate-200'}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 border text-[10px] font-bold tracking-wider uppercase rounded ${severityStyles[issue.severity] || 'bg-slate-150 text-slate-600 border-slate-200'}`}>
                             {issue.severity} Severity
                           </span>
                         )}
 
                         {issue.domains.map(d => (
-                          <span key={d.domain.id} className="inline-flex items-center gap-1 text-3xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/60 font-sans">
+                          <span key={d.domain.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/60 font-sans">
                             {d.domain.name}
                           </span>
                         ))}
 
                         {issue.domains.length === 0 && !issue.isGlobal && (
-                          <span className="inline-flex items-center text-3xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50 italic">
+                          <span className="inline-flex items-center text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50 italic">
                             Unassigned
                           </span>
                         )}

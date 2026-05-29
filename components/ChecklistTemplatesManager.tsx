@@ -155,7 +155,7 @@ export default function ChecklistTemplatesManager({ initialTemplates }: Props) {
                             return (
                               <span 
                                 key={type} 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-3xs font-extrabold tracking-wide uppercase border border-slate-200/50"
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-extrabold tracking-wide uppercase border border-slate-200/50"
                                 title={`${count} ${sym.label} steps`}
                               >
                                 <span className="text-slate-400">{sym.icon}</span>
@@ -170,11 +170,11 @@ export default function ChecklistTemplatesManager({ initialTemplates }: Props) {
 
                   <td className="px-4 py-4.5 hidden sm:table-cell">
                     {t.items.filter(i => i.isMandatory).length > 0 ? (
-                      <span className="inline-flex items-center px-2.5 py-1 bg-red-50 text-red-750 border border-red-100/50 rounded-full text-2xs font-extrabold tracking-wide uppercase">
+                      <span className="inline-flex items-center px-2.5 py-1 bg-red-50 text-red-750 border border-red-100/50 rounded-full text-[11px] font-extrabold tracking-wide uppercase">
                         {t.items.filter(i => i.isMandatory).length} mandatory
                       </span>
                     ) : (
-                      <span className="text-2xs text-slate-400 font-medium select-none">—</span>
+                      <span className="text-[11px] text-slate-400 font-medium select-none">—</span>
                     )}
                   </td>
 

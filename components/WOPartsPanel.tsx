@@ -125,11 +125,11 @@ export default function WOPartsPanel({ woId, partsUsed, allParts, canEdit, woSta
                 className="input-field text-xs bg-white" required />
             </div>
             <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-1">
-              <button type="submit" disabled={saving} className="btn-primary text-2xs py-2 px-4 shadow-sm font-bold flex-1 sm:flex-none">
+              <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-4 shadow-sm font-bold flex-1 sm:flex-none">
                 {saving ? '...' : 'Add'}
               </button>
               <button type="button" onClick={() => { setAdding(false); setError('') }}
-                className="btn-secondary text-2xs py-2 px-4 font-bold flex-1 sm:flex-none">
+                className="btn-secondary text-xs py-2 px-4 font-bold flex-1 sm:flex-none">
                 Cancel
               </button>
             </div>

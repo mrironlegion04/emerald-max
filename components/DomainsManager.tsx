@@ -260,7 +260,7 @@ export default function DomainsManager({ initialDomains }: Props) {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`font-bold text-sm tracking-tight ${d.isActive ? 'text-slate-800' : 'text-slate-500 line-through'}`}>{d.name}</span>
                         {!d.isActive && (
-                          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full text-3xs border border-slate-250">
+                          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full text-[10px] border border-slate-250">
                             <EyeOff className="w-2.5 h-2.5" /> INACTIVE
                           </span>
                         )}

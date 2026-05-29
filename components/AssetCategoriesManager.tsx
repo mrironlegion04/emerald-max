@@ -410,7 +410,7 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                       <div className="min-w-0 flex-1">
                         <span className="text-sm font-bold text-slate-800 leading-snug tracking-tight">{cat.name}</span>
                         {trimmedSearch && cat.depth > 0 && (
-                          <p className="text-3xs font-semibold text-indigo-600 uppercase tracking-widest mt-0.5">{pathStr}</p>
+                          <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-widest mt-0.5">{pathStr}</p>
                         )}
                       </div>
                     </div>
@@ -418,17 +418,17 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                     {/* Numeric indicators and button panels */}
                     <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
                       {hasChildren && (
-                        <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/50 font-bold px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/50 font-bold px-2 py-0.5 rounded text-[10px]">
                           {childCount} sub-{childCount === 1 ? 'category' : 'categories'}
                         </span>
                       )}
                       
                       {assetCount > 0 ? (
-                        <span className="inline-flex items-center bg-indigo-55/7 text-indigo-700 border border-indigo-100/50 font-bold px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-indigo-55/7 text-indigo-700 border border-indigo-100/50 font-bold px-2 py-0.5 rounded text-[10px]">
                           {assetCount} asset{assetCount !== 1 ? 's' : ''}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center bg-slate-50 text-slate-400 border border-slate-200/20 px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-slate-50 text-slate-400 border border-slate-200/20 px-2 py-0.5 rounded text-[10px]">
                           0 assets
                         </span>
                       )}
@@ -494,7 +494,7 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                                 type="button"
                                 onClick={() => toggleDomain(cat.id, d.id)}
                                 disabled={savingDomains.has(cat.id)}
-                                className={`px-2.5 py-1 rounded-full text-3xs font-extrabold tracking-wider uppercase border transition-all ${
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase border transition-all ${
                                   active
                                     ? 'bg-violet-600 border-violet-600 text-white shadow-3xs'
                                     : 'bg-white border-slate-250 text-slate-600 hover:border-violet-300'
@@ -505,7 +505,7 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                             )
                           })}
                           {savingDomains.has(cat.id) && (
-                            <span className="text-3xs font-bold text-violet-400 animate-pulse ml-1 tracking-wider uppercase">Syncing…</span>
+                            <span className="text-[10px] font-bold text-violet-400 animate-pulse ml-1 tracking-wider uppercase">Syncing…</span>
                           )}
                         </div>
                       )}

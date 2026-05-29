@@ -394,7 +394,7 @@ export default function LocationsManager({ initialLocations }: Props) {
                         <span className="text-sm font-bold text-slate-800 leading-snug tracking-tight">{loc.name}</span>
                         {/* Show full path when searching, address otherwise */}
                         {trimmedSearch && loc.depth > 0 ? (
-                          <p className="text-3xs font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">{pathStr}</p>
+                          <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">{pathStr}</p>
                         ) : loc.address ? (
                           <p className="text-xs text-slate-400 leading-relaxed truncate mt-0.5">{loc.address}</p>
                         ) : (
@@ -406,17 +406,17 @@ export default function LocationsManager({ initialLocations }: Props) {
                     {/* Numeric and Button Column */}
                     <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
                       {hasChildren && (
-                        <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/50 font-bold px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/50 font-bold px-2 py-0.5 rounded text-[10px]">
                           {childCount} sub-{childCount === 1 ? 'place' : 'places'}
                         </span>
                       )}
                       
                       {assetCount > 0 ? (
-                        <span className="inline-flex items-center bg-emerald-55/7 text-emerald-700 border border-emerald-100/50 font-bold px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-emerald-55/7 text-emerald-700 border border-emerald-100/50 font-bold px-2 py-0.5 rounded text-[10px]">
                           {assetCount} asset{assetCount !== 1 ? 's' : ''}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center bg-slate-50 text-slate-400 border border-slate-200/20 px-2 py-0.5 rounded text-3xs">
+                        <span className="inline-flex items-center bg-slate-50 text-slate-400 border border-slate-200/20 px-2 py-0.5 rounded text-[10px]">
                           0 assets
                         </span>
                       )}

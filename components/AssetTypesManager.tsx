@@ -168,7 +168,7 @@ export default function AssetTypesManager({ initialTypes }: Props) {
                 required
                 autoFocus
               />
-              <p className="text-3xs text-slate-400 font-medium tracking-normal mt-1.5 leading-relaxed">
+              <p className="text-[10px] text-slate-400 font-medium tracking-normal mt-1.5 leading-relaxed">
                 Keep the classification short and broad — this list operates horizontally without child structures.
               </p>
             </div>

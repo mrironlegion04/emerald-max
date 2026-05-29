@@ -179,7 +179,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
               type="button"
               onClick={() => !isClosed && saveItemValue(listId, item.id, 'PASS')}
               disabled={isClosed}
-              className={`px-2 py-1 text-2xs font-semibold rounded border transition-all ${
+              className={`px-2 py-1 text-xs font-semibold rounded border transition-all ${
                 item.stringValue === 'PASS'
                   ? 'bg-green-500 text-white border-green-500'
                   : 'border-gray-300 text-gray-500 hover:border-green-400'
@@ -191,7 +191,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
               type="button"
               onClick={() => !isClosed && saveItemValue(listId, item.id, 'FAIL')}
               disabled={isClosed}
-              className={`px-2 py-1 text-2xs font-semibold rounded border transition-all ${
+              className={`px-2 py-1 text-xs font-semibold rounded border transition-all ${
                 item.stringValue === 'FAIL'
                   ? 'bg-red-500 text-white border-red-500'
                   : 'border-gray-300 text-gray-500 hover:border-red-400'
@@ -210,10 +210,10 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
               {item.label}
             </p>
             {item.type !== 'CHECKBOX' && (
-              <span className="text-2xs text-gray-400 font-mono uppercase">{item.type === 'INSPECTION' ? 'PASS/FAIL' : item.type.replace('_', ' ')}</span>
+              <span className="text-[10px] text-gray-400 font-mono uppercase">{item.type === 'INSPECTION' ? 'PASS/FAIL' : item.type.replace('_', ' ')}</span>
             )}
             {item.isMandatory && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-2xs font-semibold border border-amber-100">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-100">
                 <AlertCircle className="w-2.5 h-2.5" />
                 Required
               </span>
@@ -271,7 +271,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
                   <button
                     type="button"
                     onClick={() => saveItemValue(listId, item.id, null)}
-                    className="text-2xs text-red-500 hover:underline"
+                    className="text-xs text-red-500 hover:underline"
                   >
                     Clear
                   </button>
@@ -291,7 +291,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
                     ctx.fillText('Signature pad placeholder', 20, 45)
                     saveItemValue(listId, item.id, canvas.toDataURL())
                   }}
-                  className="text-2xs text-blue-600 hover:underline"
+                  className="text-xs text-blue-600 hover:underline"
                 >
                   + Sign
                 </button>
@@ -303,7 +303,7 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
           )}
 
           {complete && item.checkedBy && (
-            <p className="text-2xs text-gray-400 mt-1 flex items-center gap-1">
+            <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400"></span>
               {item.type === 'CHECKBOX' ? 'Checked' : 'Completed'} by {item.checkedBy} · {item.checkedAt ? new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(item.checkedAt)) : ''}
             </p>
@@ -381,10 +381,10 @@ export default function WOChecklistPanel({ woId, initialChecklists, woStatus }: 
           </div>
           {error && <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-2 py-1.5 rounded">{error}</p>}
           <div className="flex gap-2 pt-1.5">
-            <button type="submit" disabled={saving} className="btn-primary text-2xs py-2 px-4 shadow-sm font-bold">
+            <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-4 shadow-sm font-bold">
               {saving ? 'Adding...' : 'Add checklist'}
             </button>
-            <button type="button" onClick={() => { setAdding(false); setError('') }} className="btn-secondary text-2xs py-2 px-4 font-bold">Cancel</button>
+            <button type="button" onClick={() => { setAdding(false); setError('') }} className="btn-secondary text-xs py-2 px-4 font-bold">Cancel</button>
           </div>
         </form>
       )}

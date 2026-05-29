@@ -63,29 +63,20 @@ export default function PartQRButton({ partId, partNumber, partName }: Props) {
     const win = window.open('', '_blank')
     if (!win) return
     win.document.write(`<!DOCTYPE html>
-<html><head><title>QR — ${partName}</title>
+<html><head><title>Print — ${partName}</title>
 <style>
-  body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-  .card { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center; max-width: 350px; }
-  svg { width: 100%; height: auto; max-width: 280px; }
-  .info { margin-top: 24px; }
-  .name { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.2; }
-  .code { font-size: 14px; font-weight: 600; color: #64748b; font-family: monospace; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-  @media print {
-    body { background: white; }
-    .card { border: none; box-shadow: none; padding: 0; }
-  }
+  body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
+  svg { width: 100%; height: auto; max-width: 300px; display: block; }
+  @page { margin: 0; size: auto; }
 </style></head>
 <body>
-  <div class="card">
-    ${fullCardSvg.replace(/<\?xml[^>]*\?>/, '')}
-  </div>
+  ${fullCardSvg.replace(/<\?xml[^>]*\?>/, '')}
   <script>
     window.onload = () => {
       setTimeout(() => {
         window.print();
         window.close();
-      }, 500);
+      }, 300);
     };
   </script>
 </body></html>`)

@@ -55,17 +55,14 @@ export async function GET(
 
     // Wrap in a printable card SVG
     const cardSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="300" height="360" viewBox="0 0 300 360">
-  <rect width="300" height="360" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
-  <text x="150" y="32" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="13" font-weight="600" fill="#111827">${part.name}</text>
-  <text x="150" y="52" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="11" fill="#6b7280">${part.partNumber}</text>
-  <g transform="translate(30, 65) scale(0.93)">${svgData.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}</g>
-  <text x="150" y="328" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="9" fill="#9ca3af">Scan to view part details</text>
-  <text x="150" y="344" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="8" fill="#d1d5db">${partUrl}</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="340" viewBox="0 0 300 340">
+  <rect width="298" height="338" x="1" y="1" rx="20" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="150" y="44" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#0f172a">${part.name}</text>
+  <text x="150" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="600" fill="#64748b" letter-spacing="1">${part.partNumber || ''}</text>
+  <rect x="50" y="85" width="200" height="200" rx="16" fill="#f8fafc"/>
+  <g transform="translate(50, 85)">${svgData.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}</g>
+  <line x1="40" y1="300" x2="260" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+  <text x="150" y="322" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#94a3b8" letter-spacing="2">SCAN TO VIEW PART</text>
 </svg>`
 
     return new NextResponse(cardSvg, {

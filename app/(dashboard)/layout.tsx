@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
 
         {/* Main Viewport Content Area */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto bg-slate-50/50 pb-20 md:pb-0">
           {children}
         </div>
       </main>

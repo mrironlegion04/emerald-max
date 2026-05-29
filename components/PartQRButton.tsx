@@ -124,14 +124,14 @@ export default function PartQRButton({ partId, partNumber, partName }: Props) {
 
               {/* QR Container */}
               <div className="p-8 pb-4">
-                <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 shadow-inner flex flex-col items-center">
+                <div className="bg-slate-50 rounded-[40px] p-10 border border-slate-100 shadow-inner flex flex-col items-center">
                   <div
-                    className="w-full max-w-[200px]"
+                    className="w-full max-w-[180px] drop-shadow-sm"
                     dangerouslySetInnerHTML={{ __html: svgContent }}
                   />
-                  <div className="mt-6 text-center">
-                    <p className="text-sm font-bold text-slate-900 leading-tight">{partName}</p>
-                    <p className="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">{partNumber}</p>
+                  <div className="mt-8 text-center">
+                    <p className="text-base font-bold text-slate-900 tracking-tight leading-tight">{partName}</p>
+                    <p className="text-xs font-mono font-semibold text-slate-500 mt-2 uppercase tracking-[0.1em]">{partNumber}</p>
                   </div>
                 </div>
               </div>

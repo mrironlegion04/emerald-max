@@ -189,15 +189,15 @@ export default function AdvancedWOFilters({ technicians, teams, assets, canExpor
       <div id="wo-filters-mobile" className="flex md:hidden flex-col gap-2.5">
         <div className="flex gap-2 w-full">
           {/* Search bar taking full width */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 group">
             <input
               type="text"
               placeholder="Search work orders..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => update('search', e.target.value)}
-              className="input-field pl-9 text-sm w-full bg-white shadow-3xs"
+              className="input-field pl-10 text-sm w-full bg-white shadow-3xs"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
 
           {/* Compact visual filter trigger */}
@@ -246,15 +246,15 @@ export default function AdvancedWOFilters({ technicians, teams, assets, canExpor
       {/* 2. TABLET RESPONSIVE HYBRID ROW (md to lg) */}
       <div id="wo-filters-tablet" className="hidden md:flex lg:hidden flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/85 p-3.5 rounded-2xl shadow-3xs">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 max-w-sm group">
             <input
               type="text"
               placeholder="Search work orders..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => update('search', e.target.value)}
-              className="input-field pl-9 text-sm bg-slate-50/50"
+              className="input-field pl-10 text-sm bg-slate-50/50"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
 
           {/* Crucial status inline filter for quick access */}
@@ -313,15 +313,15 @@ export default function AdvancedWOFilters({ technicians, teams, assets, canExpor
       <div id="wo-filters-desktop" className="hidden lg:block bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="relative flex-1 min-w-[220px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 min-w-[220px] max-w-xs group">
             <input
               type="text"
               placeholder="Search work orders..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => update('search', e.target.value)}
-              className="input-field pl-9 text-sm"
+              className="input-field pl-10 text-sm"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
 
           <select value={searchParams.get('status') ?? ''} onChange={e => update('status', e.target.value)} className="input-field w-auto text-sm">

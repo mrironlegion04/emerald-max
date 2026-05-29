@@ -92,15 +92,15 @@ export default function WorkOrderFilters({ technicians }: { technicians: User[] 
       {/* 1. MOBILE VIEW */}
       <div id="wo-filters-simple-mobile" className="flex md:hidden flex-col gap-2.5">
         <div className="flex gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 group">
             <input
               type="text"
               placeholder="Search..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => update('search', e.target.value)}
-              className="input-field pl-9 text-sm w-full bg-white shadow-3xs"
+              className="input-field pl-10 text-sm w-full bg-white shadow-3xs"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <button
             onClick={() => setIsDrawerOpen(true)}
@@ -129,15 +129,15 @@ export default function WorkOrderFilters({ technicians }: { technicians: User[] 
       {/* 2. TABLET HYBRID VIEW */}
       <div id="wo-filters-simple-tablet" className="hidden md:flex lg:hidden flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/85 p-3.5 rounded-2xl shadow-3xs">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 max-w-sm group">
             <input
               type="text"
               placeholder="Search..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => update('search', e.target.value)}
-              className="input-field pl-9 text-sm"
+              className="input-field pl-10 text-sm"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <select value={searchParams.get('status') ?? ''} onChange={e => update('status', e.target.value)} className="input-field w-40 text-sm bg-white">
             <option value="">All Statuses</option>
@@ -165,15 +165,15 @@ export default function WorkOrderFilters({ technicians }: { technicians: User[] 
 
       {/* 3. DESKTOP VIEW */}
       <div id="wo-filters-simple-desktop" className="hidden lg:flex flex-wrap gap-3 p-4 bg-white border border-slate-200/90 rounded-2xl shadow-3xs items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="relative flex-1 min-w-[200px] max-w-sm group">
           <input
             type="text"
             placeholder="Search work orders..."
             defaultValue={searchParams.get('search') ?? ''}
             onChange={e => update('search', e.target.value)}
-            className="input-field pl-9 text-sm"
+            className="input-field pl-10 text-sm"
           />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
         </div>
 
         <select value={searchParams.get('status') ?? ''} onChange={e => update('status', e.target.value)} className="input-field w-auto text-sm">

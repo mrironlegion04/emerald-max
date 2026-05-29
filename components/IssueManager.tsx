@@ -112,10 +112,23 @@ export default function IssueManager({ initialIssues, domains }: Props) {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search issues…" className="input-field pl-9 text-sm" />
-          {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>}
+        <div className="relative flex-1 group">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search issues…"
+            className="input-field pl-10 text-sm"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <select value={filterDomainId} onChange={e => setFilterDomainId(e.target.value)} className="input-field text-sm w-44 flex-shrink-0">
           <option value="">All domains</option>

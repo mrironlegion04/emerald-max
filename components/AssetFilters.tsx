@@ -121,15 +121,15 @@ export default function AssetFilters({ categories, locations }: Props) {
       {/* 1. MOBILE FILTER VIEW */}
       <div id="asset-filters-mobile" className="flex md:hidden flex-col gap-2.5">
         <div className="flex gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 group">
             <input
               type="text"
               placeholder="Search assets..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => updateFilter('search', e.target.value)}
-              className="input-field pl-9 text-sm w-full bg-white shadow-3xs"
+              className="input-field pl-10 text-sm w-full bg-white shadow-3xs"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <button
             onClick={() => setIsDrawerOpen(true)}
@@ -158,15 +158,15 @@ export default function AssetFilters({ categories, locations }: Props) {
       {/* 2. TABLET HYBRID VIEW */}
       <div id="asset-filters-tablet" className="hidden md:flex lg:hidden flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/85 p-3.5 rounded-2xl shadow-3xs">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative flex-1 max-w-sm group">
             <input
               type="text"
               placeholder="Search assets..."
               defaultValue={searchParams.get('search') ?? ''}
               onChange={e => updateFilter('search', e.target.value)}
-              className="input-field pl-9 text-sm bg-slate-50/50"
+              className="input-field pl-10 text-sm bg-slate-50/50"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <select
             value={searchParams.get('status') ?? ''}
@@ -205,15 +205,15 @@ export default function AssetFilters({ categories, locations }: Props) {
 
       {/* 3. DESKTOP ENTERPRISE VIEW */}
       <div id="asset-filters-desktop" className="hidden lg:flex flex-wrap items-center gap-3 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-3xs">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="relative flex-1 min-w-[200px] max-w-sm group">
           <input
             type="text"
             placeholder="Search assets..."
             defaultValue={searchParams.get('search') ?? ''}
             onChange={e => updateFilter('search', e.target.value)}
-            className="input-field pl-9 text-sm"
+            className="input-field pl-10 text-sm"
           />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
         </div>
 
         <select

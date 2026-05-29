@@ -90,7 +90,7 @@
     @apply min-h-[44px] px-5 py-2.5;
   }
   .input-field {
-    @apply min-h-[44px] text-base px-4 py-3;
+    @apply min-h-[44px] text-base pr-4 py-3 transition-all;
   }
   .sidebar-link {
     @apply min-h-[44px] py-3;

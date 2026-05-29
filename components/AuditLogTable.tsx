@@ -69,11 +69,11 @@ export default function AuditLogTable() {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="relative flex-1 min-w-[200px] max-w-sm group">
           <input type="text" placeholder="Search by name or user..."
             value={search} onChange={e => setSearch(e.target.value)}
-            className="input-field pl-9 text-sm" />
+            className="input-field pl-10 text-sm" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
         </div>
         <select value={entity} onChange={e => setEntity(e.target.value)} className="input-field w-auto text-sm">
           <option value="">All entities</option>

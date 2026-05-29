@@ -24,15 +24,15 @@ export default function InventoryFilters() {
 
   return (
     <div id="inventory-filters-container" className="mb-6 flex flex-wrap gap-3 items-center">
-      <div className="relative flex-1 min-w-[240px] max-w-md">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+      <div className="relative flex-1 min-w-[240px] max-w-md group">
         <input 
           type="text" 
           placeholder="Search inventory parts by name or SKU..."
           defaultValue={searchParams.get('search') ?? ''}
           onChange={e => update('search', e.target.value)}
-          className="input-field pl-10.5 text-sm w-full bg-white shadow-3xs" 
+          className="input-field pl-11 text-sm w-full bg-white shadow-3xs" 
         />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
       </div>
       
       {hasFilters && (

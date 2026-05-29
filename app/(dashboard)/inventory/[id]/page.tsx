@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader'
 import DeletePartButton from '@/components/DeletePartButton'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import RestorePartButton from '@/components/RestorePartButton'
+import PartQRButton from '@/components/PartQRButton'
 
 function fmtCurrency(v: number | null) {
   if (v === null || v === undefined) return '—'
@@ -84,9 +85,12 @@ export default async function PartDetailPage({
         title={part.name}
         subtitle={part.partNumber}
         action={
-          canEdit && !part.isDeleted ? (
-            <Link href={`/inventory/${part.id}/edit`} className="btn-secondary text-sm">Edit part</Link>
-          ) : undefined
+          <div className="flex gap-2">
+            <PartQRButton partId={part.id} partNumber={part.partNumber} partName={part.name} />
+            {canEdit && !part.isDeleted && (
+              <Link href={`/inventory/${part.id}/edit`} className="btn-secondary text-sm">Edit part</Link>
+            )}
+          </div>
         }
       />
 

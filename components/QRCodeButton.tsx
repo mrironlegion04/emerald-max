@@ -116,14 +116,14 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
 
               {/* QR Container */}
               <div className="p-8 pb-4">
-                <div className="bg-slate-50 rounded-[40px] p-10 border border-slate-100 shadow-inner flex flex-col items-center">
+                <div className="bg-slate-50 rounded-[40px] p-12 border border-slate-100 shadow-inner flex flex-col items-center">
                   <div
-                    className="w-full max-w-[180px] drop-shadow-sm"
+                    className="w-full max-w-[220px] drop-shadow-md"
                     dangerouslySetInnerHTML={{ __html: svgContent }}
                   />
-                  <div className="mt-8 text-center">
-                    <p className="text-base font-bold text-slate-900 tracking-tight leading-tight">{assetName}</p>
-                    <p className="text-xs font-mono font-semibold text-slate-500 mt-2 uppercase tracking-[0.1em]">{assetCode}</p>
+                  <div className="mt-10 text-center">
+                    <p className="text-lg font-bold text-slate-900 tracking-tight leading-tight">{assetName}</p>
+                    <p className="text-sm font-mono font-semibold text-slate-500 mt-3 uppercase tracking-[0.15em]">{assetCode}</p>
                   </div>
                 </div>
               </div>

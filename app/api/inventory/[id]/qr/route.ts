@@ -41,6 +41,7 @@ export async function GET(
     // SVG Data (raw QR)
     const qrSvg = await QRCode.toString(partUrl, {
       type: 'svg',
+      width: 170,
       margin: 0, // No margin for raw QR inside card
       color: { dark: '#000000', light: '#ffffff' },
     })
@@ -63,7 +64,7 @@ export async function GET(
   
   <!-- QR Area with subtle backing -->
   <rect x="55" y="85" width="190" height="190" rx="16" fill="#f8fafc"/>
-  <g transform="translate(65, 95) scale(0.85)">
+  <g transform="translate(65, 95)">
     ${qrSvg.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}
   </g>
   

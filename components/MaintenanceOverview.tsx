@@ -93,7 +93,7 @@ export default function MaintenanceOverview() {
     return (
       <div className="space-y-6">
         <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
             <div key={i} className="h-96 bg-gray-100 rounded-2xl animate-pulse" />
           ))}
@@ -174,18 +174,18 @@ export default function MaintenanceOverview() {
       </div>
 
       {/* Fleet Summary Strip */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-0 overflow-hidden">
-        <div className="grid grid-cols-5 divide-x divide-gray-100">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-5 text-center">
           {[
-            { label: 'Total WOs', value: data.summary.total, color: 'text-gray-600' },
-            { label: 'Breakdown', value: data.summary.breakdown, color: 'text-blue-600' },
-            { label: 'Preventive', value: data.summary.preventive, color: 'text-green-600' },
-            { label: 'Open', value: data.summary.open, color: 'text-yellow-600' },
-            { label: 'Completed', value: data.summary.completed, color: 'text-green-600' },
+            { label: 'Total WOs', value: data.summary.total, color: 'text-gray-650 text-gray-600', border: 'border-b md:border-b-0 md:border-r border-gray-100 col-span-2 md:col-span-1' },
+            { label: 'Breakdown', value: data.summary.breakdown, color: 'text-blue-600', border: 'border-r border-b md:border-b-0 md:border-r border-gray-100' },
+            { label: 'Preventive', value: data.summary.preventive, color: 'text-green-600', border: 'border-b md:border-b-0 md:border-r border-gray-100' },
+            { label: 'Open', value: data.summary.open, color: 'text-yellow-600', border: 'border-r border-gray-100 md:border-r' },
+            { label: 'Completed', value: data.summary.completed, color: 'text-green-600', border: 'border-0' },
           ].map((item, idx) => (
-            <div key={idx} className="p-6 text-center">
-              <p className={`text-4xl font-bold ${item.color}`}>{item.value}</p>
-              <p className="text-xs text-gray-600 font-medium mt-2 uppercase tracking-wider">{item.label}</p>
+            <div key={idx} className={`p-4 sm:p-6 flex flex-col justify-center items-center ${item.border}`}>
+              <p className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900">{item.value}</p>
+              <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1 sm:mt-2 ${item.color.split(' ')[0]}`}>{item.label}</p>
             </div>
           ))}
         </div>

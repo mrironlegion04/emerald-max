@@ -18,7 +18,8 @@ export async function GET(
     const asset    = await prisma.asset.findUnique({ where: { id }, select: { name: true, assetCode: true } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
 
-    const format   = new URL(request.url).searchParams.get('format') ?? 'svg'
+    const format = new URL(request.url).searchParams.get('format') ?? 'svg'
+    const raw    = new URL(request.url).searchParams.get('raw') === 'true'
     const baseUrl  = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
     const assetUrl = `${baseUrl}/assets/${id}`
 
@@ -35,11 +36,19 @@ export async function GET(
       })
     }
 
-    // SVG with label
+    // SVG Data
     const svgData = await QRCode.toString(assetUrl, {
-      type: 'svg', margin: 2,
+      type: 'svg', margin: raw ? 0 : 2,
       color: { dark: '#111827', light: '#ffffff' },
     })
+
+    if (raw) {
+      return new NextResponse(svgData, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+        },
+      })
+    }
 
     // Wrap in a printable card SVG
     const cardSvg = `<?xml version="1.0" encoding="UTF-8"?>

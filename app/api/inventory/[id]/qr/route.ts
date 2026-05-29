@@ -19,6 +19,7 @@ export async function GET(
     if (!part) return NextResponse.json({ error: 'Part not found' }, { status: 404 })
 
     const format = new URL(request.url).searchParams.get('format') ?? 'svg'
+    const raw    = new URL(request.url).searchParams.get('raw') === 'true'
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
     const partUrl = `${baseUrl}/inventory/${id}`
 
@@ -37,12 +38,20 @@ export async function GET(
       })
     }
 
-    // SVG with label
+    // SVG Data
     const svgData = await QRCode.toString(partUrl, {
       type: 'svg',
-      margin: 2,
+      margin: raw ? 0 : 2,
       color: { dark: '#111827', light: '#ffffff' },
     })
+
+    if (raw) {
+      return new NextResponse(svgData, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+        },
+      })
+    }
 
     // Wrap in a printable card SVG
     const cardSvg = `<?xml version="1.0" encoding="UTF-8"?>

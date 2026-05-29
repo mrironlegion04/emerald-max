@@ -309,61 +309,73 @@ export default function BOMTemplatesManager({ initialTemplates, allParts }: Prop
             </p>
           )}
 
-          {/* Form Create/Edit Dialog */}
+          {/* Form Slide-over Drawer */}
           {showForm && (
-            <div className="p-5 sm:p-6 bg-slate-50/55 rounded-2xl border border-blue-100 shadow-sm animate-in fade-in duration-150">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
-                  <h3 className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
-                    <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
-                    {editingId ? 'Edit BOM Template properties' : 'Create Bill of Materials (BOM) Template'}
-                  </h3>
-                  <button 
-                    type="button" 
-                    onClick={cancel} 
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-150 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                      Template Name <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      value={name} 
-                      onChange={e => setName(e.target.value)} 
-                      required 
-                      className="input-field font-semibold" 
-                      placeholder="e.g., Standard HVAC Unit-A BOM" 
-                      autoFocus 
-                    />
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex justify-end animate-in fade-in duration-200">
+              {/* Backdrop Click */}
+              <div className="absolute inset-0" onClick={cancel} />
+              
+              <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+                <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                      <h3 className="font-bold text-slate-900 text-base tracking-tight">
+                        {editingId ? 'Edit BOM Template' : 'Create BOM Template'}
+                      </h3>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={cancel} 
+                      className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Description</label>
-                    <textarea 
-                      value={description} 
-                      onChange={e => setDescription(e.target.value)} 
-                      className="input-field resize-none min-h-[75px]" 
-                      rows={2} 
-                      placeholder="Brief description of when or on which equipment assets to apply this template..." 
-                    />
-                  </div>
-                </div>
 
-                <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
-                  <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-2xs">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={saving || !name.trim()} className="btn-primary py-2 px-4 shadow-sm flex items-center gap-1.5 font-semibold">
-                    <Check className="w-4 h-4" />
-                    <span>{saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Template'}</span>
-                  </button>
-                </div>
-              </form>
+                  {/* Scrollable Body */}
+                  <div className="p-5 overflow-y-auto flex-1 space-y-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Template Name <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          value={name} 
+                          onChange={e => setName(e.target.value)} 
+                          required 
+                          className="input-field font-semibold" 
+                          placeholder="e.g., Standard HVAC Unit-A BOM" 
+                          autoFocus 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Description</label>
+                        <textarea 
+                          value={description} 
+                          onChange={e => setDescription(e.target.value)} 
+                          className="input-field resize-none min-h-[100px]" 
+                          rows={3} 
+                          placeholder="Brief description of when or on which equipment assets to apply this template..." 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
+                    <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-sm text-xs">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={saving || !name.trim()} className="btn-primary py-2 px-5 shadow-sm flex items-center gap-1.5 text-xs font-semibold">
+                      <Check className="w-4 h-4" />
+                      <span>{saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create Template'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

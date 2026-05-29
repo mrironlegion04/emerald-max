@@ -130,59 +130,71 @@ export default function AssetTypesManager({ initialTypes }: Props) {
         </div>
       </div>
 
-      {/* Form Drawer */}
+      {/* Form Slide-over Drawer */}
       {showForm && (
-        <div className="p-5 sm:p-6 bg-slate-50/50 rounded-2xl border border-blue-200 shadow-sm animate-in fade-in duration-200">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
-              <h3 className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
-                <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
-                {editingId ? 'Edit Asset Classification Type' : 'Create Asset Type'}
-              </h3>
-              <button 
-                type="button" 
-                onClick={cancel} 
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-150 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {error && (
-              <div className="flex gap-2.5 p-3.5 bg-red-55/7 px-4 rounded-xl border border-red-100 text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex justify-end animate-in fade-in duration-200">
+          {/* Backdrop Click */}
+          <div className="absolute inset-0" onClick={cancel} />
+          
+          <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                  <h3 className="font-bold text-slate-900 text-base tracking-tight">
+                    {editingId ? 'Edit Classification Type' : 'Create Asset Type'}
+                  </h3>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={cancel} 
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                Asset Classification Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formName}
-                onChange={e => setFormName(e.target.value)}
-                className="input-field font-semibold"
-                placeholder="e.g., Equipment, Vehicle, Smart Tool, Facility System"
-                required
-                autoFocus
-              />
-              <p className="text-[10px] text-slate-400 font-medium tracking-normal mt-1.5 leading-relaxed">
-                Keep the classification short and broad — this list operates horizontally without child structures.
-              </p>
-            </div>
+              {/* Scrollable Body */}
+              <div className="p-5 overflow-y-auto flex-1 space-y-4">
+                {error && (
+                  <div className="flex gap-2.5 p-3.5 bg-red-50/70 px-4 rounded-xl border border-red-100 text-sm text-red-700">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-2xs">
-                Cancel
-              </button>
-              <button type="submit" disabled={loading} className="btn-primary py-2 px-4 shadow-sm flex items-center gap-1.5 font-semibold">
-                <Check className="w-4 h-4" />
-                <span>{loading ? 'Saving…' : editingId ? 'Save Changes' : 'Create Type'}</span>
-              </button>
-            </div>
-          </form>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Asset Classification Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    className="input-field font-semibold"
+                    placeholder="e.g., Equipment, Vehicle, Smart Tool..."
+                    required
+                    autoFocus
+                  />
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    Keep the classification short and broad — this list operates horizontally without child structures.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
+                <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-sm text-xs">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} className="btn-primary py-2 px-5 shadow-sm flex items-center gap-1.5 text-xs font-semibold">
+                  <Check className="w-4 h-4" />
+                  <span>{loading ? 'Saving…' : editingId ? 'Save Changes' : 'Create Type'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

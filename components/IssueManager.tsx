@@ -199,133 +199,145 @@ export default function IssueManager({ initialIssues, domains }: Props) {
         </div>
       </div>
 
-      {/* Inline Form */}
+      {/* Form Slide-over Drawer */}
       {showForm && (
-        <div className="p-5 sm:p-6 bg-slate-50/50 rounded-2xl border border-blue-100/70 shadow-sm animate-in fade-in slide-in-from-top duration-200">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-1">
-              <h3 className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
-                <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
-                {editingId ? 'Edit Configuration Issue' : 'Create New Troubleshooting Issue'}
-              </h3>
-              <button 
-                type="button" 
-                onClick={cancel} 
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-150 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {error && (
-              <div className="flex gap-2.5 p-3.5 bg-red-55/7 px-4 rounded-xl border border-red-100 text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-550" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Code <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  value={formCode} 
-                  onChange={e => setFormCode(e.target.value)} 
-                  className="input-field font-mono font-semibold" 
-                  placeholder="e.g., HYD-001" 
-                  required 
-                  autoFocus 
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Severity Level</label>
-                <select 
-                  value={formSeverity} 
-                  onChange={e => setFormSeverity(e.target.value)} 
-                  className="input-field bg-white"
-                >
-                  <option value="LOW">Low Status</option>
-                  <option value="MEDIUM">Medium Status</option>
-                  <option value="HIGH">High Status</option>
-                  <option value="CRITICAL">Critical Status</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Issue Title <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  value={formTitle} 
-                  onChange={e => setFormTitle(e.target.value)} 
-                  className="input-field" 
-                  placeholder="e.g., Oil leakage around lower master cylinder valves" 
-                  required 
-                />
-              </div>
-
-              <div className="md:col-span-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">Applicable Maintenance Domains <span className="text-red-500">*</span></label>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input 
-                      type="checkbox" 
-                      checked={formIsGlobal} 
-                      onChange={e => {
-                        setFormIsGlobal(e.target.checked)
-                        if (e.target.checked) setFormDomainIds([])
-                      }} 
-                      className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20" 
-                    />
-                    <span className="text-xs font-semibold text-slate-600">Mark as Global Issue <span className="font-normal text-slate-400">(no domains required)</span></span>
-                  </label>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex justify-end animate-in fade-in duration-200">
+          {/* Backdrop Click */}
+          <div className="absolute inset-0" onClick={cancel} />
+          
+          <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                  <h3 className="font-bold text-slate-900 text-base tracking-tight">
+                    {editingId ? 'Edit Troubleshooting Issue' : 'Create Troubleshooting Issue'}
+                  </h3>
                 </div>
+                <button 
+                  type="button" 
+                  onClick={cancel} 
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-                {!formIsGlobal ? (
-                  <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 max-h-40 overflow-y-auto">
-                    {domains.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">No domains configured. Register domains first under Domain Settings.</p>
+              {/* Scrollable Body */}
+              <div className="p-5 overflow-y-auto flex-1 space-y-4">
+                {error && (
+                  <div className="flex gap-2.5 p-3.5 bg-red-55/7 px-4 rounded-xl border border-red-100 text-sm text-red-700">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Code <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      value={formCode} 
+                      onChange={e => setFormCode(e.target.value)} 
+                      className="input-field font-mono font-semibold" 
+                      placeholder="e.g., HYD-001" 
+                      required 
+                      autoFocus 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Severity Level</label>
+                    <select 
+                      value={formSeverity} 
+                      onChange={e => setFormSeverity(e.target.value)} 
+                      className="input-field bg-white"
+                    >
+                      <option value="LOW">Low Status</option>
+                      <option value="MEDIUM">Medium Status</option>
+                      <option value="HIGH">High Status</option>
+                      <option value="CRITICAL">Critical Status</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue Title <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      value={formTitle} 
+                      onChange={e => setFormTitle(e.target.value)} 
+                      className="input-field" 
+                      placeholder="e.g., Oil leakage around lower master cylinder valves" 
+                      required 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Applicable Maintenance Domains <span className="text-red-500">*</span></label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                          type="checkbox" 
+                          checked={formIsGlobal} 
+                          onChange={e => {
+                            setFormIsGlobal(e.target.checked)
+                            if (e.target.checked) setFormDomainIds([])
+                          }} 
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20" 
+                        />
+                        <span className="text-xs font-semibold text-slate-600">Mark as Global Issue</span>
+                      </label>
+                    </div>
+
+                    {!formIsGlobal ? (
+                      <div className="bg-white border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto">
+                        {domains.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No domains configured. Register domains first under Domain Settings.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {domains.map(d => {
+                              const active = formDomainIds.includes(d.id)
+                              return (
+                                <button 
+                                  key={d.id} 
+                                  type="button" 
+                                  onClick={() => toggleDomain(d.id)}
+                                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                                    active 
+                                      ? 'bg-blue-600 border-blue-600 text-white shadow-3xs' 
+                                      : 'bg-white border-slate-250 text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {d.name}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {domains.map(d => {
-                          const active = formDomainIds.includes(d.id)
-                          return (
-                            <button 
-                              key={d.id} 
-                              type="button" 
-                              onClick={() => toggleDomain(d.id)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-                                active 
-                                  ? 'bg-blue-600 border-blue-600 text-white shadow-3xs' 
-                                  : 'bg-white border-slate-250 text-slate-700 hover:border-slate-400 hover:bg-slate-50'
-                              }`}
-                            >
-                              {d.name}
-                            </button>
-                          )
-                        })}
+                      <div className="bg-slate-100/50 rounded-xl p-3 text-xs text-slate-500 flex items-center gap-2 border border-slate-200/50">
+                        <Globe className="w-4 h-4 text-slate-400" />
+                        <span>Global issues represent un-scoped malfunctions and will bypass category restrictions.</span>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="bg-slate-100/50 rounded-xl p-3.5 text-xs text-slate-500 flex items-center gap-2 border border-slate-200/50">
-                    <Globe className="w-4 h-4 text-slate-400" />
-                    <span>Global issues represent un-scoped malfunctions and will bypass specific category restrictions.</span>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-2xs">
-                Cancel
-              </button>
-              <button type="submit" disabled={loading} className="btn-primary py-2 px-4 shadow-sm flex items-center gap-1.5 font-semibold">
-                <Check className="w-4 h-4" />
-                <span>{loading ? 'Saving…' : editingId ? 'Save Changes' : 'Create Issue'}</span>
-              </button>
-            </div>
-          </form>
+              {/* Footer */}
+              <div className="p-5 border-t border-slate-100 flex-shrink-0 bg-slate-50/50 flex justify-end gap-3">
+                <button type="button" onClick={cancel} className="btn-secondary py-2 px-4 shadow-sm text-xs">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} className="btn-primary py-2 px-5 shadow-sm flex items-center gap-1.5 text-xs font-semibold">
+                  <Check className="w-4 h-4" />
+                  <span>{loading ? 'Saving…' : editingId ? 'Save Changes' : 'Create Issue'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

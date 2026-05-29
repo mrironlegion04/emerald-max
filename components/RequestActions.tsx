@@ -25,24 +25,56 @@ export default function RequestActions({ requestId, title }: Props) {
   }
 
   if (mode === 'reject') return (
-    <div className="flex-shrink-0 space-y-2 min-w-48">
-      <textarea value={reason} onChange={e => setReason(e.target.value)} className="input-field text-sm resize-none w-full" rows={2} placeholder="Reason for rejection..." />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+    <div className="w-full md:w-64 space-y-3 bg-rose-50/30 p-3 rounded-xl border border-rose-100">
+      <textarea 
+        value={reason} 
+        onChange={e => setReason(e.target.value)} 
+        className="input-field text-xs sm:text-sm resize-none w-full bg-white min-h-[80px]" 
+        rows={3} 
+        placeholder="Reason for rejection..." 
+      />
+      {error && <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">{error}</p>}
       <div className="flex gap-2">
-        <button onClick={() => doAction('reject', { reason })} disabled={loading} className="text-sm bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-3 rounded-lg flex-1 disabled:opacity-50">{loading ? '...' : 'Reject'}</button>
-        <button onClick={() => setMode('idle')} className="btn-secondary text-sm py-1.5">Cancel</button>
+        <button 
+          onClick={() => doAction('reject', { reason })} 
+          disabled={loading} 
+          className="flex-1 text-xs font-black bg-rose-600 hover:bg-rose-700 text-white uppercase tracking-wider py-2.5 px-3 rounded-lg shadow-sm disabled:opacity-50 transition-all active:scale-95"
+        >
+          {loading ? '...' : 'Reject'}
+        </button>
+        <button 
+          onClick={() => setMode('idle')} 
+          className="flex-1 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 py-2.5 rounded-lg active:scale-95 transition-all shadow-3xs"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   )
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-2 min-w-36">
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <button onClick={() => doAction('approve')} disabled={loading}
-        className="btn-primary text-sm py-1.5 w-full">{loading ? '...' : 'Approve'}</button>
-      <button onClick={() => doAction('convert')} disabled={loading}
-        className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-1.5 px-3 rounded-lg border border-blue-200 transition-colors disabled:opacity-50 w-full">{loading ? '...' : 'Convert to WO'}</button>
-      <button onClick={() => setMode('reject')} className="btn-secondary text-sm py-1.5 w-full">Reject</button>
+    <div className="flex flex-row md:flex-col gap-2 w-full md:w-40 flex-wrap">
+      {error && <p className="w-full text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">{error}</p>}
+      <button 
+        onClick={() => doAction('approve')} 
+        disabled={loading}
+        className="flex-1 md:w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+      >
+        {loading ? '...' : 'Approve'}
+      </button>
+      <button 
+        onClick={() => doAction('convert')} 
+        disabled={loading}
+        className="flex-1 md:w-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(37,99,235,0.3)] transition-all active:scale-95"
+      >
+        {loading ? '...' : 'Convert'}
+      </button>
+      <button 
+        onClick={() => setMode('reject')} 
+        className="flex-1 md:w-full bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-[11px] font-bold uppercase tracking-wider py-2.5 px-4 rounded-xl shadow-3xs transition-all active:scale-95"
+      >
+        Reject
+      </button>
     </div>
   )
 }

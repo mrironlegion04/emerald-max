@@ -68,14 +68,14 @@ export default async function RequestsPage({
   const baseUrl = `/requests?${queryString.toString()}`
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto min-h-screen">
       <PageHeader
         title="Maintenance Requests"
-        subtitle={`${allRequestsForStats.length} total · ${requests.length} showing${pendingReviewCount > 0 ? ` · ${pendingReviewCount} pending review` : ''}`}
+        subtitle={`${allRequestsForStats.length} total • ${totalCount} matching filters${pendingReviewCount > 0 ? ` • ${pendingReviewCount} pending` : ''}`}
         action={
-          <a href="/request" target="_blank" className="btn-secondary text-sm flex items-center gap-1.5">
+          <a href="/request" target="_blank" className="btn-secondary text-sm flex items-center justify-center gap-1.5 w-full sm:w-auto shadow-3xs">
             <ExternalLink className="w-4 h-4" />
-            Public request form
+            <span>Public Form</span>
           </a>
         }
       />
@@ -83,45 +83,82 @@ export default async function RequestsPage({
       {allRequestsForStats.length > 0 && <RequestFilters />}
 
       {allRequestsForStats.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-sm text-gray-500">No requests submitted yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Share the public request form link so users can submit maintenance requests.</p>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-3xs">
+          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ExternalLink className="w-8 h-8 text-slate-300" />
+          </div>
+          <p className="text-base font-bold text-slate-800">No requests yet</p>
+          <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto text-balance">
+            Share the public form link so users can submit maintenance requests.
+          </p>
         </div>
       ) : requests.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-sm text-gray-500">No requests match your search or filter criteria.</p>
-          <p className="text-xs text-gray-400 mt-1">Try clearing your filters or adjusting your search term.</p>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-3xs">
+          <p className="text-base font-bold text-slate-800">No matches found</p>
+          <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or search term.</p>
         </div>
       ) : (
-        <>
-          <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {requests.map((req: any) => (
-              <div key={req.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+              <div key={req.id} className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] hover:border-blue-200/50 transition-all group">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
+                  <div className="flex-1 min-w-0 space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge label={req.status} variant={statusVariant(req.status)} />
                       <Badge label={req.priority} variant={req.priority === 'CRITICAL' ? 'red' : req.priority === 'HIGH' ? 'orange' as never : req.priority === 'MEDIUM' ? 'blue' : 'gray'} />
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight ml-auto md:ml-0">
+                        {fmt(req.createdAt)}
+                      </span>
                     </div>
-                    <h3 className="font-semibold text-gray-900">{req.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{req.description}</p>
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
-                      <span>From: <span className="text-gray-600 font-medium">{req.requesterName}</span></span>
-                      {req.requesterEmail && <span>{req.requesterEmail}</span>}
-                      {req.location && <span>Location: {req.location}</span>}
-                      <span>{fmt(req.createdAt)}</span>
+
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-lg leading-snug group-hover:text-blue-700 transition-colors">{req.title}</h3>
+                      <p className="text-sm text-slate-500 mt-1.5 leading-relaxed line-clamp-3">{req.description}</p>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 pt-1 border-t border-slate-50/50">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-400 font-medium">Requester:</span>
+                        <span className="text-slate-700 font-bold truncate">{req.requesterName}</span>
+                      </div>
+                      {req.requesterEmail && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-slate-400 font-medium">Email:</span>
+                          <span className="text-slate-700 font-bold truncate">{req.requesterEmail}</span>
+                        </div>
+                      )}
+                      {req.location && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-slate-400 font-medium">Location:</span>
+                          <span className="text-slate-700 font-bold truncate">{req.location}</span>
+                        </div>
+                      )}
+                    </div>
+
                     {req.workOrder && (
-                      <p className="text-xs text-green-600 mt-1 font-medium">
-                        Converted → <Link href={`/work-orders/${req.workOrder.id}`} className="hover:underline">{req.workOrder.woNumber}</Link>
-                      </p>
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider">
+                          Converted to <Link href={`/work-orders/${req.workOrder.id}`} className="hover:underline decoration-2 underline-offset-2">{req.workOrder.woNumber}</Link>
+                        </p>
+                      </div>
                     )}
+                    
                     {req.rejectionReason && (
-                      <p className="text-xs text-red-600 mt-1">Rejection reason: {req.rejectionReason}</p>
+                      <div className="bg-rose-50/50 border border-rose-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <p className="text-[11px] font-black text-rose-700 uppercase tracking-wider">
+                          Rejected: <span className="font-bold text-rose-600 normal-case">{req.rejectionReason}</span>
+                        </p>
+                      </div>
                     )}
                   </div>
+
                   {canReview && req.status === 'PENDING' && (
-                    <RequestActions requestId={req.id} title={req.title} />
+                    <div className="md:pt-1 border-t md:border-t-0 border-slate-100 pt-4 mt-1 md:mt-0">
+                      <RequestActions requestId={req.id} title={req.title} />
+                    </div>
                   )}
                 </div>
               </div>
@@ -130,35 +167,35 @@ export default async function RequestsPage({
 
           {/* Pagination controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between p-5 border-t border-gray-200 rounded-b-xl bg-white">
-              <div className="text-sm text-gray-600">
-                Page <span className="font-semibold">{page}</span> of <span className="font-semibold">{totalPages}</span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 py-6 mt-4 bg-white border border-slate-200/90 rounded-2xl shadow-3xs">
+              <div className="text-sm font-bold text-slate-500 flex items-center gap-1.5">
+                Page <span className="text-slate-900">{page}</span> of <span className="text-slate-900">{totalPages}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page=1'} className="btn-secondary text-sm">
-                    ← First
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page=1'} className="btn-secondary text-xs h-9 px-3">
+                    First
                   </Link>
                 )}
                 {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page - 1}`} className="btn-secondary text-sm">
-                    ← Previous
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page - 1}`} className="btn-secondary text-xs h-9 px-3">
+                    Previous
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page + 1}`} className="btn-secondary text-sm">
-                    Next →
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page + 1}`} className="btn-secondary text-xs h-9 px-3">
+                    Next
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${totalPages}`} className="btn-secondary text-sm">
-                    Last →
+                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${totalPages}`} className="btn-secondary text-xs h-9 px-3">
+                    Last
                   </Link>
                 )}
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )

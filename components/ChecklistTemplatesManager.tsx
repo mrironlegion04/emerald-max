@@ -91,7 +91,7 @@ export default function ChecklistTemplatesManager({ initialTemplates }: Props) {
             <span>{templates.length} total templates</span>
           </div>
 
-          <Link href="/settings/checklist-templates/new" className="btn-primary text-sm flex items-center gap-1.5 flex-shrink-0 w-full sm:w-auto shadow-sm">
+          <Link href="/settings/checklist-templates/new" className="btn-primary text-sm flex items-center justify-center gap-1.5 flex-shrink-0 flex-1 sm:flex-initial shadow-sm">
             <Plus className="w-4 h-4" />
             <span>New Template</span>
           </Link>

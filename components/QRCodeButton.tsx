@@ -55,20 +55,29 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
     const win = window.open('', '_blank')
     if (!win) return
     win.document.write(`<!DOCTYPE html>
-<html><head><title>Print — ${assetName}</title>
+<html><head><title>QR — ${assetName}</title>
 <style>
-  body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
-  svg { width: 100%; height: auto; max-width: 300px; display: block; }
-  @page { margin: 0; size: auto; }
+  body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+  .card { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center; max-width: 350px; }
+  svg { width: 100%; height: auto; max-width: 280px; }
+  .info { margin-top: 24px; }
+  .name { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.2; }
+  .code { font-size: 14px; font-weight: 600; color: #64748b; font-family: monospace; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+  @media print {
+    body { background: white; }
+    .card { border: none; box-shadow: none; padding: 0; }
+  }
 </style></head>
 <body>
-  ${fullCardSvg.replace(/<\?xml[^>]*\?>/, '')}
+  <div class="card">
+    ${fullCardSvg.replace(/<\?xml[^>]*\?>/, '')}
+  </div>
   <script>
     window.onload = () => {
       setTimeout(() => {
         window.print();
         window.close();
-      }, 300);
+      }, 500);
     };
   </script>
 </body></html>`)
@@ -116,14 +125,14 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
 
               {/* QR Container */}
               <div className="p-8 pb-4">
-                <div className="bg-slate-50 rounded-[40px] p-12 border border-slate-100 shadow-inner flex flex-col items-center">
+                <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 shadow-inner flex flex-col items-center">
                   <div
-                    className="w-full max-w-[220px] drop-shadow-md"
+                    className="w-full max-w-[200px]"
                     dangerouslySetInnerHTML={{ __html: svgContent }}
                   />
-                  <div className="mt-10 text-center">
-                    <p className="text-lg font-bold text-slate-900 tracking-tight leading-tight">{assetName}</p>
-                    <p className="text-sm font-mono font-semibold text-slate-500 mt-3 uppercase tracking-[0.15em]">{assetCode}</p>
+                  <div className="mt-6 text-center">
+                    <p className="text-sm font-bold text-slate-900 leading-tight">{assetName}</p>
+                    <p className="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">{assetCode}</p>
                   </div>
                 </div>
               </div>

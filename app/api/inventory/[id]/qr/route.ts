@@ -38,39 +38,34 @@ export async function GET(
       })
     }
 
-    // SVG Data (raw QR)
-    const qrSvg = await QRCode.toString(partUrl, {
+    // SVG Data
+    const svgData = await QRCode.toString(partUrl, {
       type: 'svg',
-      width: 170,
-      margin: 0, // No margin for raw QR inside card
-      color: { dark: '#000000', light: '#ffffff' },
+      margin: raw ? 0 : 2,
+      color: { dark: '#111827', light: '#ffffff' },
     })
 
     if (raw) {
-      return new NextResponse(qrSvg, {
-        headers: { 'Content-Type': 'image/svg+xml' },
+      return new NextResponse(svgData, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+        },
       })
     }
 
-    // Wrap in a professional label SVG (300x340)
+    // Wrap in a printable card SVG
     const cardSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="300" height="340" viewBox="0 0 300 340">
-  <!-- Material-like Card -->
-  <rect width="290" height="330" x="5" y="5" rx="24" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  
-  <!-- Header Section -->
-  <text x="150" y="45" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="#0f172a">${part.name}</text>
-  <text x="150" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" font-weight="600" fill="#64748b" letter-spacing="1">${part.partNumber || 'NO-PN'}</text>
-  
-  <!-- QR Area with subtle backing -->
-  <rect x="55" y="85" width="190" height="190" rx="16" fill="#f8fafc"/>
-  <g transform="translate(65, 95)">
-    ${qrSvg.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}
-  </g>
-  
-  <!-- Footer Branding -->
-  <line x1="40" y1="295" x2="260" y2="295" stroke="#f1f5f9" stroke-width="1.5"/>
-  <text x="150" y="318" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#94a3b8" letter-spacing="2.5">INVENTORY TAG</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="360" viewBox="0 0 300 360">
+  <rect width="300" height="360" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="150" y="32" text-anchor="middle" font-family="-apple-system,sans-serif"
+    font-size="13" font-weight="600" fill="#111827">${part.name}</text>
+  <text x="150" y="52" text-anchor="middle" font-family="-apple-system,sans-serif"
+    font-size="11" fill="#6b7280">${part.partNumber}</text>
+  <g transform="translate(30, 65) scale(0.93)">${svgData.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}</g>
+  <text x="150" y="328" text-anchor="middle" font-family="-apple-system,sans-serif"
+    font-size="9" fill="#9ca3af">Scan to view part details</text>
+  <text x="150" y="344" text-anchor="middle" font-family="-apple-system,sans-serif"
+    font-size="8" fill="#d1d5db">${partUrl}</text>
 </svg>`
 
     return new NextResponse(cardSvg, {

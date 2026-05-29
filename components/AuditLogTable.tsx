@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import Badge from '@/components/Badge'
-import { Search } from 'lucide-react'
+import { Search, Filter } from 'lucide-react'
+import FilterDrawer from './FilterDrawer'
 
 interface LogEntry {
   id: string; action: string; entity: string; entityName: string
@@ -46,6 +47,7 @@ export default function AuditLogTable() {
   const [action,  setAction]  = useState('')
   const [search,  setSearch]  = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -67,30 +69,101 @@ export default function AuditLogTable() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* 1. Desktop Filters (hidden md:flex) */}
+      <div className="hidden md:flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm group">
           <input type="text" placeholder="Search by name or user..."
             value={search} onChange={e => setSearch(e.target.value)}
             className="input-field pl-10 text-sm" />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
         </div>
-        <select value={entity} onChange={e => setEntity(e.target.value)} className="input-field w-auto text-sm">
+        <select value={entity} onChange={e => setEntity(e.target.value)} className="input-field w-auto text-sm bg-white">
           <option value="">All entities</option>
           {ENTITIES.slice(1).map(e => <option key={e} value={e}>{e}</option>)}
         </select>
-        <select value={action} onChange={e => setAction(e.target.value)} className="input-field w-auto text-sm">
+        <select value={action} onChange={e => setAction(e.target.value)} className="input-field w-auto text-sm bg-white">
           <option value="">All actions</option>
           {ACTIONS.slice(1).map(a => <option key={a} value={a}>{a}</option>)}
         </select>
         {(entity || action || search) && (
           <button onClick={() => { setEntity(''); setAction(''); setSearch('') }}
-            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100">
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 cursor-pointer">
             Clear
           </button>
         )}
         <span className="text-sm text-gray-400 self-center ml-auto">{total} events</span>
       </div>
+
+      {/* 2. Mobile/Tablet Filters (flex md:hidden) */}
+      <div className="flex md:hidden flex-col gap-2.5">
+        <div className="flex gap-2.5 items-center w-full">
+          <div className="relative flex-1 group">
+            <input type="text" placeholder="Search by name or user..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="input-field pl-10 text-sm w-full bg-white shadow-3xs" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className={`flex items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 shadow-3xs focus:outline-none ${
+              (entity || action) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-650'
+            }`}
+          >
+            <Filter className="w-5 h-5" />
+            {(entity || action) && (
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black bg-white text-blue-700 rounded-full">
+                {(entity ? 1 : 0) + (action ? 1 : 0)}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-slate-400 font-medium px-1">
+          <span>{total} events</span>
+          {(entity || action || search) && (
+            <button onClick={() => { setEntity(''); setAction(''); setSearch('') }}
+              className="text-blue-600 font-semibold cursor-pointer">
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Filter Drawer for Mobile/Tablet */}
+      <FilterDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title="Audit Log Filters"
+        activeCount={(entity ? 1 : 0) + (action ? 1 : 0)}
+        onClear={() => { setEntity(''); setAction('') }}
+      >
+        <div className="space-y-4 font-sans text-sm">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Entity Type</label>
+            <select
+              value={entity}
+              onChange={e => setEntity(e.target.value)}
+              className="input-field w-full text-sm bg-white"
+            >
+              <option value="">All entities</option>
+              {ENTITIES.slice(1).map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Action Type</label>
+            <select
+              value={action}
+              onChange={e => setAction(e.target.value)}
+              className="input-field w-full text-sm bg-white"
+            >
+              <option value="">All actions</option>
+              {ACTIONS.slice(1).map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+        </div>
+      </FilterDrawer>
 
       {/* Table & Mobile Cards */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] overflow-hidden">

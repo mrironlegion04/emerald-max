@@ -6,6 +6,16 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import {
+  ClipboardList,
+  CheckSquare,
+  AlertTriangle,
+  CheckCircle2,
+  DollarSign,
+  Users,
+  Package,
+  TrendingUp,
+} from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface KPIs {
@@ -62,16 +72,32 @@ const TYPE_LABELS: Record<string,string> = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function KPICard({ title, value, sub, color = 'blue' }: { title: string; value: string | number; sub?: string; color?: string }) {
-  const colors: Record<string,string> = {
-    blue:'bg-blue-50 text-blue-600', green:'bg-green-50 text-green-600',
-    red:'bg-red-50 text-red-600', purple:'bg-purple-50 text-purple-600',
-    yellow:'bg-yellow-50 text-yellow-600', teal:'bg-teal-50 text-teal-600',
+  const colors: Record<string, { bg: string; text: string; value: string; border: string }> = {
+    blue: { bg: 'bg-blue-50/70', border: 'border-blue-100/40', text: 'text-blue-600', value: 'text-blue-700' },
+    green: { bg: 'bg-emerald-50/70', border: 'border-emerald-100/40', text: 'text-emerald-600', value: 'text-emerald-700' },
+    red: { bg: 'bg-rose-50/70', border: 'border-rose-100/40', text: 'text-rose-600', value: 'text-rose-700' },
+    purple: { bg: 'bg-purple-50/70', border: 'border-purple-100/40', text: 'text-purple-600', value: 'text-purple-700' },
+    yellow: { bg: 'bg-amber-50/70', border: 'border-amber-100/40', text: 'text-amber-600', value: 'text-amber-700' },
+    teal: { bg: 'bg-teal-50/70', border: 'border-teal-100/40', text: 'text-teal-600', value: 'text-teal-700' },
   }
+  const c = colors[color] || colors.blue;
   return (
-    <div className="stat-card">
-      <p className="text-xs text-gray-500 font-medium">{title}</p>
-      <p className={`text-2xl font-bold mt-1 ${colors[color]?.split(' ')[1] ?? 'text-gray-900'}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    <div className="stat-card flex items-start gap-3 sm:gap-4 p-4 sm:p-5">
+      <div className={`w-10 h-10 border rounded-xl flex items-center justify-center flex-shrink-0 shadow-3xs ${c.bg} ${c.border}`}>
+        {title.toLowerCase().includes('total work') && <ClipboardList className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('completed') && <CheckSquare className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('overdue') && <AlertTriangle className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('compliance') && <CheckCircle2 className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('total cost') && <DollarSign className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('labor cost') && <Users className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('parts cost') && <Package className={`w-5 h-5 ${c.text}`} />}
+        {title.toLowerCase().includes('avg cost') && <TrendingUp className={`w-5 h-5 ${c.text}`} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] sm:text-xs text-slate-400 font-semibold uppercase tracking-wider truncate" title={title}>{title}</p>
+        <p className={`text-lg sm:text-2xl font-bold tracking-tight mt-0.5 leading-none ${c.value}`}>{value}</p>
+        {sub && <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium mt-1 truncate" title={sub}>{sub}</p>}
+      </div>
     </div>
   )
 }
@@ -127,9 +153,9 @@ export default function ReportsDashboard({ userRole }: { userRole: string }) {
   )
 
   if (loading || !data) return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 animate-pulse">
       {Array.from({length: 8}).map((_, i) => (
-        <div key={i} className="stat-card h-20 bg-gray-100 rounded-xl" />
+        <div key={i} className="stat-card h-24 bg-gray-100/60 rounded-2xl border-dashed" />
       ))}
     </div>
   )
@@ -159,7 +185,7 @@ export default function ReportsDashboard({ userRole }: { userRole: string }) {
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
         <KPICard title="Total work orders"  value={kpis.totalWOs}
           sub={`last ${months} months`} color="blue" />
         <KPICard title="Completed"          value={kpis.completedWOs}

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge from '@/components/Badge'
+import { Layers, ClipboardList, AlertTriangle, AlertCircle, DollarSign } from 'lucide-react'
 
 function fmtc(v: number) { return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(v) }
 
@@ -94,18 +95,23 @@ export default async function SitesPage() {
       <PageHeader title="Sites overview" subtitle="Maintenance KPIs broken down by location." />
 
       {/* Fleet totals */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mb-8">
         {[
-          { label: 'Total assets',   value: totals.assets,            color: 'text-blue-700' },
-          { label: 'Open WOs',       value: totals.openWOs,           color: 'text-yellow-700' },
-          { label: 'Overdue',        value: totals.overdue,           color: totals.overdue > 0 ? 'text-red-700' : 'text-green-700' },
-          { label: 'Critical open',  value: totals.critical,          color: totals.critical > 0 ? 'text-red-700' : 'text-gray-700' },
-          { label: 'Total maint. cost', value: fmtc(totals.cost),    color: 'text-purple-700' },
+          { label: 'Total assets',   value: totals.assets,            color: 'text-blue-700', bg: 'bg-blue-50/70', border: 'border-blue-100/40', icon: Layers, iconColor: 'text-blue-600' },
+          { label: 'Open WOs',       value: totals.openWOs,           color: 'text-amber-700', bg: 'bg-amber-50/70', border: 'border-amber-100/40', icon: ClipboardList, iconColor: 'text-amber-600' },
+          { label: 'Overdue',        value: totals.overdue,           color: totals.overdue > 0 ? 'text-red-700' : 'text-green-700', bg: totals.overdue > 0 ? 'bg-rose-50/70' : 'bg-emerald-50/70', border: totals.overdue > 0 ? 'border-rose-100/40' : 'border-emerald-100/40', icon: AlertTriangle, iconColor: totals.overdue > 0 ? 'text-red-600' : 'text-emerald-600' },
+          { label: 'Critical open',  value: totals.critical,          color: totals.critical > 0 ? 'text-rose-700' : 'text-slate-700', bg: totals.critical > 0 ? 'bg-rose-10/70 shadow-3xs' : 'bg-slate-50/70', border: totals.critical > 0 ? 'border-rose-100/30' : 'border-slate-100', icon: AlertCircle, iconColor: totals.critical > 0 ? 'text-rose-600' : 'text-slate-500' },
+          { label: 'Total maint. cost', value: fmtc(totals.cost),    color: 'text-purple-700', bg: 'bg-purple-50/70', border: 'border-purple-100/40', icon: DollarSign, iconColor: 'text-purple-600' },
         ].map((s: any) => (
-          <div key={s.label} className="stat-card">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-400">all sites</p>
+          <div key={s.label} className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] p-4 sm:p-5 flex items-start gap-3 sm:gap-4 transition-all duration-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.025)]">
+            <div className={`w-10 h-10 border rounded-xl flex items-center justify-center flex-shrink-0 shadow-3xs ${s.bg} ${s.border}`}>
+              <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] sm:text-xs text-slate-400 font-semibold uppercase tracking-wider truncate" title={s.label}>{s.label}</p>
+              <p className={`text-lg sm:text-2xl font-bold tracking-tight mt-0.5 leading-none ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium mt-1">all sites</p>
+            </div>
           </div>
         ))}
       </div>

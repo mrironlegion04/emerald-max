@@ -263,7 +263,7 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
             <span>{categories.length} total categories</span>
           </div>
 
-          <button onClick={() => openAdd()} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 flex-1 sm:flex-initial shadow-sm">
+          <button onClick={() => openAdd()} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 shadow-sm">
             <Plus className="w-4 h-4" />
             <span>Add Category</span>
           </button>

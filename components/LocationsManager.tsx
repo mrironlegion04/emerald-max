@@ -233,7 +233,7 @@ export default function LocationsManager({ initialLocations }: Props) {
             <span>{locations.length} total facilities</span>
           </div>
 
-          <button onClick={() => openAdd()} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 flex-1 sm:flex-initial shadow-sm">
+          <button onClick={() => openAdd()} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 shadow-sm">
             <Plus className="w-4 h-4" />
             <span>Add Location</span>
           </button>

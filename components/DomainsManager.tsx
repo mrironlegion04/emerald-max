@@ -133,7 +133,7 @@ export default function DomainsManager({ initialDomains }: Props) {
             <Layers className="w-3.5 h-3.5 text-slate-400" />
             <span>{domains.length} absolute domains</span>
           </div>
-          <button onClick={openAdd} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 flex-1 sm:flex-initial shadow-sm">
+          <button onClick={openAdd} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 shadow-sm">
             <Plus className="w-4 h-4" />
             <span>Add Domain</span>
           </button>

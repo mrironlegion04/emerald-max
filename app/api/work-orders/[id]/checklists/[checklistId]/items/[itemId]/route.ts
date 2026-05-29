@@ -33,7 +33,7 @@ function validateValue(type: string, value: string | null, options: string[]): s
   return null
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ itemId: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; checklistId: string; itemId: string }> }) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { itemId } = await params

@@ -16,7 +16,7 @@ function getTransporter() {
   })
 }
 
-const FROM = process.env.EMAIL_FROM ?? 'CMMS <noreply@cmms.local>'
+const FROM = process.env.EMAIL_FROM ?? 'MAX <noreply@cmms.local>'
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
 
 // ── Template helper ───────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export async function sendWOAssigned(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Work order assigned: ${opts.woNumber}`,
+    subject: `[MAX] Work order assigned: ${opts.woNumber}`,
     html:    html(`Work order assigned to you`, body),
   })
 }
@@ -104,7 +104,7 @@ export async function sendWOOverdue(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Overdue: ${opts.woNumber} — ${opts.daysOverdue}d past due`,
+    subject: `[MAX] Overdue: ${opts.woNumber} — ${opts.daysOverdue}d past due`,
     html:    html(`Work order overdue`, body),
   })
 }
@@ -132,7 +132,7 @@ export async function sendWOCompleted(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Completed: ${opts.woNumber}`,
+    subject: `[MAX] Completed: ${opts.woNumber}`,
     html:    html(`Work order completed`, body),
   })
 }
@@ -172,7 +172,7 @@ export async function sendOverdueDigest(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] ${opts.overdueItems.length} overdue work order${opts.overdueItems.length !== 1 ? 's' : ''} — daily digest`,
+    subject: `[MAX] ${opts.overdueItems.length} overdue work order${opts.overdueItems.length !== 1 ? 's' : ''} — daily digest`,
     html:    html('Overdue work orders digest', body),
   })
 }
@@ -199,7 +199,7 @@ export async function sendRequestApproved(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Approved: ${opts.requestTitle}`,
+    subject: `[MAX] Approved: ${opts.requestTitle}`,
     html:    html('Maintenance request approved', body),
   })
 }
@@ -226,7 +226,7 @@ export async function sendRequestRejected(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Rejected: ${opts.requestTitle}`,
+    subject: `[MAX] Rejected: ${opts.requestTitle}`,
     html:    html('Maintenance request rejected', body),
   })
 }
@@ -253,7 +253,7 @@ export async function sendRequestConverted(opts: {
   await getTransporter().sendMail({
     from:    FROM,
     to:      opts.toEmail,
-    subject: `[CMMS] Converted: ${opts.requestTitle} — ${opts.woNumber}`,
+    subject: `[MAX] Converted: ${opts.requestTitle} — ${opts.woNumber}`,
     html:    html('Maintenance request converted', body),
   })
 }

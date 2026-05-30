@@ -259,7 +259,7 @@ export default function LocationsManager({ initialLocations }: Props) {
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-3 bg-emerald-600 rounded-full"></span>
                   <h3 className="font-bold text-slate-900 text-base tracking-tight">
-                    {editingId ? 'Edit Facility Location' : 'Register Corporate Facility'}
+                    {editingId ? 'Edit Facility Location' : 'Register Company Facility'}
                   </h3>
                 </div>
                 <button 
@@ -354,7 +354,7 @@ export default function LocationsManager({ initialLocations }: Props) {
           <p className="text-slate-400 text-sm mt-1 mb-5 max-w-sm mx-auto">
             {trimmedSearch
               ? 'Try adjusting your facilities search term.'
-              : 'Add broad structures like "Corporate HQ" or "North warehouse" and anchor sub-divisions inside.'}
+              : 'Add broad structures like "Company HQ" or "North warehouse" and anchor sub-divisions inside.'}
           </p>
           {trimmedSearch ? (
             <button onClick={() => setSearch('')} className="btn-secondary text-xs font-bold py-1.5 px-3">

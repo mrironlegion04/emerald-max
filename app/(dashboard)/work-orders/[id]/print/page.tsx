@@ -29,7 +29,7 @@ export default async function WorkOrderPrintPage({
       createdBy: { select: { name: true } },
       partsUsed: { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       attachments: true,
-      checklists: { include: { items: true } },
+      procedures: { include: { steps: true } },
     },
   })
 
@@ -169,20 +169,27 @@ export default async function WorkOrderPrintPage({
         </div>
       )}
 
-      {/* Checklists */}
-      {wo.checklists.length > 0 && (
+      {/* Procedures */}
+      {wo.procedures.length > 0 && (
         <div className="mb-8 pb-8 border-b border-gray-300">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Checklists</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Procedures</h3>
           <div className="space-y-4">
-            {wo.checklists.map((list: any) => (
+            {wo.procedures.map((list: any) => (
               <div key={list.id}>
-                <h4 className="font-semibold text-gray-900 text-sm mb-2">{list.title}</h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-semibold text-gray-900 text-sm">{list.title}</h4>
+                  {list.source && (
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-extrabold uppercase uppercase-wide select-none">
+                      {list.source}
+                    </span>
+                  )}
+                </div>
                 <ul className="space-y-1">
-                  {list.items.map((item: any) => (
-                    <li key={item.id} className="text-sm text-gray-700 flex items-start gap-2">
-                      <span className="font-bold">{item.isChecked ? '✓' : '☐'}</span>
-                      <span>{item.label}</span>
-                      {item.isMandatory && <span className="text-red-600 font-bold">*</span>}
+                  {list.steps.map((step: any) => (
+                    <li key={step.id} className="text-sm text-gray-705 flex items-start gap-2">
+                      <span className="font-bold">{step.isChecked ? '✓' : '☐'}</span>
+                      <span>{step.label}</span>
+                      {step.isMandatory && <span className="text-red-650 font-extrabold">*</span>}
                     </li>
                   ))}
                 </ul>

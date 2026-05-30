@@ -129,156 +129,189 @@ async function resolveLocationAssets(locationId: string): Promise<AssetEntry[]> 
 }
 
 /**
- * Collect relevant checklist templates for a set of assets and (optionally) a location.
+ * Collect relevant procedures for a set of assets and (optionally) a location,
+ * matching priority-based rules: ASSET > CATEGORY > LOCATION.
+ * If the same Procedure is found through multiple sources, keep only the highest-priority match.
  */
-export async function resolveTemplatesForAssets(
+export async function resolveProceduresForAssets(
   assetIds: string[],
-  locationId?: string | null,
-): Promise<{ templateId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[]> {
-  if (assetIds.length === 0 && !locationId) return []
+  workOrderLocationId?: string | null,
+): Promise<{ procedureId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[]> {
+  if (assetIds.length === 0) return []
 
-  const assets = assetIds.length > 0
-    ? await prisma.asset.findMany({
-        where: { id: { in: assetIds } },
-        select: { id: true, categoryId: true },
-      })
-    : []
+  const assets = await prisma.asset.findMany({
+    where: { id: { in: assetIds } },
+    select: { id: true, categoryId: true, locationId: true },
+  })
 
   const categoryIds = [...new Set(assets.map(a => a.categoryId).filter((id): id is string => !!id))]
+  const locationIds = [...new Set([
+    ...assets.map(a => a.locationId).filter((id): id is string => !!id),
+    ...(workOrderLocationId ? [workOrderLocationId] : [])
+  ])]
 
-  const templateAssets = assetIds.length > 0
-    ? await prisma.checklistTemplate.findMany({
-        where: { assets: { some: { id: { in: assetIds } } } },
-        select: { id: true, assets: { select: { id: true } } },
-      })
-    : []
+  // Fetch all potentially relevant procedures
+  const procedures = await prisma.procedure.findMany({
+    where: {
+      OR: [
+        { assets: { some: { id: { in: assetIds } } } },
+        ...(categoryIds.length > 0 ? [{ categories: { some: { id: { in: categoryIds } } } }] : []),
+        ...(locationIds.length > 0 ? [{ locations: { some: { id: { in: locationIds } } } }] : []),
+      ]
+    },
+    include: {
+      assets: { select: { id: true } },
+      categories: { select: { id: true } },
+      locations: { select: { id: true } },
+    }
+  })
 
-  const templateCategories = categoryIds.length > 0
-    ? await prisma.checklistTemplate.findMany({
-        where: { categories: { some: { id: { in: categoryIds } } } },
-        select: { id: true, categories: { select: { id: true } } },
-      })
-    : []
+  const results: { procedureId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[] = []
 
-  const templateLocations = locationId
-    ? await prisma.checklistTemplate.findMany({
-        where: { locations: { some: { id: locationId } } },
-        select: { id: true },
-      })
-    : []
+  // Resolve matching procedures per asset based on priority: ASSET > CATEGORY > LOCATION
+  for (const asset of assets) {
+    const assetId = asset.id
+    const seenProcedureIdsForAsset = new Set<string>()
 
-  const result: { templateId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[] = []
-
-  const seen = new Set<string>()
-
-  for (const t of templateAssets) {
-    for (const a of t.assets) {
-      const key = `${t.id}-${a.id}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        result.push({ templateId: t.id, assetId: a.id, source: 'ASSET' })
+    // Priority 1: ASSET Procedures
+    const matchingAssetProcedures = procedures.filter(p => 
+      p.assets.some(a => a.id === assetId)
+    )
+    for (const p of matchingAssetProcedures) {
+      if (!seenProcedureIdsForAsset.has(p.id)) {
+        seenProcedureIdsForAsset.add(p.id)
+        results.push({ procedureId: p.id, assetId, source: 'ASSET' })
       }
     }
-  }
 
-  for (const t of templateCategories) {
-    for (const c of t.categories) {
-      const matchedAssets = assets.filter(a => a.categoryId === c.id)
-      for (const a of matchedAssets) {
-        const key = `${t.id}-${a.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          result.push({ templateId: t.id, assetId: a.id, source: 'CATEGORY' })
+    // Priority 2: CATEGORY Procedures
+    if (asset.categoryId) {
+      const matchingCategoryProcedures = procedures.filter(p => 
+        p.categories.some(c => c.id === asset.categoryId)
+      )
+      for (const p of matchingCategoryProcedures) {
+        if (!seenProcedureIdsForAsset.has(p.id)) {
+          seenProcedureIdsForAsset.add(p.id)
+          results.push({ procedureId: p.id, assetId, source: 'CATEGORY' })
+        }
+      }
+    }
+
+    // Priority 3: LOCATION Procedures
+    const assetLocIds = [
+      ...(asset.locationId ? [asset.locationId] : []),
+      ...(workOrderLocationId ? [workOrderLocationId] : [])
+    ]
+    if (assetLocIds.length > 0) {
+      const matchingLocationProcedures = procedures.filter(p => 
+        p.locations.some(l => assetLocIds.includes(l.id))
+      )
+      for (const p of matchingLocationProcedures) {
+        if (!seenProcedureIdsForAsset.has(p.id)) {
+          seenProcedureIdsForAsset.add(p.id)
+          results.push({ procedureId: p.id, assetId, source: 'LOCATION' })
         }
       }
     }
   }
 
-  const locTemplateIds = new Set(templateLocations.map(t => t.id))
-
-  if (locationId) {
-    for (const assetId of assetIds) {
-      for (const tid of locTemplateIds) {
-        const key = `${tid}-${assetId}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          result.push({ templateId: tid, assetId, source: 'LOCATION' })
-        }
-      }
-    }
-  }
-
-  return result
+  return results
 }
 
 /**
- * Generate per-asset checklists from templates.
- * Creates one WOChecklist per asset-template pair, with items preserving assetId.
- * Duplicate prevention: skips if same template already applied to same asset.
+ * Generate per-asset procedures.
+ * Creates one WOProcedure with associated steps.
+ * Deduplicates using Procedure IDs to prevent double application.
  */
-export async function generatePerAssetChecklists(
+export async function generatePerAssetProcedures(
   workOrderId: string,
-  templateMappings: { templateId: string; assetId: string; source: string }[],
+  mappings: { procedureId: string; assetId: string | null; source: string }[],
+  sourceType: 'AUTO' | 'MANUAL' | 'PM' = 'AUTO'
 ): Promise<void> {
-  if (templateMappings.length === 0) return
+  if (mappings.length === 0) return
 
-  const templateIds = [...new Set(templateMappings.map(m => m.templateId))]
+  const procedureIds = [...new Set(mappings.map(m => m.procedureId))]
 
-  const templates = await prisma.checklistTemplate.findMany({
-    where: { id: { in: templateIds } },
-    include: { items: { orderBy: { sortOrder: 'asc' } } },
+  const procedures = await prisma.procedure.findMany({
+    where: { id: { in: procedureIds } },
+    include: { steps: { orderBy: { sortOrder: 'asc' } } },
   })
 
-  const templateMap = new Map(templates.map(t => [t.id, t]))
+  const procedureMap = new Map(procedures.map(p => [p.id, p]))
 
-  // Group mappings by template
-  const byTemplate = new Map<string, { assetId: string; source: string }[]>()
-  for (const m of templateMappings) {
-    if (!byTemplate.has(m.templateId)) byTemplate.set(m.templateId, [])
-    byTemplate.get(m.templateId)!.push(m)
-  }
+  // Prevent duplicate Procedure application using Procedure IDs
+  const existingProcedures = await prisma.wOProcedure.findMany({
+    where: { workOrderId },
+    select: { procedureId: true }
+  })
+  const existingProcedureIds = new Set(existingProcedures.map(p => p.procedureId).filter(Boolean))
 
-  for (const [templateId, mappings] of byTemplate) {
-    const template = templateMap.get(templateId)
-    if (!template || template.items.length === 0) continue
+  for (const mapping of mappings) {
+    if (existingProcedureIds.has(mapping.procedureId)) {
+      continue
+    }
 
-    // Deduplicate by asset
-    const seenAssets = new Set<string>()
-    const uniqueMappings = mappings.filter(m => {
-      if (seenAssets.has(m.assetId)) return false
-      seenAssets.add(m.assetId)
-      return true
+    const procedure = procedureMap.get(mapping.procedureId)
+    if (!procedure) continue
+
+    const asset = mapping.assetId
+      ? await prisma.asset.findUnique({
+          where: { id: mapping.assetId },
+          select: { name: true },
+        })
+      : null
+
+    const titlePrefix = asset ? `${asset.name} — ` : ''
+
+    const woProcedure = await prisma.wOProcedure.create({
+      data: {
+        workOrderId,
+        procedureId: mapping.procedureId,
+        title: `${titlePrefix}${procedure.name}`,
+        source: sourceType,
+      },
     })
 
-    // Create one checklist per asset (this template + this asset)
-    for (const mapping of uniqueMappings) {
-      const asset = await prisma.asset.findUnique({
-        where: { id: mapping.assetId },
-        select: { name: true },
-      })
-      if (!asset) continue
-
-      const checklist = await prisma.wOChecklist.create({
-        data: {
-          workOrderId,
-          title: `${asset.name} — ${template.name}`,
-        },
-      })
-
-      await prisma.wOChecklistItem.createMany({
-        data: template.items.map(item => ({
-          checklistId: checklist.id,
-          label: item.label,
-          type: item.type,
-          isMandatory: item.isMandatory,
-          sortOrder: item.sortOrder,
-          options: item.options,
+    if (procedure.steps.length > 0) {
+      await prisma.wOProcedureStep.createMany({
+        data: procedure.steps.map(step => ({
+          procedureId: woProcedure.id,
+          label: step.label,
+          type: step.type,
+          isMandatory: step.isMandatory,
+          sortOrder: step.sortOrder,
+          options: step.options,
           isChecked: false,
           assetId: mapping.assetId,
         })),
       })
     }
   }
+}
+
+// Backward-compatible Legacy Aliases for smooth transition/file coexistence
+export async function resolveTemplatesForAssets(
+  assetIds: string[],
+  locationId?: string | null,
+) {
+  const resolved = await resolveProceduresForAssets(assetIds, locationId)
+  return resolved.map(r => ({
+    templateId: r.procedureId,
+    assetId: r.assetId,
+    source: r.source
+  }))
+}
+
+export async function generatePerAssetChecklists(
+  workOrderId: string,
+  templateMappings: { templateId?: string; procedureId?: string; assetId: string | null; source: string }[],
+): Promise<void> {
+  const normalizedMappings = templateMappings.map(m => ({
+    procedureId: m.procedureId || m.templateId!,
+    assetId: m.assetId,
+    source: m.source
+  }))
+  return generatePerAssetProcedures(workOrderId, normalizedMappings, 'AUTO')
 }
 
 /**

@@ -154,8 +154,8 @@ const adminItems = [
 // Settings section for ADMIN + MANAGER
 const settingsItems = [
   {
-    label: 'Checklist Templates',
-    href:  '/settings/checklist-templates',
+    label: 'Procedures',
+    href:  '/settings/procedures',
     icon:  <ClipboardCheck className="w-4 h-4" />,
     adminOnly: false,
   },

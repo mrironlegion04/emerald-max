@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import {
+  resolveProceduresForAssets,
+  generatePerAssetProcedures
+} from '@/lib/work-order-assets'
 
 // Calculate the next due date based on frequency and interval
 function advanceDate(current: Date, frequency: string, interval: number): Date {
@@ -57,8 +61,8 @@ export async function POST(
       include: {
         asset: { select: { id: true, name: true, currentMeterValue: true } },
         location: { select: { id: true, name: true } },
-        checklistTemplates: {
-          select: { template: { select: { id: true, name: true } } },
+        procedures: {
+          select: { procedure: { select: { id: true, name: true } } },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -185,16 +189,17 @@ export async function POST(
       }
 
       if (tracedAssets.length > 0) {
-        const checklist = await prisma.wOChecklist.create({
+        const woProcedure = await prisma.wOProcedure.create({
           data: {
             workOrderId: wo.id,
-            title: 'Location Assets Checklist',
+            title: 'Location Assets Procedure',
+            source: 'PM',
           },
         })
 
-        await prisma.wOChecklistItem.createMany({
+        await prisma.wOProcedureStep.createMany({
           data: tracedAssets.map((asset, index) => ({
-            checklistId: checklist.id,
+            procedureId: woProcedure.id,
             label: `Check ${asset.name}`,
             assetId: asset.id,
             isChecked: false,
@@ -202,35 +207,43 @@ export async function POST(
           })),
         })
       }
-    } else if (schedule.checklistTemplates && schedule.checklistTemplates.length > 0) {
-      // Propagate multiple checklist templates if specified
-      for (const ctItem of schedule.checklistTemplates) {
-        const templateItems = await prisma.checklistTemplateItem.findMany({
-          where: { templateId: ctItem.template.id },
+    } else if (schedule.procedures && schedule.procedures.length > 0) {
+      // Propagate PM procedures
+      for (const sp of schedule.procedures) {
+        const steps = await prisma.procedureStep.findMany({
+          where: { procedureId: sp.procedure.id },
           orderBy: { sortOrder: 'asc' },
         })
 
-        if (templateItems.length > 0) {
-          const checklist = await prisma.wOChecklist.create({
+        if (steps.length > 0) {
+          const woProcedure = await prisma.wOProcedure.create({
             data: {
               workOrderId: wo.id,
-              title: ctItem.template.name,
+              procedureId: sp.procedure.id,
+              title: sp.procedure.name,
+              source: 'PM',
             },
           })
 
-          await prisma.wOChecklistItem.createMany({
-            data: templateItems.map(item => ({
-              checklistId: checklist.id,
-              label: item.label,
-              type: item.type,
-              isMandatory: item.isMandatory,
-              sortOrder: item.sortOrder,
-              options: item.options,
+          await prisma.wOProcedureStep.createMany({
+            data: steps.map(step => ({
+              procedureId: woProcedure.id,
+              label: step.label,
+              type: step.type,
+              isMandatory: step.isMandatory,
+              sortOrder: step.sortOrder,
+              options: step.options,
               isChecked: false,
             })),
           })
         }
       }
+    }
+
+    // Also run auto-resolution for assets, category, and location in addition to PM procedures
+    if (schedule.assetId) {
+      const resolvedProcedures = await resolveProceduresForAssets([schedule.assetId], schedule.locationId)
+      await generatePerAssetProcedures(wo.id, resolvedProcedures, 'AUTO')
     }
 
     // Write audit log

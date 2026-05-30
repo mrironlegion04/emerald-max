@@ -8,7 +8,7 @@ import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Bad
 import WOStatusActions from '@/components/WOStatusActions'
 import WOPartsPanel from '@/components/WOPartsPanel'
 import WOCommentsPanel from '@/components/WOCommentsPanel'
-import WOChecklistPanel from '@/components/WOChecklistPanel'
+import WOProceduresPanel from '@/components/WOProceduresPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import TimerPanel from '@/components/TimerPanel'
@@ -57,9 +57,9 @@ export default async function WorkOrderDetailPage({
       issue:        true,
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedTeam: { select: { id: true, name: true, trade: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
-      checklists: {
+      procedures: {
         include: {
-          items: {
+          steps: {
             include: {
               asset: {
                 include: {
@@ -307,31 +307,32 @@ export default async function WorkOrderDetailPage({
             allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name, trade: t.trade }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
           />
-          <WOChecklistPanel
+          <WOProceduresPanel
             woId={wo.id}
-            initialChecklists={wo.checklists.map((c: any) => ({
+            initialProcedures={wo.procedures.map((c: any) => ({
               id: c.id,
               title: c.title,
-              items: c.items.map((i: any) => ({
-                id: i.id,
-                label: i.label,
-                type: i.type,
-                isChecked: i.isChecked,
-                isMandatory: i.isMandatory,
-                stringValue: i.stringValue,
-                options: i.options,
-                checkedAt: i.checkedAt ? i.checkedAt.toISOString() : null,
-                checkedBy: i.checkedBy,
-                sortOrder: i.sortOrder,
-                assetId: i.assetId,
-                asset: i.asset ? {
-                  id: i.asset.id,
-                  name: i.asset.name,
-                  parentId: i.asset.parentId,
-                  location: i.asset.location ? {
-                    id: i.asset.location.id,
-                    name: i.asset.location.name,
-                    parentId: i.asset.location.parentId,
+              source: c.source,
+              steps: c.steps.map((s: any) => ({
+                id: s.id,
+                label: s.label,
+                type: s.type,
+                isChecked: s.isChecked,
+                isMandatory: s.isMandatory,
+                stringValue: s.stringValue,
+                options: s.options,
+                checkedAt: s.checkedAt ? s.checkedAt.toISOString() : null,
+                checkedBy: s.checkedBy,
+                sortOrder: s.sortOrder,
+                assetId: s.assetId,
+                asset: s.asset ? {
+                  id: s.asset.id,
+                  name: s.asset.name,
+                  parentId: s.asset.parentId,
+                  location: s.asset.location ? {
+                    id: s.asset.location.id,
+                    name: s.asset.location.name,
+                    parentId: s.asset.location.parentId,
                   } : null
                 } : null
               })),

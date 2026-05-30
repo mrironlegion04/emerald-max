@@ -62,23 +62,23 @@ export async function PATCH(
       )
     }
 
-    // If completing, check for unchecked mandatory checklist items across ALL checklists
+    // If completing, check for unchecked mandatory procedure steps across ALL procedures
     if (status === 'COMPLETED') {
-      const checklists = await prisma.wOChecklist.findMany({
+      const procedures = await prisma.wOProcedure.findMany({
         where: { workOrderId: id },
-        include: { items: true }
+        include: { steps: true }
       })
       let uncheckedMandatory = 0
-      for (const cl of checklists) {
-        for (const item of cl.items) {
-          if (!item.isMandatory) continue
-          const isIncomplete = item.type === 'CHECKBOX' ? !item.isChecked : !item.stringValue
+      for (const proc of procedures) {
+        for (const step of proc.steps) {
+          if (!step.isMandatory) continue
+          const isIncomplete = step.type === 'CHECKBOX' ? !step.isChecked : !step.stringValue
           if (isIncomplete) uncheckedMandatory++
         }
       }
       if (uncheckedMandatory > 0) {
         return NextResponse.json(
-          { error: `Cannot complete: ${uncheckedMandatory} mandatory checklist item(s) unchecked` },
+          { error: `Cannot complete: ${uncheckedMandatory} mandatory procedure step(s) incomplete` },
           { status: 422 }
         )
       }

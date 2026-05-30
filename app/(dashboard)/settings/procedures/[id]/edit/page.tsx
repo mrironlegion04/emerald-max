@@ -3,20 +3,20 @@ import { getCurrentUser } from '@/lib/session'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
-import ChecklistTemplateForm from '@/components/ChecklistTemplateForm'
+import ProcedureForm from '@/components/ProcedureForm'
 
-export default async function EditChecklistTemplatePage({
+export default async function EditProcedurePage({
   params,
 }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
   if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) redirect('/dashboard')
 
   const { id } = await params
-  const [template, assets, locations, assetCategories] = await Promise.all([
-    prisma.checklistTemplate.findUnique({
+  const [procedure, assets, locations, assetCategories] = await Promise.all([
+    prisma.procedure.findUnique({
       where: { id },
       include: {
-        items: { orderBy: { sortOrder: 'asc' } },
+        steps: { orderBy: { sortOrder: 'asc' } },
         locations: true,
         categories: true,
         assets: true,
@@ -36,35 +36,35 @@ export default async function EditChecklistTemplatePage({
       orderBy: { name: 'asc' },
     }),
   ])
-  if (!template) notFound()
+  if (!procedure) notFound()
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-1">
-        <Link href="/settings/checklist-templates" className="text-sm text-gray-400 hover:text-gray-600">
-          ← Back to templates
+        <Link href="/settings/procedures" className="text-sm text-gray-400 hover:text-gray-600">
+          ← Back to Procedures
         </Link>
       </div>
       <PageHeader
-        title={`Edit: ${template.name}`}
-        subtitle="Update the template name, checklist items, and tag associations."
+        title={`Edit: ${procedure.name}`}
+        subtitle="Update the procedure name, steps, and target tags or resources."
       />
-      <ChecklistTemplateForm
-        templateId={template.id}
+      <ProcedureForm
+        templateId={procedure.id}
         initialData={{
-          name:       template.name,
-          description:template.description ?? '',
-          items:      template.items.map((i: any) => ({
-            id:          i.id,
-            label:       i.label,
-            type:        i.type,
-            isMandatory: i.isMandatory,
-            options:     i.options,
-            sortOrder:   i.sortOrder,
+          name:       procedure.name,
+          description:procedure.description ?? '',
+          steps:      procedure.steps.map((s: any) => ({
+            id:          s.id,
+            label:       s.label,
+            type:        s.type,
+            isMandatory: s.isMandatory,
+            options:     s.options,
+            sortOrder:   s.sortOrder,
           })),
-          assetIds:    template.assets.map((a: any) => a.id),
-          categoryIds: template.categories.map((c: any) => c.id),
-          locationIds: template.locations.map((l: any) => l.id),
+          assetIds:    procedure.assets.map((a: any) => a.id),
+          categoryIds: procedure.categories.map((c: any) => c.id),
+          locationIds: procedure.locations.map((l: any) => l.id),
         }}
         assets={assets}
         locations={locations}

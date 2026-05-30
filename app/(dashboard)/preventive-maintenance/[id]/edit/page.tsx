@@ -12,13 +12,13 @@ export default async function EditPMPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/preventive-maintenance/${id}`)
 
-  const [schedule, assets, locations, templates] = await Promise.all([
+  const [schedule, assets, locations, procedures] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
       include: {
-        checklistTemplates: {
+        procedures: {
           include: {
-            template: true,
+            procedure: true,
           },
         },
       },
@@ -32,8 +32,8 @@ export default async function EditPMPage({
       select:  { id: true, name: true, address: true, path: true, parentId: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.checklistTemplate.findMany({
-      select:  { id: true, name: true, description: true, items: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
+    prisma.procedure.findMany({
+      select:  { id: true, name: true, description: true, steps: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -53,7 +53,7 @@ export default async function EditPMPage({
     locationId:          schedule.locationId    ?? '',
     locationScope:       schedule.locationScope ?? 'ALL_ASSETS',
     isActive:            schedule.isActive,
-    checklistTemplates:  schedule.checklistTemplates,
+    procedures:          schedule.procedures,
   }
 
   return (
@@ -64,7 +64,7 @@ export default async function EditPMPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${schedule.title}`} />
-      <PMScheduleForm assets={assets} locations={locations} templates={templates} initialData={initialData} scheduleId={id} />
+      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} initialData={initialData} scheduleId={id} />
     </div>
   )
 }

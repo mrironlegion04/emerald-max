@@ -8,8 +8,8 @@ import { z } from 'zod'
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
-  resolveTemplatesForAssets,
-  generatePerAssetChecklists,
+  resolveProceduresForAssets,
+  generatePerAssetProcedures,
 } from '@/lib/work-order-assets'
 
 const woSchema = z.object({
@@ -32,6 +32,7 @@ const woSchema = z.object({
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
   checklistTemplateIds: z.array(z.string()).optional().default([]),
+  procedureIds:        z.array(z.string()).optional().default([]),
 }).refine(
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
@@ -140,51 +141,28 @@ export async function POST(request: NextRequest) {
       await syncWorkOrderAssets(wo.id, normalized.entries)
     }
 
-    // ── Generate per-asset checklists from auto-resolved templates ───
+    // ── Generate per-asset procedures from auto-resolved templates ───
     const assetIds = normalized.entries.map(e => e.assetId)
     if (assetIds.length > 0) {
-      const templateMappings = await resolveTemplatesForAssets(assetIds, data.locationId)
-      await generatePerAssetChecklists(wo.id, templateMappings)
+      const resolvedProcedures = await resolveProceduresForAssets(assetIds, data.locationId)
+      await generatePerAssetProcedures(wo.id, resolvedProcedures, 'AUTO')
     }
 
-    // ── Snapshot user-selected checklist templates ───────────────────
-    if (data.checklistTemplateIds && data.checklistTemplateIds.length > 0) {
-      const selectedTemplates = await prisma.checklistTemplate.findMany({
-        where: { id: { in: data.checklistTemplateIds } },
-        include: { items: { orderBy: { sortOrder: 'asc' } } },
-      })
-
-      // Apply each selected template to every asset in scope
-      const selectedMappings: { templateId: string; assetId: string; source: string }[] = []
-      for (const tid of data.checklistTemplateIds) {
-        for (const aid of assetIds.length > 0 ? assetIds : [null]) {
-          if (aid) selectedMappings.push({ templateId: tid, assetId: aid, source: 'MANUAL' })
+    // ── Snapshot user-selected procedures (manual additions) ───────────
+    const combinedProcedureIds = [...new Set([...(data.procedureIds ?? []), ...(data.checklistTemplateIds ?? [])])]
+    if (combinedProcedureIds.length > 0) {
+      // Apply each selected procedure to every asset in scope (or single procedure for location-general with no assets)
+      const selectedMappings: { procedureId: string; assetId: string | null; source: string }[] = []
+      for (const pid of combinedProcedureIds) {
+        if (assetIds.length > 0) {
+          for (const aid of assetIds) {
+            selectedMappings.push({ procedureId: pid, assetId: aid, source: 'MANUAL' })
+          }
+        } else {
+          selectedMappings.push({ procedureId: pid, assetId: null, source: 'MANUAL' })
         }
       }
-      // For location-general WOs with no assets, create a single checklist
-      if (assetIds.length === 0 && normalized.scope === 'LOCATION_GENERAL') {
-        for (const template of selectedTemplates) {
-          if (template.items.length === 0) continue
-          await prisma.wOChecklist.create({
-            data: {
-              workOrderId: wo.id,
-              title: template.name,
-              items: {
-                create: template.items.map(item => ({
-                  label: item.label,
-                  type: item.type,
-                  isMandatory: item.isMandatory,
-                  sortOrder: item.sortOrder,
-                  options: item.options,
-                  isChecked: false,
-                })),
-              },
-            },
-          })
-        }
-      } else {
-        await generatePerAssetChecklists(wo.id, selectedMappings)
-      }
+      await generatePerAssetProcedures(wo.id, selectedMappings, 'MANUAL')
     }
 
     await writeAudit({

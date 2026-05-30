@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
-import ChecklistTemplatesManager from '@/components/ChecklistTemplatesManager'
+import ProceduresManager from '@/components/ProceduresManager'
 
 interface SearchParams {
   page?: string
@@ -11,7 +11,7 @@ interface SearchParams {
 
 const ITEMS_PER_PAGE = 25
 
-export default async function ChecklistTemplatesPage({
+export default async function ProceduresPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
@@ -23,29 +23,29 @@ export default async function ChecklistTemplatesPage({
   const page = Math.max(1, parseInt(params.page ?? '1', 10))
   const skip = (page - 1) * ITEMS_PER_PAGE
 
-  const [templates, totalCount] = await Promise.all([
-    prisma.checklistTemplate.findMany({
+  const [procedures, totalCount] = await Promise.all([
+    prisma.procedure.findMany({
       include: {
-        items: true,
+        steps: true,
         _count: { select: { pmSchedules: true } },
       },
       orderBy: { name: 'asc' },
       skip,
       take: ITEMS_PER_PAGE,
     }),
-    prisma.checklistTemplate.count(),
+    prisma.procedure.count(),
   ])
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
-  const baseUrl = '/settings/checklist-templates'
+  const baseUrl = '/settings/procedures'
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <PageHeader
-        title="Checklist Templates"
-        subtitle={`Reusable checklists that auto-apply to work orders via PM schedules. · ${totalCount} total · ${templates.length} showing`}
+        title="Procedures"
+        subtitle={`Reusable step-by-step procedures that auto-apply to work orders based on assets, categories, locations, or PM schedules. · ${totalCount} total · ${procedures.length} showing`}
       />
-      <ChecklistTemplatesManager key={page} initialTemplates={templates} />
+      <ProceduresManager key={page} initialProcedures={procedures} />
 
       {/* Pagination controls */}
       {totalPages > 1 && (

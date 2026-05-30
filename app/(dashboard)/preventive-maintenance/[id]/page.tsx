@@ -35,9 +35,9 @@ export default async function PMDetailPage({
       },
       location: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
-      checklistTemplates: {
+      procedures: {
         include: {
-          template: {
+          procedure: {
             select: { id: true, name: true, description: true },
           },
         },
@@ -156,16 +156,16 @@ export default async function PMDetailPage({
             </div>
           )}
 
-          {/* Checklist Templates */}
-          {schedule.checklistTemplates && schedule.checklistTemplates.length > 0 && (
+          {/* Procedures */}
+          {schedule.procedures && schedule.procedures.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-3">Attached checklists</h2>
+              <h2 className="font-semibold text-gray-900 text-sm mb-3">Attached Procedures</h2>
               <div className="space-y-2">
-                {schedule.checklistTemplates.map((ct: any) => (
-                  <div key={ct.template.id} className="p-3 border border-gray-150 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                    <p className="text-xs font-semibold text-gray-800">{ct.template.name}</p>
-                    {ct.template.description && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{ct.template.description}</p>
+                {schedule.procedures.map((cp: any) => (
+                  <div key={cp.procedure.id} className="p-3 border border-gray-150 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                    <p className="text-xs font-semibold text-gray-800">{cp.procedure.name}</p>
+                    {cp.procedure.description && (
+                      <p className="text-[10px] text-gray-500 mt-0.5">{cp.procedure.description}</p>
                     )}
                   </div>
                 ))}

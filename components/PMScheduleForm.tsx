@@ -17,8 +17,8 @@ interface SimpleMeter {
 
 interface Asset    { id: string; name: string; assetCode: string | null; imageUrl?: string | null; parentId?: string | null; locationId?: string | null; categoryId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
-interface Template {
-  id: string; name: string; description?: string | null; items?: { id: string }[]
+interface Procedure {
+  id: string; name: string; description?: string | null; steps?: { id: string }[]
   locations?: { id: string }[]
   categories?: { id: string }[]
   assets?: { id: string }[]
@@ -29,13 +29,13 @@ interface PMFormData {
   triggerType: string; frequency: string; interval: string
   meterInterval: string; meterUnit: string; meterId: string
   nextDueDate: string; assetId: string; locationId: string; locationScope: string; isActive: boolean
-  checklistTemplateIds: string[]
+  procedureIds: string[]
 }
 
 interface Props {
   assets:     Asset[]
   locations:  Location[]
-  templates?: Template[]
+  procedures?: Procedure[]
   initialData?: Partial<PMFormData>
   scheduleId?: string
   preselectedAssetId?: string
@@ -96,7 +96,7 @@ function defaultDueDate() {
   return d.toISOString().split('T')[0]
 }
 
-export default function PMScheduleForm({ assets, locations, templates = [], initialData, scheduleId, preselectedAssetId }: Props) {
+export default function PMScheduleForm({ assets, locations, procedures = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
 
@@ -114,7 +114,7 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
     locationId:         initialData?.locationId         ?? '',
     locationScope:      initialData?.locationScope      ?? 'ALL_ASSETS',
     isActive:           initialData?.isActive           ?? true,
-    checklistTemplateIds: (initialData as any)?.checklistTemplates?.map((ct: any) => ct.template?.id).filter(Boolean) ?? [],
+    procedureIds:       (initialData as any)?.procedures?.map((p: any) => p.procedure?.id || p.procedureId).filter(Boolean) ?? (initialData as any)?.procedureIds ?? [],
   })
 
   const [saving, setSaving] = useState(false)
@@ -137,7 +137,7 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  // Smart recommendation: determine which templates match the selected asset/location
+  // Smart recommendation: determine which procedures match the selected asset/location
   const recommendedIds = useMemo(() => {
     const ids = new Set<string>()
     if (!form.assetId && !form.locationId) return ids
@@ -145,23 +145,23 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
     const selectedAsset = assets.find(a => a.id === form.assetId)
     const selectedAssetCategoryId = selectedAsset?.categoryId
 
-    for (const t of templates) {
-      const matchesAsset   = form.assetId && t.assets?.some(a => a.id === form.assetId)
-      const matchesCategory = form.assetId && selectedAssetCategoryId && t.categories?.some(c => c.id === selectedAssetCategoryId)
-      const matchesLocation = form.locationId && t.locations?.some(l => l.id === form.locationId)
-      if (matchesAsset || matchesCategory || matchesLocation) ids.add(t.id)
+    for (const p of procedures) {
+      const matchesAsset   = form.assetId && p.assets?.some(a => a.id === form.assetId)
+      const matchesCategory = form.assetId && selectedAssetCategoryId && p.categories?.some(c => c.id === selectedAssetCategoryId)
+      const matchesLocation = form.locationId && p.locations?.some(l => l.id === form.locationId)
+      if (matchesAsset || matchesCategory || matchesLocation) ids.add(p.id)
     }
     return ids
-  }, [form.assetId, form.locationId, templates, assets])
+  }, [form.assetId, form.locationId, procedures, assets])
 
   // Sort: recommended first, then others
-  const sortedTemplates = useMemo(() => {
-    return [...templates].sort((a, b) => {
+  const sortedProcedures = useMemo(() => {
+    return [...procedures].sort((a, b) => {
       const aRec = recommendedIds.has(a.id) ? 0 : 1
       const bRec = recommendedIds.has(b.id) ? 0 : 1
       return aRec - bRec
     })
-  }, [templates, recommendedIds])
+  }, [procedures, recommendedIds])
 
   const hasRecommendations = recommendedIds.size > 0 && (!!form.assetId || !!form.locationId)
 
@@ -205,7 +205,8 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
         assetId:              form.assetId || null,
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
-        checklistTemplateIds: form.checklistTemplateIds,
+        procedureIds:         form.procedureIds,
+        checklistTemplateIds: form.procedureIds, // Backwards compatible support
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -310,7 +311,7 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900">All Assets in this Location</p>
-                      <p className="text-xs text-gray-500">Creates a checklist for each asset recursively</p>
+                      <p className="text-xs text-gray-500">Creates procedure execution instances for each asset recursively</p>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -324,7 +325,7 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900">General Maintenance</p>
-                      <p className="text-xs text-gray-500">Location-only ticket (no asset checklist)</p>
+                      <p className="text-xs text-gray-500">Location-only ticket (no asset-specific procedures)</p>
                     </div>
                   </label>
                 </div>
@@ -477,15 +478,15 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
         )}
       </div>
 
-      {/* Checklist Templates */}
-      {templates.length > 0 && (
+      {/* Procedures */}
+      {procedures.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-emerald-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Checklist templates</h2>
+            <h2 className="font-semibold text-gray-900 text-sm">Procedures</h2>
           </div>
-          <p className="text-xs text-gray-400">
-            Select one or more checklists to be automatically applied when work orders are generated from this schedule.
+          <p className="text-xs text-gray-450 text-slate-400">
+            Select one or more Procedures to be automatically applied when work orders are generated from this schedule.
           </p>
 
           {/* Recommended section */}
@@ -493,34 +494,34 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 uppercase tracking-wider">
                 <Star className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
-                Recommended
+                Recommended Procedures
               </div>
-              {sortedTemplates.filter(t => recommendedIds.has(t.id)).map(template => (
-                <label key={template.id} className="flex items-center gap-3 p-3 border border-emerald-200 bg-emerald-50/50 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors">
+              {sortedProcedures.filter(p => recommendedIds.has(p.id)).map(proc => (
+                <label key={proc.id} className="flex items-center gap-3 p-3 border border-emerald-200 bg-emerald-50/50 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
-                    checked={form.checklistTemplateIds.includes(template.id)}
+                    checked={form.procedureIds.includes(proc.id)}
                     onChange={e => {
                       const newIds = e.target.checked
-                        ? [...form.checklistTemplateIds, template.id]
-                        : form.checklistTemplateIds.filter(id => id !== template.id)
-                      set('checklistTemplateIds', newIds)
+                        ? [...form.procedureIds, proc.id]
+                        : form.procedureIds.filter(id => id !== proc.id)
+                      set('procedureIds', newIds)
                     }}
-                    className="w-4 h-4 text-emerald-600 rounded border-gray-300"
+                    className="w-4 h-4 text-emerald-605 rounded border-gray-300 pointer-events-none"
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900">{template.name}</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
-                        <Star className="w-2.5 h-2.5 fill-emerald-500" />
+                      <p className="text-sm font-bold text-gray-900">{proc.name}</p>
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-705 text-[10px] font-bold rounded-full">
+                        <Star className="w-2.5 h-2.5 fill-emerald-505" />
                         Recommended
                       </span>
                     </div>
-                    {template.description && (
-                      <p className="text-xs text-gray-500">{template.description}</p>
+                    {proc.description && (
+                      <p className="text-xs text-gray-500">{proc.description}</p>
                     )}
-                    {template.items && template.items.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">{template.items.length} items</p>
+                    {proc.steps && proc.steps.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">{proc.steps.length} steps</p>
                     )}
                   </div>
                 </label>
@@ -528,43 +529,43 @@ export default function PMScheduleForm({ assets, locations, templates = [], init
             </div>
           )}
 
-          {/* All templates section */}
+          {/* All procedures section */}
           <div className="space-y-2">
             {hasRecommendations && (
               <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider pt-2">
-                All templates
+                All procedures
               </div>
             )}
-            {sortedTemplates.filter(t => !recommendedIds.has(t.id)).map(template => (
-              <label key={template.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+            {sortedProcedures.filter(p => !recommendedIds.has(p.id)).map(proc => (
+              <label key={proc.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                 <input
                   type="checkbox"
-                  checked={form.checklistTemplateIds.includes(template.id)}
+                  checked={form.procedureIds.includes(proc.id)}
                   onChange={e => {
                     const newIds = e.target.checked
-                      ? [...form.checklistTemplateIds, template.id]
-                      : form.checklistTemplateIds.filter(id => id !== template.id)
-                    set('checklistTemplateIds', newIds)
+                      ? [...form.procedureIds, proc.id]
+                      : form.procedureIds.filter(id => id !== proc.id)
+                    set('procedureIds', newIds)
                   }}
                   className="w-4 h-4 text-emerald-600 rounded border-gray-300"
                 />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{template.name}</p>
-                  {template.description && (
-                    <p className="text-xs text-gray-500">{template.description}</p>
+                  <p className="text-sm font-bold text-gray-900">{proc.name}</p>
+                  {proc.description && (
+                    <p className="text-xs text-gray-500">{proc.description}</p>
                   )}
-                  {template.items && template.items.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">{template.items.length} items</p>
+                  {proc.steps && proc.steps.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">{proc.steps.length} steps</p>
                   )}
                 </div>
               </label>
             ))}
           </div>
 
-          {form.checklistTemplateIds.length > 0 && (
+          {form.procedureIds.length > 0 && (
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
               <ClipboardCheck className="w-3.5 h-3.5" />
-              {form.checklistTemplateIds.length} checklist{form.checklistTemplateIds.length !== 1 ? 's' : ''} will auto-apply to all generated work orders
+              {form.procedureIds.length} Procedure{form.procedureIds.length !== 1 ? 's' : ''} will auto-apply to all generated work orders
             </div>
           )}
         </div>

@@ -4,8 +4,6 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
 
-const stepTypeEnum = z.enum(['CHECKBOX','TEXT_INPUT','NUMBER_INPUT','SINGLE_SELECT','INSPECTION','SIGNATURE'])
-
 const updateSchema = z.object({
   isChecked: z.boolean().optional(),
   isMandatory: z.boolean().optional(),
@@ -33,19 +31,19 @@ function validateValue(type: string, value: string | null, options: string[]): s
   return null
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; checklistId: string; itemId: string }> }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; procedureId: string; stepId: string }> }) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const { itemId } = await params
+  const { stepId } = await params
   const { isChecked, isMandatory, stringValue } = updateSchema.parse(await req.json())
   
-  const existingItem = await prisma.wOChecklistItem.findUnique({
-    where: { id: itemId },
-    include: { checklist: { include: { workOrder: true } } },
+  const existingStep = await prisma.wOProcedureStep.findUnique({
+    where: { id: stepId },
+    include: { procedure: { include: { workOrder: true } } },
   })
-  if (!existingItem) return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 })
+  if (!existingStep) return NextResponse.json({ error: 'Procedure step not found' }, { status: 404 })
 
-  const validationError = validateValue(existingItem.type, stringValue ?? null, existingItem.options)
+  const validationError = validateValue(existingStep.type, stringValue ?? null, existingStep.options)
   if (validationError) {
     return NextResponse.json({ error: validationError }, { status: 422 })
   }
@@ -66,20 +64,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updateData.checkedBy = stringValue !== null && stringValue !== '' ? user.name : null
   }
   
-  const item = await prisma.wOChecklistItem.update({
-    where: { id: itemId },
+  const step = await prisma.wOProcedureStep.update({
+    where: { id: stepId },
     data: updateData,
   })
 
-  if (isChecked !== undefined && existingItem.isChecked !== isChecked) {
+  if (isChecked !== undefined && existingStep.isChecked !== isChecked) {
     await writeAudit({
       action: 'UPDATE',
       entity: 'Work Order',
-      entityId: existingItem.checklist.workOrder.id,
-      entityName: existingItem.checklist.workOrder.title,
+      entityId: existingStep.procedure.workOrder.id,
+      entityName: existingStep.procedure.workOrder.title,
       changes: {
-        [`Checklist Item: ${existingItem.label}`]: {
-          before: existingItem.isChecked ? 'Checked' : 'Unchecked',
+        [`Procedure Step: ${existingStep.label}`]: {
+          before: existingStep.isChecked ? 'Checked' : 'Unchecked',
           after: isChecked ? 'Checked' : 'Unchecked',
         }
       },
@@ -89,5 +87,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
   }
 
-  return NextResponse.json(item)
+  return NextResponse.json(step)
 }

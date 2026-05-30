@@ -19,6 +19,7 @@ const pmSchema = z.object({
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
   checklistTemplateIds: z.array(z.string()).optional().default([]),
+  procedureIds:        z.array(z.string()).optional().default([]),
 }).refine(data => data.assetId || data.locationId, {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -28,10 +29,10 @@ export async function GET() {
   try {
     const schedules = await prisma.maintenanceSchedule.findMany({
       include: {
-        asset:             { select: { id: true, name: true, assetCode: true } },
-        location:          { select: { id: true, name: true } },
-        checklistTemplates: {
-          select: { template: { select: { id: true, name: true } }, sortOrder: true },
+        asset:    { select: { id: true, name: true, assetCode: true } },
+        location: { select: { id: true, name: true } },
+        procedures: {
+          select: { procedure: { select: { id: true, name: true } }, sortOrder: true },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = pmSchema.parse(body)
 
+    const combinedProcedureIds = [...new Set([...(data.procedureIds ?? []), ...(data.checklistTemplateIds ?? [])])]
+
     const schedule = await prisma.maintenanceSchedule.create({
       data: {
         title:               data.title,
@@ -69,9 +72,9 @@ export async function POST(request: NextRequest) {
         meterInterval:       data.meterInterval        ?? null,
         meterUnit:           data.meterUnit            ?? null,
         createdById:         user.userId,
-        checklistTemplates: {
-          create: data.checklistTemplateIds.map((templateId, index) => ({
-            templateId,
+        procedures: {
+          create: combinedProcedureIds.map((procedureId, index) => ({
+            procedureId,
             sortOrder: index,
           })),
         },

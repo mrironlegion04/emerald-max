@@ -130,9 +130,9 @@ export async function GET(request: NextRequest) {
         include: {
           asset: { select: { name: true, assetCode: true, location: { select: { name: true } } } },
           location: { select: { name: true } },
-          checklistTemplates: {
+          procedures: {
             select: {
-              template: { select: { name: true } },
+              procedure: { select: { name: true } },
             },
           },
         },
@@ -141,13 +141,13 @@ export async function GET(request: NextRequest) {
       filename = `pm-schedules-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
         'Title','Description','Trigger','Frequency','Interval','Next Due',
-        'Asset','Asset Code','Location','Checklist Template','Active','Created At',
+        'Asset','Asset Code','Location','Procedure','Active','Created At',
       ]
       const rows = schedules.map(s => [
         s.title, s.description ?? '',
         s.triggerType, s.frequency, s.interval, fmt(s.nextDueDate),
         s.asset?.name ?? '', s.asset?.assetCode ?? '', s.asset?.location?.name ?? s.location?.name ?? '',
-        s.checklistTemplates.map(ct => ct.template.name).join('; ') || '',
+        s.procedures.map(p => p.procedure.name).join('; ') || '',
         s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
       ])
       csv = toCSV(headers, rows)

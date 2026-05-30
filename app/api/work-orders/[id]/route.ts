@@ -14,8 +14,8 @@ import { updateAssetMetrics } from '@/lib/metrics'
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
-  resolveTemplatesForAssets,
-  generatePerAssetChecklists,
+  resolveProceduresForAssets,
+  generatePerAssetProcedures,
 } from '@/lib/work-order-assets'
 
 const updateSchema = z.object({
@@ -172,36 +172,32 @@ export async function PUT(
     // ── Sync WorkOrderAsset rows ──────────────────────────────────────
     await syncWorkOrderAssets(id, normalized.entries)
 
-    // ── Regenerate checklists if scope changed (only for auto-generated) ──
+    // ── Regenerate procedures if scope changed (only for auto-generated) ──
     if (assetIdsChanged) {
-      // Remove old auto-generated checklists (those from templates, not manually added)
-      // We preserve manual checklists by only deleting those linked to templates
-      const existingChecklists = await prisma.wOChecklist.findMany({
-        where: { workOrderId: id },
-        select: { id: true, title: true },
+      // Find all existing AUTO-generated procedures
+      const autoProcedures = await prisma.wOProcedure.findMany({
+        where: { workOrderId: id, source: 'AUTO' },
+        select: { id: true },
       })
 
-      // Delete old auto-generated checklists
-      const autoChecklistIds = existingChecklists
-        .filter(c => c.title !== 'Manual Checklist')
-        .map(c => c.id)
+      const autoProcedureIds = autoProcedures.map(p => p.id)
 
-      if (autoChecklistIds.length > 0) {
-        await prisma.wOChecklistItem.deleteMany({
-          where: { checklistId: { in: autoChecklistIds } },
+      if (autoProcedureIds.length > 0) {
+        await prisma.wOProcedureStep.deleteMany({
+          where: { procedureId: { in: autoProcedureIds } },
         })
-        await prisma.wOChecklist.deleteMany({
-          where: { id: { in: autoChecklistIds } },
+        await prisma.wOProcedure.deleteMany({
+          where: { id: { in: autoProcedureIds } },
         })
       }
 
-      // Regenerate checklists from templates for the new asset set
+      // Regenerate auto-procedures for the new asset set
       if (incomingAssetIds.length > 0) {
-        const templateMappings = await resolveTemplatesForAssets(
+        const resolvedProcedures = await resolveProceduresForAssets(
           incomingAssetIds,
           data.locationId !== undefined ? data.locationId : existingWo.locationId,
         )
-        await generatePerAssetChecklists(id, templateMappings)
+        await generatePerAssetProcedures(id, resolvedProcedures, 'AUTO')
       }
     }
 

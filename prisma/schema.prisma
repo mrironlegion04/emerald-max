@@ -200,7 +200,7 @@ model Location {
   assets    Asset[]
   workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
   maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
-  checklistTemplates ChecklistTemplate[] @relation("ChecklistTemplateLocations")
+  procedures Procedure[] @relation("ProcedureLocations")
 
   @@map("locations")
 }
@@ -216,7 +216,7 @@ model AssetCategory {
   children AssetCategory[] @relation("AssetCategoryHierarchy")
   assets   Asset[]
   domains  CategoryDomain[]
-  checklistTemplates ChecklistTemplate[] @relation("ChecklistTemplateCategories")
+  procedures Procedure[] @relation("ProcedureCategories")
   slaPolicies        SLAPolicy[]
 
   @@map("asset_categories")
@@ -285,8 +285,8 @@ model Asset {
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
   assetParts           AssetPart[]           @relation("AssetToAssetPart")
-  checklistItems       WOChecklistItem[]
-  checklistTemplates   ChecklistTemplate[]   @relation("ChecklistTemplateAssets")
+  procedureSteps       WOProcedureStep[]
+  procedures           Procedure[]   @relation("ProcedureAssets")
 
   // Soft-delete (archive) support
   isDeleted  Boolean   @default(false)
@@ -436,7 +436,7 @@ model WorkOrder {
   partsUsed     WorkOrderPart[]
   comments      WorkOrderComment[]
   subtasks      Subtask[]
-  checklists    WOChecklist[]
+  procedures    WOProcedure[]
   requests      MaintenanceRequest[]
   attachments   Attachment[]        @relation("WOAttachments")
   breachHistory SLABreachHistory[]  @relation("SLABreachHistory")
@@ -616,7 +616,7 @@ model MaintenanceSchedule {
   workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
-  checklistTemplates  MaintenanceScheduleChecklist[] @relation("PMScheduleChecklists")
+  procedures          MaintenanceScheduleProcedure[] @relation("PMScheduleProcedures")
 
   @@map("maintenance_schedules")
 }
@@ -706,19 +706,21 @@ model MaintenanceRequest {
   @@map("maintenance_requests")
 }
 
-model WOChecklist {
+model WOProcedure {
   id          String    @id @default(cuid())
   title       String
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  procedureId String?   // Track original Procedure template ID
+  source      String    @default("AUTO") // "AUTO" | "MANUAL" | "PM"
   createdAt   DateTime  @default(now())
 
-  items WOChecklistItem[]
+  steps WOProcedureStep[]
 
-  @@map("wo_checklists")
+  @@map("wo_procedures")
 }
 
-model WOChecklistItem {
+model WOProcedureStep {
   id          String      @id @default(cuid())
   label       String
   type        String      @default("CHECKBOX")
@@ -729,12 +731,12 @@ model WOChecklistItem {
   checkedAt   DateTime?
   checkedBy   String?
   sortOrder   Int         @default(0)
-  checklistId String
-  checklist   WOChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  procedureId String
+  procedure   WOProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
   assetId     String?
   asset       Asset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
-  @@map("wo_checklist_items")
+  @@map("wo_procedure_steps")
 }
 
 model SLAPolicy {
@@ -839,45 +841,47 @@ model Notification {
 
 // ── Checklist Templates ───────────────────────────────────────────────────────
 
-model ChecklistTemplate {
-  id          String   @id @default(cuid())
+// ── Procedures ───────────────────────────────────────────────────────────────
+
+model Procedure {
+  id          String    @id @default(cuid())
   name        String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  items       ChecklistTemplateItem[]
-  pmSchedules MaintenanceScheduleChecklist[] @relation("PMTemplateChecklists")
+  steps       ProcedureStep[]
+  pmSchedules MaintenanceScheduleProcedure[] @relation("PMProcedurePMSchedules")
 
-  locations   Location[]         @relation("ChecklistTemplateLocations")
-  categories  AssetCategory[]    @relation("ChecklistTemplateCategories")
-  assets      Asset[]            @relation("ChecklistTemplateAssets")
+  locations   Location[]         @relation("ProcedureLocations")
+  categories  AssetCategory[]    @relation("ProcedureCategories")
+  assets      Asset[]            @relation("ProcedureAssets")
 
-  @@map("checklist_templates")
+  @@map("procedures")
 }
 
-model ChecklistTemplateItem {
-  id          String            @id @default(cuid())
+model ProcedureStep {
+  id          String    @id @default(cuid())
   label       String
-  type        String            @default("CHECKBOX")
-  isMandatory Boolean           @default(false)
+  type        String    @default("CHECKBOX")
+  isMandatory Boolean   @default(false)
   options     String[]
-  sortOrder   Int               @default(0)
-  templateId  String
-  template    ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  sortOrder   Int       @default(0)
+  procedureId String
+  procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
 
-  @@map("checklist_template_items")
+  @@map("procedure_steps")
 }
 
-model MaintenanceScheduleChecklist {
+model MaintenanceScheduleProcedure {
   scheduleId  String
-  schedule    MaintenanceSchedule @relation("PMScheduleChecklists", fields: [scheduleId], references: [id], onDelete: Cascade)
-  templateId  String
-  template    ChecklistTemplate   @relation("PMTemplateChecklists", fields: [templateId], references: [id], onDelete: Cascade)
+  schedule    MaintenanceSchedule @relation("PMScheduleProcedures", fields: [scheduleId], references: [id], onDelete: Cascade)
+  procedureId String
+  procedure   Procedure           @relation("PMProcedurePMSchedules", fields: [procedureId], references: [id], onDelete: Cascade)
   sortOrder   Int                 @default(0)
 
-  @@id([scheduleId, templateId])
-  @@map("maintenance_schedule_checklists")
+  @@id([scheduleId, procedureId])
+  @@map("maintenance_schedule_procedures")
 }
 
 model PushSubscription {

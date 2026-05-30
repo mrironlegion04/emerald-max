@@ -15,7 +15,7 @@ const ACTION_VARIANTS: Record<string, 'green'|'blue'|'red'|'yellow'|'gray'> = {
   STATUS_CHANGE: 'yellow', LOGIN: 'gray',
 }
 
-const ENTITIES = ['','Asset','WorkOrder','Part','User','MaintenanceSchedule','Location','Request','ChecklistTemplate','Team']
+const ENTITIES = ['','Asset','WorkOrder','Part','User','MaintenanceSchedule','Location','Request','Procedure','Team']
 const ACTIONS  = ['','CREATE','UPDATE','DELETE','STATUS_CHANGE','LOGIN']
 
 function fmt(date: string) {

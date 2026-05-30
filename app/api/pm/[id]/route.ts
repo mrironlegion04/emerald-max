@@ -19,6 +19,7 @@ const updateSchema = z.object({
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
   checklistTemplateIds: z.array(z.string()).optional(),
+  procedureIds:        z.array(z.string()).optional(),
 })
 
 export async function GET(
@@ -32,8 +33,8 @@ export async function GET(
       include: {
         asset: true,
         location: true,
-        checklistTemplates: {
-          select: { template: { select: { id: true, name: true } }, sortOrder: true },
+        procedures: {
+          select: { procedure: { select: { id: true, name: true } }, sortOrder: true },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -68,6 +69,8 @@ export async function PUT(
       ? (data.locationScope !== undefined ? data.locationScope : (existing.locationScope ?? 'ALL_ASSETS'))
       : null
 
+    const inputProcedures = data.procedureIds !== undefined ? data.procedureIds : data.checklistTemplateIds
+    
     const schedule = await prisma.maintenanceSchedule.update({
       where: { id },
       data: {
@@ -84,10 +87,10 @@ export async function PUT(
         meterId:             data.meterId              ?? null,
         meterInterval:       data.meterInterval        ?? null,
         meterUnit:           data.meterUnit            ?? null,
-        checklistTemplates: data.checklistTemplateIds !== undefined ? {
+        procedures: inputProcedures !== undefined ? {
           deleteMany: {},
-          create: data.checklistTemplateIds.map((templateId, index) => ({
-            templateId,
+          create: inputProcedures.map((procedureId, index) => ({
+            procedureId,
             sortOrder: index,
           })),
         } : undefined,

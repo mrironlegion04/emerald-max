@@ -13,7 +13,7 @@ const STEP_TYPE_OPTIONS = [
   { value: 'SIGNATURE', label: 'Signature' },
 ] as const
 
-interface TemplateItem {
+interface ProcedureStep {
   id?: string
   label: string
   type: string
@@ -32,7 +32,7 @@ interface Props {
   initialData?: {
     name: string
     description: string
-    items: TemplateItem[]
+    steps: ProcedureStep[]
     assetIds?: string[]
     categoryIds?: string[]
     locationIds?: string[]
@@ -83,21 +83,21 @@ function MultiTagSelect({
 
   return (
     <div ref={ref} className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
       <div
-        className="input-field flex flex-wrap gap-1.5 min-h-[2.5rem] py-1.5 cursor-text"
+        className="input-field flex flex-wrap gap-1.5 min-h-[2.5rem] py-1.5 cursor-text bg-white"
         onClick={() => { setOpen(true); setQuery('') }}
       >
         {selectedLabels.length === 0 && !open && (
-          <span className="text-gray-400 text-sm">{placeholder ?? 'Select...'}</span>
+          <span className="text-slate-400 text-sm">{placeholder ?? 'Select...'}</span>
         )}
         {selectedLabels.map(opt => (
-          <span key={opt.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+          <span key={opt.id} className="inline-flex items-center gap-1 bg-blue-105 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/50">
             {opt.name}
             <button
               type="button"
               onClick={e => { e.stopPropagation(); toggle(opt.id) }}
-              className="hover:text-blue-600"
+              className="hover:text-blue-600 transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
@@ -106,10 +106,10 @@ function MultiTagSelect({
       </div>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-gray-100">
-            <div className="flex items-center gap-2 bg-gray-50 rounded-md px-2 py-1">
-              <Search className="w-4 h-4 text-gray-400" />
+        <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-slate-100">
+            <div className="flex items-center gap-2 bg-slate-50 rounded-md px-2 py-1">
+              <Search className="w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={query}
@@ -122,17 +122,17 @@ function MultiTagSelect({
           </div>
           <div className="overflow-y-auto flex-1">
             {filtered.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">No options found</p>
+              <p className="text-sm text-slate-400 text-center py-4">No options found</p>
             ) : (
               filtered.map(opt => (
-                <label key={opt.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                <label key={opt.id} className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selected.includes(opt.id)}
                     onChange={() => toggle(opt.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600"
                   />
-                  <span className="text-sm text-gray-900">{opt.name}</span>
+                  <span className="text-sm text-slate-900">{opt.name}</span>
                 </label>
               ))
             )}
@@ -143,13 +143,13 @@ function MultiTagSelect({
   )
 }
 
-export default function ChecklistTemplateForm({ templateId, initialData, assets, assetCategories, locations }: Props) {
+export default function ProcedureForm({ templateId, initialData, assets, assetCategories, locations }: Props) {
   const router = useRouter()
   const isEdit = !!templateId
 
   const [name,       setName]       = useState(initialData?.name ?? '')
   const [description,setDescription] = useState(initialData?.description ?? '')
-  const [items,      setItems]      = useState<TemplateItem[]>(initialData?.items ?? [])
+  const [steps,      setSteps]      = useState<ProcedureStep[]>(initialData?.steps ?? [])
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState('')
 
@@ -157,32 +157,32 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(initialData?.categoryIds ?? [])
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(initialData?.locationIds ?? [])
 
-  function addItem() {
-    setItems(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length }])
+  function addStep() {
+    setSteps(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length }])
   }
 
-  function removeItem(idx: number) {
-    setItems(prev => prev.filter((_, i) => i !== idx).map((it, i) => ({ ...it, sortOrder: i })))
+  function removeStep(idx: number) {
+    setSteps(prev => prev.filter((_, i) => i !== idx).map((it, i) => ({ ...it, sortOrder: i })))
   }
 
-  function updateItem<K extends keyof TemplateItem>(idx: number, field: K, value: TemplateItem[K]) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it))
+  function updateStep<K extends keyof ProcedureStep>(idx: number, field: K, value: ProcedureStep[K]) {
+    setSteps(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it))
   }
 
   function addOption(idx: number) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, options: [...it.options, ''] } : it))
+    setSteps(prev => prev.map((it, i) => i === idx ? { ...it, options: [...it.options, ''] } : it))
   }
 
   function removeOption(idx: number, optIdx: number) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, options: it.options.filter((_, oi) => oi !== optIdx) } : it))
+    setSteps(prev => prev.map((it, i) => i === idx ? { ...it, options: it.options.filter((_, oi) => oi !== optIdx) } : it))
   }
 
   function updateOption(idx: number, optIdx: number, value: string) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, oi) => oi === optIdx ? value : o) } : it))
+    setSteps(prev => prev.map((it, i) => i === idx ? { ...it, options: it.options.map((o, oi) => oi === optIdx ? value : o) } : it))
   }
 
-  function moveItem(idx: number, direction: -1 | 1) {
-    setItems(prev => {
+  function moveStep(idx: number, direction: -1 | 1) {
+    setSteps(prev => {
       const arr = [...prev]
       const target = idx + direction
       if (target < 0 || target >= arr.length) return arr
@@ -193,11 +193,11 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (items.some(it => !it.label.trim())) {
-      setError('All checklist items must have a label')
+    if (steps.some(it => !it.label.trim())) {
+      setError('All steps must have a label')
       return
     }
-    if (items.some(it => it.type === 'SINGLE_SELECT' && it.options.some(o => !o.trim()))) {
+    if (steps.some(it => it.type === 'SINGLE_SELECT' && it.options.some(o => !o.trim()))) {
       setError('All SINGLE_SELECT options must have a label')
       return
     }
@@ -206,7 +206,7 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
       const payload = {
         name: name.trim(),
         description: description.trim() || null,
-        items: items.map((it, i) => ({
+        steps: steps.map((it, i) => ({
           label:       it.label.trim(),
           type:        it.type,
           isMandatory: it.isMandatory,
@@ -217,12 +217,12 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
         categoryIds: selectedCategoryIds,
         locationIds: selectedLocationIds,
       }
-      const url    = isEdit ? `/api/checklist-templates/${templateId}` : '/api/checklist-templates'
+      const url    = isEdit ? `/api/procedures/${templateId}` : '/api/procedures'
       const method = isEdit ? 'PUT' : 'POST'
       const res  = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Something went wrong'); return }
-      router.push('/settings/checklist-templates')
+      router.push('/settings/procedures')
       router.refresh()
     } catch { setError('Network error') }
     finally  { setSaving(false) }
@@ -233,18 +233,18 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="bg-red-50 border border-red-250 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
           {error}
         </div>
       )}
 
-      {/* Template info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <h2 className="font-semibold text-gray-900 text-sm">Template details</h2>
+      {/* Procedure info */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        <h2 className="font-bold text-slate-900 text-sm">Procedure details</h2>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Template name <span className="text-red-500">*</span>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">
+            Procedure name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -256,30 +256,30 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="input-field resize-none"
+            className="input-field resize-none bg-white"
             rows={2}
-            placeholder="Optional description of this template..."
+            placeholder="Optional description of this procedure..."
           />
         </div>
       </div>
 
       {/* Tag associations */}
       {showTagSection && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900 text-sm">
-            Tag associations <span className="text-xs font-normal text-gray-400 ml-1">— metadata only, no restrictions</span>
+        <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+          <h2 className="font-bold text-slate-900 text-sm">
+            Tag associations <span className="text-xs font-normal text-slate-400 ml-1">— trigger linkages</span>
           </h2>
-          <p className="text-xs text-gray-400">
-            Optionally tag this template with locations, categories, and assets for easy filtering and smart recommendations.
+          <p className="text-xs text-slate-400">
+            Define automatic resolution triggers. Target Work Orders tracking tagged locations, matching asset categories, or specific asset IDs will automatically inherit this Procedure.
           </p>
           <div className="space-y-4">
             {locations && (
               <MultiTagSelect
-                label="Locations"
+                label="Locations link"
                 options={locations}
                 selected={selectedLocationIds}
                 onChange={setSelectedLocationIds}
@@ -288,7 +288,7 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
             )}
             {assetCategories && (
               <MultiTagSelect
-                label="Asset Categories"
+                label="Asset Categories link"
                 options={assetCategories}
                 selected={selectedCategoryIds}
                 onChange={setSelectedCategoryIds}
@@ -297,7 +297,7 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
             )}
             {assets && (
               <MultiTagSelect
-                label="Assets"
+                label="Assets link"
                 options={assets}
                 selected={selectedAssetIds}
                 onChange={setSelectedAssetIds}
@@ -308,53 +308,53 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
         </div>
       )}
 
-      {/* Checklist items */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+      {/* Procedure items */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 text-sm">Checklist items ({items.length})</h2>
-          <button type="button" onClick={addItem} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <h2 className="font-bold text-slate-900 text-sm">Procedure steps ({steps.length})</h2>
+          <button type="button" onClick={addStep} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-xs">
             <Plus className="w-3.5 h-3.5" />
-            Add item
+            Add step
           </button>
         </div>
 
-        {items.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
-            <div className="text-3xl mb-2">✅</div>
-            <p className="text-sm">No items yet. Click &quot;Add item&quot; to get started.</p>
+        {steps.length === 0 && (
+          <div className="text-center py-8 text-slate-405">
+            <div className="text-3xl mb-2">📋</div>
+            <p className="text-sm">No steps yet. Click &quot;Add step&quot; to define instructions.</p>
           </div>
         )}
 
         <div className="space-y-3">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex flex-col bg-gray-50 rounded-lg px-3 py-2.5 group">
+          {steps.map((step, idx) => (
+            <div key={idx} className="flex flex-col bg-slate-50 border border-slate-200/40 rounded-lg px-3 py-2.5 group">
               <div className="flex items-center gap-3">
                 {/* Reorder controls */}
-                <div className="flex flex-col gap-0.5 text-gray-300 group-hover:text-gray-500 flex-shrink-0">
-                  <button type="button" onClick={() => moveItem(idx, -1)} disabled={idx === 0}
-                    className="hover:text-gray-700 disabled:opacity-30 leading-none text-xs">▲</button>
-                  <button type="button" onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1}
-                    className="hover:text-gray-700 disabled:opacity-30 leading-none text-xs">▼</button>
+                <div className="flex flex-col gap-0.5 text-slate-300 group-hover:text-slate-500 flex-shrink-0">
+                  <button type="button" onClick={() => moveStep(idx, -1)} disabled={idx === 0}
+                    className="hover:text-slate-700 disabled:opacity-30 leading-none text-xs">▲</button>
+                  <button type="button" onClick={() => moveStep(idx, 1)} disabled={idx === steps.length - 1}
+                    className="hover:text-slate-700 disabled:opacity-30 leading-none text-xs">▼</button>
                 </div>
-                <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <GripVertical className="w-4 h-4 text-slate-300 flex-shrink-0" />
 
                 {/* Label */}
                 <input
                   type="text"
-                  value={item.label}
-                  onChange={e => updateItem(idx, 'label', e.target.value)}
-                  placeholder={`Item ${idx + 1}...`}
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-400 min-w-0"
+                  value={step.label}
+                  onChange={e => updateStep(idx, 'label', e.target.value)}
+                  placeholder={`Instruction ${idx + 1}...`}
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 placeholder-slate-400 min-w-0"
                 />
 
                 {/* Step type selector */}
                 <select
-                  value={item.type}
+                  value={step.type}
                   onChange={e => {
-                    updateItem(idx, 'type', e.target.value)
-                    if (e.target.value !== 'SINGLE_SELECT') updateItem(idx, 'options', [])
+                    updateStep(idx, 'type', e.target.value)
+                    if (e.target.value !== 'SINGLE_SELECT') updateStep(idx, 'options', [])
                   }}
-                  className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-700 flex-shrink-0"
+                  className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white text-slate-700 flex-shrink-0 cursor-pointer"
                 >
                   {STEP_TYPE_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -365,37 +365,37 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
                 <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={item.isMandatory}
-                    onChange={e => updateItem(idx, 'isMandatory', e.target.checked)}
-                    className="w-3.5 h-3.5 text-red-600 rounded border-gray-300"
+                    checked={step.isMandatory}
+                    onChange={e => updateStep(idx, 'isMandatory', e.target.checked)}
+                    className="w-3.5 h-3.5 text-red-600 rounded border-slate-300 pointer-events-none"
                   />
-                  <span className="text-xs text-gray-500 whitespace-nowrap">Req</span>
+                  <span className="text-xs text-slate-500 whitespace-nowrap select-none font-bold">Req</span>
                 </label>
 
-                <button type="button" onClick={() => removeItem(idx)} className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                <button type="button" onClick={() => removeStep(idx)} className="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Options editor for SINGLE_SELECT */}
-              {item.type === 'SINGLE_SELECT' && (
+              {step.type === 'SINGLE_SELECT' && (
                 <div className="ml-10 mt-2 space-y-1.5">
-                  {item.options.map((opt, oi) => (
-                    <div key={oi} className="flex items-center gap-2">
+                  {step.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2 animate-fade-in">
                       <input
                         type="text"
                         value={opt}
                         onChange={e => updateOption(idx, oi, e.target.value)}
                         placeholder={`Option ${oi + 1}`}
-                        className="flex-1 bg-white border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 placeholder-gray-400"
+                        className="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-705 placeholder-slate-400"
                       />
-                      <button type="button" onClick={() => removeOption(idx, oi)} className="text-gray-300 hover:text-red-500">
+                      <button type="button" onClick={() => removeOption(idx, oi)} className="text-slate-305 hover:text-red-500 transition-colors">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
                   <button type="button" onClick={() => addOption(idx)}
-                    className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                    className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Add option
                   </button>
                 </div>
@@ -404,16 +404,16 @@ export default function ChecklistTemplateForm({ templateId, initialData, assets,
           ))}
         </div>
 
-        {items.length > 0 && (
-          <p className="text-xs text-gray-400">
-            {items.filter(i => i.isMandatory).length} mandatory · {items.filter(i => i.type !== 'CHECKBOX').length} typed step{items.filter(i => i.type !== 'CHECKBOX').length !== 1 ? 's' : ''}
+        {steps.length > 0 && (
+          <p className="text-xs text-slate-400">
+            {steps.filter(i => i.isMandatory).length} required · {steps.filter(i => i.type !== 'CHECKBOX').length} typed steps
           </p>
         )}
       </div>
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create template'}
+          {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create Procedure'}
         </button>
         <button type="button" onClick={() => router.back()} className="btn-secondary">Cancel</button>
       </div>

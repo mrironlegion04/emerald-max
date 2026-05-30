@@ -3,9 +3,9 @@ import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
-import ChecklistTemplateForm from '@/components/ChecklistTemplateForm'
+import ProcedureForm from '@/components/ProcedureForm'
 
-export default async function NewChecklistTemplatePage() {
+export default async function NewProcedurePage() {
   const user = await getCurrentUser()
   if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) redirect('/dashboard')
 
@@ -28,12 +28,12 @@ export default async function NewChecklistTemplatePage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-1">
-        <Link href="/settings/checklist-templates" className="text-sm text-gray-400 hover:text-gray-600">
-          ← Back to templates
+        <Link href="/settings/procedures" className="text-sm text-gray-400 hover:text-gray-600">
+          ← Back to Procedures
         </Link>
       </div>
-      <PageHeader title="New Checklist Template" subtitle="Create a reusable checklist that can be auto-applied to work orders." />
-      <ChecklistTemplateForm
+      <PageHeader title="New Procedure" subtitle="Create a reusable procedure containing specific required actions." />
+      <ProcedureForm
         assets={assets}
         locations={locations}
         assetCategories={assetCategories}

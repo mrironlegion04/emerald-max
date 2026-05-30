@@ -16,6 +16,7 @@ import {
   syncWorkOrderAssets,
   resolveTemplatesForAssets,
   generatePerAssetChecklists,
+  generateAutoChecklistsForWorkOrder,
 } from '@/lib/work-order-assets'
 
 const updateSchema = z.object({
@@ -195,13 +196,10 @@ export async function PUT(
         })
       }
 
-      // Regenerate checklists from templates for the new asset set
-      if (incomingAssetIds.length > 0) {
-        const templateMappings = await resolveTemplatesForAssets(
-          incomingAssetIds,
-          data.locationId !== undefined ? data.locationId : existingWo.locationId,
-        )
-        await generatePerAssetChecklists(id, templateMappings)
+      // Regenerate checklists from templates for the new asset set, skipping if generalized scope
+      const finalLocationScope = data.locationScope !== undefined ? data.locationScope : existingWo.locationScope
+      if (incomingAssetIds.length > 0 && finalLocationScope !== 'GENERAL') {
+        await generateAutoChecklistsForWorkOrder(id, incomingAssetIds, finalLocationScope)
       }
     }
 

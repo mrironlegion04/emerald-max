@@ -10,6 +10,7 @@ import {
   syncWorkOrderAssets,
   resolveTemplatesForAssets,
   generatePerAssetChecklists,
+  generateAutoChecklistsForWorkOrder,
 } from '@/lib/work-order-assets'
 
 const woSchema = z.object({
@@ -140,50 +141,51 @@ export async function POST(request: NextRequest) {
       await syncWorkOrderAssets(wo.id, normalized.entries)
     }
 
-    // ── Generate per-asset checklists from auto-resolved templates ───
-    const assetIds = normalized.entries.map(e => e.assetId)
-    if (assetIds.length > 0) {
-      const templateMappings = await resolveTemplatesForAssets(assetIds, data.locationId)
-      await generatePerAssetChecklists(wo.id, templateMappings)
-    }
-
-    // ── Snapshot user-selected checklist templates ───────────────────
-    if (data.checklistTemplateIds && data.checklistTemplateIds.length > 0) {
-      const selectedTemplates = await prisma.checklistTemplate.findMany({
-        where: { id: { in: data.checklistTemplateIds } },
-        include: { items: { orderBy: { sortOrder: 'asc' } } },
-      })
-
-      // Apply each selected template to every asset in scope
-      const selectedMappings: { templateId: string; assetId: string; source: string }[] = []
-      for (const tid of data.checklistTemplateIds) {
-        for (const aid of assetIds.length > 0 ? assetIds : [null]) {
-          if (aid) selectedMappings.push({ templateId: tid, assetId: aid, source: 'MANUAL' })
-        }
+    // ── Generate checklists only if location scope is not GENERAL ───
+    if (data.locationScope !== 'GENERAL') {
+      const assetIds = normalized.entries.map(e => e.assetId)
+      if (assetIds.length > 0) {
+        await generateAutoChecklistsForWorkOrder(wo.id, assetIds, data.locationScope)
       }
-      // For location-general WOs with no assets, create a single checklist
-      if (assetIds.length === 0 && normalized.scope === 'LOCATION_GENERAL') {
-        for (const template of selectedTemplates) {
-          if (template.items.length === 0) continue
-          await prisma.wOChecklist.create({
-            data: {
-              workOrderId: wo.id,
-              title: template.name,
-              items: {
-                create: template.items.map(item => ({
-                  label: item.label,
-                  type: item.type,
-                  isMandatory: item.isMandatory,
-                  sortOrder: item.sortOrder,
-                  options: item.options,
-                  isChecked: false,
-                })),
-              },
-            },
-          })
+
+      // ── Snapshot user-selected checklist templates ───────────────────
+      if (data.checklistTemplateIds && data.checklistTemplateIds.length > 0) {
+        const selectedTemplates = await prisma.checklistTemplate.findMany({
+          where: { id: { in: data.checklistTemplateIds } },
+          include: { items: { orderBy: { sortOrder: 'asc' } } },
+        })
+
+        // Apply each selected template to every asset in scope
+        const selectedMappings: { templateId: string; assetId: string; source: string }[] = []
+        for (const tid of data.checklistTemplateIds) {
+          for (const aid of assetIds.length > 0 ? assetIds : [null]) {
+            if (aid) selectedMappings.push({ templateId: tid, assetId: aid, source: 'MANUAL' })
+          }
         }
-      } else {
-        await generatePerAssetChecklists(wo.id, selectedMappings)
+        // For location-general WOs with no assets, create a single checklist
+        if (assetIds.length === 0 && normalized.scope === 'LOCATION_GENERAL') {
+          for (const template of selectedTemplates) {
+            if (template.items.length === 0) continue
+            await prisma.wOChecklist.create({
+              data: {
+                workOrderId: wo.id,
+                title: template.name,
+                items: {
+                  create: template.items.map((item: any) => ({
+                    label: item.label,
+                    type: item.type,
+                    isMandatory: item.isMandatory,
+                    sortOrder: item.sortOrder,
+                    options: item.options,
+                    isChecked: false,
+                  })),
+                },
+              },
+            })
+          }
+        } else {
+          await generatePerAssetChecklists(wo.id, selectedMappings)
+        }
       }
     }
 
@@ -221,6 +223,13 @@ export async function POST(request: NextRequest) {
           title: `WO ${wo.woNumber} Assigned to Your Team`,
           message: wo.title, type: 'WORK_ORDER_ASSIGNED',
           entityId: wo.id, href: `/work-orders/${wo.id}`,
+        }).catch(console.error)
+        // Send email to each team member
+        await sendWOAssigned({
+          toEmail: member.user.email, toName: member.user.name,
+          woNumber: wo.woNumber, woTitle: wo.title, woId: wo.id,
+          priority: wo.priority, dueDate: wo.dueDate?.toISOString() ?? null,
+          assetName: null,
         }).catch(console.error)
       }
     }

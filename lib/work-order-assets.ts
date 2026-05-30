@@ -282,6 +282,98 @@ export async function generatePerAssetChecklists(
 }
 
 /**
+ * Automatically generates MaintainX-style checklists for a work order based on its assets,
+ * adhering to the MaintainX checklist generation rules.
+ */
+export async function generateAutoChecklistsForWorkOrder(
+  workOrderId: string,
+  assetIds: string[],
+  locationScope?: string | null,
+): Promise<void> {
+  // Rule 1: General Maintenance (location-only): do not generate checklist
+  if (locationScope === 'GENERAL' || assetIds.length === 0) {
+    return
+  }
+
+  // Iterate over each asset independently
+  for (const assetId of assetIds) {
+    if (!assetId) continue
+
+    // 1. Load asset name and categoryId
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { name: true, categoryId: true },
+    })
+    if (!asset) continue
+
+    // 2. Load ChecklistTemplates directly attached to the asset
+    const assetTemplates = await prisma.checklistTemplate.findMany({
+      where: {
+        assets: { some: { id: assetId } },
+      },
+      include: {
+        items: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+
+    // 3. Load ChecklistTemplates attached to the asset's category
+    const categoryTemplates = asset.categoryId
+      ? await prisma.checklistTemplate.findMany({
+          where: {
+            categories: { some: { id: asset.categoryId } },
+          },
+          include: {
+            items: { orderBy: { sortOrder: 'asc' } },
+          },
+        })
+      : []
+
+    // 4. Merge and deduplicate based on Priority: Asset-attached first, then category-attached.
+    const uniqueTemplatesMap = new Map<string, typeof assetTemplates[0]>()
+    
+    // Add asset-attached templates (higher priority)
+    for (const t of assetTemplates) {
+      if (t.items.length > 0) {
+        uniqueTemplatesMap.set(t.id, t)
+      }
+    }
+
+    // Add category-attached templates if not already present
+    for (const t of categoryTemplates) {
+      if (t.items.length > 0 && !uniqueTemplatesMap.has(t.id)) {
+        uniqueTemplatesMap.set(t.id, t)
+      }
+    }
+
+    // 5. Generate checklist instances for that asset
+    const templatesToApply = Array.from(uniqueTemplatesMap.values())
+    for (const template of templatesToApply) {
+      // Create a checklist instance
+      const checklist = await prisma.wOChecklist.create({
+        data: {
+          workOrderId,
+          title: `${asset.name} — ${template.name}`,
+        },
+      })
+
+      // Generate items preserving assetId
+      await prisma.wOChecklistItem.createMany({
+        data: template.items.map((item: any) => ({
+          checklistId: checklist.id,
+          label: item.label,
+          type: item.type,
+          isMandatory: item.isMandatory,
+          sortOrder: item.sortOrder,
+          options: item.options,
+          isChecked: false,
+          assetId: assetId,
+        })),
+      })
+    }
+  }
+}
+
+/**
  * Sync WorkOrderAsset records in the database.
  * Removes stale entries, adds new ones.
  */
@@ -293,13 +385,13 @@ export async function syncWorkOrderAssets(
     where: { workOrderId },
     select: { assetId: true, source: true },
   })
-  const existingMap = new Map(existing.map(e => [e.assetId, e.source]))
+  const existingMap = new Map(existing.map((e: any) => [e.assetId, e.source]))
 
-  const incomingMap = new Map(entries.map(e => [e.assetId, e]))
+  const incomingMap = new Map(entries.map((e: AssetEntry) => [e.assetId, e]))
 
-  const toRemove = [...existingMap.keys()].filter(id => !incomingMap.has(id))
+  const toRemove = [...existingMap.keys()].filter((id: string) => !incomingMap.has(id))
 
-  const toAdd = entries.filter(e => !existingMap.has(e.assetId))
+  const toAdd = entries.filter((e: AssetEntry) => !existingMap.has(e.assetId))
 
   if (toRemove.length > 0) {
     await prisma.workOrderAsset.deleteMany({
@@ -309,7 +401,7 @@ export async function syncWorkOrderAssets(
 
   if (toAdd.length > 0) {
     await prisma.workOrderAsset.createMany({
-      data: toAdd.map(e => ({
+      data: toAdd.map((e: AssetEntry) => ({
         workOrderId,
         assetId: e.assetId,
         source: e.source,

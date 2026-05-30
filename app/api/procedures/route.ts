@@ -4,7 +4,22 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
 
-const stepTypeEnum = z.enum(['CHECKBOX','TEXT_INPUT','NUMBER_INPUT','SINGLE_SELECT','INSPECTION','SIGNATURE'])
+const stepTypeEnum = z.enum([
+  'SECTION',
+  'INSTRUCTION',
+  'CHECKBOX',
+  'INSPECTION',
+  'TEXT_INPUT',
+  'NUMBER_INPUT',
+  'SINGLE_SELECT',
+  'MULTIPLE_CHOICE',
+  'DROPDOWN',
+  'DATE',
+  'SIGNATURE',
+  'PHOTO',
+  'FILE',
+  'METER'
+])
 
 const stepSchema = z.object({
   label:      z.string().min(1),
@@ -13,8 +28,8 @@ const stepSchema = z.object({
   options:    z.array(z.string()).default([]),
   sortOrder:  z.number().int().default(0),
 }).refine(
-  step => step.type !== 'SINGLE_SELECT' || step.options.length >= 1,
-  { message: 'SINGLE_SELECT steps must have at least one option', path: ['options'] }
+  step => !['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(step.type) || step.options.length >= 1,
+  { message: 'Multiple choice, single select, and dropdown steps must have at least one option', path: ['options'] }
 )
 
 const procedureSchema = z.object({

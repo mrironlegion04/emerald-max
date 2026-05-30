@@ -2,15 +2,34 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, GripVertical, AlertCircle, X, Search } from 'lucide-react'
+import { 
+  Plus, 
+  Trash2, 
+  GripVertical, 
+  AlertCircle, 
+  X, 
+  Search, 
+  Paperclip, 
+  Heading, 
+  ArrowUp, 
+  ArrowDown
+} from 'lucide-react'
 
 const STEP_TYPE_OPTIONS = [
-  { value: 'CHECKBOX', label: 'Checkbox' },
-  { value: 'TEXT_INPUT', label: 'Text Input' },
-  { value: 'NUMBER_INPUT', label: 'Number Input' },
-  { value: 'SINGLE_SELECT', label: 'Single Select' },
-  { value: 'INSPECTION', label: 'Pass / Fail' },
-  { value: 'SIGNATURE', label: 'Signature' },
+  { value: 'SECTION', label: 'Section / Divider 📁' },
+  { value: 'INSTRUCTION', label: 'Instruction Text 📝' },
+  { value: 'CHECKBOX', label: 'Checkbox ✅' },
+  { value: 'INSPECTION', label: 'Inspection (Pass / Flag / Fail) 🔍' },
+  { value: 'TEXT_INPUT', label: 'Text Input 🔠' },
+  { value: 'NUMBER_INPUT', label: 'Number Input 🔢' },
+  { value: 'SINGLE_SELECT', label: 'Single Select Option 🔘' },
+  { value: 'MULTIPLE_CHOICE', label: 'Multiple Choice Checkboxes ☑️' },
+  { value: 'DROPDOWN', label: 'Dropdown List 🔽' },
+  { value: 'DATE', label: 'Date Selection 📅' },
+  { value: 'SIGNATURE', label: 'Signature Sign-off ✍️' },
+  { value: 'PHOTO', label: 'Photo Upload 📷' },
+  { value: 'FILE', label: 'File Attachment 📎' },
+  { value: 'METER', label: 'Meter Reading ⚙️' },
 ] as const
 
 interface ProcedureStep {
@@ -40,6 +59,34 @@ interface Props {
   assets?: SelectOption[]
   assetCategories?: SelectOption[]
   locations?: SelectOption[]
+}
+
+interface Attachment {
+  name: string
+  url: string
+  type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER'
+}
+
+function parseProcedureDescription(descRaw: string | null | undefined): { text: string; attachments: Attachment[] } {
+  if (!descRaw) return { text: '', attachments: [] }
+  try {
+    if (descRaw.trim().startsWith('{')) {
+      const parsed = JSON.parse(descRaw)
+      if (parsed && typeof parsed === 'object') {
+        return {
+          text: typeof parsed.text === 'string' ? parsed.text : '',
+          attachments: Array.isArray(parsed.attachments) ? parsed.attachments : [],
+        }
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return { text: descRaw, attachments: [] }
+}
+
+function serializeProcedureDescription(text: string, attachments: Attachment[]): string {
+  return JSON.stringify({ text, attachments })
 }
 
 function MultiTagSelect({
@@ -83,16 +130,16 @@ function MultiTagSelect({
 
   return (
     <div ref={ref} className="relative">
-      <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold text-slate-705 mb-1">{label}</label>
       <div
-        className="input-field flex flex-wrap gap-1.5 min-h-[2.5rem] py-1.5 cursor-text bg-white"
+        className="input-field flex flex-wrap gap-1.5 min-h-[2.5rem] py-1.5 cursor-text bg-white border border-slate-200 rounded-lg px-3 shadow-xs"
         onClick={() => { setOpen(true); setQuery('') }}
       >
         {selectedLabels.length === 0 && !open && (
           <span className="text-slate-400 text-sm">{placeholder ?? 'Select...'}</span>
         )}
         {selectedLabels.map(opt => (
-          <span key={opt.id} className="inline-flex items-center gap-1 bg-blue-105 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/50">
+          <span key={opt.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/50">
             {opt.name}
             <button
               type="button"
@@ -130,7 +177,7 @@ function MultiTagSelect({
                     type="checkbox"
                     checked={selected.includes(opt.id)}
                     onChange={() => toggle(opt.id)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-100 accent-blue-600"
                   />
                   <span className="text-sm text-slate-900">{opt.name}</span>
                 </label>
@@ -147,15 +194,26 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
   const router = useRouter()
   const isEdit = !!templateId
 
-  const [name,       setName]       = useState(initialData?.name ?? '')
-  const [description,setDescription] = useState(initialData?.description ?? '')
-  const [steps,      setSteps]      = useState<ProcedureStep[]>(initialData?.steps ?? [])
-  const [saving,     setSaving]     = useState(false)
-  const [error,      setError]      = useState('')
+  const parsedDesc = parseProcedureDescription(initialData?.description)
+  const [name, setName] = useState(initialData?.name ?? '')
+  const [descriptionText, setDescriptionText] = useState(parsedDesc.text)
+  const [attachments, setAttachments] = useState<Attachment[]>(parsedDesc.attachments)
+  const [steps, setSteps] = useState<ProcedureStep[]>(initialData?.steps ?? [])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const [selectedAssetIds,    setSelectedAssetIds]    = useState<string[]>(initialData?.assetIds ?? [])
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(initialData?.assetIds ?? [])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(initialData?.categoryIds ?? [])
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(initialData?.locationIds ?? [])
+
+  // State for adding a new procedure level attachment
+  const [newAttachName, setNewAttachName] = useState('')
+  const [newAttachUrl, setNewAttachUrl] = useState('')
+  const [newAttachType, setNewAttachType] = useState<Attachment['type']>('PDF')
+  const [showAttachForm, setShowAttachForm] = useState(false)
+
+  // Drag and drop state
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
 
   function addStep() {
     setSteps(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length }])
@@ -191,26 +249,65 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
     })
   }
 
+  function handleDragStart(idx: number) {
+    setDraggedIdx(idx)
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+  }
+
+  function handleDrop(e: React.DragEvent, dropIdx: number) {
+    e.preventDefault()
+    if (draggedIdx === null || draggedIdx === dropIdx) return
+    setSteps(prev => {
+      const arr = [...prev]
+      const [draggedItem] = arr.splice(draggedIdx, 1)
+      arr.splice(dropIdx, 0, draggedItem)
+      return arr.map((it, i) => ({ ...it, sortOrder: i }))
+    })
+    setDraggedIdx(null)
+  }
+
+  function addAttachment() {
+    if (!newAttachName.trim() || !newAttachUrl.trim()) return
+    const newAttachment: Attachment = {
+      name: newAttachName.trim(),
+      url: newAttachUrl.trim(),
+      type: newAttachType,
+    }
+    setAttachments(prev => [...prev, newAttachment])
+    setNewAttachName('')
+    setNewAttachUrl('')
+    setNewAttachType('PDF')
+    setShowAttachForm(false)
+  }
+
+  function removeAttachment(idx: number) {
+    setAttachments(prev => prev.filter((_, i) => i !== idx))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (steps.some(it => !it.label.trim())) {
-      setError('All steps must have a label')
+      setError('All procedure steps must have a descriptive label/instruction.')
       return
     }
-    if (steps.some(it => it.type === 'SINGLE_SELECT' && it.options.some(o => !o.trim()))) {
-      setError('All SINGLE_SELECT options must have a label')
+    const optionRequiredTypes = ['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN']
+    if (steps.some(it => optionRequiredTypes.includes(it.type) && it.options.some(o => !o.trim()))) {
+      setError('All choose/dropdown and multiple choice fields must have non-empty options.')
       return
     }
     setError(''); setSaving(true)
     try {
       const payload = {
         name: name.trim(),
-        description: description.trim() || null,
+        description: serializeProcedureDescription(descriptionText.trim(), attachments),
         steps: steps.map((it, i) => ({
           label:       it.label.trim(),
           type:        it.type,
           isMandatory: it.isMandatory,
-          options:     it.type === 'SINGLE_SELECT' ? it.options.map(o => o.trim()).filter(Boolean) : [],
+          options:     optionRequiredTypes.includes(it.type) ? it.options.map(o => o.trim()).filter(Boolean) : [],
           sortOrder:   i,
         })),
         assetIds:    selectedAssetIds,
@@ -230,194 +327,412 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
 
   const showTagSection = assets || assetCategories || locations
 
+  // Group steps visually. We find which sections contain which steps.
+  let currentHeader: string | null = null;
+  const stepsWithSectionGroup = steps.map((step) => {
+    if (step.type === 'SECTION') {
+      currentHeader = step.label;
+    }
+    return {
+      ...step,
+      sectionHeader: currentHeader
+    }
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto px-4 pb-12">
       {error && (
-        <div className="bg-red-50 border border-red-250 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+        <div className="bg-red-50 border border-red-250 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 shadow-xs">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500" />
           {error}
         </div>
       )}
 
-      {/* Procedure info */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        <h2 className="font-bold text-slate-900 text-sm">Procedure details</h2>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">
-            Procedure name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="input-field"
-            placeholder="e.g. Monthly Pump Inspection"
-            required
-          />
+      {/* Procedure Info */}
+      <div className="premium-card p-6 sm:p-7 border border-slate-200 bg-white shadow-sm rounded-xl space-y-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-slate-900 text-lg tracking-tight">Procedure Template Details</h2>
+            <p className="text-xs text-slate-500 mt-1">Configure the core details of this Standard Operating Procedure (SOP).</p>
+          </div>
+          <span className="px-2.5 py-1 bg-slate-100 text-slate-800 text-[10px] font-bold tracking-wider uppercase rounded-full">
+            MaintainX SOP
+          </span>
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            className="input-field resize-none bg-white"
-            rows={2}
-            placeholder="Optional description of this procedure..."
-          />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-1">
+            <label className="block text-sm font-semibold text-slate-705 mb-1.5">
+              Procedure Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="input-field border-slate-200 focus:border-blue-500"
+              placeholder="e.g. Forklift Pre-Use Inspection Guide"
+              required
+            />
+          </div>
+
+          <div className="col-span-1">
+            <label className="block text-sm font-semibold text-slate-705 mb-1.5">Description Summary</label>
+            <textarea
+              value={descriptionText}
+              onChange={e => setDescriptionText(e.target.value)}
+              className="input-field resize-none border-slate-200 focus:border-blue-500"
+              rows={2}
+              placeholder="Provide context or directions for operators executing this SOP..."
+            />
+          </div>
+        </div>
+
+        {/* Level Attachments Manager */}
+        <div className="pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <Paperclip className="w-4 h-4 text-slate-500" />
+              SOP Level Reference Manuals & Media ({attachments.length})
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAttachForm(prev => !prev)}
+              className="text-xs text-blue-600 font-bold hover:text-blue-800 flex items-center gap-1 bg-blue-50/50 hover:bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200/30 transition-all"
+            >
+              {showAttachForm ? 'Cancel' : '＋ Add Attachment'}
+            </button>
+          </div>
+
+          {showAttachForm && (
+            <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3 mb-4 animate-fade-in">
+              <span className="text-xs font-bold text-slate-700 block">Add Reference Material Attachment</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  placeholder="Document Name (e.g. Safety Policy V4)"
+                  value={newAttachName}
+                  onChange={e => setNewAttachName(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-705 outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="URL String (e.g. /docs/ForkliftManual.pdf)"
+                  value={newAttachUrl}
+                  onChange={e => setNewAttachUrl(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-705 outline-none focus:ring-1 focus:ring-blue-500 sm:col-span-2"
+                />
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Resource Type:</span>
+                  <select
+                    value={newAttachType}
+                    onChange={e => setNewAttachType(e.target.value as Attachment['type'])}
+                    className="border border-slate-200 rounded-md px-2 py-1 text-xs bg-white text-slate-700 cursor-pointer outline-none"
+                  >
+                    <option value="PDF">PDF Document (PDF)</option>
+                    <option value="IMAGE">Image Resource (IMAGE)</option>
+                    <option value="VIDEO">Video Guide (VIDEO)</option>
+                    <option value="MANUAL">Operating Manual (MANUAL)</option>
+                    <option value="OTHER">Other Link (OTHER)</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={addAttachment}
+                  disabled={!newAttachName.trim() || !newAttachUrl.trim()}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all"
+                >
+                  Confirm Upload
+                </button>
+              </div>
+            </div>
+          )}
+
+          {attachments.length === 0 ? (
+            <p className="text-[11px] text-slate-400 italic">No attachments or instruction manuals added yet. Attachments will be available to operators on-site.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {attachments.map((attach, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-lg text-xs leading-relaxed transition-all">
+                  <div className="flex items-center gap-2 truncate pr-4">
+                    <span className="px-1.5 py-0.5 rounded bg-blue-105 border border-blue-200/50 text-blue-800 text-[9px] font-extrabold">{attach.type}</span>
+                    <span className="font-bold text-slate-700 truncate" title={attach.name}>{attach.name}</span>
+                    <span className="text-[9px] text-slate-400 truncate opacity-70" title={attach.url}>({attach.url})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx)}
+                    className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Tag associations */}
+      {/* Tag Triggers */}
       {showTagSection && (
-        <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-          <h2 className="font-bold text-slate-900 text-sm">
-            Tag associations <span className="text-xs font-normal text-slate-400 ml-1">— trigger linkages</span>
-          </h2>
-          <p className="text-xs text-slate-400">
-            Define automatic resolution triggers. Target Work Orders tracking tagged locations, matching asset categories, or specific asset IDs will automatically inherit this Procedure.
-          </p>
-          <div className="space-y-4">
+        <div className="premium-card p-6 border border-slate-200 bg-white shadow-sm rounded-xl space-y-4">
+          <div>
+            <h2 className="font-bold text-slate-900 text-sm">Automatic Location & Asset Association</h2>
+            <p className="text-xs text-slate-500 mt-1">Define trigger rules. Work orders created matching any of these targets will automatically inherit this procedure.</p>
+          </div>
+          <div className="space-y-4 pt-2">
             {locations && (
               <MultiTagSelect
-                label="Locations link"
+                label="Locations Triggers"
                 options={locations}
                 selected={selectedLocationIds}
                 onChange={setSelectedLocationIds}
-                placeholder="Select locations..."
+                placeholder="Assign to locations..."
               />
             )}
             {assetCategories && (
               <MultiTagSelect
-                label="Asset Categories link"
+                label="Asset Categories Triggers"
                 options={assetCategories}
                 selected={selectedCategoryIds}
                 onChange={setSelectedCategoryIds}
-                placeholder="Select asset categories..."
+                placeholder="Assign to asset categories..."
               />
             )}
             {assets && (
               <MultiTagSelect
-                label="Assets link"
+                label="Assets Triggers"
                 options={assets}
                 selected={selectedAssetIds}
                 onChange={setSelectedAssetIds}
-                placeholder="Select assets..."
+                placeholder="Assign to assets..."
               />
             )}
           </div>
         </div>
       )}
 
-      {/* Procedure items */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-slate-900 text-sm">Procedure steps ({steps.length})</h2>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={addStep} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-xs">
-              <Plus className="w-3.5 h-3.5" />
-              Add step
+      {/* Procedure Builder Blocks (SOP Builder) */}
+      <div className="premium-card p-6 border border-slate-200 bg-white shadow-sm rounded-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="font-bold text-slate-900 text-base">Procedure Blocks Builder ({steps.length})</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Stack block types below to form your Standard Operating Procedure (SOP). Drag & Drop to order.</p>
+          </div>
+          <button
+            type="button"
+            onClick={addStep}
+            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            Add Procedure Block
+          </button>
+        </div>
+
+        {steps.length === 0 ? (
+          <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+            <Heading className="w-10 h-10 mx-auto text-slate-350 stroke-[1.25] mb-2" />
+            <p className="text-sm font-bold text-slate-505">No procedure blocks added yet</p>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">SOPs are composed of ordered block types like section headers, check boxes, instruction cards, and text entry fields.</p>
+            <button
+              type="button"
+              onClick={addStep}
+              className="mt-4 inline-flex items-center gap-1 px-3.5 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 text-xs font-bold rounded-lg transition-colors"
+            >
+              Add first block
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            {stepsWithSectionGroup.map((step, idx) => {
+              const isSection = step.type === 'SECTION'
+              const isInstruction = step.type === 'INSTRUCTION'
+              const hasOptions = ['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(step.type)
 
-        {steps.length === 0 && (
-          <div className="text-center py-8 text-slate-405">
-            <div className="text-3xl mb-2">📋</div>
-            <p className="text-sm">No steps yet. Click &quot;Add step&quot; to define instructions.</p>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          {steps.map((step, idx) => (
-            <div key={idx} className="flex flex-col bg-slate-50 border border-slate-200/40 rounded-lg px-3 py-2.5 group">
-              <div className="flex items-center gap-3">
-                {/* Reorder controls */}
-                <div className="flex flex-col gap-0.5 text-slate-300 group-hover:text-slate-500 flex-shrink-0">
-                  <button type="button" onClick={() => moveStep(idx, -1)} disabled={idx === 0}
-                    className="hover:text-slate-700 disabled:opacity-30 leading-none text-xs">▲</button>
-                  <button type="button" onClick={() => moveStep(idx, 1)} disabled={idx === steps.length - 1}
-                    className="hover:text-slate-700 disabled:opacity-30 leading-none text-xs">▼</button>
-                </div>
-                <GripVertical className="w-4 h-4 text-slate-300 flex-shrink-0" />
-
-                {/* Label */}
-                <input
-                  type="text"
-                  value={step.label}
-                  onChange={e => updateStep(idx, 'label', e.target.value)}
-                  placeholder={`Instruction ${idx + 1}...`}
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 placeholder-slate-400 min-w-0"
-                />
-
-                {/* Step type selector */}
-                <select
-                  value={step.type}
-                  onChange={e => {
-                    updateStep(idx, 'type', e.target.value)
-                    if (e.target.value !== 'SINGLE_SELECT') updateStep(idx, 'options', [])
-                  }}
-                  className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white text-slate-700 flex-shrink-0 cursor-pointer"
+              return (
+                <div
+                  key={idx}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  className={`flex flex-col bg-white border rounded-xl transition-all shadow-xxs ${
+                    isSection 
+                      ? 'border-blue-350 bg-blue-50/10 shadow-xs' 
+                      : 'border-slate-200 hover:border-slate-300'
+                  } ${draggedIdx === idx ? 'opacity-40 border-dashed border-blue-505' : ''}`}
                 >
-                  {STEP_TYPE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-
-                {/* Mandatory toggle */}
-                <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={step.isMandatory}
-                    onChange={e => updateStep(idx, 'isMandatory', e.target.checked)}
-                    className="w-3.5 h-3.5 text-red-600 rounded border-slate-300 pointer-events-none"
-                  />
-                  <span className="text-xs text-slate-500 whitespace-nowrap select-none font-bold">Req</span>
-                </label>
-
-                <button type="button" onClick={() => removeStep(idx)} className="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Options editor for SINGLE_SELECT */}
-              {step.type === 'SINGLE_SELECT' && (
-                <div className="ml-10 mt-2 space-y-1.5">
-                  {step.options.map((opt, oi) => (
-                    <div key={oi} className="flex items-center gap-2 animate-fade-in">
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={e => updateOption(idx, oi, e.target.value)}
-                        placeholder={`Option ${oi + 1}`}
-                        className="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-705 placeholder-slate-400"
-                      />
-                      <button type="button" onClick={() => removeOption(idx, oi)} className="text-slate-305 hover:text-red-500 transition-colors">
-                        <X className="w-3 h-3" />
-                      </button>
+                  <div className="flex items-start gap-3 p-4">
+                    {/* Native Drag & Swap handle */}
+                    <div 
+                      className="cursor-grab active:cursor-grabbing p-1.5 rounded-lg text-slate-350 hover:bg-slate-100 hover:text-slate-500 transition-all flex-shrink-0"
+                      title="Drag to reposition this block"
+                    >
+                      <GripVertical className="w-4 h-4" />
                     </div>
-                  ))}
-                  <button type="button" onClick={() => addOption(idx)}
-                    className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Add option
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {steps.length > 0 && (
-          <p className="text-xs text-slate-400">
-            {steps.filter(i => i.isMandatory).length} required · {steps.filter(i => i.type !== 'CHECKBOX').length} typed steps
-          </p>
+                    <div className="flex-1 space-y-3 min-w-0">
+                      {/* Step Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        {/* Step Label input */}
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={step.label}
+                            onChange={e => updateStep(idx, 'label', e.target.value)}
+                            placeholder={
+                              isSection 
+                                ? "Enter section header title (e.g. Safety Checks)" 
+                                : isInstruction
+                                ? "Enter instructional instruction text for operator"
+                                : `Step ${idx + 1} instruction/prompt label...`
+                            }
+                            className={`w-full bg-transparent border-none outline-none text-sm placeholder-slate-400 focus:ring-0 ${
+                              isSection ? 'font-black text-slate-850 text-base' : 'font-semibold text-slate-800'
+                            }`}
+                          />
+                        </div>
+
+                        {/* Block Type selector */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={step.type}
+                            onChange={e => {
+                              updateStep(idx, 'type', e.target.value)
+                              if (!['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(e.target.value)) {
+                                updateStep(idx, 'options', [])
+                              }
+                            }}
+                            className="text-xs font-bold border border-slate-205 rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-705 flex-shrink-0 cursor-pointer hover:bg-slate-100 transition shadow-xxs"
+                          >
+                            {STEP_TYPE_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+
+                          {/* Skip Required for Section & Instruction */}
+                          {!isSection && !isInstruction && (
+                            <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer p-1.5 hover:bg-slate-50 rounded-lg border border-slate-100 transition whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={step.isMandatory}
+                                onChange={e => updateStep(idx, 'isMandatory', e.target.checked)}
+                                className="w-3.5 h-3.5 rounded border-slate-300 text-red-650 accent-red-600 cursor-pointer"
+                              />
+                              <span className="text-[10px] text-slate-600 font-extrabold uppercase">Mandatory</span>
+                            </label>
+                          )}
+
+                          {/* Quick Up/Down buttons in case drag-drop is inconvenient */}
+                          <div className="flex items-center border border-slate-100 rounded-lg">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => moveStep(idx, -1)}
+                              className="p-1 text-slate-405 hover:text-slate-605 disabled:opacity-30"
+                              title="Move step up"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === steps.length - 1}
+                              onClick={() => moveStep(idx, 1)}
+                              className="p-1 text-slate-405 hover:text-slate-605 disabled:opacity-30 border-l border-slate-100"
+                              title="Move step down"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeStep(idx)}
+                            className="p-1.5 text-slate-350 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete this block"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Choices Options list */}
+                      {hasOptions && (
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-150 space-y-2 max-w-md ml-2 animate-fade-in">
+                          <span className="text-[10px] font-extrabold text-slate-505 uppercase block">Define Selection Items</span>
+                          <div className="space-y-1.5">
+                            {step.options.map((opt, oi) => (
+                              <div key={oi} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={e => updateOption(idx, oi, e.target.value)}
+                                  placeholder={`Option ${oi + 1} (e.g. Normal Operational Status)`}
+                                  className="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-705 outline-none focus:border-slate-350 placeholder-slate-400"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeOption(idx, oi)}
+                                  className="text-slate-350 hover:text-red-500 p-1"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addOption(idx)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 pt-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Add select option
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Brief visual indicator of the block's intent */}
+                      <div className="text-[11px] text-slate-400 pl-1 leading-relaxed italic">
+                        {isSection && '📁 Section Header: groups following blocks.'}
+                        {isInstruction && '📝 Read-only Instruction: plain paragraph guiding the operator.'}
+                        {step.type === 'CHECKBOX' && '✅ Checkbox: verification checkbox.'}
+                        {step.type === 'INSPECTION' && '🔍 Inspection: Pass / Flag / Fail. Helps raise corrective schedules.'}
+                        {step.type === 'TEXT_INPUT' && '🔠 Text Input: collects alphanumeric text response.'}
+                        {step.type === 'NUMBER_INPUT' && '🔢 Number Input: captures numeric metrics.'}
+                        {step.type === 'MULTIPLE_CHOICE' && '☑️ Multiple Choice: allows choosing multiple items simultaneously.'}
+                        {step.type === 'DROPDOWN' && '🔽 Dropdown List: selects from a dropdown stack.'}
+                        {step.type === 'DATE' && '📅 Date: records signature calendars.'}
+                        {step.type === 'SIGNATURE' && '✍️ Signature: capturing operator sign-off.'}
+                        {step.type === 'PHOTO' && '📷 Photo Upload: prompts image attachments during execution.'}
+                        {step.type === 'FILE' && '📎 File Attachment: uploads technical manuals or files.'}
+                        {step.type === 'METER' && '⚙️ Meter Reading: stores physical metrics.'}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create Procedure'}
+      {/* Submission Buttons */}
+      <div className="flex items-center justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="px-5 py-2.5 bg-white border border-slate-205 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition shadow-xxs"
+        >
+          Cancel
         </button>
-        <button type="button" onClick={() => router.back()} className="btn-secondary">Cancel</button>
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center gap-2"
+        >
+          {saving ? 'Saving Templates...' : isEdit ? 'Save SOP Template' : 'Create SOP Template'}
+        </button>
       </div>
     </form>
   )

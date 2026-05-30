@@ -14,15 +14,17 @@ function validateValue(type: string, value: string | null, options: string[]): s
   if (value === null || value === undefined) return null
   switch (type) {
     case 'NUMBER_INPUT':
+    case 'METER':
       if (value === '') return null
       if (isNaN(Number(value))) return 'Value must be a valid number'
       break
     case 'SINGLE_SELECT':
+    case 'DROPDOWN':
       if (value === '') return null
       if (!options.includes(value)) return `Value must be one of: ${options.join(', ')}`
       break
     case 'INSPECTION':
-      if (value !== 'PASS' && value !== 'FAIL') return 'Value must be PASS or FAIL'
+      if (value !== 'PASS' && value !== 'FLAG' && value !== 'FAIL') return 'Value must be PASS, FLAG, or FAIL'
       break
     case 'SIGNATURE':
       if (!value) return 'Signature is required'

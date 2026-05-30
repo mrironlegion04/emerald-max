@@ -18,7 +18,6 @@ const updateSchema = z.object({
   meterInterval:        z.number().nullable().optional(),
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
-  checklistTemplateIds: z.array(z.string()).optional(),
   procedureIds:        z.array(z.string()).optional(),
 })
 
@@ -69,8 +68,6 @@ export async function PUT(
       ? (data.locationScope !== undefined ? data.locationScope : (existing.locationScope ?? 'ALL_ASSETS'))
       : null
 
-    const inputProcedures = data.procedureIds !== undefined ? data.procedureIds : data.checklistTemplateIds
-    
     const schedule = await prisma.maintenanceSchedule.update({
       where: { id },
       data: {
@@ -87,9 +84,9 @@ export async function PUT(
         meterId:             data.meterId              ?? null,
         meterInterval:       data.meterInterval        ?? null,
         meterUnit:           data.meterUnit            ?? null,
-        procedures: inputProcedures !== undefined ? {
+        procedures: data.procedureIds !== undefined ? {
           deleteMany: {},
-          create: inputProcedures.map((procedureId, index) => ({
+          create: data.procedureIds.map((procedureId, index) => ({
             procedureId,
             sortOrder: index,
           })),

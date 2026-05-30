@@ -206,7 +206,6 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
         procedureIds:         form.procedureIds,
-        checklistTemplateIds: form.procedureIds, // Backwards compatible support
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'

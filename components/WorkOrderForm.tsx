@@ -24,7 +24,7 @@ interface WOFormData {
   status: string; dueDate: string; assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
   assignedToId: string; assignedTeamId: string; laborHours: string; laborCost: string; partsCost: string
-  notes: string; issueId: string; customIssue: string; checklistTemplateIds: string[]
+  notes: string; issueId: string; customIssue: string;
   procedureIds: string[]
 }
 
@@ -48,8 +48,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
   const isEdit = !!woId
 
   // Map checklists to procedures
-  const initialChecklists = initialData?.checklistTemplateIds || []
-  const initialProcedures = initialData?.procedureIds || initialChecklists
+  const initialProcedures = initialData?.procedureIds || initialData?.checklistTemplateIds || []
 
   const [form, setForm] = useState<WOFormData>({
     title:          initialData?.title          ?? '',
@@ -70,7 +69,6 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
     notes:          initialData?.notes          ?? '',
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
-    checklistTemplateIds: initialChecklists,
     procedureIds:   initialProcedures,
   })
 
@@ -198,7 +196,6 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
       return {
         ...prev,
         procedureIds: nextIds,
-        checklistTemplateIds: nextIds,
       }
     })
   }
@@ -236,7 +233,6 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
         procedureIds: form.procedureIds,
-        checklistTemplateIds: form.checklistTemplateIds,
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'

@@ -18,8 +18,7 @@ const pmSchema = z.object({
   meterInterval:        z.number().nullable().optional(),
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
-  checklistTemplateIds: z.array(z.string()).optional().default([]),
-  procedureIds:        z.array(z.string()).optional().default([]),
+  procedureIds:         z.array(z.string()).optional().default([]),
 }).refine(data => data.assetId || data.locationId, {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = pmSchema.parse(body)
 
-    const combinedProcedureIds = [...new Set([...(data.procedureIds ?? []), ...(data.checklistTemplateIds ?? [])])]
+    const procedureIds = data.procedureIds ?? []
 
     const schedule = await prisma.maintenanceSchedule.create({
       data: {
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
         meterUnit:           data.meterUnit            ?? null,
         createdById:         user.userId,
         procedures: {
-          create: combinedProcedureIds.map((procedureId, index) => ({
+          create: procedureIds.map((procedureId, index) => ({
             procedureId,
             sortOrder: index,
           })),

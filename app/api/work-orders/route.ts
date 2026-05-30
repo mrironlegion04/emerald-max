@@ -31,7 +31,6 @@ const woSchema = z.object({
   notes:               z.string().nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
-  checklistTemplateIds: z.array(z.string()).optional().default([]),
   procedureIds:        z.array(z.string()).optional().default([]),
 }).refine(
   data => !(data.issueId && data.customIssue),
@@ -149,11 +148,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Snapshot user-selected procedures (manual additions) ───────────
-    const combinedProcedureIds = [...new Set([...(data.procedureIds ?? []), ...(data.checklistTemplateIds ?? [])])]
-    if (combinedProcedureIds.length > 0) {
+    const procedureIds = data.procedureIds ?? []
+    if (procedureIds.length > 0) {
       // Apply each selected procedure to every asset in scope (or single procedure for location-general with no assets)
       const selectedMappings: { procedureId: string; assetId: string | null; source: string }[] = []
-      for (const pid of combinedProcedureIds) {
+      for (const pid of procedureIds) {
         if (assetIds.length > 0) {
           for (const aid of assetIds) {
             selectedMappings.push({ procedureId: pid, assetId: aid, source: 'MANUAL' })

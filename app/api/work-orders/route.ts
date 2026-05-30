@@ -171,8 +171,9 @@ export async function POST(request: NextRequest) {
                 workOrderId: wo.id,
                 title: template.name,
                 source: 'MANUAL',
+                templateId: template.id,
                 items: {
-                  create: template.items.map((item: any) => ({
+                  create: template.items.map(item => ({
                     label: item.label,
                     type: item.type,
                     isMandatory: item.isMandatory,

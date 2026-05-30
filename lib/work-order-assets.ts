@@ -271,9 +271,18 @@ export async function generatePerAssetChecklists(
   // Load existing checklists for this work order to prevent duplicate generation (Requirement 6)
   const existingChecklists = await prisma.wOChecklist.findMany({
     where: { workOrderId },
-    select: { title: true, source: true },
+    select: {
+      id: true,
+      title: true,
+      source: true,
+      templateId: true,
+      items: {
+        select: {
+          assetId: true,
+        },
+      },
+    },
   })
-  const existingTitles = new Set(existingChecklists.map(c => c.title))
 
   for (const mapping of uniqueMappings) {
     const template = templateMap.get(mapping.templateId)
@@ -282,8 +291,26 @@ export async function generatePerAssetChecklists(
     const assetName = mapping.assetId ? assetNameMap.get(mapping.assetId) : null
     const title = assetName ? `${assetName} — ${template.name}` : template.name
 
-    // Skip if already generated (Requirement 6)
-    if (existingTitles.has(title)) {
+    // Check if the combination of (assetId, templateId) already exists to prevent duplicate generation (Requirement 6)
+    let isDuplicate = false
+    for (const ec of existingChecklists) {
+      // Priority 1: Match by persisted templateId and item assetId
+      if (ec.templateId === mapping.templateId) {
+        const hasMatchingAsset = ec.items.some(item => item.assetId === mapping.assetId)
+        const bothNoAsset = !mapping.assetId && ec.items.every(item => !item.assetId)
+        if (hasMatchingAsset || bothNoAsset) {
+          isDuplicate = true
+          break
+        }
+      }
+      // Priority 2: Fallback to title matching for legacy records without templateId
+      if (ec.title === title) {
+        isDuplicate = true
+        break
+      }
+    }
+
+    if (isDuplicate) {
       continue
     }
 
@@ -292,6 +319,7 @@ export async function generatePerAssetChecklists(
         workOrderId,
         title,
         source: checklistSource,
+        templateId: mapping.templateId,
       },
     })
 

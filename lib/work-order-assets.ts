@@ -135,90 +135,76 @@ export async function resolveTemplatesForAssets(
   assetIds: string[],
   locationId?: string | null,
 ): Promise<{ templateId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[]> {
-  if (assetIds.length === 0) return []
+  if (assetIds.length === 0 && !locationId) return []
 
-  // 1. Batch load all assets to fetch their categoryId to avoid N+1 lookups
-  const assets = await prisma.asset.findMany({
-    where: { id: { in: assetIds } },
-    select: { id: true, categoryId: true },
-  })
-
-  const assetCategoryMap = new Map<string, string | null>(
-    assets.map(a => [a.id, a.categoryId])
-  )
-
-  const categoryIds = [...new Set(assets.map(a => a.categoryId).filter((id): id is string => !!id))]
-
-  // 2. Load all ChecklistTemplates that are directly attached to these assets
-  const templateAssets = await prisma.checklistTemplate.findMany({
-    where: {
-      assets: { some: { id: { in: assetIds } } },
-    },
-    select: {
-      id: true,
-      assets: { select: { id: true } },
-    },
-  })
-
-  // 3. Load all ChecklistTemplates attached to these categories
-  const templateCategories = categoryIds.length > 0
-    ? await prisma.checklistTemplate.findMany({
-        where: {
-          categories: { some: { id: { in: categoryIds } } },
-        },
-        select: {
-          id: true,
-          categories: { select: { id: true } },
-        },
+  const assets = assetIds.length > 0
+    ? await prisma.asset.findMany({
+        where: { id: { in: assetIds } },
+        select: { id: true, categoryId: true },
       })
     : []
 
-  // 4. Load all ChecklistTemplates attached to the location (if provided)
+  const categoryIds = [...new Set(assets.map(a => a.categoryId).filter((id): id is string => !!id))]
+
+  const templateAssets = assetIds.length > 0
+    ? await prisma.checklistTemplate.findMany({
+        where: { assets: { some: { id: { in: assetIds } } } },
+        select: { id: true, assets: { select: { id: true } } },
+      })
+    : []
+
+  const templateCategories = categoryIds.length > 0
+    ? await prisma.checklistTemplate.findMany({
+        where: { categories: { some: { id: { in: categoryIds } } } },
+        select: { id: true, categories: { select: { id: true } } },
+      })
+    : []
+
   const templateLocations = locationId
     ? await prisma.checklistTemplate.findMany({
-        where: {
-          locations: { some: { id: locationId } },
-        },
+        where: { locations: { some: { id: locationId } } },
         select: { id: true },
       })
     : []
 
-  const locTemplateIds = templateLocations.map(t => t.id)
-
   const result: { templateId: string; assetId: string; source: 'ASSET' | 'CATEGORY' | 'LOCATION' }[] = []
 
-  // For each asset, resolve its templates independently with correct source prioritization:
-  // ASSET (highest) > CATEGORY > LOCATION (lowest)
-  for (const assetId of assetIds) {
-    const resolvedForAsset = new Map<string, 'ASSET' | 'CATEGORY' | 'LOCATION'>()
+  const seen = new Set<string>()
 
-    // Priority 1: Direct Asset Templates
-    const directTemplates = templateAssets.filter(t => t.assets.some(a => a.id === assetId))
-    for (const t of directTemplates) {
-      resolvedForAsset.set(t.id, 'ASSET')
+  for (const t of templateAssets) {
+    for (const a of t.assets) {
+      const key = `${t.id}-${a.id}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push({ templateId: t.id, assetId: a.id, source: 'ASSET' })
+      }
     }
+  }
 
-    // Priority 2: Category Templates
-    const catId = assetCategoryMap.get(assetId)
-    if (catId) {
-      const catTemplates = templateCategories.filter(t => t.categories.some(c => c.id === catId))
-      for (const t of catTemplates) {
-        if (!resolvedForAsset.has(t.id)) {
-          resolvedForAsset.set(t.id, 'CATEGORY')
+  for (const t of templateCategories) {
+    for (const c of t.categories) {
+      const matchedAssets = assets.filter(a => a.categoryId === c.id)
+      for (const a of matchedAssets) {
+        const key = `${t.id}-${a.id}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          result.push({ templateId: t.id, assetId: a.id, source: 'CATEGORY' })
         }
       }
     }
+  }
 
-    // Priority 3: Location Templates
-    for (const tid of locTemplateIds) {
-      if (!resolvedForAsset.has(tid)) {
-        resolvedForAsset.set(tid, 'LOCATION')
+  const locTemplateIds = new Set(templateLocations.map(t => t.id))
+
+  if (locationId) {
+    for (const assetId of assetIds) {
+      for (const tid of locTemplateIds) {
+        const key = `${tid}-${assetId}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          result.push({ templateId: tid, assetId, source: 'LOCATION' })
+        }
       }
-    }
-
-    // Add resolved asset-template mappings
-    for (const [templateId, source] of resolvedForAsset.entries()) {
-      result.push({ templateId, assetId, source })
     }
   }
 
@@ -228,18 +214,16 @@ export async function resolveTemplatesForAssets(
 /**
  * Generate per-asset checklists from templates.
  * Creates one WOChecklist per asset-template pair, with items preserving assetId.
- * Duplicate prevention: skips if same template already applied to same asset, ensuring idempotency.
+ * Duplicate prevention: skips if same template already applied to same asset.
  */
 export async function generatePerAssetChecklists(
   workOrderId: string,
   templateMappings: { templateId: string; assetId: string; source: string }[],
-  checklistSource: string = 'AUTO_TEMPLATE',
 ): Promise<void> {
   if (templateMappings.length === 0) return
 
   const templateIds = [...new Set(templateMappings.map(m => m.templateId))]
 
-  // Batch load all ChecklistTemplates and their items
   const templates = await prisma.checklistTemplate.findMany({
     where: { id: { in: templateIds } },
     include: { items: { orderBy: { sortOrder: 'asc' } } },
@@ -247,126 +231,54 @@ export async function generatePerAssetChecklists(
 
   const templateMap = new Map(templates.map(t => [t.id, t]))
 
-  // Batch load all unique Asset names
-  const assetIds = [...new Set(templateMappings.map(m => m.assetId).filter((id): id is string => !!id))]
-  const assets = assetIds.length > 0
-    ? await prisma.asset.findMany({
-        where: { id: { in: assetIds } },
-        select: { id: true, name: true },
-      })
-    : []
-  const assetNameMap = new Map<string, string>(assets.map(a => [a.id, a.name]))
-
-  // Deduplicate mappings to prevent duplicate checklist generation in the same batch
-  const uniqueMappings: { templateId: string; assetId: string; source: string }[] = []
-  const seenBatchKeys = new Set<string>()
-  for (const mapping of templateMappings) {
-    const key = `${mapping.assetId ?? 'null'}-${mapping.templateId}`
-    if (!seenBatchKeys.has(key)) {
-      seenBatchKeys.add(key)
-      uniqueMappings.push(mapping)
-    }
+  // Group mappings by template
+  const byTemplate = new Map<string, { assetId: string; source: string }[]>()
+  for (const m of templateMappings) {
+    if (!byTemplate.has(m.templateId)) byTemplate.set(m.templateId, [])
+    byTemplate.get(m.templateId)!.push(m)
   }
 
-  // Load existing checklists for this work order to prevent duplicate generation (Requirement 6)
-  const existingChecklists = await prisma.wOChecklist.findMany({
-    where: { workOrderId },
-    select: {
-      id: true,
-      title: true,
-      source: true,
-      templateId: true,
-      items: {
-        select: {
-          assetId: true,
-        },
-      },
-    },
-  })
-
-  for (const mapping of uniqueMappings) {
-    const template = templateMap.get(mapping.templateId)
+  for (const [templateId, mappings] of byTemplate) {
+    const template = templateMap.get(templateId)
     if (!template || template.items.length === 0) continue
 
-    const assetName = mapping.assetId ? assetNameMap.get(mapping.assetId) : null
-    const title = assetName ? `${assetName} — ${template.name}` : template.name
-
-    // Check if the combination of (assetId, templateId) already exists to prevent duplicate generation (Requirement 6)
-    let isDuplicate = false
-    for (const ec of existingChecklists) {
-      // Priority 1: Match by persisted templateId and item assetId
-      if (ec.templateId === mapping.templateId) {
-        const hasMatchingAsset = ec.items.some(item => item.assetId === mapping.assetId)
-        const bothNoAsset = !mapping.assetId && ec.items.every(item => !item.assetId)
-        if (hasMatchingAsset || bothNoAsset) {
-          isDuplicate = true
-          break
-        }
-      }
-      // Priority 2: Fallback to title matching for legacy records without templateId
-      if (ec.title === title) {
-        isDuplicate = true
-        break
-      }
-    }
-
-    if (isDuplicate) {
-      continue
-    }
-
-    const checklist = await prisma.wOChecklist.create({
-      data: {
-        workOrderId,
-        title,
-        source: checklistSource,
-        templateId: mapping.templateId,
-      },
+    // Deduplicate by asset
+    const seenAssets = new Set<string>()
+    const uniqueMappings = mappings.filter(m => {
+      if (seenAssets.has(m.assetId)) return false
+      seenAssets.add(m.assetId)
+      return true
     })
 
-    await prisma.wOChecklistItem.createMany({
-      data: template.items.map(item => ({
-        checklistId: checklist.id,
-        label: item.label,
-        type: item.type,
-        isMandatory: item.isMandatory,
-        sortOrder: item.sortOrder,
-        options: item.options,
-        isChecked: false,
-        assetId: mapping.assetId || null,
-      })),
-    })
+    // Create one checklist per asset (this template + this asset)
+    for (const mapping of uniqueMappings) {
+      const asset = await prisma.asset.findUnique({
+        where: { id: mapping.assetId },
+        select: { name: true },
+      })
+      if (!asset) continue
+
+      const checklist = await prisma.wOChecklist.create({
+        data: {
+          workOrderId,
+          title: `${asset.name} — ${template.name}`,
+        },
+      })
+
+      await prisma.wOChecklistItem.createMany({
+        data: template.items.map(item => ({
+          checklistId: checklist.id,
+          label: item.label,
+          type: item.type,
+          isMandatory: item.isMandatory,
+          sortOrder: item.sortOrder,
+          options: item.options,
+          isChecked: false,
+          assetId: mapping.assetId,
+        })),
+      })
+    }
   }
-}
-
-/**
- * Automatically generates MaintainX-style checklists for a work order based on its assets,
- * adhering to the MaintainX checklist generation rules.
- */
-export async function generateAutoChecklistsForWorkOrder(
-  workOrderId: string,
-  assetIds: string[],
-  locationScope?: string | null,
-): Promise<void> {
-  const finalLocationScope = locationScope ?? (await prisma.workOrder.findUnique({
-    where: { id: workOrderId },
-    select: { locationScope: true },
-  }))?.locationScope
-
-  if (finalLocationScope === 'GENERAL' || assetIds.length === 0) {
-    return
-  }
-
-  const wo = await prisma.workOrder.findUnique({
-    where: { id: workOrderId },
-    select: { locationId: true },
-  })
-  const locationId = wo?.locationId
-
-  // 1. Resolve templates for all assetIds
-  const templateMappings = await resolveTemplatesForAssets(assetIds, locationId)
-
-  // 2. Generate checklists
-  await generatePerAssetChecklists(workOrderId, templateMappings, 'AUTO_TEMPLATE')
 }
 
 /**
@@ -383,11 +295,11 @@ export async function syncWorkOrderAssets(
   })
   const existingMap = new Map(existing.map(e => [e.assetId, e.source]))
 
-  const incomingMap = new Map(entries.map((e: AssetEntry) => [e.assetId, e]))
+  const incomingMap = new Map(entries.map(e => [e.assetId, e]))
 
-  const toRemove = [...existingMap.keys()].filter((id: string) => !incomingMap.has(id))
+  const toRemove = [...existingMap.keys()].filter(id => !incomingMap.has(id))
 
-  const toAdd = entries.filter((e: AssetEntry) => !existingMap.has(e.assetId))
+  const toAdd = entries.filter(e => !existingMap.has(e.assetId))
 
   if (toRemove.length > 0) {
     await prisma.workOrderAsset.deleteMany({
@@ -397,7 +309,7 @@ export async function syncWorkOrderAssets(
 
   if (toAdd.length > 0) {
     await prisma.workOrderAsset.createMany({
-      data: toAdd.map((e: AssetEntry) => ({
+      data: toAdd.map(e => ({
         workOrderId,
         assetId: e.assetId,
         source: e.source,

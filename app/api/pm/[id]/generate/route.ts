@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import {
-  normalizeWorkOrderAssets,
-  syncWorkOrderAssets,
-  generateAutoChecklistsForWorkOrder,
-  generatePerAssetChecklists,
-} from '@/lib/work-order-assets'
 
 // Calculate the next due date based on frequency and interval
 function advanceDate(current: Date, frequency: string, interval: number): Date {
@@ -144,41 +138,97 @@ export async function POST(
       }),
     ])
 
-    // Normalize and sync WorkOrderAsset rows (freezes the scope)
-    const normalized = await normalizeWorkOrderAssets(
-      schedule.assetId,
-      [],
-      schedule.locationId,
-      schedule.locationScope,
-    )
-    if (normalized.entries.length > 0) {
-      await syncWorkOrderAssets(wo.id, normalized.entries)
-    }
+    // Generate checklists if ALL_ASSETS location scope
+    if (schedule.locationId && schedule.locationScope === 'ALL_ASSETS') {
+      const allLocations = await prisma.location.findMany({
+        select: { id: true, parentId: true },
+      })
 
-    // Generate checklists only if location scope is not GENERAL
-    if (schedule.locationScope !== 'GENERAL') {
-      const assetIds = normalized.entries.map(e => e.assetId)
-      if (assetIds.length > 0) {
-        await generateAutoChecklistsForWorkOrder(wo.id, assetIds, schedule.locationScope)
+      function getDescendantLocationIds(locId: string): string[] {
+        const ids = [locId]
+        const children = allLocations.filter(l => l.parentId === locId)
+        for (const child of children) {
+          ids.push(...getDescendantLocationIds(child.id))
+        }
+        return ids
       }
 
-      // Propagate PM-level template shortcuts if direct templates are assigned to the PM schedule
-      if (schedule.checklistTemplates && schedule.checklistTemplates.length > 0) {
-        // Apply each PM checklist template to every asset in scope using the unified resolution pipeline
-        const pmMappings: { templateId: string; assetId: string; source: string }[] = []
-        for (const ctItem of schedule.checklistTemplates) {
-          for (const aid of assetIds) {
-            if (aid) {
-              pmMappings.push({
-                templateId: ctItem.template.id,
-                assetId: aid,
-                source: 'PM_TEMPLATE',
-              })
-            }
-          }
+      const allLocationIds = getDescendantLocationIds(schedule.locationId)
+
+      const allAssets = await prisma.asset.findMany({
+        select: { id: true, name: true, parentId: true, locationId: true },
+      })
+
+      const locationSeedAssets = allAssets.filter(a => a.locationId && allLocationIds.includes(a.locationId))
+      const seedIds = new Set(locationSeedAssets.map(a => a.id))
+
+      const topLevelParents = locationSeedAssets.filter(a => !a.parentId || !seedIds.has(a.parentId))
+
+      const tracedAssets: { id: string; name: string }[] = []
+      const visited = new Set<string>()
+
+      function traceDescendants(asset: typeof allAssets[0]) {
+        if (visited.has(asset.id)) return
+        visited.add(asset.id)
+        tracedAssets.push({ id: asset.id, name: asset.name })
+
+        const children = allAssets.filter(a => a.parentId === asset.id)
+        children.sort((a, b) => a.name.localeCompare(b.name))
+        for (const child of children) {
+          traceDescendants(child)
         }
-        if (pmMappings.length > 0) {
-          await generatePerAssetChecklists(wo.id, pmMappings, 'PM_TEMPLATE')
+      }
+
+      topLevelParents.sort((a, b) => a.name.localeCompare(b.name))
+      for (const parent of topLevelParents) {
+        traceDescendants(parent)
+      }
+
+      if (tracedAssets.length > 0) {
+        const checklist = await prisma.wOChecklist.create({
+          data: {
+            workOrderId: wo.id,
+            title: 'Location Assets Checklist',
+          },
+        })
+
+        await prisma.wOChecklistItem.createMany({
+          data: tracedAssets.map((asset, index) => ({
+            checklistId: checklist.id,
+            label: `Check ${asset.name}`,
+            assetId: asset.id,
+            isChecked: false,
+            sortOrder: index,
+          })),
+        })
+      }
+    } else if (schedule.checklistTemplates && schedule.checklistTemplates.length > 0) {
+      // Propagate multiple checklist templates if specified
+      for (const ctItem of schedule.checklistTemplates) {
+        const templateItems = await prisma.checklistTemplateItem.findMany({
+          where: { templateId: ctItem.template.id },
+          orderBy: { sortOrder: 'asc' },
+        })
+
+        if (templateItems.length > 0) {
+          const checklist = await prisma.wOChecklist.create({
+            data: {
+              workOrderId: wo.id,
+              title: ctItem.template.name,
+            },
+          })
+
+          await prisma.wOChecklistItem.createMany({
+            data: templateItems.map(item => ({
+              checklistId: checklist.id,
+              label: item.label,
+              type: item.type,
+              isMandatory: item.isMandatory,
+              sortOrder: item.sortOrder,
+              options: item.options,
+              isChecked: false,
+            })),
+          })
         }
       }
     }

@@ -170,6 +170,7 @@ export async function POST(request: NextRequest) {
               data: {
                 workOrderId: wo.id,
                 title: template.name,
+                source: 'MANUAL',
                 items: {
                   create: template.items.map((item: any) => ({
                     label: item.label,
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
             })
           }
         } else {
-          await generatePerAssetChecklists(wo.id, selectedMappings)
+          await generatePerAssetChecklists(wo.id, selectedMappings, 'MANUAL')
         }
       }
     }

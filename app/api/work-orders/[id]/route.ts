@@ -175,17 +175,12 @@ export async function PUT(
 
     // ── Regenerate checklists if scope changed (only for auto-generated) ──
     if (assetIdsChanged) {
-      // Remove old auto-generated checklists (those from templates, not manually added)
-      // We preserve manual checklists by only deleting those linked to templates
-      const existingChecklists = await prisma.wOChecklist.findMany({
-        where: { workOrderId: id },
-        select: { id: true, title: true },
+      // Remove old auto-generated checklists (AUTO_TEMPLATE) and preserve MANUAL and PM_TEMPLATE checklists
+      const oldAutoChecklists = await prisma.wOChecklist.findMany({
+        where: { workOrderId: id, source: 'AUTO_TEMPLATE' },
+        select: { id: true },
       })
-
-      // Delete old auto-generated checklists
-      const autoChecklistIds = existingChecklists
-        .filter(c => c.title !== 'Manual Checklist')
-        .map(c => c.id)
+      const autoChecklistIds = oldAutoChecklists.map(c => c.id)
 
       if (autoChecklistIds.length > 0) {
         await prisma.wOChecklistItem.deleteMany({

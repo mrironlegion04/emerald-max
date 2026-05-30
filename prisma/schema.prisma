@@ -712,6 +712,7 @@ model WOChecklist {
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
+  source      String    @default("MANUAL") // "AUTO_TEMPLATE" | "MANUAL" | "PM_TEMPLATE"
 
   items WOChecklistItem[]
 

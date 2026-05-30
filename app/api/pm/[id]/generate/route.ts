@@ -5,6 +5,7 @@ import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
   generateAutoChecklistsForWorkOrder,
+  generatePerAssetChecklists,
 } from '@/lib/work-order-assets'
 
 // Calculate the next due date based on frequency and interval
@@ -163,37 +164,21 @@ export async function POST(
 
       // Propagate PM-level template shortcuts if direct templates are assigned to the PM schedule
       if (schedule.checklistTemplates && schedule.checklistTemplates.length > 0) {
-        // Apply each PM checklist template to every asset in scope
+        // Apply each PM checklist template to every asset in scope using the unified resolution pipeline
+        const pmMappings: { templateId: string; assetId: string; source: string }[] = []
         for (const ctItem of schedule.checklistTemplates) {
-          const templateItems = await prisma.checklistTemplateItem.findMany({
-            where: { templateId: ctItem.template.id },
-            orderBy: { sortOrder: 'asc' },
-          })
-
-          if (templateItems.length > 0) {
-            for (const aid of assetIds.length > 0 ? assetIds : [null]) {
-              const prefix = aid ? `${(await prisma.asset.findUnique({ where: { id: aid }, select: { name: true } }))?.name} — ` : ''
-              const checklist = await prisma.wOChecklist.create({
-                data: {
-                  workOrderId: wo.id,
-                  title: `${prefix}${ctItem.template.name}`,
-                },
-              })
-
-              await prisma.wOChecklistItem.createMany({
-                data: templateItems.map(item => ({
-                  checklistId: checklist.id,
-                  label: item.label,
-                  type: item.type,
-                  isMandatory: item.isMandatory,
-                  sortOrder: item.sortOrder,
-                  options: item.options,
-                  isChecked: false,
-                  assetId: aid,
-                })),
+          for (const aid of assetIds) {
+            if (aid) {
+              pmMappings.push({
+                templateId: ctItem.template.id,
+                assetId: aid,
+                source: 'PM_TEMPLATE',
               })
             }
           }
+        }
+        if (pmMappings.length > 0) {
+          await generatePerAssetChecklists(wo.id, pmMappings, 'PM_TEMPLATE')
         }
       }
     }

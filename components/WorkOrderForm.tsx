@@ -12,8 +12,8 @@ interface Location { id: string; name: string; address: string | null; path: str
 interface User  { id: string; name: string; role: string }
 interface Team  { id: string; name: string; trade: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean }
-interface Template {
-  id: string; name: string; description?: string | null; items?: { id: string }[]
+interface Procedure {
+  id: string; name: string; description?: string | null; steps?: { id: string }[]
   locations?: { id: string }[]
   categories?: { id: string }[]
   assets?: { id: string }[]
@@ -25,11 +25,12 @@ interface WOFormData {
   selectedAssetIds: string[]
   assignedToId: string; assignedTeamId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string; checklistTemplateIds: string[]
+  procedureIds: string[]
 }
 
 interface Props {
   assets: Asset[]; locations: Location[]; users: User[]; teams: Team[]
-  templates?: Template[]
+  procedures?: Procedure[]
   initialData?: Partial<WOFormData>
   woId?: string
   preselectedAssetId?: string
@@ -42,9 +43,13 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels: Record<string,string>   = { OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled' }
 
-export default function WorkOrderForm({ assets, locations, users, teams, templates = [], initialData, woId, preselectedAssetId }: Props) {
+export default function WorkOrderForm({ assets, locations, users, teams, procedures = [], initialData, woId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!woId
+
+  // Map checklists to procedures
+  const initialChecklists = initialData?.checklistTemplateIds || []
+  const initialProcedures = initialData?.procedureIds || initialChecklists
 
   const [form, setForm] = useState<WOFormData>({
     title:          initialData?.title          ?? '',
@@ -65,7 +70,8 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
     notes:          initialData?.notes          ?? '',
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
-    checklistTemplateIds: [],
+    checklistTemplateIds: initialChecklists,
+    procedureIds:   initialProcedures,
   })
 
   const [saving, setSaving] = useState(false)
@@ -164,32 +170,37 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
     const allAssetIdsForRec = allSelectedAssetIds
     const categoryIds = new Set(allAssetIdsForRec.map(id => assets.find(a => a.id === id)?.categoryId).filter(Boolean))
 
-    for (const t of templates) {
-      const matchesAsset    = allAssetIdsForRec.some(aid => t.assets?.some(a => a.id === aid))
-      const matchesCategory = categoryIds.size > 0 && [...categoryIds].some(cid => t.categories?.some(c => c.id === cid))
-      const matchesLocation = form.locationId && t.locations?.some(l => l.id === form.locationId)
-      if (matchesAsset || matchesCategory || matchesLocation) ids.add(t.id)
+    for (const p of procedures) {
+      const matchesAsset    = allAssetIdsForRec.some(aid => p.assets?.some(a => a.id === aid))
+      const matchesCategory = categoryIds.size > 0 && [...categoryIds].some(cid => p.categories?.some(c => c.id === cid))
+      const matchesLocation = form.locationId && p.locations?.some(l => l.id === form.locationId)
+      if (matchesAsset || matchesCategory || matchesLocation) ids.add(p.id)
     }
     return ids
-  }, [primaryAssetId, allSelectedAssetIds, form.locationId, templates, assets])
+  }, [primaryAssetId, allSelectedAssetIds, form.locationId, procedures, assets])
 
-  const sortedTemplates = useMemo(() => {
-    return [...templates].sort((a, b) => {
+  const sortedProcedures = useMemo(() => {
+    return [...procedures].sort((a, b) => {
       const aRec = recommendedIds.has(a.id) ? 0 : 1
       const bRec = recommendedIds.has(b.id) ? 0 : 1
       return aRec - bRec
     })
-  }, [templates, recommendedIds])
+  }, [procedures, recommendedIds])
 
   const hasRecommendations = recommendedIds.size > 0 && (!!primaryAssetId || !!form.locationId)
 
-  function toggleTemplate(id: string) {
-    setForm(prev => ({
-      ...prev,
-      checklistTemplateIds: prev.checklistTemplateIds.includes(id)
-        ? prev.checklistTemplateIds.filter(t => t !== id)
-        : [...prev.checklistTemplateIds, id],
-    }))
+  function toggleProcedure(id: string) {
+    setForm(prev => {
+      const hasId = prev.procedureIds.includes(id)
+      const nextIds = hasId
+        ? prev.procedureIds.filter(t => t !== id)
+        : [...prev.procedureIds, id]
+      return {
+        ...prev,
+        procedureIds: nextIds,
+        checklistTemplateIds: nextIds,
+      }
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -224,6 +235,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
         notes:        form.notes          || null,
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
+        procedureIds: form.procedureIds,
         checklistTemplateIds: form.checklistTemplateIds,
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
@@ -549,15 +561,15 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
         </div>
       ) : null}
 
-      {/* Checklist Templates */}
-      {templates.length > 0 && (
+      {/* Procedures */}
+      {procedures.length > 0 && (
         <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-4 bg-white">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <ClipboardCheck className="w-5 h-5 text-emerald-600" />
-            <h2 className="font-bold text-slate-805 text-sm tracking-tight">Checklist templates</h2>
+            <h2 className="font-bold text-slate-805 text-sm tracking-tight">Procedures</h2>
           </div>
           <p className="text-xs text-slate-450 leading-relaxed font-medium">
-            Select one or more checklists to snap into this work order. Changes to templates after creation will not affect existing work orders.
+            Select one or more procedures to snap into this work order. Changes to procedures after creation will not affect existing work orders.
           </p>
 
           {hasRecommendations && (
@@ -566,24 +578,24 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
                 <Star className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
                 Recommended
               </div>
-              {sortedTemplates.filter(t => recommendedIds.has(t.id)).map(template => (
-                <label key={template.id} className="flex items-start gap-3 p-3.5 border border-emerald-200 bg-emerald-50/20 rounded-xl hover:bg-emerald-50/65 cursor-pointer transition shadow-xs">
+              {sortedProcedures.filter(t => recommendedIds.has(t.id)).map(procedure => (
+                <label key={procedure.id} className="flex items-start gap-3 p-3.5 border border-emerald-200 bg-emerald-50/20 rounded-xl hover:bg-emerald-50/65 cursor-pointer transition shadow-xs">
                   <input
                     type="checkbox"
-                    checked={form.checklistTemplateIds.includes(template.id)}
-                    onChange={() => toggleTemplate(template.id)}
+                    checked={form.procedureIds.includes(procedure.id)}
+                    onChange={() => toggleProcedure(procedure.id)}
                     className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer mt-0.5 accent-emerald-600"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-bold text-slate-800">{template.name}</p>
+                      <p className="text-xs font-bold text-slate-800">{procedure.name}</p>
                       <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-100 text-emerald-850 text-[9px] font-bold rounded-full">
                         <Star className="w-2.5 h-2.5 fill-emerald-500 text-emerald-600" />
                         Recommended
                       </span>
                     </div>
-                    {template.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{template.description}</p>}
-                    {template.items && template.items.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{template.items.length} items</p>}
+                    {procedure.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{procedure.description}</p>}
+                    {procedure.steps && procedure.steps.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{procedure.steps.length} steps</p>}
                   </div>
                 </label>
               ))}
@@ -593,30 +605,30 @@ export default function WorkOrderForm({ assets, locations, users, teams, templat
           <div className="space-y-3">
             {hasRecommendations && (
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider pt-3">
-                All templates
+                All procedures
               </div>
             )}
-            {sortedTemplates.filter(t => !recommendedIds.has(t.id)).map(template => (
-              <label key={template.id} className="flex items-start gap-3 p-3.5 border border-slate-200 rounded-xl hover:bg-slate-50/60 cursor-pointer transition shadow-xs">
+            {sortedProcedures.filter(t => !recommendedIds.has(t.id)).map(procedure => (
+              <label key={procedure.id} className="flex items-start gap-3 p-3.5 border border-slate-200 rounded-xl hover:bg-slate-50/60 cursor-pointer transition shadow-xs">
                 <input
                   type="checkbox"
-                  checked={form.checklistTemplateIds.includes(template.id)}
-                  onChange={() => toggleTemplate(template.id)}
+                  checked={form.procedureIds.includes(procedure.id)}
+                  onChange={() => toggleProcedure(procedure.id)}
                   className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer mt-0.5 accent-blue-600"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-800">{template.name}</p>
-                  {template.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{template.description}</p>}
-                  {template.items && template.items.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{template.items.length} items</p>}
+                  <p className="text-xs font-bold text-slate-800">{procedure.name}</p>
+                  {procedure.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{procedure.description}</p>}
+                  {procedure.steps && procedure.steps.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{procedure.steps.length} steps</p>}
                 </div>
               </label>
             ))}
           </div>
 
-          {form.checklistTemplateIds.length > 0 && (
+          {form.procedureIds.length > 0 && (
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2.5 rounded-xl border border-emerald-100">
               <ClipboardCheck className="w-4 h-4" />
-              {form.checklistTemplateIds.length} template{form.checklistTemplateIds.length !== 1 ? 's' : ''} will be snapshotted into this work order
+              {form.procedureIds.length} procedure{form.procedureIds.length !== 1 ? 's' : ''} will be snapshotted into this work order
             </div>
           )}
         </div>

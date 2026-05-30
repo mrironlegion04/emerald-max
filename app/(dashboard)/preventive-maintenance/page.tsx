@@ -68,9 +68,9 @@ export default async function PMPage({
       include: {
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
         location: { select: { id: true, name: true } },
-        checklistTemplates: {
+        procedures: {
           select: {
-            template: {
+            procedure: {
               select: { id: true, name: true },
             },
           },
@@ -231,9 +231,9 @@ export default async function PMPage({
                         Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}
                       </td>
                       <td className="px-4 py-3">
-                        {s.checklistTemplates && s.checklistTemplates.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium" title={s.checklistTemplates.map((ct: any) => ct.template.name).join(', ')}>
-                            ✅ {s.checklistTemplates.length} checklist{s.checklistTemplates.length !== 1 ? 's' : ''}
+                        {s.procedures && s.procedures.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium" title={s.procedures.map((ct: any) => ct.procedure.name).join(', ')}>
+                            ✅ {s.procedures.length} procedure{s.procedures.length !== 1 ? 's' : ''}
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
@@ -330,10 +330,10 @@ export default async function PMPage({
 
                     {/* Checklist linked count */}
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checklists</span>
-                      {s.checklistTemplates && s.checklistTemplates.length > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[11px] font-bold" title={s.checklistTemplates.map((ct: any) => ct.template.name).join(', ')}>
-                          📋 {s.checklistTemplates.length} Task List{(s.checklistTemplates.length !== 1) ? 's' : ''}
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Procedures</span>
+                      {s.procedures && s.procedures.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[11px] font-bold" title={s.procedures.map((ct: any) => ct.procedure.name).join(', ')}>
+                          📋 {s.procedures.length} Procedure{(s.procedures.length !== 1) ? 's' : ''}
                         </span>
                       ) : (
                         <span className="text-slate-400 font-medium">—</span>

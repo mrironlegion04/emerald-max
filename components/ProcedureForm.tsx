@@ -152,10 +152,55 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
   const [steps,      setSteps]      = useState<ProcedureStep[]>(initialData?.steps ?? [])
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState('')
+  const [generatingSteps, setGeneratingSteps] = useState(false)
 
   const [selectedAssetIds,    setSelectedAssetIds]    = useState<string[]>(initialData?.assetIds ?? [])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(initialData?.categoryIds ?? [])
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(initialData?.locationIds ?? [])
+
+  async function handleAIGenerate() {
+    if (!name.trim()) return
+    setError('')
+    setGeneratingSteps(true)
+    try {
+      const associatedAssetNames = selectedAssetIds.map(id => assets?.find(a => a.id === id)?.name).filter(Boolean)
+      const associatedCategoryNames = selectedCategoryIds.map(id => assetCategories?.find(c => c.id === id)?.name).filter(Boolean)
+      
+      const res = await fetch('/api/procedures/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          assetName: associatedAssetNames.length > 0 ? associatedAssetNames.join(', ') : undefined,
+          categoryName: associatedCategoryNames.length > 0 ? associatedCategoryNames.join(', ') : undefined,
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? 'Failed to generate steps with AI')
+        return
+      }
+
+      if (data.steps && Array.isArray(data.steps)) {
+        const mappedSteps = data.steps.map((s: any, i: number) => ({
+          label: s.label,
+          type: s.type || 'CHECKBOX',
+          isMandatory: !!s.isMandatory,
+          options: s.options || [],
+          sortOrder: i,
+        }))
+        setSteps(mappedSteps)
+      } else {
+        setError('Invalid response structure from AI')
+      }
+    } catch {
+      setError('Network error during AI generation')
+    } finally {
+      setGeneratingSteps(false)
+    }
+  }
 
   function addStep() {
     setSteps(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length }])
@@ -312,10 +357,21 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-slate-900 text-sm">Procedure steps ({steps.length})</h2>
-          <button type="button" onClick={addStep} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-xs">
-            <Plus className="w-3.5 h-3.5" />
-            Add step
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAIGenerate}
+              disabled={generatingSteps || !name.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-lg hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xs"
+              title={!name.trim() ? "Enter a procedure name to generate steps" : "Generate steps using Gemini AI"}
+            >
+              <span>{generatingSteps ? '✨ Generating...' : '✨ AI Auto-Generate'}</span>
+            </button>
+            <button type="button" onClick={addStep} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-xs">
+              <Plus className="w-3.5 h-3.5" />
+              Add step
+            </button>
+          </div>
         </div>
 
         {steps.length === 0 && (

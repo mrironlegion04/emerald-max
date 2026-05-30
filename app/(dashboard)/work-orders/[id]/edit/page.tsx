@@ -12,7 +12,7 @@ export default async function EditWorkOrderPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/work-orders/${id}`)
 
-  const [wo, assets, locations, users, teams, templates] = await Promise.all([
+  const [wo, assets, locations, users, teams, procedures] = await Promise.all([
     prisma.workOrder.findUnique({
       where: { id },
       include: { assets: { select: { assetId: true } } },
@@ -36,8 +36,8 @@ export default async function EditWorkOrderPage({
       select:  { id: true, name: true, trade: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.checklistTemplate.findMany({
-      select: { id: true, name: true, description: true, items: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
+    prisma.procedure.findMany({
+      select: { id: true, name: true, description: true, steps: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -75,7 +75,7 @@ export default async function EditWorkOrderPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${wo.title}`} subtitle={wo.woNumber} />
-      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} templates={templates} initialData={initialData} woId={id} />
+      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} procedures={procedures} initialData={initialData} woId={id} />
     </div>
   )
 }

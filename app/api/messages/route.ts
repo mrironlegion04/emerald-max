@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { Prisma } from '@prisma/client'
 
 // Get messages for a channel OR list available channels
 export async function GET(req: NextRequest) {
@@ -12,6 +13,24 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const listChannels = searchParams.get('list_channels') === 'true'
+    const pollUnreads = searchParams.get('poll_unreads') === 'true'
+
+    if (pollUnreads) {
+      try {
+        const recentMessages = await prisma.chatMessage.findMany({
+          where: {
+            createdAt: { gte: new Date(Date.now() - 60000) }, // last 1 minute
+            senderId: { not: user.userId }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 30
+        })
+        return NextResponse.json(recentMessages)
+      } catch (err) {
+        console.error('Failed to poll recent messages:', err)
+        return NextResponse.json([])
+      }
+    }
 
     if (listChannels) {
       // 1. General Channel (Statics)
@@ -47,7 +66,7 @@ export async function GET(req: NextRequest) {
 
       // 3. Fetch Active Work Orders (User\'s assigned ones, plus others for admins/managers)
       try {
-        const queryConditions: any = {}
+        const queryConditions: Prisma.WorkOrderWhereInput = {}
         if (user.role === 'TECHNICIAN') {
           queryConditions.OR = [
             { assignedToId: user.userId },
@@ -110,14 +129,15 @@ export async function GET(req: NextRequest) {
 
     // Otherwise, fetch messages for specific channel
     const channel = searchParams.get('channel') || 'GENERAL'
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
     
     const messages = await prisma.chatMessage.findMany({
       where: { channel },
-      orderBy: { createdAt: 'asc' },
-      take: 100, // retrieve last 100 messages for context
+      orderBy: { createdAt: 'desc' },
+      take: limit,
     })
 
-    return NextResponse.json(messages)
+    return NextResponse.json(messages.reverse())
   } catch (error) {
     console.error('Messages fetch error:', error)
     return NextResponse.json({ error: 'Failed to retrieve messages' }, { status: 500 })

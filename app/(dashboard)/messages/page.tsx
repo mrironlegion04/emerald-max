@@ -32,7 +32,8 @@ import {
   ShieldAlert,
   Sparkles,
   FileCheck,
-  CheckCheck
+  CheckCheck,
+  Settings
 } from 'lucide-react'
 
 // Extended channel types
@@ -73,11 +74,19 @@ interface ThreadReply {
   createdAt: string
 }
 
+export interface UserProfile {
+  userId: string
+  id: string
+  name: string
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN'
+  email?: string
+}
+
 export default function MessagesPage() {
   const router = useRouter()
   
   // Base State
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
   const [dbChannels, setDbChannels] = useState<ChatChannel[]>([])
   const [activeChannel, setActiveChannel] = useState<ChatChannel | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -85,6 +94,11 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'general' | 'team' | 'workorder' | 'direct' | 'group'>('all')
   
+  // Dynamic load sizes
+  const [messagesLimit, setMessagesLimit] = useState(50)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const processedMsgIdsRef = useRef<Set<string>>(new Set())
+
   // Loaders
   const [loadingChannels, setLoadingChannels] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -99,6 +113,11 @@ export default function MessagesPage() {
   
   // Custom Local Group Chats
   const [customGroups, setCustomGroups] = useState<ChatChannel[]>([])
+
+  // Group editing state
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false)
+  const [editGroupName, setEditGroupName] = useState('')
+  const [editGroupDesc, setEditGroupDesc] = useState('')
   
   // Dialog/Modal UI states
   const [showCreateGroup, setShowCreateGroup] = useState(false)
@@ -232,7 +251,7 @@ export default function MessagesPage() {
           setDbChannels(data)
           
           // Select default channel
-          const generalChan = data.find((c: any) => c.id === 'GENERAL')
+          const generalChan = data.find((c: ChatChannel) => c.id === 'GENERAL')
           if (generalChan && !activeChannel) {
             setActiveChannel(generalChan)
           } else if (data.length > 0 && !activeChannel) {
@@ -262,17 +281,26 @@ export default function MessagesPage() {
       try {
         const cached = JSON.parse(localStorage.getItem(`maintainx_messages_group_${activeChannel.id}`) || '[]')
         setMessages(cached)
+        setHasMoreMessages(false)
       } catch (e) {
         setMessages([])
+        setHasMoreMessages(false)
       }
       return
     }
 
     try {
-      const res = await fetch(`/api/messages?channel=${activeChannel.id}`)
+      const res = await fetch(`/api/messages?channel=${activeChannel.id}&limit=${messagesLimit}`)
       if (res.ok) {
         const data = await res.json()
         
+        // Update older files boundary
+        if (data.length < messagesLimit) {
+          setHasMoreMessages(false)
+        } else {
+          setHasMoreMessages(true)
+        }
+
         // Read client edits or deleted items if saved locally (simulated edits/deletes)
         const localEdits = JSON.parse(localStorage.getItem('maintainx_msg_local_edits') || '{}')
         const localDeletes = JSON.parse(localStorage.getItem('maintainx_msg_local_deletes') || '[]')
@@ -294,6 +322,12 @@ export default function MessagesPage() {
     }
   }
 
+  // Reset message count limits on active channel change
+  useEffect(() => {
+    setMessagesLimit(50)
+    setHasMoreMessages(true)
+  }, [activeChannel])
+
   // Load on channel transfer
   useEffect(() => {
     if (!activeChannel) return
@@ -309,9 +343,11 @@ export default function MessagesPage() {
           savePreference('maintainx_msg_unread', upd)
         }
 
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-        }, 150)
+        if (messagesLimit === 50) {
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+          }, 150)
+        }
       } catch (err) {
         console.error('Failed to trigger message pull:', err)
       } finally {
@@ -320,7 +356,7 @@ export default function MessagesPage() {
     }
     loadMessages()
     setThreadParent(null) // Reset active threads sidebar
-  }, [activeChannel])
+  }, [activeChannel, messagesLimit])
 
   // Short-polling interval (3s) for rich live response
   useEffect(() => {
@@ -329,12 +365,78 @@ export default function MessagesPage() {
       fetchMessagesRef.current()
     }, 3000)
     return () => clearInterval(interval)
-  }, [activeChannel])
+  }, [activeChannel, messagesLimit])
 
-  // Scroll anchor watcher
+  // Track already-loaded messages to avoid duplicate notifications
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messages.forEach(m => {
+      processedMsgIdsRef.current.add(m.id)
+    })
   }, [messages])
+
+  // Background polling for unreads and real browser push notifications
+  useEffect(() => {
+    if (!currentUser) return
+
+    // Auto-ask browser notification permissions on mount
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(console.error)
+      }
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/messages?poll_unreads=true')
+        if (res.ok) {
+          const recentMsgList = await res.json()
+          if (!Array.isArray(recentMsgList)) return
+
+          let unreadsChanged = false
+          const updatedUnreads = [...unreadIds]
+
+          recentMsgList.forEach((m: ChatMessage) => {
+            // Skip messages from self
+            if (m.senderId === currentUser.userId) return
+
+            // Check if we have already processed this message ID
+            if (processedMsgIdsRef.current.has(m.id)) return
+            processedMsgIdsRef.current.add(m.id)
+
+            // If it belongs to another channel, mark it unread!
+            if (!activeChannel || m.channel !== activeChannel.id) {
+              if (!updatedUnreads.includes(m.channel)) {
+                updatedUnreads.push(m.channel)
+                unreadsChanged = true
+              }
+              // Toast notification inside the app
+              displayToast(`💬 New message from ${m.senderName} inside "${m.channelName || 'Crew'}"`)
+            }
+
+            // Trigger Desktop Browser Notification
+            if (!activeChannel || m.channel !== activeChannel.id || document.visibilityState !== 'visible') {
+              if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                new window.Notification(`New Message from ${m.senderName}`, {
+                  body: m.content || 'Sent an attachment',
+                  tag: m.channel,
+                  requireInteraction: false
+                })
+              }
+            }
+          })
+
+          if (unreadsChanged) {
+            setUnreadIds(updatedUnreads)
+            savePreference('maintainx_msg_unread', updatedUnreads)
+          }
+        }
+      } catch (e) {
+        console.error('Unreads background poll issue:', e)
+      }
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [currentUser, activeChannel, unreadIds])
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {
@@ -434,9 +536,6 @@ export default function MessagesPage() {
         const updatedM = [...currentM, optimisticMock]
         localStorage.setItem(groupKey, JSON.stringify(updatedM))
         
-        // Simulating artificial response from team within 2 seconds
-        simulateTeamResponse(activeMsgVal, activeChannel.id)
-        
         setTimeout(() => {
           fetchMessagesRef.current()
         }, 100)
@@ -495,41 +594,6 @@ export default function MessagesPage() {
     } finally {
       setIsSending(false)
     }
-  }
-
-  // Artificial Group responses simulating realistic MaintainX technician alerts
-  const simulateTeamResponse = (msgVal: string, chanId: string) => {
-    setTimeout(() => {
-      const simulatedReplies = [
-        "Roger that, headed to location now.",
-        "Check. Let me grab the tools from the janitorial locker.",
-        "Thanks for the heads-up. Pressure values look stable from my desk.",
-        "I can support that! Let's schedule it for 2 PM shift.",
-        "Is that logged under safety procedures? Please confirm."
-      ]
-      const randomText = simulatedReplies[Math.floor(Math.random() * simulatedReplies.length)]
-      const responseMock: ChatMessage = {
-        id: `simulate_${Date.now()}`,
-        content: `💬 [Crew Alert Response] ${randomText}`,
-        channel: chanId,
-        channelName: 'Team Discussion Thread',
-        senderId: 'mock_tech_lucas',
-        senderName: 'Lucas Vance (Technician)',
-        senderRole: 'TECHNICIAN',
-        createdAt: new Date().toISOString()
-      }
-
-      const key = `maintainx_messages_group_${chanId}`
-      const cur = JSON.parse(localStorage.getItem(key) || '[]')
-      const updated = [...cur, responseMock]
-      localStorage.setItem(key, JSON.stringify(updated))
-
-      setNotificationToast("🔔 Lucas Vance replied in the Group Chat!")
-
-      if (activeChannel?.id === chanId) {
-        setMessages(updated)
-      }
-    }, 2500)
   }
 
   // Action Menu Channel changes (Pin, Mute, Hide etc.)
@@ -645,6 +709,33 @@ export default function MessagesPage() {
     displayToast(`✨ Group Chat "${newGroupName}" assembled!`)
   }
 
+  const updateCustomGroupChat = () => {
+    if (!editGroupName.trim() || !activeChannel) return
+    
+    const updatedGroups = customGroups.map(g => {
+      if (g.id === activeChannel.id) {
+        return {
+          ...g,
+          name: editGroupName.trim(),
+          description: editGroupDesc.trim()
+        }
+      }
+      return g
+    })
+    
+    setCustomGroups(updatedGroups)
+    localStorage.setItem('maintainx_msg_custom_groups', JSON.stringify(updatedGroups))
+    
+    setActiveChannel(prev => prev ? {
+      ...prev,
+      name: editGroupName.trim(),
+      description: editGroupDesc.trim()
+    } : null)
+    
+    setShowEditGroupModal(false)
+    displayToast(`🔧 Group Chat updated: "${editGroupName}"`)
+  }
+
   // Mention system popup trigger
   const triggerMentionAlert = (text: string) => {
     const splitWords = text.split(' ')
@@ -686,10 +777,10 @@ export default function MessagesPage() {
     const idx = newMessage.lastIndexOf('@')
     if (idx !== -1) {
       const pre = newMessage.substring(0, idx)
-      setNewMessage(`${pre}@${name} `)
+      const cleanName = name.replace(/\s+/g, '')
+      setNewMessage(`${pre}@${cleanName} `)
       setMentionQuery(null)
-      // Throw mock toast alert representing company dispatch override
-      displayToast(`🔔 Mention Alert: @${name} tagged in chat message!`)
+      displayToast(`🔔 Tagged @${cleanName}!`)
     }
   }
 
@@ -700,16 +791,9 @@ export default function MessagesPage() {
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current)
       setIsRecording(false)
       
-      // Simulate automatic high fidelity transcription from MaintainX AI scribe
-      const transcribePhrases = [
-        "Technician Lucas reports: Boiler heater thermal sensor indicates steady heat values but pressure dial requires alignment.",
-        "Emergency team attention: Main power supply breaker has tripped again in Section B. Please dispatch electricians.",
-        "HVAC system air flow looks normal but high wear notice noted on water cooling duct valves.",
-        "Safety check complete: Fire exit clear of debris, work site properly cordoned off."
-      ]
-      const randomTranscription = transcribePhrases[Math.floor(Math.random() * transcribePhrases.length)]
-      setAudioBlobTranscribed(randomTranscription)
-      displayToast("🤖 AI Scribe Done: Transcribed voice note")
+      const audioDuration = recordTimer === 0 ? 4 : recordTimer
+      setAudioBlobTranscribed(`Recorded ${audioDuration} seconds of audio clip`)
+      displayToast("🎙️ Voice note recording saved.")
     } else {
       // START recording
       setAudioBlobTranscribed(null)
@@ -1240,20 +1324,7 @@ export default function MessagesPage() {
           )}
         </div>
         
-        {/* Foot lock user details */}
-        {currentUser && (
-          <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase border border-blue-200">
-              {(currentUser.name || currentUser.userId || 'US').substring(0, 2)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold text-slate-800 truncate leading-snug">{currentUser.name || currentUser.userId || 'User'}</p>
-              <span className="text-[8px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.2 rounded-xs uppercase">
-                {(currentUser.role || 'USER')} Account
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Sidebar categories wrap content */}
       </div>
 
       {/* ────────────────── 2. CENTRAL ACTIVE DIALOG STREAM FEED ────────────────── */}
@@ -1290,6 +1361,21 @@ export default function MessagesPage() {
 
               {/* Right Special Action context bar */}
               <div className="flex items-center gap-2">
+                {activeChannel.type === 'group' && (
+                  <button
+                    onClick={() => {
+                      setEditGroupName(activeChannel.name)
+                      setEditGroupDesc(activeChannel.description || '')
+                      setShowEditGroupModal(true)
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-extrabold text-amber-700 border border-amber-250 bg-amber-50 hover:bg-amber-100 rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer select-none"
+                    title="Edit group chat details and summary description"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-amber-605" />
+                    <span>Edit Group</span>
+                  </button>
+                )}
+
                 {activeChannel.type === 'workorder' && (
                   <button
                     onClick={() => router.push(`/work-orders/${activeChannel.id.substring(3)}`)}
@@ -1318,6 +1404,18 @@ export default function MessagesPage() {
 
             {/* Stream Flow List Area */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-linear-to-b from-slate-50 to-slate-100/50 relative">
+              {hasMoreMessages && messages.length >= 50 && (
+                <div className="flex justify-center pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setMessagesLimit(prev => prev + 50)}
+                    className="px-4 py-1.5 text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-full cursor-pointer select-none transition-all active:scale-95 shadow-3xs"
+                  >
+                    Load Older Messages ({messagesLimit} active)
+                  </button>
+                </div>
+              )}
+
               {loadingMessages ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -1436,9 +1534,31 @@ export default function MessagesPage() {
                               </div>
                             ) : (
                               // Regular text parser with tagged links highlight
-                              <p className="whitespace-pre-wrap">
+                              <p className="whitespace-pre-wrap inline">
                                 {msg.content.split(' ').map((word, wIdx) => {
                                   if (word.startsWith('@')) {
+                                    const cleanWord = word.substring(1).replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+                                    const matchingChan = dbChannels.find(
+                                      c => c.type === 'direct' && c.name.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === cleanWord
+                                    )
+
+                                    if (matchingChan) {
+                                      return (
+                                        <button
+                                          key={wIdx}
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveChannel(matchingChan)
+                                            displayToast(`💬 Switched to chat with ${matchingChan.name}`)
+                                          }}
+                                          className="bg-blue-150 hover:bg-blue-200 text-blue-900 border border-blue-300 cursor-pointer px-1.5 py-0.5 rounded-md font-extrabold mr-1 inline-flex items-center gap-0.5 transition-all text-[11px] select-none"
+                                          title={`Open chat with ${matchingChan.name}`}
+                                        >
+                                          {word}
+                                        </button>
+                                      )
+                                    }
+
                                     return (
                                       <span key={wIdx} className="bg-blue-200/45 dark:bg-black/15 text-blue-800 dark:text-blue-100 px-1 py-0.2 rounded-xs border border-blue-300/30 font-extrabold mr-1">
                                         {word}
@@ -1485,8 +1605,8 @@ export default function MessagesPage() {
 
                         {/* Power operations control bar on Hover */}
                         {!msg.isDeleted && !isEditingThis && (
-                          <div className={`absolute top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 flex items-center gap-0.5 pointer-events-none group-hover:pointer-events-auto ${
-                            isOwn ? 'right-full mr-2' : 'left-full ml-2'
+                          <div className={`absolute top-0 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-10 flex items-center gap-0.5 pointer-events-none group-hover/msg:pointer-events-auto ${
+                            isOwn ? 'right-full mr-1 pr-1.5' : 'left-full ml-1 pl-1.5'
                           }`}>
                             <div className="flex bg-white shadow-md rounded-lg border border-slate-200 p-1 divide-x divide-slate-100 text-slate-500">
                               
@@ -1632,52 +1752,6 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              {/* Media preset drawer */}
-              {showMediaPresets && (
-                <div className="absolute bottom-full left-4 mb-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-80">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Attach Team Assets</span>
-                    <button onClick={() => setShowMediaPresets(false)} className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button>
-                  </div>
-
-                  {/* Real computer/mobile file attachment choice */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      document.getElementById('chat-file-upload-input')?.click()
-                      setShowMediaPresets(false)
-                    }}
-                    className="w-full mb-3 p-3 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center gap-2 text-[10px] font-extrabold cursor-pointer transition-all active:scale-97"
-                  >
-                    <Plus className="w-4 h-4 text-blue-600" />
-                    <span>Upload local computer file (MinIO)</span>
-                  </button>
-
-                  <div className="relative flex py-1 items-center mb-2">
-                    <div className="flex-grow border-t border-slate-150"></div>
-                    <span className="flex-shrink mx-2 text-[8px] font-extrabold text-slate-400 uppercase">Or select screenshot preset</span>
-                    <div className="flex-grow border-t border-slate-150"></div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {industrialMediaPresets.map(p => (
-                      <button
-                        key={p.name}
-                        onClick={() => {
-                          setSelectedMediaPreset(p)
-                          setAudioBlobTranscribed(null)
-                          setShowMediaPresets(false)
-                        }}
-                        className="p-1 border border-slate-100 hover:border-blue-500 rounded-lg text-left overflow-hidden bg-slate-50 transition-colors cursor-pointer block"
-                      >
-                        <img src={p.url} className="w-full h-14 object-cover rounded-md mb-1" />
-                        <span className="text-[9px] font-bold text-slate-600 truncate block">{p.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <form
                 onSubmit={triggerSendMessage}
                 className="flex gap-2 items-center"
@@ -1685,10 +1759,10 @@ export default function MessagesPage() {
                 {/* Media paperclip button */}
                 <button
                   type="button"
-                  onClick={() => setShowMediaPresets(!showMediaPresets)}
+                  onClick={() => document.getElementById('chat-file-upload-input')?.click()}
                   disabled={isSending || isRecording || isUploadingFile}
                   className="p-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 rounded-xl text-slate-500 cursor-pointer active:scale-95 transition-transform"
-                  title="Attach screenshot photo or direct production file"
+                  title="Attach direct production file or photo"
                 >
                   <Paperclip className="w-4 h-4 text-slate-600" />
                 </button>
@@ -2169,6 +2243,72 @@ export default function MessagesPage() {
                 className="px-5 py-2 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md cursor-pointer transition-colors"
               >
                 Close Manager
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────── 6. EDIT CREW GROUP CHAT DETAILS MODAL ────────────────── */}
+      {showEditGroupModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 select-none">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 border border-slate-250/80 animate-scale-up text-xs space-y-4 inline-block font-sans text-slate-800">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg"><Settings className="w-5 h-5 animate-spin" style={{ animationDuration: '4s' }} /></span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Edit Crew Group Details</h3>
+                  <p className="text-[10px] text-slate-500 font-medium">Update the group chat topic name or operational summary description</p>
+                </div>
+              </div>
+              <button onClick={() => setShowEditGroupModal(false)} className="p-1 hover:bg-slate-100 rounded-full text-slate-400 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Group Action Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Boiler Team B"
+                  value={editGroupName}
+                  onChange={e => setEditGroupName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-amber-500 outline-none font-bold text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Objectives Description</label>
+                <textarea
+                  rows={3}
+                  placeholder="Task coordinates, safety objectives or equipment reference..."
+                  value={editGroupDesc}
+                  onChange={e => setEditGroupDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-amber-500 outline-none font-semibold text-xs font-sans"
+                />
+              </div>
+            </div>
+
+            {/* Modal actions */}
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowEditGroupModal(false)}
+                className="px-4 py-2 font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl cursor-pointer navigation-tab"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={updateCustomGroupChat}
+                className="px-4 py-2 font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-md cursor-pointer transition-colors"
+              >
+                Save Group Changes
               </button>
             </div>
 

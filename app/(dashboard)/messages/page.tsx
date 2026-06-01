@@ -83,6 +83,22 @@ export interface UserProfile {
   email?: string
 }
 
+interface SystemAsset {
+  id: string
+  name: string
+  model?: string | null
+}
+
+interface SystemLocation {
+  id: string
+  name: string
+}
+
+interface SystemUser {
+  id: string | undefined
+  name: string
+}
+
 export default function MessagesPage() {
   const router = useRouter()
   
@@ -138,6 +154,38 @@ export default function MessagesPage() {
     }
     return matched.length > 0 ? matched : [currentUser?.userId].filter(Boolean) as string[]
   }
+
+  const loadGroupRegistries = async (userId: string, role: string) => {
+    try {
+      const res = await fetch('/api/messages?channel=SYSTEM_GROUPS&limit=200')
+      if (res.ok) {
+        const systemMsgs = await res.json()
+        const groupMap: Record<string, ChatChannel> = {}
+        const sortedMsgs = [...systemMsgs].sort((a: ChatMessage, b: ChatMessage) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        
+        sortedMsgs.forEach((msg: ChatMessage) => {
+          try {
+            const groupObj = JSON.parse(msg.content)
+            if (groupObj && groupObj.id && groupObj.type === 'group') {
+              groupMap[groupObj.id] = groupObj
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        })
+        const allGroups = Object.values(groupMap)
+        const filtered = allGroups.filter((g: ChatChannel) => {
+          const isMember = g.memberIds?.includes(userId)
+          const isPrivileged = role === 'ADMIN' || role === 'MANAGER'
+          return isMember || isPrivileged
+        })
+        setCustomGroups(filtered)
+        localStorage.setItem('maintainx_msg_custom_groups', JSON.stringify(filtered))
+      }
+    } catch (err) {
+      console.error('Failed to load group registries from server:', err)
+    }
+  }
   
   // Dialog/Modal UI states
   const [showCreateGroup, setShowCreateGroup] = useState(false)
@@ -160,9 +208,9 @@ export default function MessagesPage() {
   const [isConvertingWO, setIsConvertingWO] = useState(false)
 
   // System options loading
-  const [systemAssets, setSystemAssets] = useState<any[]>([])
-  const [systemLocations, setSystemLocations] = useState<any[]>([])
-  const [systemUsers, setSystemUsers] = useState<any[]>([])
+  const [systemAssets, setSystemAssets] = useState<SystemAsset[]>([])
+  const [systemLocations, setSystemLocations] = useState<SystemLocation[]>([])
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([])
 
   // Action channel menu active state
   const [menuOpenChanId, setMenuOpenChanId] = useState<string | null>(null)
@@ -188,7 +236,7 @@ export default function MessagesPage() {
 
   // @Mentions feature dropdown indices
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([])
+  const [mentionSuggestions, setMentionSuggestions] = useState<SystemUser[]>([])
   const [focusedMentionIndex, setFocusedMentionIndex] = useState(0)
   const mentionDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -217,7 +265,10 @@ export default function MessagesPage() {
         const res = await fetch('/api/auth/me')
         if (res.ok) {
           const data = await res.json()
-          setCurrentUser(data)
+          setCurrentUser(data.user)
+          if (data.user) {
+            loadGroupRegistries(data.user.userId, data.user.role)
+          }
         } else {
           router.push('/login')
         }
@@ -238,16 +289,11 @@ export default function MessagesPage() {
         setUnreadIds(JSON.parse(localStorage.getItem('maintainx_msg_unread') || '[]'))
         setCustomGroups(JSON.parse(localStorage.getItem('maintainx_msg_custom_groups') || '[]'))
         
-        // Read URL variables for Message Links
+        // Read URL variables for Message Links on mount
         const params = new URLSearchParams(window.location.search)
         const targetMsg = params.get('msgId')
-        const targetChan = params.get('channel')
         if (targetMsg) {
           setHighlightedMsgId(targetMsg)
-          setTimeout(() => {
-            const el = document.getElementById(`msg-${targetMsg}`)
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }, 1000)
         }
       } catch (e) {
         console.error('Error parsing localStorage:', e)
@@ -255,8 +301,38 @@ export default function MessagesPage() {
     }
   }, [])
 
+  // Synchronize active channel with URL query parameter on initial load
+  useEffect(() => {
+    if (typeof window !== 'undefined' && allChannelsCombined.length > 0) {
+      const params = new URLSearchParams(window.location.search)
+      const targetChan = params.get('channel')
+      if (targetChan) {
+        const found = allChannelsCombined.find(c => c.id === targetChan)
+        if (found && (!activeChannel || activeChannel.id !== targetChan)) {
+          setActiveChannel(found)
+        }
+      }
+    }
+  }, [allChannelsCombined, activeChannel])
+
+  // Scroll to targeted secure copy jump link message when loaded in DOM
+  useEffect(() => {
+    if (highlightedMsgId && messages.length > 0) {
+      const exists = messages.some(m => m.id === highlightedMsgId)
+      if (exists) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(`msg-${highlightedMsgId}`)
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 400)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [messages, highlightedMsgId])
+
   // Write changes to localStorage
-  const savePreference = (key: string, data: any) => {
+  const savePreference = (key: string, data: unknown) => {
     localStorage.setItem(key, JSON.stringify(data))
   }
 
@@ -295,19 +371,6 @@ export default function MessagesPage() {
 
   fetchMessagesRef.current = async () => {
     if (!activeChannel) return
-
-    // If channel is custom group chat, load from localStorage
-    if (activeChannel.type === 'group') {
-      try {
-        const cached = JSON.parse(localStorage.getItem(`maintainx_messages_group_${activeChannel.id}`) || '[]')
-        setMessages(cached)
-        setHasMoreMessages(false)
-      } catch (e) {
-        setMessages([])
-        setHasMoreMessages(false)
-      }
-      return
-    }
 
     try {
       const res = await fetch(`/api/messages?channel=${activeChannel.id}&limit=${messagesLimit}`)
@@ -548,25 +611,6 @@ export default function MessagesPage() {
       triggerMentionAlert(activeMsgVal)
     }
 
-    // 1. Group Channel Storage Mode
-    if (activeChannel.type === 'group') {
-      try {
-        const groupKey = `maintainx_messages_group_${activeChannel.id}`
-        const currentM = JSON.parse(localStorage.getItem(groupKey) || '[]')
-        const updatedM = [...currentM, optimisticMock]
-        localStorage.setItem(groupKey, JSON.stringify(updatedM))
-        
-        setTimeout(() => {
-          fetchMessagesRef.current()
-        }, 100)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setIsSending(false)
-      }
-      return
-    }
-
     // 2. Normal Database post sync
     try {
       let workOrderId: string | undefined
@@ -709,18 +753,33 @@ export default function MessagesPage() {
     setCustomGroups(updatedGroups)
     savePreference('maintainx_msg_custom_groups', updatedGroups)
 
-    // Seed group with an intro message
-    const intro: ChatMessage = {
-      id: `sys_${Date.now()}`,
-      content: `👥 Welcome to the "${newGroupName}" Crew Chatroom. Setup isolated communication!`,
-      channel: newId,
-      channelName: newGroupName,
-      senderId: 'system',
-      senderName: 'System Bot',
-      senderRole: 'ADMIN',
-      createdAt: new Date().toISOString()
-    }
-    localStorage.setItem(`maintainx_messages_group_${newId}`, JSON.stringify([intro]))
+    // Save group definition to permanent database registry
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: JSON.stringify(newGroupChannel),
+        channel: 'SYSTEM_GROUPS',
+        channelName: 'Group Registry'
+      })
+    })
+      .then(() => {
+        // Post welcome intro message into the newly registered database room
+        fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `👥 Welcome to the "${newGroupName}" Crew Chatroom. Setup isolated communication!`,
+            channel: newId,
+            channelName: newGroupName
+          })
+        }).then(() => {
+          if (currentUser?.userId) {
+            loadGroupRegistries(currentUser.userId, currentUser.role)
+          }
+        })
+      })
+      .catch(err => console.error('Error posting group chat registries:', err))
 
     setShowCreateGroup(false)
     setNewGroupName('')
@@ -743,20 +802,41 @@ export default function MessagesPage() {
       .map(c => c.name)
       .join(', ')
 
+    const updatedGroupDef = {
+      id: activeChannel.id,
+      name: editGroupName.trim(),
+      type: 'group' as const,
+      description: editGroupDesc.trim() || `Private crew room: ${membersName || 'Empty'}`,
+      avatarText: '👥',
+      memberIds: finalMemberIds
+    }
+
     const updatedGroups = customGroups.map(g => {
       if (g.id === activeChannel.id) {
-        return {
-          ...g,
-          name: editGroupName.trim(),
-          description: editGroupDesc.trim() || `Private crew room: ${membersName || 'Empty'}`,
-          memberIds: finalMemberIds
-        }
+        return updatedGroupDef
       }
       return g
     })
     
     setCustomGroups(updatedGroups)
     localStorage.setItem('maintainx_msg_custom_groups', JSON.stringify(updatedGroups))
+
+    // Save updated group definition to permanent database registry
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: JSON.stringify(updatedGroupDef),
+        channel: 'SYSTEM_GROUPS',
+        channelName: 'Group Registry'
+      })
+    })
+      .then(() => {
+        if (currentUser?.userId) {
+          loadGroupRegistries(currentUser.userId, currentUser.role)
+        }
+      })
+      .catch(err => console.error('Error updating group chat database registries:', err))
     
     const matched = updatedGroups.find(g => g.id === activeChannel.id)
     if (matched) {
@@ -925,7 +1005,7 @@ export default function MessagesPage() {
 
   // Client Msg Edits & Deletion handling
   const setLocalMessageContent = async (id: string, newTxt: string) => {
-    if (activeChannel?.type === 'group' || id.startsWith('sys_') || id.startsWith('message_')) {
+    if (id.startsWith('sys_') || id.startsWith('message_')) {
       const edits_key = 'maintainx_msg_local_edits'
       const curEdits = JSON.parse(localStorage.getItem(edits_key) || '{}')
       curEdits[id] = newTxt
@@ -960,7 +1040,7 @@ export default function MessagesPage() {
   }
 
   const deleteLocalMessage = async (id: string) => {
-    if (activeChannel?.type === 'group' || id.startsWith('sys_') || id.startsWith('message_')) {
+    if (id.startsWith('sys_') || id.startsWith('message_')) {
       const del_key = 'maintainx_msg_local_deletes'
       const curDeletes = JSON.parse(localStorage.getItem(del_key) || '[]')
       if (!curDeletes.includes(id)) {
@@ -1038,35 +1118,16 @@ export default function MessagesPage() {
         displayToast(`🛠️ Created Work Order ${createdWO.woNumber} successfully!`)
         
         // Save trace in chat feed
-        const key = `maintainx_messages_group_${convertingMessage.channel}`
-        const updatedMsg: ChatMessage = {
-          id: `sys_wo_${Date.now()}`,
-          content: `🛠️ [System Dispatch Log] Message was converted to Work Order ${createdWO.woNumber}: "${createdWO.title}" by ${currentUser.name || currentUser.userId || 'User'}.`,
-          channel: convertingMessage.channel,
-          channelName: convertingMessage.channelName,
-          senderId: 'system',
-          senderName: 'System Dispatcher',
-          senderRole: 'ADMIN',
-          createdAt: new Date().toISOString(),
-          convertedWOId: createdWO.id,
-          convertedWONumber: createdWO.woNumber
-        }
-
-        if (convertingMessage.channel.startsWith('GROUP_')) {
-          const cur = JSON.parse(localStorage.getItem(key) || '[]')
-          localStorage.setItem(key, JSON.stringify([...cur, updatedMsg]))
-        } else {
-          // Send system dispatch logged as standard DB message if we have permission
-          await fetch('/api/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `🛠️ [System Dispatch Log] This conversion created Work Order ${createdWO.woNumber}.`,
-              channel: convertingMessage.channel,
-              channelName: convertingMessage.channelName,
-            })
+        // Send system dispatch logged as standard DB message
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `🛠️ [System Dispatch Log] Message was converted to Work Order ${createdWO.woNumber}: "${createdWO.title}" by ${currentUser.name || currentUser.userId || 'User'}.`,
+            channel: convertingMessage.channel,
+            channelName: convertingMessage.channelName,
           })
-        }
+        })
 
         setShowWorkOrderModal(false)
         setConvertingMessage(null)
@@ -1297,7 +1358,7 @@ export default function MessagesPage() {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'all' | 'general' | 'team' | 'workorder' | 'direct' | 'group')}
                 className={`px-2.5 py-1 text-[10px] sm:text-[10px] font-bold rounded-lg whitespace-nowrap transition-all border select-none cursor-pointer ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white border-blue-600 shadow-xs'

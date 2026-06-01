@@ -403,8 +403,8 @@ export default function MessagesPage() {
       channel: activeChannel.id,
       channelName: activeChannel.name,
       senderId: currentUser.userId || currentUser.id,
-      senderName: currentUser.name,
-      senderRole: currentUser.role,
+      senderName: currentUser.name || currentUser.userId || 'User',
+      senderRole: currentUser.role || 'USER',
       createdAt: new Date().toISOString(),
       isVoice: !!audioBlobTranscribed,
       voiceDuration: audioBlobTranscribed ? `${recordTimer}s` : undefined,
@@ -734,8 +734,8 @@ export default function MessagesPage() {
       id: `reply_${Date.now()}`,
       content: newThreadText.trim(),
       senderId: currentUser.userId || currentUser.id,
-      senderName: currentUser.name,
-      senderRole: currentUser.role,
+      senderName: currentUser.name || currentUser.userId || 'User',
+      senderRole: currentUser.role || 'USER',
       createdAt: new Date().toISOString()
     }
 
@@ -842,7 +842,7 @@ export default function MessagesPage() {
         const key = `maintainx_messages_group_${convertingMessage.channel}`
         const updatedMsg: ChatMessage = {
           id: `sys_wo_${Date.now()}`,
-          content: `🛠️ [System Dispatch Log] Message was converted to Work Order ${createdWO.woNumber}: "${createdWO.title}" by ${currentUser.name}.`,
+          content: `🛠️ [System Dispatch Log] Message was converted to Work Order ${createdWO.woNumber}: "${createdWO.title}" by ${currentUser.name || currentUser.userId || 'User'}.`,
           channel: convertingMessage.channel,
           channelName: convertingMessage.channelName,
           senderId: 'system',
@@ -908,6 +908,123 @@ export default function MessagesPage() {
     ADMIN: 'bg-rose-100 text-rose-700 font-bold border border-rose-200',
     MANAGER: 'bg-blue-100 text-blue-700 font-bold border border-blue-200',
     TECHNICIAN: 'bg-emerald-100 text-emerald-700 font-bold border border-emerald-200',
+  }
+
+  // Helper function to evaluate and render sidebar room items
+  const renderChannelRow = (channel: ChatChannel) => {
+    const isActive = activeChannel?.id === channel.id
+    const isPinned = pinnedIds.includes(channel.id)
+    const isMuted = mutedIds.includes(channel.id)
+    const isUnread = unreadIds.includes(channel.id)
+    const isMenuOpen = menuOpenChanId === channel.id
+
+    return (
+      <div
+        key={channel.id}
+        className={`group/item relative w-full text-left transition-all hover:bg-slate-50/70 border-l-4 cursor-pointer outline-none ${
+          isActive 
+            ? 'bg-blue-50/45 border-blue-600 pl-0' 
+            : isUnread 
+              ? 'bg-slate-50/80 border-cyan-500 pl-0' 
+              : 'border-transparent pl-0'
+        }`}
+      >
+        <div className="flex gap-3 p-3 items-center" onClick={() => setActiveChannel(channel)}>
+          {/* Channel Avatar bubble */}
+          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-base shadow-3xs flex-shrink-0 border border-slate-200/40 select-none relative">
+            {channel.avatarText}
+            {isUnread && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-500 border-2 border-white rounded-full" />
+            )}
+          </div>
+
+          {/* Information body */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between mb-0.5">
+              <p className={`text-xs font-bold truncate leading-tight ${isActive ? 'text-blue-700' : 'text-slate-800'}`}>
+                {channel.name}
+              </p>
+              
+              {/* Indicators line */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isMuted && <VolumeX className="w-3 h-3 text-slate-400" />}
+                {isPinned && <Pin className="w-3 h-3 text-amber-500 fill-amber-500 rotate-45" />}
+                
+                <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded-md tracking-wider border ${
+                  channel.type === 'general' ? 'bg-indigo-50 text-indigo-600 border-indigo-150' :
+                  channel.type === 'team' ? 'bg-teal-50 text-teal-600 border-teal-150' :
+                  channel.type === 'workorder' ? 'bg-amber-50 text-amber-600 border-amber-150' :
+                  channel.type === 'group' ? 'bg-purple-50 text-purple-600 border-purple-150' :
+                  'bg-slate-100 text-slate-600 border-slate-200'
+                }`}>
+                  {channel.type === 'workorder' ? 'WO' : channel.type}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium truncate">
+              {channel.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Float Trigger menu drawer button */}
+        <div className="absolute right-2 top-3 opacity-0 group-hover/item:opacity-100 transition-opacity z-10 flex gap-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpenChanId(isMenuOpen ? null : channel.id)
+            }}
+            className="p-1 hover:bg-slate-205 rounded-md text-slate-500 bg-white shadow-xs border border-slate-200/50 cursor-pointer"
+            title="Options"
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Inline floating context menu values */}
+        {isMenuOpen && (
+          <div 
+            className="absolute right-2 top-10 bg-white border border-slate-200 rounded-xl shadow-md p-1.5 z-40 w-44 font-sans text-xs space-y-0.5"
+            onMouseLeave={() => setMenuOpenChanId(null)}
+          >
+            <button
+              onClick={() => togglePinChannel(channel.id)}
+              className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
+            >
+              <Pin className="w-3.5 h-3.5 text-slate-400" />
+              {isPinned ? 'Unpin Room' : 'Pin to Top'}
+            </button>
+
+            <button
+              onClick={() => toggleMuteChannel(channel.id)}
+              className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
+            >
+              <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+              {isMuted ? 'Mute Alerts' : 'Mute room'}
+            </button>
+
+            <button
+              onClick={() => markChannelAsUnread(channel.id)}
+              className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
+            >
+              <Bookmark className="w-3.5 h-3.5 text-slate-400" />
+              Mark as Unread
+            </button>
+
+            <div className="border-t border-slate-100 my-1" />
+
+            <button
+              onClick={() => hideChannelItem(channel.id)}
+              className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
+            >
+              <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+              Hide (Archive)
+            </button>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -1043,134 +1160,17 @@ export default function MessagesPage() {
         {currentUser && (
           <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2 flex-shrink-0">
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase border border-blue-200">
-              {currentUser.name.substring(0, 2)}
+              {(currentUser.name || currentUser.userId || 'US').substring(0, 2)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold text-slate-800 truncate leading-snug">{currentUser.name}</p>
+              <p className="text-[11px] font-bold text-slate-800 truncate leading-snug">{currentUser.name || currentUser.userId || 'User'}</p>
               <span className="text-[8px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.2 rounded-xs uppercase">
-                {currentUser.role} Account
+                {(currentUser.role || 'USER')} Account
               </span>
             </div>
           </div>
         )}
       </div>
-
-      {/* Helper function to evaluate and render sidebar room items */}
-      {function renderChannelRow(channel: ChatChannel) {
-        const isActive = activeChannel?.id === channel.id
-        const isPinned = pinnedIds.includes(channel.id)
-        const isMuted = mutedIds.includes(channel.id)
-        const isUnread = unreadIds.includes(channel.id)
-        const isMenuOpen = menuOpenChanId === channel.id
-
-        return (
-          <div
-            key={channel.id}
-            className={`group/item relative w-full text-left transition-all hover:bg-slate-50/70 border-l-4 cursor-pointer outline-none ${
-              isActive 
-                ? 'bg-blue-50/45 border-blue-600 pl-0' 
-                : isUnread 
-                  ? 'bg-slate-50/80 border-cyan-500 pl-0' 
-                  : 'border-transparent pl-0'
-            }`}
-          >
-            <div className="flex gap-3 p-3 items-center" onClick={() => setActiveChannel(channel)}>
-              {/* Channel Avatar bubble */}
-              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-base shadow-3xs flex-shrink-0 border border-slate-200/40 select-none relative">
-                {channel.avatarText}
-                {isUnread && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-500 border-2 border-white rounded-full" />
-                )}
-              </div>
-
-              {/* Information body */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-xs font-bold truncate leading-tight ${isActive ? 'text-blue-700' : 'text-slate-800'}`}>
-                    {channel.name}
-                  </p>
-                  
-                  {/* Indicators line */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isMuted && <VolumeX className="w-3 h-3 text-slate-400" />}
-                    {isPinned && <Pin className="w-3 h-3 text-amber-500 fill-amber-500 rotate-45" />}
-                    
-                    <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.2 rounded-md tracking-wider border ${
-                      channel.type === 'general' ? 'bg-indigo-50 text-indigo-600 border-indigo-150' :
-                      channel.type === 'team' ? 'bg-teal-50 text-teal-600 border-teal-150' :
-                      channel.type === 'workorder' ? 'bg-amber-50 text-amber-600 border-amber-150' :
-                      channel.type === 'group' ? 'bg-purple-50 text-purple-600 border-purple-150' :
-                      'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}>
-                      {channel.type === 'workorder' ? 'WO' : channel.type}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium truncate">
-                  {channel.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Float Trigger menu drawer button */}
-            <div className="absolute right-2 top-3 opacity-0 group-hover/item:opacity-100 transition-opacity z-10 flex gap-0.5">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMenuOpenChanId(isMenuOpen ? null : channel.id)
-                }}
-                className="p-1 hover:bg-slate-205 rounded-md text-slate-500 bg-white shadow-xs border border-slate-200/50 cursor-pointer"
-                title="Options"
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Inline floating context menu values */}
-            {isMenuOpen && (
-              <div 
-                className="absolute right-2 top-10 bg-white border border-slate-200 rounded-xl shadow-md p-1.5 z-40 w-44 font-sans text-xs space-y-0.5"
-                onMouseLeave={() => setMenuOpenChanId(null)}
-              >
-                <button
-                  onClick={() => togglePinChannel(channel.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
-                >
-                  <Pin className="w-3.5 h-3.5 text-slate-400" />
-                  {isPinned ? 'Unpin Room' : 'Pin to Top'}
-                </button>
-
-                <button
-                  onClick={() => toggleMuteChannel(channel.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
-                >
-                  <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                  {isMuted ? 'Mute Alerts' : 'Mute room'}
-                </button>
-
-                <button
-                  onClick={() => markChannelAsUnread(channel.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
-                >
-                  <Bookmark className="w-3.5 h-3.5 text-slate-400" />
-                  Mark as Unread
-                </button>
-
-                <div className="border-t border-slate-100 my-1" />
-
-                <button
-                  onClick={() => hideChannelItem(channel.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors font-semibold"
-                >
-                  <EyeOff className="w-3.5 h-3.5 text-rose-400" />
-                  Hide (Archive)
-                </button>
-              </div>
-            )}
-          </div>
-        )
-      }}
 
       {/* ────────────────── 2. CENTRAL ACTIVE DIALOG STREAM FEED ────────────────── */}
       <div className={`flex-1 bg-slate-50 flex flex-col h-full ${!activeChannel ? 'hidden md:flex' : 'flex'}`}>

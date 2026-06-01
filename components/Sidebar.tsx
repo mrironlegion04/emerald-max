@@ -316,131 +316,14 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           })}
         </div>
 
-        {/* Assets Folder */}
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-          Assets
-        </p>
-        <div className="space-y-1">
-          <button
-            onClick={() => toggleGroup('assets')}
-            className={clsx(
-              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
-              { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
-                <Building2 className="w-4.5 h-4.5" />
-              </span>
-              <span>Assets Folder</span>
-            </div>
-            <span>
-              {openGroups.assets ? (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              )}
-            </span>
-          </button>
-
-          {openGroups.assets && (
-            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
-              {assetGroupItems.map(item => {
-                const active = isActive(item.href)
-                return (
-                  <div key={item.href} className="relative">
-                    {active && (
-                      <motion.div 
-                        layoutId="activeSideIndicator"
-                        className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
-                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                      />
-                    )}
-                    <Link
-                      href={item.href}
-                      onClick={onClose}
-                      className={clsx(
-                        'sidebar-link group text-xs !py-1.5 pl-2',
-                        { 'active !bg-blue-50/70': active }
-                      )}
-                    >
-                      <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Reports Folder */}
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-          Reports & sites
-        </p>
-        <div className="space-y-1">
-          <button
-            onClick={() => toggleGroup('reports')}
-            className={clsx(
-              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
-              { 'text-blue-600 bg-blue-50/20': isReportsActive && !openGroups.reports }
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <span className={clsx('transition-colors', isReportsActive ? 'text-blue-600' : 'text-slate-400')}>
-                <BarChart3 className="w-4.5 h-4.5" />
-              </span>
-              <span>Reports</span>
-            </div>
-            <span>
-              {openGroups.reports ? (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              )}
-            </span>
-          </button>
-
-          {openGroups.reports && (
-            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
-              {reportGroupItems
-                .filter(item => !item.adminOnly || user.role === 'ADMIN')
-                .map(item => {
-                  const active = isActive(item.href)
-                  return (
-                    <div key={item.href} className="relative">
-                      {active && (
-                        <motion.div 
-                          layoutId="activeSideIndicator"
-                          className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
-                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                        />
-                      )}
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={clsx(
-                          'sidebar-link group text-xs !py-1.5 pl-2',
-                          { 'active !bg-blue-50/70': active }
-                        )}
-                      >
-                        <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </div>
-                  )
-                })}
-            </div>
-          )}
-        </div>
-
-        {/* Manager/Admin controls */}
+        {/* Privileged Controls for Admin / Manager */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
           <>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-              Management
+              Privileged controls
             </p>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
+              {/* Direct Link: Teams / Users */}
               {managerItems.map(item => {
                 const active = isActive(item.href)
                 return (
@@ -463,18 +346,9 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                   </div>
                 )
               })}
-            </div>
-          </>
-        )}
 
-        {/* Admin controls */}
-        {user.role === 'ADMIN' && (
-          <>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-              Privileged controls
-            </p>
-            <div className="space-y-1">
-              {adminItems.map(item => {
+              {/* Direct Link: Audit Log */}
+              {user.role === 'ADMIN' && adminItems.map(item => {
                 const active = isActive(item.href)
                 return (
                   <div key={item.href} className="relative">
@@ -496,48 +370,34 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                   </div>
                 )
               })}
-            </div>
-          </>
-        )}
 
-        {/* Enterprise Settings Folder */}
-        {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
-          <>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-              Enterprise Settings
-            </p>
-            <div className="space-y-1">
-              <button
-                onClick={() => toggleGroup('settings')}
-                className={clsx(
-                  'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
-                  { 'text-blue-600 bg-blue-50/20': isSettingsActive && !openGroups.settings }
-                )}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className={clsx('transition-colors', isSettingsActive ? 'text-blue-600' : 'text-slate-400')}>
-                    <Settings className="w-4.5 h-4.5" />
-                  </span>
-                  <span>Settings</span>
-                </div>
-                <span>
-                  {openGroups.settings ? (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+              {/* Collapsible: Assets Folder */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => toggleGroup('assets')}
+                  className={clsx(
+                    'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                    { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
                   )}
-                </span>
-              </button>
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
+                      <Building2 className="w-4.5 h-4.5" />
+                    </span>
+                    <span>Assets Folder</span>
+                  </div>
+                  <span>
+                    {openGroups.assets ? (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    )}
+                  </span>
+                </button>
 
-              {openGroups.settings && (
-                <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative font-mono">
-                  {enterpriseSettingsItems
-                    .filter(item => {
-                      if (item.adminOnly && user.role !== 'ADMIN') return false
-                      if (item.managerOrAdmin && user.role !== 'ADMIN' && user.role !== 'MANAGER') return false
-                      return true
-                    })
-                    .map(item => {
+                {openGroups.assets && (
+                  <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+                    {assetGroupItems.map(item => {
                       const active = isActive(item.href)
                       return (
                         <div key={item.href} className="relative">
@@ -552,18 +412,137 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                             href={item.href}
                             onClick={onClose}
                             className={clsx(
-                              'sidebar-link group text-xs !py-1.5 pl-2 font-sans',
+                              'sidebar-link group text-xs !py-1.5 pl-2',
                               { 'active !bg-blue-50/70': active }
                             )}
                           >
-                            <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                            <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
                             <span className="truncate">{item.label}</span>
                           </Link>
                         </div>
                       )
                     })}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsible: Reports */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => toggleGroup('reports')}
+                  className={clsx(
+                    'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                    { 'text-blue-600 bg-blue-50/20': isReportsActive && !openGroups.reports }
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={clsx('transition-colors', isReportsActive ? 'text-blue-600' : 'text-slate-400')}>
+                      <BarChart3 className="w-4.5 h-4.5" />
+                    </span>
+                    <span>Reports</span>
+                  </div>
+                  <span>
+                    {openGroups.reports ? (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    )}
+                  </span>
+                </button>
+
+                {openGroups.reports && (
+                  <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+                    {reportGroupItems
+                      .filter(item => !item.adminOnly || user.role === 'ADMIN')
+                      .map(item => {
+                        const active = isActive(item.href)
+                        return (
+                          <div key={item.href} className="relative">
+                            {active && (
+                              <motion.div 
+                                layoutId="activeSideIndicator"
+                                className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                              />
+                            )}
+                            <Link
+                              href={item.href}
+                              onClick={onClose}
+                              className={clsx(
+                                'sidebar-link group text-xs !py-1.5 pl-2',
+                                { 'active !bg-blue-50/70': active }
+                              )}
+                            >
+                              <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                              <span className="truncate">{item.label}</span>
+                            </Link>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsible: Settings */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => toggleGroup('settings')}
+                  className={clsx(
+                    'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                    { 'text-blue-600 bg-blue-50/20': isSettingsActive && !openGroups.settings }
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={clsx('transition-colors', isSettingsActive ? 'text-blue-600' : 'text-slate-400')}>
+                      <Settings className="w-4.5 h-4.5" />
+                    </span>
+                    <span>Settings</span>
+                  </div>
+                  <span>
+                    {openGroups.settings ? (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    )}
+                  </span>
+                </button>
+
+                {openGroups.settings && (
+                  <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative font-mono">
+                    {enterpriseSettingsItems
+                      .filter(item => {
+                        if (item.adminOnly && user.role !== 'ADMIN') return false
+                        if (item.managerOrAdmin && user.role !== 'ADMIN' && user.role !== 'MANAGER') return false
+                        return true
+                      })
+                      .map(item => {
+                        const active = isActive(item.href)
+                        return (
+                          <div key={item.href} className="relative">
+                            {active && (
+                              <motion.div 
+                                layoutId="activeSideIndicator"
+                                className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                              />
+                            )}
+                            <Link
+                              href={item.href}
+                              onClick={onClose}
+                              className={clsx(
+                                'sidebar-link group text-xs !py-1.5 pl-2 font-sans',
+                                { 'active !bg-blue-50/70': active }
+                              )}
+                            >
+                              <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                              <span className="truncate">{item.label}</span>
+                            </Link>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}

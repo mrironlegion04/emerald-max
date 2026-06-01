@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Send,
@@ -8,7 +8,6 @@ import {
   MessageCircle,
   Users,
   ClipboardList,
-  User,
   ExternalLink,
   RefreshCw,
   Loader2,
@@ -19,7 +18,6 @@ import {
   EyeOff,
   MoreVertical,
   Mic,
-  Image as ImageIcon,
   Paperclip,
   Trash2,
   Edit2,
@@ -28,7 +26,6 @@ import {
   X,
   Link2,
   Play,
-  Pause,
   ShieldAlert,
   Sparkles,
   FileCheck,
@@ -231,9 +228,6 @@ export default function MessagesPage() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Image/Rich Media Panel state
-  const [showMediaPresets, setShowMediaPresets] = useState(false)
-  const [selectedMediaPreset, setSelectedMediaPreset] = useState<{ url: string; name: string } | null>(null)
-
   // @Mentions feature dropdown indices
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionSuggestions, setMentionSuggestions] = useState<SystemUser[]>([])
@@ -251,13 +245,7 @@ export default function MessagesPage() {
   const threadEndRef = useRef<HTMLDivElement>(null)
 
   // Diagnostic presets for media tests
-  const industrialMediaPresets = [
-    { name: '⚡ Circuit Breaker Blown', url: 'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=400&q=80' },
-    { name: '🌊 Boiler Room Pipe Leak', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80' },
-    { name: '🔥 Engine Overheating HVAC', url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=400&q=80' },
-    { name: '⚙️ Ruptured Belt Gear', url: 'https://images.unsplash.com/photo-1530124560072-a059b014b37d?auto=format&fit=crop&w=400&q=80' },
-  ]
-
+  
   // Fetch current user session
   useEffect(() => {
     async function loadCurrentUser() {
@@ -300,6 +288,9 @@ export default function MessagesPage() {
       }
     }
   }, [])
+
+  // Combine database channels and custom temporary groups
+  const allChannelsCombined = useMemo(() => [...dbChannels, ...customGroups], [dbChannels, customGroups])
 
   // Synchronize active channel with URL query parameter on initial load
   useEffect(() => {
@@ -363,8 +354,9 @@ export default function MessagesPage() {
     loadChannels()
   }, [])
 
-  // Combine database channels and custom temporary groups
-  const allChannelsCombined = [...dbChannels, ...customGroups]
+
+  const messagesLimitRef = useRef(messagesLimit)
+  useEffect(() => { messagesLimitRef.current = messagesLimit }, [messagesLimit])
 
   // Retrieve messages for selected active channel
   const fetchMessagesRef = useRef<() => Promise<void>>(async () => {})

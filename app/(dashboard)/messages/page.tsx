@@ -44,6 +44,9 @@ interface ChatChannel {
   description: string
   avatarText: string
   memberIds?: string[]
+  isPinned?: boolean
+  isMuted?: boolean
+  unreadCount?: number
 }
 
 // Extended message type matching schema database rows + rich mock elements
@@ -64,6 +67,7 @@ interface ChatMessage {
   mediaName?: string
   convertedWOId?: string
   convertedWONumber?: string
+  repliesCount?: number
 }
 
 interface ThreadReply {
@@ -87,6 +91,7 @@ interface SystemAsset {
   id: string
   name: string
   model?: string | null
+  assetCode?: string | null
 }
 
 interface SystemLocation {
@@ -144,7 +149,7 @@ export default function MessagesPage() {
     const matched: string[] = []
     if (channel.description) {
       systemUsers.forEach(u => {
-        if (channel.description.includes(u.name)) {
+        if (u.id && channel.description.includes(u.name)) {
           matched.push(u.id)
         }
       })
@@ -236,7 +241,7 @@ export default function MessagesPage() {
 
   // @Mentions feature dropdown indices
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const [mentionSuggestions, setMentionSuggestions] = useState<SystemUser[]>([])
+  const [mentionSuggestions, setMentionSuggestions] = useState<string[]>([])
   const [focusedMentionIndex, setFocusedMentionIndex] = useState(0)
   const mentionDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -424,15 +429,16 @@ export default function MessagesPage() {
 
   // Load on channel transfer
   useEffect(() => {
-    if (!activeChannel) return
+    const currentChan = activeChannel
+    if (!currentChan) return
     async function loadMessages() {
       try {
         setLoadingMessages(true)
         await fetchMessagesRef.current()
         
         // Remove unread state on select
-        if (unreadIds.includes(activeChannel.id)) {
-          const upd = unreadIds.filter(id => id !== activeChannel.id)
+        if (unreadIds.includes(currentChan.id)) {
+          const upd = unreadIds.filter(id => id !== currentChan.id)
           setUnreadIds(upd)
           savePreference('maintainx_msg_unread', upd)
         }
@@ -534,10 +540,12 @@ export default function MessagesPage() {
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {
-    if (!threadParent || !activeChannel) return
+    const parent = threadParent
+    const channel = activeChannel
+    if (!parent || !channel) return
     async function loadThreadComments() {
       try {
-        const res = await fetch(`/api/messages?channel=${activeChannel.id}&parentId=${threadParent.id}`)
+        const res = await fetch(`/api/messages?channel=${channel.id}&parentId=${parent.id}`)
         if (res.ok) {
           const data = await res.json()
           setThreadReplies(data)

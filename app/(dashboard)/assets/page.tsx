@@ -12,7 +12,7 @@ import AssetViewToggle from '@/components/AssetViewToggle'
 interface AssetWithRelations {
   id: string
   name: string
-  assetCode: string
+  assetCode: string | null
   status: string
   imageUrl?: string | null
   categoryId?: string | null

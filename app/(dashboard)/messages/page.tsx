@@ -355,7 +355,7 @@ export default function MessagesPage() {
     localStorage.setItem(key, JSON.stringify(data))
   }
 
-  // Fetch API Channels and link up with group-chats
+  // Fetch API Channels and link up with group-chats (Load exactly ONCE on mount)
   useEffect(() => {
     async function loadChannels() {
       try {
@@ -365,12 +365,25 @@ export default function MessagesPage() {
           const data = await res.json()
           setDbChannels(data)
           
-          // Select default channel
-          const generalChan = data.find((c: ChatChannel) => c.id === 'GENERAL')
-          if (generalChan && !activeChannel) {
-            setActiveChannel(generalChan)
-          } else if (data.length > 0 && !activeChannel) {
-            setActiveChannel(data[0])
+          // Select default or URL-matching channel
+          let initialChan: ChatChannel | null = null
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            const targetChan = params.get('channel')
+            if (targetChan) {
+              initialChan = data.find((c: ChatChannel) => c.id === targetChan) || null
+            }
+          }
+          
+          if (!initialChan) {
+            initialChan = data.find((c: ChatChannel) => c.id === 'GENERAL') || null
+          }
+          if (!initialChan && data.length > 0) {
+            initialChan = data[0]
+          }
+          
+          if (initialChan) {
+            setActiveChannel(initialChan)
           }
         }
       } catch (err) {
@@ -380,7 +393,7 @@ export default function MessagesPage() {
       }
     }
     loadChannels()
-  }, [activeChannel])
+  }, [])
 
   // Retrieve messages for selected active channel
   const fetchMessagesRef = useRef<() => Promise<void>>(async () => {})
@@ -427,7 +440,7 @@ export default function MessagesPage() {
     setHasMoreMessages(true)
   }, [activeChannel])
 
-  // Load on channel transfer
+  // Load on channel transfer (Removed unreadIds dependency to prevent infinite loops)
   useEffect(() => {
     const currentChan = activeChannel
     if (!currentChan) return
@@ -436,12 +449,15 @@ export default function MessagesPage() {
         setLoadingMessages(true)
         await fetchMessagesRef.current()
         
-        // Remove unread state on select
-        if (unreadIds.includes(currentChan.id)) {
-          const upd = unreadIds.filter(id => id !== currentChan.id)
-          setUnreadIds(upd)
-          savePreference('maintainx_msg_unread', upd)
-        }
+        // Remove unread state on select (Functional state updates to avoid dependencies)
+        setUnreadIds(prev => {
+          if (prev.includes(currentChan.id)) {
+            const upd = prev.filter(id => id !== currentChan.id)
+            savePreference('maintainx_msg_unread', upd)
+            return upd
+          }
+          return prev
+        })
 
         if (messagesLimit === 50) {
           setTimeout(() => {
@@ -456,7 +472,7 @@ export default function MessagesPage() {
     }
     loadMessages()
     setThreadParent(null) // Reset active threads sidebar
-  }, [activeChannel, messagesLimit, unreadIds])
+  }, [activeChannel, messagesLimit])
 
   // Short-polling interval (3s) for rich live response
   useEffect(() => {
@@ -474,7 +490,7 @@ export default function MessagesPage() {
     })
   }, [messages])
 
-  // Background polling for unreads and real browser push notifications
+  // Background polling for unreads and real browser push notifications (No unreadIds dependency to prevent interval recreation)
   useEffect(() => {
     if (!currentUser) return
 
@@ -492,8 +508,7 @@ export default function MessagesPage() {
           const recentMsgList = await res.json()
           if (!Array.isArray(recentMsgList)) return
 
-          let unreadsChanged = false
-          const updatedUnreads = [...unreadIds]
+          const addedChannels: string[] = []
 
           recentMsgList.forEach((m: ChatMessage) => {
             // Skip messages from self
@@ -505,10 +520,7 @@ export default function MessagesPage() {
 
             // If it belongs to another channel, mark it unread!
             if (!activeChannel || m.channel !== activeChannel.id) {
-              if (!updatedUnreads.includes(m.channel)) {
-                updatedUnreads.push(m.channel)
-                unreadsChanged = true
-              }
+              addedChannels.push(m.channel)
               // Toast notification inside the app
               displayToast(`💬 New message from ${m.senderName} inside "${m.channelName || 'Crew'}"`)
             }
@@ -525,9 +537,22 @@ export default function MessagesPage() {
             }
           })
 
-          if (unreadsChanged) {
-            setUnreadIds(updatedUnreads)
-            savePreference('maintainx_msg_unread', updatedUnreads)
+          if (addedChannels.length > 0) {
+            setUnreadIds(prev => {
+              const upd = [...prev]
+              let changed = false
+              addedChannels.forEach(id => {
+                if (!upd.includes(id)) {
+                  upd.push(id)
+                  changed = true
+                }
+              })
+              if (changed) {
+                savePreference('maintainx_msg_unread', upd)
+                return upd
+              }
+              return prev
+            })
           }
         }
       } catch (e) {
@@ -536,7 +561,7 @@ export default function MessagesPage() {
     }, 4000)
 
     return () => clearInterval(interval)
-  }, [currentUser, activeChannel, unreadIds])
+  }, [currentUser, activeChannel])
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {

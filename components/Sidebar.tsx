@@ -14,6 +14,7 @@ import {
   Calendar,
   Clock,
   MessageSquare,
+  MessageCircle,
   BarChart3,
   Upload,
   Users,
@@ -49,6 +50,11 @@ const navItems = [
     label: 'To Do',
     href: '/to-do',
     icon: <CheckSquare className="w-4.5 h-4.5" />,
+  },
+  {
+    label: 'Messages',
+    href: '/messages',
+    icon: <MessageCircle className="w-4.5 h-4.5" />,
   },
   {
     label: 'Assets',

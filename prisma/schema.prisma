@@ -897,4 +897,25 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+model ChatMessage {
+  id          String   @id @default(cuid())
+  content     String
+  channel     String   // "GENERAL", "TEAM_<teamId>", "WO_<workOrderId>", "DIRECT_<userId1>_<userId2>"
+  channelName String   // Human-readable label
+  senderId    String
+  senderName  String
+  senderRole  Role     @default(TECHNICIAN)
+  workOrderId String?  // Optional: associated work order
+  receiverId  String?  // Optional: for direct messages
+  teamId      String?  // Optional: for team messages
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([channel])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+
 

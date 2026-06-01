@@ -31,6 +31,8 @@ import {
   CheckSquare,
   Gauge,
   X,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 
 interface User {
@@ -55,17 +57,6 @@ const navItems = [
     label: 'Messages',
     href: '/messages',
     icon: <MessageCircle className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Assets',
-    href: '/assets',
-    exact: false,
-    icon: <Building2 className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Asset Explorer',
-    href: '/asset-explorer',
-    icon: <FolderTree className="w-4.5 h-4.5" />,
   },
   {
     label: 'Meters',
@@ -102,30 +93,10 @@ const navItems = [
     href: '/requests',
     icon: <MessageSquare className="w-4.5 h-4.5" />,
   },
-  {
-    label: 'Reports',
-    href: '/reports',
-    icon: <BarChart3 className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Maintenance Report',
-    href: '/reports/maintenance',
-    icon: <BarChart3 className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'SLA Breach Reports',
-    href: '/sla-breach-reports',
-    icon: <BarChart3 className="w-4.5 h-4.5" />,
-  },
 ]
 
 // Visible to ADMIN and MANAGER
 const managerItems = [
-  {
-    label: 'Bulk Import',
-    href: '/import',
-    icon: <Upload className="w-4.5 h-4.5" />,
-  },
   {
     label: 'Teams / Users',
     href: '/teams',
@@ -136,65 +107,102 @@ const managerItems = [
 // Visible to ADMIN only
 const adminItems = [
   {
-    label: 'Sites Overview',
-    href: '/sites',
-    icon: <Globe className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'SLA Policies',
-    href: '/sla-policies',
-    icon: <Shield className="w-4.5 h-4.5" />,
-  },
-  {
     label: 'Audit Log',
     href: '/audit-log',
     icon: <Shield className="w-4.5 h-4.5" />,
   },
 ]
 
-// Settings section for ADMIN + MANAGER
-const settingsItems = [
+// Foldered items
+const assetGroupItems = [
+  {
+    label: 'Assets Directory',
+    href: '/assets',
+    icon: <Building2 className="w-4 h-4" />,
+  },
+  {
+    label: 'Asset Explorer',
+    href: '/asset-explorer',
+    icon: <FolderTree className="w-4 h-4" />,
+  },
+]
+
+const reportGroupItems = [
+  {
+    label: 'Reports Dashboard',
+    href: '/reports',
+    icon: <BarChart3 className="w-4 h-4" />,
+  },
+  {
+    label: 'Maintenance Report',
+    href: '/reports/maintenance',
+    icon: <BarChart3 className="w-4 h-4" />,
+  },
+  {
+    label: 'SLA Breach Reports',
+    href: '/sla-breach-reports',
+    icon: <AlertCircle className="w-4 h-4" />,
+  },
+  {
+    label: 'Sites Overview',
+    href: '/sites',
+    icon: <Globe className="w-4 h-4" />,
+    adminOnly: true,
+  },
+]
+
+const enterpriseSettingsItems = [
   {
     label: 'Procedures',
-    href:  '/settings/procedures',
-    icon:  <ClipboardCheck className="w-4 h-4" />,
-    adminOnly: false,
+    href: '/settings/procedures',
+    icon: <ClipboardCheck className="w-4 h-4" />,
   },
   {
     label: 'Locations',
-    href:  '/settings/locations',
-    icon:  <MapPin className="w-4 h-4" />,
-    adminOnly: false,
+    href: '/settings/locations',
+    icon: <MapPin className="w-4 h-4" />,
   },
   {
     label: 'Asset Types',
-    href:  '/settings/asset-types',
-    icon:  <Tag className="w-4 h-4" />,
+    href: '/settings/asset-types',
+    icon: <Tag className="w-4 h-4" />,
     adminOnly: true,
   },
   {
     label: 'Asset Categories',
-    href:  '/settings/asset-categories',
-    icon:  <FolderTree className="w-4 h-4" />,
+    href: '/settings/asset-categories',
+    icon: <FolderTree className="w-4 h-4" />,
     adminOnly: true,
   },
   {
     label: 'BOM Templates',
-    href:  '/settings/bom-templates',
-    icon:  <ClipboardCheck className="w-4 h-4" />,
+    href: '/settings/bom-templates',
+    icon: <ClipboardCheck className="w-4 h-4" />,
     adminOnly: true,
   },
   {
     label: 'Domains',
-    href:  '/settings/domains',
-    icon:  <Layers className="w-4 h-4" />,
+    href: '/settings/domains',
+    icon: <Layers className="w-4 h-4" />,
     adminOnly: true,
   },
   {
     label: 'Issues',
-    href:  '/settings/issues',
-    icon:  <AlertCircle className="w-4 h-4" />,
+    href: '/settings/issues',
+    icon: <AlertCircle className="w-4 h-4" />,
     adminOnly: true,
+  },
+  {
+    label: 'SLA Policies',
+    href: '/sla-policies',
+    icon: <Shield className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
+    label: 'Bulk Import',
+    href: '/import',
+    icon: <Upload className="w-4 h-4" />,
+    managerOrAdmin: true,
   },
 ]
 
@@ -209,6 +217,17 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
+    const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
+    const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
+    return {
+      assets: isAssetsActive,
+      reports: isReportsActive,
+      settings: isSettingsActive,
+    }
+  })
+
   async function handleLogout() {
     setLoggingOut(true)
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -220,6 +239,14 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
+
+  const toggleGroup = (groupKey: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }))
+  }
+
+  const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
+  const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
+  const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
 
   return (
     <aside className="w-full h-full bg-white border-r border-slate-200 flex flex-col flex-shrink-0 shadow-xs">
@@ -289,6 +316,124 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           })}
         </div>
 
+        {/* Assets Folder */}
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+          Assets
+        </p>
+        <div className="space-y-1">
+          <button
+            onClick={() => toggleGroup('assets')}
+            className={clsx(
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
+                <Building2 className="w-4.5 h-4.5" />
+              </span>
+              <span>Assets Folder</span>
+            </div>
+            <span>
+              {openGroups.assets ? (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              )}
+            </span>
+          </button>
+
+          {openGroups.assets && (
+            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+              {assetGroupItems.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <div key={item.href} className="relative">
+                    {active && (
+                      <motion.div 
+                        layoutId="activeSideIndicator"
+                        className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={clsx(
+                        'sidebar-link group text-xs !py-1.5 pl-2',
+                        { 'active !bg-blue-50/70': active }
+                      )}
+                    >
+                      <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Reports Folder */}
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+          Reports & sites
+        </p>
+        <div className="space-y-1">
+          <button
+            onClick={() => toggleGroup('reports')}
+            className={clsx(
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              { 'text-blue-600 bg-blue-50/20': isReportsActive && !openGroups.reports }
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className={clsx('transition-colors', isReportsActive ? 'text-blue-600' : 'text-slate-400')}>
+                <BarChart3 className="w-4.5 h-4.5" />
+              </span>
+              <span>Reports</span>
+            </div>
+            <span>
+              {openGroups.reports ? (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              )}
+            </span>
+          </button>
+
+          {openGroups.reports && (
+            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+              {reportGroupItems
+                .filter(item => !item.adminOnly || user.role === 'ADMIN')
+                .map(item => {
+                  const active = isActive(item.href)
+                  return (
+                    <div key={item.href} className="relative">
+                      {active && (
+                        <motion.div 
+                          layoutId="activeSideIndicator"
+                          className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        className={clsx(
+                          'sidebar-link group text-xs !py-1.5 pl-2',
+                          { 'active !bg-blue-50/70': active }
+                        )}
+                      >
+                        <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </div>
+                  )
+                })}
+            </div>
+          )}
+        </div>
+
         {/* Manager/Admin controls */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
           <>
@@ -355,37 +500,70 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           </>
         )}
 
-        {/* Global Settings */}
+        {/* Enterprise Settings Folder */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
           <>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
               Enterprise Settings
             </p>
             <div className="space-y-1">
-              {settingsItems
-                .filter(item => !item.adminOnly || user.role === 'ADMIN')
-                .map(item => {
-                  const active = isActive(item.href)
-                  return (
-                    <div key={item.href} className="relative">
-                      {active && (
-                        <motion.div 
-                          layoutId="activeSideIndicator"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-lg z-10"
-                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                        />
-                      )}
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={clsx('sidebar-link group text-sm', { 'active !bg-blue-50/70': active })}
-                      >
-                        <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </div>
-                  )
-                })}
+              <button
+                onClick={() => toggleGroup('settings')}
+                className={clsx(
+                  'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                  { 'text-blue-600 bg-blue-50/20': isSettingsActive && !openGroups.settings }
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className={clsx('transition-colors', isSettingsActive ? 'text-blue-600' : 'text-slate-400')}>
+                    <Settings className="w-4.5 h-4.5" />
+                  </span>
+                  <span>Settings</span>
+                </div>
+                <span>
+                  {openGroups.settings ? (
+                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  )}
+                </span>
+              </button>
+
+              {openGroups.settings && (
+                <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative font-mono">
+                  {enterpriseSettingsItems
+                    .filter(item => {
+                      if (item.adminOnly && user.role !== 'ADMIN') return false
+                      if (item.managerOrAdmin && user.role !== 'ADMIN' && user.role !== 'MANAGER') return false
+                      return true
+                    })
+                    .map(item => {
+                      const active = isActive(item.href)
+                      return (
+                        <div key={item.href} className="relative">
+                          {active && (
+                            <motion.div 
+                              layoutId="activeSideIndicator"
+                              className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                            />
+                          )}
+                          <Link
+                            href={item.href}
+                            onClick={onClose}
+                            className={clsx(
+                              'sidebar-link group text-xs !py-1.5 pl-2 font-sans',
+                              { 'active !bg-blue-50/70': active }
+                            )}
+                          >
+                            <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-705')}>{item.icon}</span>
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
             </div>
           </>
         )}

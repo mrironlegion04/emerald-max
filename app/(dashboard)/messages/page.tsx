@@ -451,7 +451,7 @@ export default function MessagesPage() {
         
         // Remove unread state on select (Functional state updates to avoid dependencies)
         setUnreadIds(prev => {
-          if (prev.includes(currentChan.id)) {
+          if (currentChan && prev.includes(currentChan.id)) {
             const upd = prev.filter(id => id !== currentChan.id)
             savePreference('maintainx_msg_unread', upd)
             return upd
@@ -568,9 +568,11 @@ export default function MessagesPage() {
     const parent = threadParent
     const channel = activeChannel
     if (!parent || !channel) return
+    const channelId = channel.id
+    const parentId = parent.id
     async function loadThreadComments() {
       try {
-        const res = await fetch(`/api/messages?channel=${channel.id}&parentId=${parent.id}`)
+        const res = await fetch(`/api/messages?channel=${channelId}&parentId=${parentId}`)
         if (res.ok) {
           const data = await res.json()
           setThreadReplies(data)

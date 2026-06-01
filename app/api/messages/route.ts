@@ -3,6 +3,128 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { Prisma } from '@prisma/client'
 
+// Helper to check if channel exists and dynamically create it if it doesn't
+async function ensureChannelExists(channelId: string, currentUserId: string): Promise<boolean> {
+  try {
+    const channel = await prisma.chatChannel.findUnique({
+      where: { id: channelId }
+    })
+    if (channel) return true
+
+    // Channel does not exist. Let's create it dynamically.
+    if (channelId === 'GENERAL') {
+      await prisma.chatChannel.create({
+        data: {
+          id: 'GENERAL',
+          name: 'General System Board',
+          type: 'general',
+          description: 'Announcements and general discussions for all technicians',
+          avatarText: '📢',
+        }
+      })
+      return true
+    }
+
+    if (channelId.startsWith('WO_')) {
+      const woId = channelId.substring(3)
+      const wo = await prisma.workOrder.findUnique({
+        where: { id: woId },
+        select: { id: true, woNumber: true, title: true, priority: true, status: true }
+      })
+      if (wo) {
+        await prisma.chatChannel.create({
+          data: {
+            id: channelId,
+            name: `${wo.woNumber}: ${wo.title}`,
+            type: 'workorder',
+            description: `Priority: ${wo.priority} | Status: ${wo.status}`,
+            avatarText: '📋',
+            entityId: wo.id,
+          }
+        })
+        return true
+      }
+    }
+
+    if (channelId.startsWith('TEAM_')) {
+      const teamId = channelId.substring(5)
+      const team = await prisma.team.findUnique({
+        where: { id: teamId }
+      })
+      if (team) {
+        await prisma.chatChannel.create({
+          data: {
+            id: channelId,
+            name: `${team.name} (${team.trade})`,
+            type: 'team',
+            description: team.description || `Team workspace for ${team.trade}`,
+            avatarText: '🛠️',
+            entityId: team.id,
+          }
+        })
+        return true
+      }
+    }
+
+    if (channelId.startsWith('DIRECT_')) {
+      const parts = channelId.replace('DIRECT_', '').split('_')
+      const otherUserId = parts.find(p => p !== currentUserId)
+      if (otherUserId) {
+        const other = await prisma.user.findUnique({
+          where: { id: otherUserId },
+          select: { id: true, name: true, role: true, email: true }
+        })
+        if (other) {
+          await prisma.chatChannel.create({
+            data: {
+              id: channelId,
+              name: other.name,
+              type: 'direct',
+              description: `Role: ${other.role} | ${other.email}`,
+              avatarText: '👤',
+              entityId: other.id,
+            }
+          })
+          return true
+        }
+      }
+    }
+
+    // Fallback: If we couldn't match or find the entity in DB, create a generic placeholder Channel
+    // to absolutely prevent ForeignKey errors of ChatChannelMember.
+    let fallbackName = 'Discussion Room'
+    let fallbackType = 'general'
+    let fallbackText = '💬'
+    if (channelId.startsWith('WO_')) {
+      fallbackName = `Work Order Room (${channelId.substring(3).substring(0, 6)})`
+      fallbackType = 'workorder'
+      fallbackText = '📋'
+    } else if (channelId.startsWith('TEAM_')) {
+      fallbackName = 'Team Space'
+      fallbackType = 'team'
+      fallbackText = '🛠️'
+    } else if (channelId.startsWith('DIRECT_')) {
+      fallbackName = 'Private Chat'
+      fallbackType = 'direct'
+      fallbackText = '👤'
+    }
+
+    await prisma.chatChannel.create({
+      data: {
+        id: channelId,
+        name: fallbackName,
+        type: fallbackType,
+        description: 'Dynamically initialized active session room',
+        avatarText: fallbackText,
+      }
+    })
+    return true
+  } catch (err) {
+    console.error('Error in ensureChannelExists:', err)
+    return false
+  }
+}
+
 // Ensure static channels exist in PostgreSQL and add memberships
 async function ensureStaticAndDirectChannels(userId: string, role: string) {
   try {
@@ -255,6 +377,7 @@ export async function GET(req: NextRequest) {
 
     // Update read receipt state to "now" since they are viewing this room (only if fetching room feed, not thread feed)
     if (!parentId) {
+      await ensureChannelExists(channelId, user.userId)
       await prisma.chatChannelMember.upsert({
         where: { channelId_userId: { channelId, userId: user.userId } },
         update: { lastReadAt: new Date() },

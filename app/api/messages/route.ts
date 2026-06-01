@@ -153,24 +153,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Auto-sync synchronized Work Order Comments if it's a Work Order chat
-    if (channel.startsWith('WO_')) {
-      const parsedWOId = workOrderId || channel.substring(3)
-      try {
-        await prisma.workOrderComment.create({
-          data: {
-            content: `[Message Center Update] ${content}`,
-            workOrderId: parsedWOId,
-            authorId: user.userId,
-            authorName: user.name,
-            authorRole: user.role,
-          },
-        })
-      } catch (err) {
-        console.error('Failed to mirror comment to WorkOrderComment:', err)
-      }
-    }
-
     return NextResponse.json(chatMessage)
   } catch (error) {
     console.error('Message creation error:', error)

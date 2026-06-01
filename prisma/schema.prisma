@@ -156,6 +156,9 @@ model User {
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
 
+  sentMessages          ChatMessage[]           @relation("ChatMessageSender")
+  chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
+
   @@map("users")
 }
 
@@ -897,29 +900,78 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+model ChatChannel {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // "general" | "team" | "workorder" | "direct" | "group"
+  description String?
+  avatarText  String?
+  entityId    String?  // References teamId, workOrderId, etc., if linked
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     ChatChannelMember[]
+  messages    ChatMessage[]
+
+  @@index([type])
+  @@map("chat_channels")
+}
+
+model ChatChannelMember {
+  id         String   @id @default(cuid())
+  channelId  String
+  channel    ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("ChannelMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  
+  lastReadAt DateTime @default(now())
+  isMuted    Boolean  @default(false)
+  isPinned   Boolean  @default(false)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@map("chat_channel_members")
+}
+
 model ChatMessage {
   id            String   @id @default(cuid())
   content       String
-  channel       String   // "GENERAL", "TEAM_<teamId>", "WO_<workOrderId>", "DIRECT_<userId1>_<userId2>"
-  channelName   String   // Human-readable label
+  channelId     String
+  channelRel    ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channel       String   // Keep as string helper for backward compatibility
+  channelName   String
   senderId      String
+  sender        User     @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   senderName    String
   senderRole    Role     @default(TECHNICIAN)
-  workOrderId   String?  // Optional: associated work order
-  receiverId    String?  // Optional: for direct messages
-  teamId        String?  // Optional: for team messages
-  mediaUrl      String?  // URL of attachment from MinIO or local filesystem
-  mediaName     String?  // Display filename
-  mediaType     String?  // MIME type
+  
+  // Optional relations
+  workOrderId   String?
+  receiverId    String?
+  teamId        String?
+  
+  // Attachment fields
+  mediaUrl      String?
+  mediaName     String?
+  mediaType     String?
   isVoice       Boolean  @default(false)
-  voiceDuration String?  // Optional voice clip duration
+  voiceDuration String?
+  
+  // Self relation for threading replies
+  parentId      String?
+  parent        ChatMessage?   @relation("ThreadReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       ChatMessage[]  @relation("ThreadReplies")
+
   isEdited      Boolean  @default(false)
   isDeleted     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@index([channel])
+  @@index([channelId, createdAt])
   @@index([senderId])
+  @@index([parentId])
   @@index([createdAt])
   @@map("chat_messages")
 }

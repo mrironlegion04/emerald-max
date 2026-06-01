@@ -282,15 +282,11 @@ export default function MessagesPage() {
     loadCurrentUser()
   }, [router])
 
-  // Hydrate custom lists & settings from localStorage
+  // Hydrate custom lists & settings from localStorage & sync from Postgres
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        setPinnedIds(JSON.parse(localStorage.getItem('maintainx_msg_pinned') || '[]'))
-        setMutedIds(JSON.parse(localStorage.getItem('maintainx_msg_muted') || '[]'))
         setHiddenIds(JSON.parse(localStorage.getItem('maintainx_msg_hidden') || '[]'))
-        setUnreadIds(JSON.parse(localStorage.getItem('maintainx_msg_unread') || '[]'))
-        setCustomGroups(JSON.parse(localStorage.getItem('maintainx_msg_custom_groups') || '[]'))
         
         // Read URL variables for Message Links on mount
         const params = new URLSearchParams(window.location.search)
@@ -303,6 +299,21 @@ export default function MessagesPage() {
       }
     }
   }, [])
+
+  // Synchronically bridge dbChannels directly to pinnedIds, mutedIds, unreadIds, and customGroups
+  useEffect(() => {
+    if (dbChannels && dbChannels.length > 0) {
+      const pins = dbChannels.filter(c => c.isPinned).map(c => c.id)
+      const mutes = dbChannels.filter(c => c.isMuted).map(c => c.id)
+      const unreads = dbChannels.filter(c => c.unreadCount && c.unreadCount > 0).map(c => c.id)
+      const groups = dbChannels.filter(c => c.type === 'group')
+      
+      setPinnedIds(pins)
+      setMutedIds(mutes)
+      setUnreadIds(unreads)
+      setCustomGroups(groups)
+    }
+  }, [dbChannels])
 
   // Synchronize active channel with URL query parameter on initial load
   useEffect(() => {
@@ -523,18 +534,24 @@ export default function MessagesPage() {
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {
-    if (!threadParent) return
-    try {
-      const parentId = threadParent.id
-      const loaded = JSON.parse(localStorage.getItem(`maintainx_thread_replies_${parentId}`) || '[]')
-      setThreadReplies(loaded)
+    if (!threadParent || !activeChannel) return
+    async function loadThreadComments() {
+      try {
+        const res = await fetch(`/api/messages?channel=${activeChannel.id}&parentId=${threadParent.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setThreadReplies(data)
+        }
+      } catch (e) {
+        console.error('Failed loading thread comments:', e)
+        setThreadReplies([])
+      }
       setTimeout(() => {
         threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
-    } catch (e) {
-      setThreadReplies([])
     }
-  }, [threadParent])
+    loadThreadComments()
+  }, [threadParent, activeChannel])
 
   // Trigger loading system items for modal directories
   const prepareSystemFormOptions = async () => {
@@ -660,53 +677,94 @@ export default function MessagesPage() {
     }
   }
 
-  // Action Menu Channel changes (Pin, Mute, Hide etc.)
-  const togglePinChannel = (id: string) => {
-    let newPinned = [...pinnedIds]
-    if (newPinned.includes(id)) {
-      newPinned = newPinned.filter(p => p !== id)
-      displayToast("📌 Channel unpinned from top list")
-    } else {
-      newPinned.push(id)
-      displayToast("📌 Channel locked and pinned to top")
+  // Action Menu Channel changes (Pin, Mute, Hide etc.) secured inside PostgreSQL
+  const togglePinChannel = async (id: string) => {
+    try {
+      const isPinnedNow = pinnedIds.includes(id)
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: id, isPinned: !isPinnedNow }),
+      })
+      if (res.ok) {
+        const freshRes = await fetch('/api/messages?list_channels=true')
+        if (freshRes.ok) {
+          const fresh = await freshRes.json()
+          setDbChannels(fresh)
+        }
+        displayToast(!isPinnedNow ? "📌 Channel locked and pinned to top" : "📌 Channel unpinned from top list")
+      }
+    } catch (e) {
+      console.error(e)
     }
-    setPinnedIds(newPinned)
-    savePreference('maintainx_msg_pinned', newPinned)
     setMenuOpenChanId(null)
   }
 
-  const toggleMuteChannel = (id: string) => {
-    let newMutes = [...mutedIds]
-    if (newMutes.includes(id)) {
-      newMutes = newMutes.filter(m => m !== id)
-      displayToast("🔊 Notifications restored")
-    } else {
-      newMutes.push(id)
-      displayToast("🔇 Notifications silenced for room")
+  const toggleMuteChannel = async (id: string) => {
+    try {
+      const isMutedNow = mutedIds.includes(id)
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: id, isMuted: !isMutedNow }),
+      })
+      if (res.ok) {
+        const freshRes = await fetch('/api/messages?list_channels=true')
+        if (freshRes.ok) {
+          const fresh = await freshRes.json()
+          setDbChannels(fresh)
+        }
+        displayToast(!isMutedNow ? "🔇 Notifications silenced for room" : "🔊 Notifications restored")
+      }
+    } catch (e) {
+      console.error(e)
     }
-    setMutedIds(newMutes)
-    savePreference('maintainx_msg_muted', newMutes)
     setMenuOpenChanId(null)
   }
 
-  const hideChannelItem = (id: string) => {
-    const newHiddens = [...hiddenIds, id]
-    setHiddenIds(newHiddens)
-    savePreference('maintainx_msg_hidden', newHiddens)
-    displayToast("👁️ Channel removed/archived from main view")
-    setMenuOpenChanId(null)
-    
-    if (activeChannel?.id === id) {
-      const rest = allChannelsCombined.filter(c => !newHiddens.includes(c.id))
-      setActiveChannel(rest.length > 0 ? rest[0] : null)
+  const hideChannelItem = async (id: string) => {
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: id, isArchived: true }),
+      })
+      if (res.ok) {
+        const freshRes = await fetch('/api/messages?list_channels=true')
+        if (freshRes.ok) {
+          const fresh = await freshRes.json()
+          setDbChannels(fresh)
+          if (activeChannel?.id === id) {
+            const rest = fresh.filter((c: ChatChannel) => c.id !== id)
+            setActiveChannel(rest.length > 0 ? rest[0] : null)
+          }
+        }
+        displayToast("👁️ Channel removed/archived from main view")
+      }
+    } catch (e) {
+      console.error(e)
     }
+    setMenuOpenChanId(null)
   }
 
-  const restoreHiddenChannel = (id: string) => {
-    const upd = hiddenIds.filter(x => x !== id)
-    setHiddenIds(upd)
-    savePreference('maintainx_msg_hidden', upd)
-    displayToast("👁️ Communication channel restored")
+  const restoreHiddenChannel = async (id: string) => {
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: id, isArchived: false }),
+      })
+      if (res.ok) {
+        const freshRes = await fetch('/api/messages?list_channels=true')
+        if (freshRes.ok) {
+          const fresh = await freshRes.json()
+          setDbChannels(fresh)
+        }
+        displayToast("👁️ Communication channel restored")
+      }
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   const markChannelAsUnread = (id: string) => {
@@ -726,125 +784,97 @@ export default function MessagesPage() {
     }, 3000)
   }
 
-  // Group creation confirmation
-  const createCustomGroupChat = () => {
-    if (!newGroupName.trim()) return
+  // Group creation confirmation with direct database-backed creation
+  const createCustomGroupChat = async () => {
+    if (!newGroupName.trim() || !currentUser) return
     
-    const newId = `GROUP_${Date.now()}`
-    const membersName = dbChannels
-      .filter(c => c.type === 'direct')
-      .filter(c => {
-        const otherId = c.id.substring(7).split('_').find(x => x !== currentUser?.userId)
-        return otherId && selectedGroupMembers.includes(otherId)
+    try {
+      const payload = {
+        createGroup: true,
+        groupName: newGroupName.trim(),
+        groupDesc: newGroupDesc.trim() || undefined,
+        memberIds: selectedGroupMembers,
+      }
+
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      .map(c => c.name)
-      .join(', ')
 
-    const newGroupChannel: ChatChannel = {
-      id: newId,
-      name: newGroupName,
-      type: 'group',
-      description: newGroupDesc || `Private crew room: ${membersName || 'Empty'}`,
-      avatarText: '👥',
-      memberIds: [currentUser?.userId, ...selectedGroupMembers].filter(Boolean) as string[]
-    }
-
-    const updatedGroups = [...customGroups, newGroupChannel]
-    setCustomGroups(updatedGroups)
-    savePreference('maintainx_msg_custom_groups', updatedGroups)
-
-    // Save group definition to permanent database registry
-    fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: JSON.stringify(newGroupChannel),
-        channel: 'SYSTEM_GROUPS',
-        channelName: 'Group Registry'
-      })
-    })
-      .then(() => {
-        // Post welcome intro message into the newly registered database room
-        fetch('/api/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: `👥 Welcome to the "${newGroupName}" Crew Chatroom. Setup isolated communication!`,
-            channel: newId,
-            channelName: newGroupName
-          })
-        }).then(() => {
-          if (currentUser?.userId) {
-            loadGroupRegistries(currentUser.userId, currentUser.role)
+      if (res.ok) {
+        const createdGroup = await res.json()
+        
+        // Refresh channel list instantly from the database!
+        const channelsRes = await fetch('/api/messages?list_channels=true')
+        if (channelsRes.ok) {
+          const freshChannels = await channelsRes.json()
+          setDbChannels(freshChannels)
+          
+          const actualGroup = freshChannels.find((c: ChatChannel) => c.id === createdGroup.id || c.name === newGroupName.trim())
+          if (actualGroup) {
+            setActiveChannel(actualGroup)
+          } else {
+            setActiveChannel(createdGroup)
           }
-        })
-      })
-      .catch(err => console.error('Error posting group chat registries:', err))
+        }
 
-    setShowCreateGroup(false)
-    setNewGroupName('')
-    setNewGroupDesc('')
-    setSelectedGroupMembers([])
-    setActiveChannel(newGroupChannel)
-    displayToast(`✨ Group Chat "${newGroupName}" assembled!`)
+        setShowCreateGroup(false)
+        setNewGroupName('')
+        setNewGroupDesc('')
+        setSelectedGroupMembers([])
+        displayToast(`✨ Group Chat "${newGroupName}" assembled!`)
+      } else {
+        const err = await res.json()
+        displayToast(`❌ Failed to create group: ${err.error || 'Server error'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      displayToast("❌ Could not connect to assemble group chat.")
+    }
   }
 
-  const updateCustomGroupChat = () => {
+  const updateCustomGroupChat = async () => {
     if (!editGroupName.trim() || !activeChannel) return
     
-    const finalMemberIds = [currentUser?.userId, ...editGroupMembers].filter(Boolean) as string[]
-    const membersName = dbChannels
-      .filter(c => c.type === 'direct')
-      .filter(c => {
-        const otherId = c.id.substring(7).split('_').find(x => x !== currentUser?.userId)
-        return otherId && finalMemberIds.includes(otherId)
-      })
-      .map(c => c.name)
-      .join(', ')
-
-    const updatedGroupDef = {
-      id: activeChannel.id,
-      name: editGroupName.trim(),
-      type: 'group' as const,
-      description: editGroupDesc.trim() || `Private crew room: ${membersName || 'Empty'}`,
-      avatarText: '👥',
-      memberIds: finalMemberIds
-    }
-
-    const updatedGroups = customGroups.map(g => {
-      if (g.id === activeChannel.id) {
-        return updatedGroupDef
+    try {
+      const finalMemberIds = editGroupMembers
+      const payload = {
+        updateGroup: true,
+        channelId: activeChannel.id,
+        groupName: editGroupName.trim(),
+        groupDesc: editGroupDesc.trim() || undefined,
+        memberIds: finalMemberIds,
       }
-      return g
-    })
-    
-    setCustomGroups(updatedGroups)
-    localStorage.setItem('maintainx_msg_custom_groups', JSON.stringify(updatedGroups))
 
-    // Save updated group definition to permanent database registry
-    fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: JSON.stringify(updatedGroupDef),
-        channel: 'SYSTEM_GROUPS',
-        channelName: 'Group Registry'
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-    })
-      .then(() => {
-        if (currentUser?.userId) {
-          loadGroupRegistries(currentUser.userId, currentUser.role)
+
+      if (res.ok) {
+        const updatedGroup = await res.json()
+        // Refresh channels list
+        const channelsRes = await fetch('/api/messages?list_channels=true')
+        if (channelsRes.ok) {
+          const freshChannels = await channelsRes.json()
+          setDbChannels(freshChannels)
+          const actualGroup = freshChannels.find((c: ChatChannel) => c.id === activeChannel.id)
+          if (actualGroup) {
+            setActiveChannel(actualGroup)
+          }
         }
-      })
-      .catch(err => console.error('Error updating group chat database registries:', err))
-    
-    const matched = updatedGroups.find(g => g.id === activeChannel.id)
-    if (matched) {
-      setActiveChannel(matched)
+        setShowEditGroupModal(false)
+        displayToast(`🔧 Group Chat updated: "${editGroupName}"`)
+      } else {
+        const err = await res.json()
+        displayToast(`❌ Edit failed: ${err.error || 'Server error'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      displayToast("❌ Could not connect to save group edits.")
     }
-    
-    setShowEditGroupModal(false)
-    displayToast(`🔧 Group Chat updated: "${editGroupName}"`)
   }
 
   // Mention system popup trigger
@@ -963,61 +993,59 @@ export default function MessagesPage() {
   }
 
   // Side-Thread comment submission
-  const submitThreadComment = (e: React.FormEvent) => {
+  const submitThreadComment = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!threadParent || !newThreadText.trim() || !currentUser) return
+    if (!threadParent || !newThreadText.trim() || !currentUser || !activeChannel) return
 
-    const newReply: ThreadReply = {
-      id: `reply_${Date.now()}`,
-      content: newThreadText.trim(),
-      senderId: currentUser.userId || currentUser.id,
-      senderName: currentUser.name || currentUser.userId || 'User',
-      senderRole: currentUser.role || 'USER',
-      createdAt: new Date().toISOString()
+    const replyText = newThreadText.trim()
+    setNewThreadText('')
+
+    try {
+      const payload = {
+        content: replyText,
+        channel: activeChannel.id,
+        channelName: activeChannel.name,
+        parentId: threadParent.id,
+      }
+
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (res.ok) {
+        // Reload replies from server
+        const repliesRes = await fetch(`/api/messages?channel=${activeChannel.id}&parentId=${threadParent.id}`)
+        if (repliesRes.ok) {
+          const freshReplies = await repliesRes.json()
+          setThreadReplies(freshReplies)
+        }
+        
+        // Refresh root messages to update count indicators
+        await fetchMessagesRef.current()
+        displayToast("💬 Side-thread comment posted!")
+      } else {
+        displayToast("❌ Could not post thread comment")
+      }
+    } catch (err) {
+      console.error(err)
+      displayToast("❌ Error posting thread reply.")
     }
 
-    const key = `maintainx_thread_replies_${threadParent.id}`
-    const previous = JSON.parse(localStorage.getItem(key) || '[]')
-    const updated = [...previous, newReply]
-    localStorage.setItem(key, JSON.stringify(updated))
-
-    setThreadReplies(updated)
-    setNewThreadText('')
-    
-    // Auto incremental animation
     setTimeout(() => {
       threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, 100)
-
-    // Notify user
-    displayToast("💬 Side-thread comment posted!")
   }
 
-  // Get total replies for a specific message
+  // Get total replies for a specific message using PostgreSQL counts
   const getThreadRepliesCount = (msgId: string) => {
-    try {
-      const items = JSON.parse(localStorage.getItem(`maintainx_thread_replies_${msgId}`) || '[]')
-      return items.length
-    } catch {
-      return 0
-    }
+    const msg = messages.find(m => m.id === msgId)
+    return msg?.repliesCount || 0
   }
 
-  // Client Msg Edits & Deletion handling
+  // Client Msg Edits & Deletion handling directly on PostgreSQL
   const setLocalMessageContent = async (id: string, newTxt: string) => {
-    if (id.startsWith('sys_') || id.startsWith('message_')) {
-      const edits_key = 'maintainx_msg_local_edits'
-      const curEdits = JSON.parse(localStorage.getItem(edits_key) || '{}')
-      curEdits[id] = newTxt
-      localStorage.setItem(edits_key, JSON.stringify(curEdits))
-      
-      setEditingMsgId(null)
-      setEditingMsgContent('')
-      fetchMessagesRef.current()
-      displayToast("✏️ Message updated successfully!")
-      return
-    }
-
     try {
       const res = await fetch('/api/messages', {
         method: 'PATCH',
@@ -1040,18 +1068,6 @@ export default function MessagesPage() {
   }
 
   const deleteLocalMessage = async (id: string) => {
-    if (id.startsWith('sys_') || id.startsWith('message_')) {
-      const del_key = 'maintainx_msg_local_deletes'
-      const curDeletes = JSON.parse(localStorage.getItem(del_key) || '[]')
-      if (!curDeletes.includes(id)) {
-        curDeletes.push(id)
-        localStorage.setItem(del_key, JSON.stringify(curDeletes))
-      }
-      fetchMessagesRef.current()
-      displayToast("🗑️ Message deleted")
-      return
-    }
-
     try {
       const res = await fetch(`/api/messages?id=${id}`, {
         method: 'DELETE',

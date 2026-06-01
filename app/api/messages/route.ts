@@ -3,6 +3,140 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { Prisma } from '@prisma/client'
 
+// Ensure static channels exist in PostgreSQL and add memberships
+async function ensureStaticAndDirectChannels(userId: string, role: string) {
+  try {
+    // 1. Ensure GENERAL flat system channel exists
+    const generalChannelId = 'GENERAL'
+    let generalChan = await prisma.chatChannel.findUnique({ where: { id: generalChannelId } })
+    if (!generalChan) {
+      generalChan = await prisma.chatChannel.create({
+        data: {
+          id: generalChannelId,
+          name: 'General System Board',
+          type: 'general',
+          description: 'Announcements and general discussions for all technicians',
+          avatarText: '📢',
+        },
+      })
+    }
+    await prisma.chatChannelMember.upsert({
+      where: { channelId_userId: { channelId: generalChannelId, userId } },
+      update: {},
+      create: { channelId: generalChannelId, userId },
+    })
+
+    // 2. Sync Teams
+    const teams = await prisma.team.findMany({ where: { isDeleted: false } })
+    for (const team of teams) {
+      const teamChannelId = `TEAM_${team.id}`
+      let teamChan = await prisma.chatChannel.findUnique({ where: { id: teamChannelId } })
+      if (!teamChan) {
+        teamChan = await prisma.chatChannel.create({
+          data: {
+            id: teamChannelId,
+            name: `${team.name} (${team.trade})`,
+            type: 'team',
+            description: team.description || `Team workspace for ${team.trade}`,
+            avatarText: '🛠️',
+            entityId: team.id,
+          },
+        })
+      }
+
+      // Technicians must belong to the team to join, managers/admins get auto-joined
+      const isTeamMember = await prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId: team.id, userId } },
+      })
+      if (isTeamMember || role === 'ADMIN' || role === 'MANAGER') {
+        await prisma.chatChannelMember.upsert({
+          where: { channelId_userId: { channelId: teamChannelId, userId } },
+          update: {},
+          create: { channelId: teamChannelId, userId },
+        })
+      }
+    }
+
+    // 3. Sync Active Work Orders
+    const queryConditions: Prisma.WorkOrderWhereInput = {}
+    if (role === 'TECHNICIAN') {
+      queryConditions.OR = [
+        { assignedToId: userId },
+        { createdById: userId },
+      ]
+    }
+    const workOrders = await prisma.workOrder.findMany({
+      where: {
+        ...queryConditions,
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+      },
+      select: { id: true, woNumber: true, title: true, priority: true, status: true },
+      orderBy: { woNumber: 'desc' },
+      take: 30,
+    })
+
+    for (const wo of workOrders) {
+      const woChannelId = `WO_${wo.id}`
+      let woChan = await prisma.chatChannel.findUnique({ where: { id: woChannelId } })
+      if (!woChan) {
+        woChan = await prisma.chatChannel.create({
+          data: {
+            id: woChannelId,
+            name: `${wo.woNumber}: ${wo.title}`,
+            type: 'workorder',
+            description: `Priority: ${wo.priority} | Status: ${wo.status}`,
+            avatarText: '📋',
+            entityId: wo.id,
+          },
+        })
+      }
+      await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId: woChannelId, userId } },
+        update: {},
+        create: { channelId: woChannelId, userId },
+      })
+    }
+
+    // 4. Sync Other Users as standard DIRECT DMs
+    const otherUsers = await prisma.user.findMany({
+      where: { isActive: true, id: { not: userId } },
+      select: { id: true, name: true, role: true, email: true },
+      take: 50,
+    })
+
+    for (const other of otherUsers) {
+      const sortedIds = [userId, other.id].sort()
+      const dmChannelId = `DIRECT_${sortedIds[0]}_${sortedIds[1]}`
+      let dmChan = await prisma.chatChannel.findUnique({ where: { id: dmChannelId } })
+      if (!dmChan) {
+        dmChan = await prisma.chatChannel.create({
+          data: {
+            id: dmChannelId,
+            name: other.name,
+            type: 'direct',
+            description: `Role: ${other.role} | ${other.email}`,
+            avatarText: '👤',
+            entityId: other.id,
+          },
+        })
+      }
+      // Upsert memberships
+      await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId: dmChannelId, userId } },
+        update: {},
+        create: { channelId: dmChannelId, userId },
+      })
+      await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId: dmChannelId, userId: other.id } },
+        update: {},
+        create: { channelId: dmChannelId, userId: other.id },
+      })
+    }
+  } catch (err) {
+    console.error('ensureStaticAndDirectChannels discrepancy:', err)
+  }
+}
+
 // Get messages for a channel OR list available channels
 export async function GET(req: NextRequest) {
   try {
@@ -17,13 +151,20 @@ export async function GET(req: NextRequest) {
 
     if (pollUnreads) {
       try {
+        const userMemberships = await prisma.chatChannelMember.findMany({
+          where: { userId: user.userId, isArchived: false },
+          select: { channelId: true },
+        })
+        const channelsJoined = userMemberships.map(m => m.channelId)
+
         const recentMessages = await prisma.chatMessage.findMany({
           where: {
-            createdAt: { gte: new Date(Date.now() - 60000) }, // last 1 minute
-            senderId: { not: user.userId }
+            channelId: { in: channelsJoined },
+            createdAt: { gte: new Date(Date.now() - 30000) }, // last 30 seconds
+            senderId: { not: user.userId },
           },
           orderBy: { createdAt: 'desc' },
-          take: 30
+          take: 30,
         })
         return NextResponse.json(recentMessages)
       } catch (err) {
@@ -33,118 +174,127 @@ export async function GET(req: NextRequest) {
     }
 
     if (listChannels) {
-      // 1. General Channel (Statics)
-      const channels = [
-        {
-          id: 'GENERAL',
-          name: 'General System Board',
-          type: 'general',
-          description: 'Announcements and general discussions for all technicians',
-          avatarText: '📢',
+      // Refresh DB static/direct structures dynamically
+      await ensureStaticAndDirectChannels(user.userId, user.role)
+
+      // Fetch all memberships (includes general, teams, WOs, groups, and active DMs)
+      const memberships = await prisma.chatChannelMember.findMany({
+        where: { userId: user.userId, isArchived: false },
+        include: {
+          channel: {
+            include: {
+              members: {
+                select: {
+                  userId: true,
+                },
+              },
+            },
+          },
         },
-      ]
+      })
 
-      // 2. Fetch Teams the user belongs to (or all teams for managers/admins)
-      try {
-        const teams = await prisma.team.findMany({
-          where: { isDeleted: false },
-          select: { id: true, name: true, trade: true, description: true },
-        })
+      const channelList = []
+      for (const m of memberships) {
+        const channelId = m.channelId
+        const type = m.channel.type
+        let name = m.channel.name
+        let description = m.channel.description || ''
 
-        teams.forEach(team => {
-          channels.push({
-            id: `TEAM_${team.id}`,
-            name: `${team.name} (${team.trade})`,
-            type: 'team',
-            description: team.description || `Team workspace for ${team.trade}`,
-            avatarText: '🛠️',
+        // Dynamic DM name rendering
+        if (type === 'direct') {
+          const partnerId = m.channel.id.replace('DIRECT_', '').replace(user.userId, '').replace('_', '')
+          const partner = await prisma.user.findUnique({
+            where: { id: partnerId },
+            select: { name: true, role: true, email: true },
           })
-        })
-      } catch (err) {
-        console.error('Failed to load teams for messaging:', err)
-      }
-
-      // 3. Fetch Active Work Orders (User\'s assigned ones, plus others for admins/managers)
-      try {
-        const queryConditions: Prisma.WorkOrderWhereInput = {}
-        if (user.role === 'TECHNICIAN') {
-          queryConditions.OR = [
-            { assignedToId: user.userId },
-            { createdById: user.userId },
-          ]
+          if (partner) {
+            name = partner.name
+            description = `Role: ${partner.role} | ${partner.email}`
+          }
         }
 
-        const workOrders = await prisma.workOrder.findMany({
+        // Calculate actual unread counts
+        const unreadCount = await prisma.chatMessage.count({
           where: {
-            ...queryConditions,
-            status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+            channelId,
+            createdAt: { gt: m.lastReadAt },
+            senderId: { not: user.userId },
           },
-          select: { id: true, woNumber: true, title: true, priority: true, status: true },
-          orderBy: { woNumber: 'desc' },
-          take: 30,
         })
 
-        workOrders.forEach(wo => {
-          channels.push({
-            id: `WO_${wo.id}`,
-            name: `${wo.woNumber}: ${wo.title}`,
-            type: 'workorder',
-            description: `Priority: ${wo.priority} | Status: ${wo.status}`,
-            avatarText: '📋',
-          })
+        // Also compile group members if applicable
+        const memberIds = m.channel.members.map(member => member.userId)
+
+        channelList.push({
+          id: channelId,
+          name,
+          type,
+          description,
+          avatarText: m.channel.avatarText || '💬',
+          isMuted: m.isMuted,
+          isPinned: m.isPinned,
+          unreadCount,
+          memberIds,
         })
-      } catch (err) {
-        console.error('Failed to load work orders for messaging:', err)
       }
 
-      // 4. Fetch Other Users for Direct Messaging
-      try {
-        const users = await prisma.user.findMany({
-          where: {
-            isActive: true,
-            id: { not: user.userId },
-          },
-          select: { id: true, name: true, role: true, email: true },
-          orderBy: { name: 'asc' },
-        })
+      // Sort: pinned top first, then regular
+      channelList.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1
+        if (!a.isPinned && b.isPinned) return 1
+        return 0
+      })
 
-        users.forEach(otherUser => {
-          // Channel ID for DMs of format DIRECT_smallerID_largerID
-          const sortedIds = [user.userId, otherUser.id].sort()
-          const dmChannelId = `DIRECT_${sortedIds[0]}_${sortedIds[1]}`
-          channels.push({
-            id: dmChannelId,
-            name: otherUser.name,
-            type: 'direct',
-            description: `Role: ${otherUser.role} | ${otherUser.email}`,
-            avatarText: '👤',
-          })
-        })
-      } catch (err) {
-        console.error('Failed to load users for direct messaging:', err)
-      }
-
-      return NextResponse.json(channels)
+      return NextResponse.json(channelList)
     }
 
-    // Otherwise, fetch messages for specific channel
-    const channel = searchParams.get('channel') || 'GENERAL'
+    // Feed room details / Message lists
+    const channelId = searchParams.get('channel') || 'GENERAL'
+    const parentId = searchParams.get('parentId') || undefined // For threaded replies
     const limit = parseInt(searchParams.get('limit') || '50', 10)
-    
+
+    // Update read receipt state to "now" since they are viewing this room (only if fetching room feed, not thread feed)
+    if (!parentId) {
+      await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId, userId: user.userId } },
+        update: { lastReadAt: new Date() },
+        create: { channelId, userId: user.userId, lastReadAt: new Date() },
+      })
+    }
+
+    // Query messages
     const messages = await prisma.chatMessage.findMany({
-      where: { channel },
+      where: {
+        channelId,
+        parentId: parentId || null, // If parentId is not specified, only load parent/top-level messages!
+      },
+      include: {
+        replies: {
+          select: {
+            id: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
     })
 
-    return NextResponse.json(messages.reverse())
+    const messagesWithCount = messages.map(msg => {
+      const { replies, ...rest } = msg
+      return {
+        ...rest,
+        repliesCount: replies ? replies.length : 0
+      }
+    })
+
+    return NextResponse.json(messagesWithCount.reverse())
   } catch (error) {
     console.error('Messages fetch error:', error)
     return NextResponse.json({ error: 'Failed to retrieve messages' }, { status: 500 })
   }
 }
 
-// Send a message to a channel
+// Send a message to a channel OR create a group chat
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -152,9 +302,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const body = await req.json()
     const {
+      createGroup,
+      groupName,
+      groupDesc,
+      memberIds,
       content,
-      channel,
+      channel: channelId,
       channelName,
       workOrderId,
       receiverId,
@@ -163,32 +318,135 @@ export async function POST(req: NextRequest) {
       mediaName,
       mediaType,
       isVoice,
-      voiceDuration
-    } = await req.json()
+      voiceDuration,
+      parentId, // Thread parent reference
+    } = body
 
+    // 1. Relational database-backed Group Chat Creation
+    if (createGroup) {
+      if (!groupName || !groupName.trim()) {
+        return NextResponse.json({ error: 'Group name is required' }, { status: 400 })
+      }
+      const groupChannelId = `GROUP_${Date.now()}`
+      const chatChannel = await prisma.chatChannel.create({
+        data: {
+          id: groupChannelId,
+          name: groupName.trim(),
+          type: 'group',
+          description: groupDesc ? groupDesc.trim() : 'Private crew workspace',
+          avatarText: '👥',
+        },
+      })
+
+      // Add membership for the creator
+      await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId: groupChannelId, userId: user.userId } },
+        update: {},
+        create: { channelId: groupChannelId, userId: user.userId, lastReadAt: new Date() },
+      })
+
+      // Add memberships for invited colleagues
+      if (Array.isArray(memberIds)) {
+        for (const mId of memberIds) {
+          await prisma.chatChannelMember.upsert({
+            where: { channelId_userId: { channelId: groupChannelId, userId: mId } },
+            update: {},
+            create: { channelId: groupChannelId, userId: mId, lastReadAt: new Date() },
+          })
+        }
+      }
+
+      // Emit welcome intro log in newly created room
+      await prisma.chatMessage.create({
+        data: {
+          content: `👥 Welcome to the "${groupName}" Crew Chatroom. Setup isolated communication!`,
+          channelId: groupChannelId,
+          channel: groupChannelId,
+          channelName: groupName.trim(),
+          senderId: user.userId,
+          senderName: user.name,
+          senderRole: user.role,
+        },
+      })
+
+      return NextResponse.json(chatChannel)
+    }
+
+    // 2. Normal Message transmission
     if ((!content || !content.trim()) && !mediaUrl) {
       return NextResponse.json({ error: 'Content or media is required' }, { status: 400 })
     }
 
-    // Create the chat message
+    // Ensure target chat room persists in DB
+    let channelRecord = await prisma.chatChannel.findUnique({ where: { id: channelId } })
+    if (!channelRecord) {
+      // Determine type from channel prefix
+      let type = 'general'
+      if (channelId.startsWith('TEAM_')) type = 'team'
+      else if (channelId.startsWith('WO_')) type = 'workorder'
+      else if (channelId.startsWith('DIRECT_')) type = 'direct'
+      else if (channelId.startsWith('GROUP_')) type = 'group'
+
+      channelRecord = await prisma.chatChannel.create({
+        data: {
+          id: channelId,
+          name: channelName || 'Crew Space',
+          type,
+          description: type === 'group' ? 'Private group conversation' : 'Discussion zone',
+          avatarText: type === 'workorder' ? '📋' : type === 'team' ? '🛠️' : type === 'direct' ? '👤' : '👥',
+          entityId: workOrderId || teamId || receiverId || null,
+        },
+      })
+    }
+
+    // Ensure sender has membership
+    await prisma.chatChannelMember.upsert({
+      where: { channelId_userId: { channelId, userId: user.userId } },
+      update: { lastReadAt: new Date() },
+      create: { channelId, userId: user.userId, lastReadAt: new Date() },
+    })
+
+    // Create the message database-backed record
     const chatMessage = await prisma.chatMessage.create({
       data: {
         content: content || '',
-        channel,
-        channelName,
+        channelId,
+        channel: channelId,
+        channelName: channelName || 'Crew Space',
         senderId: user.userId,
         senderName: user.name,
         senderRole: user.role,
-        workOrderId,
-        receiverId,
-        teamId,
-        mediaUrl,
-        mediaName,
-        mediaType,
+        workOrderId: workOrderId || null,
+        receiverId: receiverId || null,
+        teamId: teamId || null,
+        mediaUrl: mediaUrl || null,
+        mediaName: mediaName || null,
+        mediaType: mediaType || null,
         isVoice: !!isVoice,
-        voiceDuration,
+        voiceDuration: voiceDuration || null,
+        parentId: parentId || null,
       },
     })
+
+    // Push active system notifications for other members of the channel
+    const otherMembers = await prisma.chatChannelMember.findMany({
+      where: { channelId, userId: { not: user.userId }, isMuted: false },
+      select: { userId: true },
+    })
+
+    for (const member of otherMembers) {
+      await prisma.notification.create({
+        data: {
+          userId: member.userId,
+          title: `Message inside ${channelName || 'Crew Chat'}`,
+          message: `${user.name}: ${content ? (content.substring(0, 60) + (content.length > 60 ? '...' : '')) : 'Sent an attachment'}`,
+          type: 'chat',
+          entityId: chatMessage.id,
+          href: `/messages?channel=${channelId}`,
+          isRead: false,
+        },
+      })
+    }
 
     return NextResponse.json(chatMessage)
   } catch (error) {
@@ -197,7 +455,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Update/edit an existing message
+// Update/edit an existing message OR update channel preferences
 export async function PATCH(req: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -205,7 +463,64 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id, content } = await req.json()
+    const body = await req.json()
+
+    // 1. Check if modifying a group chat channel definition
+    if (body.updateGroup && body.channelId) {
+      const { channelId, groupName, groupDesc, memberIds } = body
+      const updatedChannel = await prisma.chatChannel.update({
+        where: { id: channelId },
+        data: {
+          name: groupName ? groupName.trim() : undefined,
+          description: groupDesc !== undefined ? groupDesc.trim() : undefined,
+        },
+      })
+
+      if (Array.isArray(memberIds)) {
+        // Delete older associated memberships (except the current user)
+        await prisma.chatChannelMember.deleteMany({
+          where: {
+            channelId,
+            userId: { not: user.userId },
+          },
+        })
+
+        // Insert/refresh selected direct additions
+        for (const mId of memberIds) {
+          await prisma.chatChannelMember.upsert({
+            where: { channelId_userId: { channelId, userId: mId } },
+            update: {},
+            create: { channelId, userId: mId, lastReadAt: new Date() },
+          })
+        }
+      }
+
+      return NextResponse.json(updatedChannel)
+    }
+
+    // 2. Check if updating channel membership preferences
+    if (body.channelId) {
+      const { channelId, isPinned, isMuted, isArchived } = body
+      const updatedPreference = await prisma.chatChannelMember.upsert({
+        where: { channelId_userId: { channelId, userId: user.userId } },
+        update: {
+          isPinned: isPinned !== undefined ? isPinned : undefined,
+          isMuted: isMuted !== undefined ? isMuted : undefined,
+          isArchived: isArchived !== undefined ? isArchived : undefined,
+        },
+        create: {
+          channelId,
+          userId: user.userId,
+          isPinned: isPinned !== undefined ? isPinned : false,
+          isMuted: isMuted !== undefined ? isMuted : false,
+          isArchived: isArchived !== undefined ? isArchived : false,
+        },
+      })
+      return NextResponse.json(updatedPreference)
+    }
+
+    // 2. Otherwise update message text
+    const { id, content } = body
     if (!id || !content || !content.trim()) {
       return NextResponse.json({ error: 'Invalid message update request' }, { status: 400 })
     }
@@ -215,7 +530,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
     }
 
-    // Authorization: only sender can edit
     if (msg.senderId !== user.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -254,7 +568,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
     }
 
-    // Authorization: only sender, manager, or admin can delete
+    // Authorization: sender or high-role managers
     if (msg.senderId !== user.userId && user.role !== 'ADMIN' && user.role !== 'MANAGER') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

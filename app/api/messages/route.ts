@@ -132,16 +132,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { content, channel, channelName, workOrderId, receiverId, teamId } = await req.json()
+    const {
+      content,
+      channel,
+      channelName,
+      workOrderId,
+      receiverId,
+      teamId,
+      mediaUrl,
+      mediaName,
+      mediaType,
+      isVoice,
+      voiceDuration
+    } = await req.json()
 
-    if (!content || !content.trim()) {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+    if ((!content || !content.trim()) && !mediaUrl) {
+      return NextResponse.json({ error: 'Content or media is required' }, { status: 400 })
     }
 
     // Create the chat message
     const chatMessage = await prisma.chatMessage.create({
       data: {
-        content,
+        content: content || '',
         channel,
         channelName,
         senderId: user.userId,
@@ -150,6 +162,11 @@ export async function POST(req: NextRequest) {
         workOrderId,
         receiverId,
         teamId,
+        mediaUrl,
+        mediaName,
+        mediaType,
+        isVoice: !!isVoice,
+        voiceDuration,
       },
     })
 
@@ -157,5 +174,82 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Message creation error:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
+  }
+}
+
+// Update/edit an existing message
+export async function PATCH(req: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id, content } = await req.json()
+    if (!id || !content || !content.trim()) {
+      return NextResponse.json({ error: 'Invalid message update request' }, { status: 400 })
+    }
+
+    const msg = await prisma.chatMessage.findUnique({ where: { id } })
+    if (!msg) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    // Authorization: only sender can edit
+    if (msg.senderId !== user.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const updated = await prisma.chatMessage.update({
+      where: { id },
+      data: {
+        content,
+        isEdited: true,
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Message update error:', error)
+    return NextResponse.json({ error: 'Failed to update message' }, { status: 500 })
+  }
+}
+
+// Soft delete a message
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'Message ID is required' }, { status: 400 })
+    }
+
+    const msg = await prisma.chatMessage.findUnique({ where: { id } })
+    if (!msg) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    // Authorization: only sender, manager, or admin can delete
+    if (msg.senderId !== user.userId && user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const deleted = await prisma.chatMessage.update({
+      where: { id },
+      data: {
+        content: '🗑️ This message was deleted.',
+        isDeleted: true,
+      },
+    })
+
+    return NextResponse.json(deleted)
+  } catch (error) {
+    console.error('Message delete error:', error)
+    return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
   }
 }

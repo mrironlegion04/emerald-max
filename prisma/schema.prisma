@@ -898,18 +898,25 @@ model PushSubscription {
 }
 
 model ChatMessage {
-  id          String   @id @default(cuid())
-  content     String
-  channel     String   // "GENERAL", "TEAM_<teamId>", "WO_<workOrderId>", "DIRECT_<userId1>_<userId2>"
-  channelName String   // Human-readable label
-  senderId    String
-  senderName  String
-  senderRole  Role     @default(TECHNICIAN)
-  workOrderId String?  // Optional: associated work order
-  receiverId  String?  // Optional: for direct messages
-  teamId      String?  // Optional: for team messages
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  content       String
+  channel       String   // "GENERAL", "TEAM_<teamId>", "WO_<workOrderId>", "DIRECT_<userId1>_<userId2>"
+  channelName   String   // Human-readable label
+  senderId      String
+  senderName    String
+  senderRole    Role     @default(TECHNICIAN)
+  workOrderId   String?  // Optional: associated work order
+  receiverId    String?  // Optional: for direct messages
+  teamId        String?  // Optional: for team messages
+  mediaUrl      String?  // URL of attachment from MinIO or local filesystem
+  mediaName     String?  // Display filename
+  mediaType     String?  // MIME type
+  isVoice       Boolean  @default(false)
+  voiceDuration String?  // Optional voice clip duration
+  isEdited      Boolean  @default(false)
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([channel])
   @@index([senderId])

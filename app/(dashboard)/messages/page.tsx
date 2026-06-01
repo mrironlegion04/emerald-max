@@ -89,6 +89,7 @@ export default function MessagesPage() {
   const [loadingChannels, setLoadingChannels] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isUploadingFile, setIsUploadingFile] = useState(false)
 
   // Pin, Mute, Private Channels (LocalStorage-driven)
   const [pinnedIds, setPinnedIds] = useState<string[]>([])
@@ -464,14 +465,16 @@ export default function MessagesPage() {
       }
 
       const postBody = {
-        content: optimisticMock.mediaUrl 
-          ? `${activeMsgVal} \n[Attachment: ${optimisticMock.mediaName} - Image: ${optimisticMock.mediaUrl}]`
-          : activeMsgVal,
+        content: activeMsgVal,
         channel: activeChannel.id,
         channelName: activeChannel.name,
         workOrderId,
         teamId,
         receiverId,
+        mediaUrl: optimisticMock.mediaUrl,
+        mediaName: optimisticMock.mediaName,
+        isVoice: optimisticMock.isVoice,
+        voiceDuration: optimisticMock.voiceDuration,
       }
 
       const res = await fetch('/api/messages', {
@@ -725,6 +728,45 @@ export default function MessagesPage() {
     }
   }, [])
 
+  // Handle uploading real file/photo attachment to MinIO
+  const handleRealFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingFile(true)
+    displayToast(`📤 Uploading "${file.name}" to MinIO...`)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/api/messages/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setSelectedMediaPreset({
+          url: data.url,
+          name: data.name,
+        })
+        setAudioBlobTranscribed(null) // clear voice notes to avoid conflict
+        displayToast(`✅ File "${file.name}" uploaded successfully!`)
+      } else {
+        const errData = await res.json()
+        displayToast(`❌ Upload failed: ${errData.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error(err)
+      displayToast("❌ Error connecting to server during upload.")
+    } finally {
+      setIsUploadingFile(false)
+      // Reset input value so they can upload same file again
+      e.target.value = ''
+    }
+  }
+
   // Side-Thread comment submission
   const submitThreadComment = (e: React.FormEvent) => {
     e.preventDefault()
@@ -767,27 +809,69 @@ export default function MessagesPage() {
   }
 
   // Client Msg Edits & Deletion handling
-  const setLocalMessageContent = (id: string, newTxt: string) => {
-    const edits_key = 'maintainx_msg_local_edits'
-    const curEdits = JSON.parse(localStorage.getItem(edits_key) || '{}')
-    curEdits[id] = newTxt
-    localStorage.setItem(edits_key, JSON.stringify(curEdits))
-    
-    setEditingMsgId(null)
-    setEditingMsgContent('')
-    fetchMessagesRef.current()
-    displayToast("✏️ Message updated successfully!")
+  const setLocalMessageContent = async (id: string, newTxt: string) => {
+    if (activeChannel?.type === 'group' || id.startsWith('sys_') || id.startsWith('message_')) {
+      const edits_key = 'maintainx_msg_local_edits'
+      const curEdits = JSON.parse(localStorage.getItem(edits_key) || '{}')
+      curEdits[id] = newTxt
+      localStorage.setItem(edits_key, JSON.stringify(curEdits))
+      
+      setEditingMsgId(null)
+      setEditingMsgContent('')
+      fetchMessagesRef.current()
+      displayToast("✏️ Message updated successfully!")
+      return
+    }
+
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, content: newTxt }),
+      })
+      if (res.ok) {
+        setEditingMsgId(null)
+        setEditingMsgContent('')
+        await fetchMessagesRef.current()
+        displayToast("✏️ Message updated on server!")
+      } else {
+        const errData = await res.json()
+        displayToast(`❌ Edit failed: ${errData.error || 'Server error'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      displayToast("❌ Could not connect to edit message.")
+    }
   }
 
-  const deleteLocalMessage = (id: string) => {
-    const del_key = 'maintainx_msg_local_deletes'
-    const curDeletes = JSON.parse(localStorage.getItem(del_key) || '[]')
-    if (!curDeletes.includes(id)) {
-      curDeletes.push(id)
-      localStorage.setItem(del_key, JSON.stringify(curDeletes))
+  const deleteLocalMessage = async (id: string) => {
+    if (activeChannel?.type === 'group' || id.startsWith('sys_') || id.startsWith('message_')) {
+      const del_key = 'maintainx_msg_local_deletes'
+      const curDeletes = JSON.parse(localStorage.getItem(del_key) || '[]')
+      if (!curDeletes.includes(id)) {
+        curDeletes.push(id)
+        localStorage.setItem(del_key, JSON.stringify(curDeletes))
+      }
+      fetchMessagesRef.current()
+      displayToast("🗑️ Message deleted")
+      return
     }
-    fetchMessagesRef.current()
-    displayToast("🗑️ Message deleted")
+
+    try {
+      const res = await fetch(`/api/messages?id=${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        await fetchMessagesRef.current()
+        displayToast("🗑️ Message deleted from server!")
+      } else {
+        const errData = await res.json()
+        displayToast(`❌ Deletion failed: ${errData.error || 'Server error'}`)
+      }
+    } catch (e) {
+      console.error(e)
+      displayToast("❌ Could not connect to delete message.")
+    }
   }
 
   // Copy Message jump link
@@ -1366,20 +1450,36 @@ export default function MessagesPage() {
                               </p>
                             )}
 
-                            {/* Media image card block */}
-                            {msg.mediaUrl && (
-                              <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-3xs max-w-sm">
-                                <img
-                                  src={msg.mediaUrl}
-                                  alt={msg.mediaName || 'Media'}
-                                  className="w-full h-32 object-cover"
-                                />
-                                <div className="p-2 bg-white border-t border-slate-100 text-[9px] font-bold text-slate-500 flex items-center gap-1.5">
-                                  <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                                  <span className="truncate">{msg.mediaName || 'Attached attachment'}</span>
-                                </div>
-                              </div>
-                            )}
+                             {/* Media image card block */}
+                             {msg.mediaUrl && (
+                               <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-3xs max-w-sm">
+                                 {/[.](jpeg|jpg|png|gif|webp|svg)/i.test(msg.mediaUrl) || msg.mediaUrl.startsWith('https://images.unsplash.com') ? (
+                                   <img
+                                     src={msg.mediaUrl}
+                                     alt={msg.mediaName || 'Media'}
+                                     className="w-full h-32 object-cover"
+                                   />
+                                 ) : (
+                                   <div className="w-full h-16 bg-slate-50 flex items-center justify-center text-slate-500 text-xs font-bold p-3 select-none border-b border-slate-100">
+                                     📁 File Attachment ({msg.mediaUrl.split('.').pop()?.toUpperCase() || 'DATA'})
+                                   </div>
+                                 )}
+                                 <div className="p-2 bg-white border-t border-slate-100 text-[9px] font-bold text-slate-500 flex items-center justify-between gap-1.5">
+                                   <span className="flex items-center gap-1.5 truncate text-slate-600">
+                                     <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                                     <span className="truncate">{msg.mediaName || 'Attached download'}</span>
+                                   </span>
+                                   <a
+                                     href={msg.mediaUrl}
+                                     target="_blank"
+                                     rel="noreferrer"
+                                     className="text-blue-600 hover:underline px-2 py-0.5 bg-blue-50 hover:bg-blue-100 rounded text-[8px] font-extrabold select-none transition-colors"
+                                   >
+                                     Download
+                                   </a>
+                                 </div>
+                               </div>
+                             )}
                           </div>
                         )}
 
@@ -1462,13 +1562,18 @@ export default function MessagesPage() {
             </div>
 
             {/* Micro-Panel attachment files preview banner before active form submission */}
-            {(selectedMediaPreset || audioBlobTranscribed) && (
+            {(selectedMediaPreset || audioBlobTranscribed || isUploadingFile) && (
               <div className="p-3 bg-amber-50 border-t border-amber-200/60 flex items-center justify-between flex-shrink-0 animate-fade-in">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-amber-800">
                   <Sparkles className="w-4 h-4 text-amber-500 fill-amber-300" />
-                  {selectedMediaPreset ? (
+                  {isUploadingFile ? (
+                    <span className="flex items-center gap-1.5 font-extrabold text-amber-700">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                      Authenticating and uploading file to MinIO storage bucket...
+                    </span>
+                  ) : selectedMediaPreset ? (
                     <span className="flex items-center gap-1">
-                      Paperclip Preset Attachment: <strong className="underline">{selectedMediaPreset.name}</strong>
+                      Paperclip Attachment: <strong className="underline">{selectedMediaPreset.name}</strong>
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
@@ -1476,24 +1581,35 @@ export default function MessagesPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedMediaPreset(null)
-                      setAudioBlobTranscribed(null)
-                    }}
-                    className="p-1 hover:bg-amber-100 rounded text-amber-800"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                {!isUploadingFile && (
+                  <div className="flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMediaPreset(null)
+                        setAudioBlobTranscribed(null)
+                      }}
+                      className="p-1 hover:bg-amber-100 rounded text-amber-800 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Message input panel form */}
             <div className="bg-white border-t border-slate-200 relative p-4 flex-shrink-0">
               
+              {/* Hidden File Input for Real MinIO uploads */}
+              <input
+                type="file"
+                id="chat-file-upload-input"
+                className="hidden"
+                onChange={handleRealFileUpload}
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv"
+              />
+
               {/* @Mentions suggests autocomplete dropdown drawer */}
               {mentionQuery !== null && mentionSuggestions.length > 0 && (
                 <div
@@ -1520,9 +1636,29 @@ export default function MessagesPage() {
               {showMediaPresets && (
                 <div className="absolute bottom-full left-4 mb-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 w-80">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Attach Industrial Screenshot</span>
+                    <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Attach Team Assets</span>
                     <button onClick={() => setShowMediaPresets(false)} className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button>
                   </div>
+
+                  {/* Real computer/mobile file attachment choice */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      document.getElementById('chat-file-upload-input')?.click()
+                      setShowMediaPresets(false)
+                    }}
+                    className="w-full mb-3 p-3 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center gap-2 text-[10px] font-extrabold cursor-pointer transition-all active:scale-97"
+                  >
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    <span>Upload local computer file (MinIO)</span>
+                  </button>
+
+                  <div className="relative flex py-1 items-center mb-2">
+                    <div className="flex-grow border-t border-slate-150"></div>
+                    <span className="flex-shrink mx-2 text-[8px] font-extrabold text-slate-400 uppercase">Or select screenshot preset</span>
+                    <div className="flex-grow border-t border-slate-150"></div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     {industrialMediaPresets.map(p => (
                       <button
@@ -1550,8 +1686,9 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={() => setShowMediaPresets(!showMediaPresets)}
-                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 cursor-pointer active:scale-95 transition-transform"
-                  title="Attach screenshot photo illustration"
+                  disabled={isSending || isRecording || isUploadingFile}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 rounded-xl text-slate-500 cursor-pointer active:scale-95 transition-transform"
+                  title="Attach screenshot photo or direct production file"
                 >
                   <Paperclip className="w-4 h-4 text-slate-600" />
                 </button>
@@ -1560,7 +1697,8 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={triggerVoiceRecording}
-                  className={`p-2 rounded-xl active:scale-95 transition-all text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer relative ${
+                  disabled={isSending || isUploadingFile}
+                  className={`p-2 rounded-xl active:scale-95 transition-all text-slate-500 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center cursor-pointer relative ${
                     isRecording ? 'bg-rose-100 text-rose-600 hover:bg-rose-150 animate-pulse' : 'bg-slate-100'
                   }`}
                   title="Turn on microphone to record dictation speech transcript"
@@ -1576,24 +1714,24 @@ export default function MessagesPage() {
                 {/* Styled text-input */}
                 <input
                   type="text"
-                  placeholder={isRecording ? `🔴 Listening... speak into microphone. Tap Mic to transcribe.` : `Message ${activeChannel.name}... Type @ to tag coworkers.`}
+                  placeholder={isRecording ? `🔴 Listening... speak into microphone. Tap Mic to transcribe.` : isUploadingFile ? '📤 Uploading attachment file securely...' : `Message ${activeChannel.name}... Type @ to tag coworkers.`}
                   value={newMessage}
                   onChange={e => {
                     setNewMessage(e.target.value)
                     triggerMentionAlert(e.target.value)
                   }}
                   onKeyDown={handleMentionKeydown}
-                  disabled={isSending || isRecording}
+                  disabled={isSending || isRecording || isUploadingFile}
                   className="flex-1 px-4 py-2.5 text-xs bg-slate-100 hover:bg-slate-150/65 focus:bg-white rounded-xl border border-slate-250 focus:border-blue-500 outline-none placeholder-slate-400 transition-all font-semibold"
                 />
 
                 {/* Send action arrow */}
                 <button
                   type="submit"
-                  disabled={isSending || isRecording || (!newMessage.trim() && !selectedMediaPreset)}
+                  disabled={isSending || isRecording || isUploadingFile || (!newMessage.trim() && !selectedMediaPreset)}
                   className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-xs transition-transform active:scale-95 cursor-pointer"
                 >
-                  {isSending ? (
+                  {isSending || isUploadingFile ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Send className="w-4 h-4" />
@@ -1718,7 +1856,7 @@ export default function MessagesPage() {
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-150/80">
               <p className="text-[9px] font-extrabold text-slate-400 uppercase mb-1">Source Message Transcript:</p>
               <p className="text-[10px] italic font-bold text-slate-655 font-sans leading-relaxed">
-                "{convertingMessage.content}"
+                &ldquo;{convertingMessage.content}&rdquo;
               </p>
               <p className="text-[8px] text-slate-400 font-extrabold mt-1.5">Captured from: {convertingMessage.senderName} ({convertingMessage.senderRole}) • {new Date(convertingMessage.createdAt).toLocaleString()}</p>
             </div>

@@ -83,7 +83,8 @@ export default function TeamsAndUsersManager() {
   const [saving, setSaving] = useState(false)
 
   // Team Specific UI State
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
+  const selectedTeam = teams.find(t => t.id === selectedTeamId) || null
   const [showNewTeamForm, setShowNewTeamForm] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [showTeamDeleted, setShowTeamDeleted] = useState(false)
@@ -131,21 +132,13 @@ export default function TeamsAndUsersManager() {
         }
         setTeams(teamsData)
         setAllUsers(usersData)
-
-        // Sync currently selected team when list refreshes
-        if (selectedTeam) {
-          const currentVersion = teamsData.find((t: Team) => t.id === selectedTeam.id)
-          if (currentVersion) {
-            setSelectedTeam(currentVersion)
-          }
-        }
       })
       .catch((err) => {
         console.error(err)
         setError('Failed to securely connect to directories. Please retry.')
       })
       .finally(() => setLoading(false))
-  }, [showTeamDeleted, selectedTeam])
+  }, [showTeamDeleted])
 
   useEffect(() => {
     refreshData()
@@ -176,7 +169,7 @@ export default function TeamsAndUsersManager() {
       
       const newTeam = await res.json()
       setTeams([...teams, newTeam])
-      setSelectedTeam(newTeam)
+      setSelectedTeamId(newTeam.id)
       setTeamForm({ name: '', trade: '', description: '' })
       setShowNewTeamForm(false)
       router.refresh()
@@ -204,7 +197,7 @@ export default function TeamsAndUsersManager() {
       
       const updated = await res.json()
       setTeams(teams.map(t => t.id === updated.id ? updated : t))
-      setSelectedTeam(updated)
+      setSelectedTeamId(updated.id)
       setEditingTeam(null)
       setTeamForm({ name: '', trade: '', description: '' })
       router.refresh()
@@ -241,9 +234,6 @@ export default function TeamsAndUsersManager() {
       setTeams(teams.map(t =>
         t.id === teamId ? { ...t, isDeleted: true, deletedAt: new Date().toISOString() } : t
       ))
-      if (selectedTeam?.id === teamId) {
-        setSelectedTeam({ ...selectedTeam, isDeleted: true } as Team)
-      }
       router.refresh()
     } catch (err) {
       setError((err as Error).message)
@@ -268,7 +258,7 @@ export default function TeamsAndUsersManager() {
       
       const restored = await res.json()
       setTeams(teams.map(t => t.id === restored.id ? restored : t))
-      setSelectedTeam(restored)
+      setSelectedTeamId(restored.id)
       router.refresh()
     } catch (err) {
       setError((err as Error).message)
@@ -294,7 +284,6 @@ export default function TeamsAndUsersManager() {
       
       const updated = await res.json()
       setTeams(teams.map(t => t.id === updated.id ? updated : t))
-      setSelectedTeam(updated)
       setSelectedUserIdForMember('')
       setShowMemberForm(false)
       router.refresh()
@@ -321,7 +310,6 @@ export default function TeamsAndUsersManager() {
       
       const updated = await res.json()
       setTeams(teams.map(t => t.id === updated.id ? updated : t))
-      setSelectedTeam(updated)
       router.refresh()
     } catch (err) {
       setError((err as Error).message)
@@ -485,7 +473,7 @@ export default function TeamsAndUsersManager() {
                   checked={showTeamDeleted}
                   onChange={e => {
                     setShowTeamDeleted(e.target.checked)
-                    setSelectedTeam(null)
+                    setSelectedTeamId(null)
                   }}
                   className="w-4 h-4 rounded border-slate-300 text-red-650 focus:ring-red-500 cursor-pointer"
                 />
@@ -513,7 +501,7 @@ export default function TeamsAndUsersManager() {
                       return (
                         <div
                           key={team.id}
-                          onClick={() => setSelectedTeam(team)}
+                          onClick={() => setSelectedTeamId(team.id)}
                           className={`p-4.5 cursor-pointer transition-all flex items-start justify-between gap-4 select-none ${
                             isSelected ? 'bg-blue-50/50 border-l-4 border-l-blue-600' : 'hover:bg-slate-50/40'
                           } ${team.isDeleted ? 'bg-rose-50/25 opacity-70' : ''}`}
@@ -653,8 +641,8 @@ export default function TeamsAndUsersManager() {
                   {/* Mobile Back navigation button */}
                   <div className="p-3 border-b border-slate-100 lg:hidden bg-slate-50 flex items-center">
                     <button
-                      onClick={() => setSelectedTeam(null)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white shadow-3xs px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer"
+                      onClick={() => setSelectedTeamId(null)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 border border-slate-205 bg-white shadow-3xs px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer"
                     >
                       ← Back to index
                     </button>

@@ -43,6 +43,7 @@ interface ChatChannel {
   type: 'general' | 'team' | 'workorder' | 'direct' | 'group'
   description: string
   avatarText: string
+  memberIds?: string[]
 }
 
 // Extended message type matching schema database rows + rich mock elements
@@ -118,6 +119,25 @@ export default function MessagesPage() {
   const [showEditGroupModal, setShowEditGroupModal] = useState(false)
   const [editGroupName, setEditGroupName] = useState('')
   const [editGroupDesc, setEditGroupDesc] = useState('')
+  const [editGroupMembers, setEditGroupMembers] = useState<string[]>([])
+
+  const getChannelMembers = (channel: ChatChannel): string[] => {
+    if (channel.memberIds && channel.memberIds.length > 0) {
+      return channel.memberIds
+    }
+    const matched: string[] = []
+    if (channel.description) {
+      systemUsers.forEach(u => {
+        if (channel.description.includes(u.name)) {
+          matched.push(u.id)
+        }
+      })
+    }
+    if (currentUser?.userId) {
+      matched.push(currentUser.userId)
+    }
+    return matched.length > 0 ? matched : [currentUser?.userId].filter(Boolean) as string[]
+  }
   
   // Dialog/Modal UI states
   const [showCreateGroup, setShowCreateGroup] = useState(false)
@@ -681,7 +701,8 @@ export default function MessagesPage() {
       name: newGroupName,
       type: 'group',
       description: newGroupDesc || `Private crew room: ${membersName || 'Empty'}`,
-      avatarText: '👥'
+      avatarText: '👥',
+      memberIds: [currentUser?.userId, ...selectedGroupMembers].filter(Boolean) as string[]
     }
 
     const updatedGroups = [...customGroups, newGroupChannel]
@@ -712,12 +733,23 @@ export default function MessagesPage() {
   const updateCustomGroupChat = () => {
     if (!editGroupName.trim() || !activeChannel) return
     
+    const finalMemberIds = [currentUser?.userId, ...editGroupMembers].filter(Boolean) as string[]
+    const membersName = dbChannels
+      .filter(c => c.type === 'direct')
+      .filter(c => {
+        const otherId = c.id.substring(7).split('_').find(x => x !== currentUser?.userId)
+        return otherId && finalMemberIds.includes(otherId)
+      })
+      .map(c => c.name)
+      .join(', ')
+
     const updatedGroups = customGroups.map(g => {
       if (g.id === activeChannel.id) {
         return {
           ...g,
           name: editGroupName.trim(),
-          description: editGroupDesc.trim()
+          description: editGroupDesc.trim() || `Private crew room: ${membersName || 'Empty'}`,
+          memberIds: finalMemberIds
         }
       }
       return g
@@ -726,11 +758,10 @@ export default function MessagesPage() {
     setCustomGroups(updatedGroups)
     localStorage.setItem('maintainx_msg_custom_groups', JSON.stringify(updatedGroups))
     
-    setActiveChannel(prev => prev ? {
-      ...prev,
-      name: editGroupName.trim(),
-      description: editGroupDesc.trim()
-    } : null)
+    const matched = updatedGroups.find(g => g.id === activeChannel.id)
+    if (matched) {
+      setActiveChannel(matched)
+    }
     
     setShowEditGroupModal(false)
     displayToast(`🔧 Group Chat updated: "${editGroupName}"`)
@@ -1356,6 +1387,27 @@ export default function MessagesPage() {
                     )}
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{activeChannel.description}</p>
+                  
+                  {activeChannel.type === 'group' && (
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1 select-none">
+                      <span className="text-[8px] font-extrabold text-blue-600 bg-blue-50 border border-blue-150 px-1 py-0.2 rounded-xs uppercase tracking-wider">
+                        Crew
+                      </span>
+                      {getChannelMembers(activeChannel).map(memberId => {
+                        const isSelf = memberId === currentUser?.userId
+                        const memberName = isSelf ? 'You' : (systemUsers.find(u => u.id === memberId)?.name || memberId)
+                        return (
+                          <span
+                            key={memberId}
+                            className="inline-flex items-center gap-1 text-[8px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.2 rounded-full"
+                          >
+                            <span className={`w-1 h-1 rounded-full ${isSelf ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`} />
+                            {memberName}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1366,12 +1418,14 @@ export default function MessagesPage() {
                     onClick={() => {
                       setEditGroupName(activeChannel.name)
                       setEditGroupDesc(activeChannel.description || '')
+                      const currentMembers = getChannelMembers(activeChannel).filter(id => id !== currentUser?.userId)
+                      setEditGroupMembers(currentMembers)
                       setShowEditGroupModal(true)
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-extrabold text-amber-700 border border-amber-250 bg-amber-50 hover:bg-amber-100 rounded-xl shadow-xs transition-transform active:scale-95 cursor-pointer select-none"
                     title="Edit group chat details and summary description"
                   >
-                    <Settings className="w-3.5 h-3.5 text-amber-605" />
+                    <Settings className="w-3.5 h-3.5 text-amber-650" />
                     <span>Edit Group</span>
                   </button>
                 )}
@@ -2285,12 +2339,48 @@ export default function MessagesPage() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Objectives Description</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Task coordinates, safety objectives or equipment reference..."
                   value={editGroupDesc}
                   onChange={e => setEditGroupDesc(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:border-amber-500 outline-none font-semibold text-xs font-sans"
                 />
+              </div>
+
+              {/* Members Checklist for Management */}
+              <div>
+                <legend className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Manage Crew Members (Add/Remove)</legend>
+                <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-36 overflow-y-auto bg-slate-50 p-1">
+                  {dbChannels
+                    .filter(c => c.type === 'direct')
+                    .map(channel => {
+                      const otherId = channel.id.substring(7).split('_').find(x => x !== currentUser?.userId)
+                      if (!otherId) return null
+                      const isChecked = editGroupMembers.includes(otherId)
+
+                      return (
+                        <label
+                          key={otherId}
+                          className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{channel.avatarText}</span>
+                            <span className="font-bold text-slate-705">{channel.name}</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setEditGroupMembers(prev =>
+                                isChecked ? prev.filter(x => x !== otherId) : [...prev, otherId]
+                              )
+                            }}
+                            className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                          />
+                        </label>
+                      )
+                    })}
+                </div>
               </div>
             </div>
 

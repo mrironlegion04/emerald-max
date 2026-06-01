@@ -29,6 +29,8 @@ const stepSchema = z.object({
   isMandatory:z.boolean().default(false),
   options:    z.array(z.string()).default([]),
   sortOrder:  z.number().int().default(0),
+  settings:   z.any().optional(),
+  logic:      z.any().optional(),
 }).refine(
   step => !['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(step.type) || step.options.length >= 1,
   { message: 'Multiple choice, single select, and dropdown steps must have at least one option', path: ['options'] }

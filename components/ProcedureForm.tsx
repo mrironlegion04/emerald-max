@@ -12,7 +12,8 @@ import {
   Paperclip, 
   Heading, 
   ArrowUp, 
-  ArrowDown
+  ArrowDown,
+  Settings
 } from 'lucide-react'
 
 const STEP_TYPE_OPTIONS = [
@@ -39,6 +40,10 @@ interface ProcedureStep {
   isMandatory: boolean
   options: string[]
   sortOrder: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  logic?: any
 }
 
 interface SelectOption {
@@ -214,9 +219,12 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
 
   // Drag and drop state
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
+  
+  // Settings toggle
+  const [expandedSettingsIdx, setExpandedSettingsIdx] = useState<number | null>(null)
 
   function addStep() {
-    setSteps(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length }])
+    setSteps(prev => [...prev, { label: '', type: 'CHECKBOX', isMandatory: false, options: [], sortOrder: prev.length, settings: {}, logic: {} }])
   }
 
   function removeStep(idx: number) {
@@ -225,6 +233,14 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
 
   function updateStep<K extends keyof ProcedureStep>(idx: number, field: K, value: ProcedureStep[K]) {
     setSteps(prev => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it))
+  }
+
+  function updateStepConfig(idx: number, type: 'settings' | 'logic', key: string, value: any) {
+    setSteps(prev => prev.map((it, i) => {
+      if (i !== idx) return it
+      const current = it[type] || {}
+      return { ...it, [type]: { ...current, [key]: value } }
+    }))
   }
 
   function addOption(idx: number) {
@@ -309,6 +325,8 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
           isMandatory: it.isMandatory,
           options:     optionRequiredTypes.includes(it.type) ? it.options.map(o => o.trim()).filter(Boolean) : [],
           sortOrder:   i,
+          settings:    it.settings ?? {},
+          logic:       it.logic ?? {},
         })),
         assetIds:    selectedAssetIds,
         categoryIds: selectedCategoryIds,
@@ -646,14 +664,24 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                             </button>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => removeStep(idx)}
-                            className="p-1.5 text-slate-350 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete this block"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center border border-slate-100 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSettingsIdx(expandedSettingsIdx === idx ? null : idx)}
+                              className={`p-1.5 transition-colors ${expandedSettingsIdx === idx ? 'bg-slate-100 text-blue-600' : 'text-slate-405 hover:bg-slate-50 hover:text-slate-605'}`}
+                              title="Field Settings & Logic"
+                            >
+                              <Settings className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeStep(idx)}
+                              className="p-1.5 text-slate-350 hover:text-red-500 hover:bg-red-50 transition-colors border-l border-slate-100"
+                              title="Delete this block"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -707,6 +735,128 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                         {step.type === 'FILE' && '📎 File Attachment: uploads technical manuals or files.'}
                         {step.type === 'METER' && '⚙️ Meter Reading: stores physical metrics.'}
                       </div>
+
+                      {/* Advanced Settings Panel */}
+                      {expandedSettingsIdx === idx && (
+                        <div className="bg-slate-50 border border-slate-200 mt-3 p-4 rounded-lg animate-fade-in space-y-4">
+                          <h3 className="text-xs font-bold text-slate-800 border-b border-slate-200 pb-2 flex items-center gap-1.5">
+                            <Settings className="w-3.5 h-3.5" /> Field Settings & Logic
+                          </h3>
+                          
+                          {step.type === 'INSPECTION' && (
+                            <div className="space-y-2">
+                              <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-100 rounded-md transition border border-transparent hover:border-slate-200">
+                                <input
+                                  type="checkbox"
+                                  checked={!!step.settings?.requirePhotoOnFail}
+                                  onChange={e => updateStepConfig(idx, 'settings', 'requirePhotoOnFail', e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <div className="text-xs">
+                                  <span className="font-semibold text-slate-800 block">Require Photo on Fail</span>
+                                  <span className="text-slate-500">Forces the user to take a picture if the item is flagged or failed.</span>
+                                </div>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-100 rounded-md transition border border-transparent hover:border-slate-200">
+                                <input
+                                  type="checkbox"
+                                  checked={!!step.settings?.correctiveAction}
+                                  onChange={e => updateStepConfig(idx, 'settings', 'correctiveAction', e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <div className="text-xs">
+                                  <span className="font-semibold text-slate-800 block">Corrective Work Order Action</span>
+                                  <span className="text-slate-500">Automatically drafts a new repair work order if this step fails.</span>
+                                </div>
+                              </label>
+                            </div>
+                          )}
+
+                          {step.type === 'NUMBER_INPUT' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">Min Value</label>
+                                <input
+                                  type="number"
+                                  value={step.settings?.min ?? ''}
+                                  onChange={e => updateStepConfig(idx, 'settings', 'min', e.target.value)}
+                                  placeholder="e.g. 90"
+                                  className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-md outline-none focus:border-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">Max Value</label>
+                                <input
+                                  type="number"
+                                  value={step.settings?.max ?? ''}
+                                  onChange={e => updateStepConfig(idx, 'settings', 'max', e.target.value)}
+                                  placeholder="e.g. 110"
+                                  className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-md outline-none focus:border-blue-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {step.type === 'METER' && (
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">Meter Unit</label>
+                              <input
+                                type="text"
+                                value={step.settings?.unit ?? ''}
+                                onChange={e => updateStepConfig(idx, 'settings', 'unit', e.target.value)}
+                                placeholder="e.g. Hours, Miles, Celsius"
+                                className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-md outline-none focus:border-blue-500 max-w-sm"
+                              />
+                            </div>
+                          )}
+
+                          {/* Conditional Logic (Available for all fields except SECTION) */}
+                          {!isSection && (
+                            <div className="pt-2">
+                              <h4 className="text-[11px] font-bold text-slate-700 mb-2 uppercase tracking-wider">Conditional Logic</h4>
+                              <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
+                                <label className="flex items-center gap-2">
+                                  <input 
+                                    type="checkbox"
+                                    checked={!!step.logic?.enabled}
+                                    onChange={e => updateStepConfig(idx, 'logic', 'enabled', e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-slate-300"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-700">Display this field conditionally</span>
+                                </label>
+                                
+                                {step.logic?.enabled && (
+                                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-xs border-t border-slate-100">
+                                    <span className="text-slate-500 flex-shrink-0">Show this field ONLY IF</span>
+                                    <select
+                                      value={step.logic?.parentStepIdx ?? ''}
+                                      onChange={e => updateStepConfig(idx, 'logic', 'parentStepIdx', e.target.value)}
+                                      className="flex-1 bg-slate-50 border border-slate-200 rounded p-1 outline-none truncate"
+                                    >
+                                      <option value="">-- Select Parent Step --</option>
+                                      {steps.slice(0, idx).map((s, i) => {
+                                        if (s.type === 'SECTION' || s.type === 'INSTRUCTION') return null;
+                                        return (
+                                          <option key={i} value={i}>Step {i + 1}: {s.label.substring(0, 30)}{s.label.length > 30 ? '...' : ''}</option>
+                                        )
+                                      })}
+                                    </select>
+                                    <span className="text-slate-500">is</span>
+                                    <input
+                                      type="text"
+                                      value={step.logic?.parentStepValue ?? ''}
+                                      onChange={e => updateStepConfig(idx, 'logic', 'parentStepValue', e.target.value)}
+                                      placeholder="Value (e.g. Yes, Pass)"
+                                      className="w-32 bg-slate-50 border border-slate-200 rounded p-1 outline-none"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+                      )}
 
                     </div>
                   </div>

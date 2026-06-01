@@ -54,6 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               sortOrder: step.sortOrder,
               options: step.options,
               isChecked: false,
+              settings: step.settings ?? {},
+              logic: step.logic ?? {},
             }))
           }
         },

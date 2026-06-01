@@ -734,6 +734,10 @@ model WOProcedureStep {
   checkedAt   DateTime?
   checkedBy   String?
   sortOrder   Int         @default(0)
+
+  settings    Json?
+  logic       Json?
+
   procedureId String
   procedure   WOProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
   assetId     String?
@@ -854,6 +858,7 @@ model Procedure {
   updatedAt   DateTime  @updatedAt
 
   steps       ProcedureStep[]
+  // MaintenanceSchedule procedures (many-to-many intermediate)
   pmSchedules MaintenanceScheduleProcedure[] @relation("PMProcedurePMSchedules")
 
   locations   Location[]         @relation("ProcedureLocations")
@@ -870,6 +875,10 @@ model ProcedureStep {
   isMandatory Boolean   @default(false)
   options     String[]
   sortOrder   Int       @default(0)
+  
+  settings    Json?
+  logic       Json?
+
   procedureId String
   procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
 

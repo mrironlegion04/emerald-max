@@ -29,6 +29,10 @@ interface ProcedureStep {
   checkedAt: string | null
   checkedBy: string | null
   sortOrder: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  logic?: any
   assetId?: string | null
   asset?: {
     id: string
@@ -420,9 +424,27 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
   }
 
   // Render individual step card
-  function renderStepBlock(procId: string, step: ProcedureStep) {
+  function renderStepBlock(procId: string, step: ProcedureStep, allSteps: ProcedureStep[]) {
     const isComp = isStepCompleted(step)
     const rich = parseRichResponse(step.stringValue)
+    
+    // Evaluate logic for conditional visibility
+    if (step.logic && step.logic.enabled && step.logic.parentStepIdx !== undefined && step.logic.parentStepValue !== undefined) {
+      const parentIdx = parseInt(step.logic.parentStepIdx, 10)
+      if (!isNaN(parentIdx) && allSteps[parentIdx]) {
+        const parentStep = allSteps[parentIdx]
+        const parentRich = parseRichResponse(parentStep.stringValue)
+        let parentValue = parentStep.type === 'CHECKBOX' 
+          ? (parentStep.isChecked ? 'Yes' : 'No') 
+          : parentRich.value
+        if (!parentValue) parentValue = ''
+        
+        const targetValue = String(step.logic.parentStepValue).toLowerCase().trim()
+        if (parentValue.toLowerCase().trim() !== targetValue) {
+          return null // hide this step entirely because condition not met
+        }
+      }
+    }
     
     // Core states
     const isSection = step.type === 'SECTION'
@@ -1072,7 +1094,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 {/* Steps block contents */}
                 {listSteps.length > 0 ? (
                   <div className="space-y-3.5 pl-2 border-l-2 border-slate-100/60 ml-2">
-                    {listSteps.map(step => renderStepBlock(list.id, step))}
+                    {listSteps.map(step => renderStepBlock(list.id, step, listSteps))}
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400 italic pl-6 font-medium">No steps are declared on this procedure</p>

@@ -283,6 +283,8 @@ export async function generatePerAssetProcedures(
           options: step.options,
           isChecked: false,
           assetId: mapping.assetId,
+          settings: step.settings ?? {},
+          logic: step.logic ?? {},
         })),
       })
     }

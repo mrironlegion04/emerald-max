@@ -234,6 +234,8 @@ export async function POST(
               sortOrder: step.sortOrder,
               options: step.options,
               isChecked: false,
+              settings: step.settings ?? {},
+              logic: step.logic ?? {},
             })),
           })
         }

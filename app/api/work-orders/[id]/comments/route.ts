@@ -52,6 +52,24 @@ export async function POST(
         authorRole:  user.role,
       },
     })
+
+    // Bidirectional Mirror: Also create a ChatMessage so it instantly streams in messages view too
+    try {
+      await prisma.chatMessage.create({
+        data: {
+          content,
+          channel: `WO_${id}`,
+          channelName: `${wo.woNumber}: ${wo.title}`,
+          senderId: user.userId,
+          senderName: user.name,
+          senderRole: user.role,
+          workOrderId: id,
+        },
+      })
+    } catch (err) {
+      console.error('Failed to mirror work order comment to chat message room:', err)
+    }
+
     return NextResponse.json(comment, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {

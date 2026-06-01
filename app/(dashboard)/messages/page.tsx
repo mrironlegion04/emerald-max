@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Loader2,
   Bookmark,
+  ArrowLeft,
 } from 'lucide-react'
 
 interface ChatChannel {
@@ -236,7 +237,7 @@ export default function MessagesPage() {
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-130px)] lg:h-[calc(100vh-70px)] bg-slate-100 rounded-2xl overflow-hidden shadow-xs border border-slate-200">
       {/* Channels Panel (Left column) */}
-      <div className="w-full lg:w-96 bg-white border-r border-slate-200 flex flex-col h-full">
+      <div className={`w-full lg:w-96 bg-white border-r border-slate-200 flex flex-col h-full ${activeChannel ? 'hidden lg:flex' : 'flex'}`}>
         {/* Header Search & Title */}
         <div className="p-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
           <div className="flex items-center justify-between mb-3">
@@ -330,13 +331,23 @@ export default function MessagesPage() {
       </div>
 
       {/* Chat Area (Right column) */}
-      <div className="flex-1 bg-slate-50 flex flex-col h-full">
+      <div className={`flex-1 bg-slate-50 flex flex-col h-full ${!activeChannel ? 'hidden lg:flex' : 'flex'}`}>
         {activeChannel ? (
           <>
             {/* Active Channel Header */}
             <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between shadow-3xs flex-shrink-0">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-lg border border-slate-200">
+              <div className="flex items-center gap-2 lg:gap-3.5 min-w-0">
+                {/* Back button for mobile/tablet devices */}
+                <button
+                  type="button"
+                  onClick={() => setActiveChannel(null)}
+                  className="lg:hidden p-1.5 hover:bg-slate-100 rounded-xl text-slate-500 mr-1 transition-colors active:scale-95"
+                  title="Back to Room List"
+                >
+                  <ArrowLeft className="w-5 h-5 text-slate-600" />
+                </button>
+
+                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-lg border border-slate-200 flex-shrink-0">
                   {activeChannel.avatarText}
                 </div>
                 <div className="min-w-0">
@@ -352,7 +363,7 @@ export default function MessagesPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-xl shadow-3xs transition-all active:scale-[0.98]"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  View Work Order
+                  <span className="hidden sm:inline">View Work Order</span>
                 </button>
               )}
             </div>

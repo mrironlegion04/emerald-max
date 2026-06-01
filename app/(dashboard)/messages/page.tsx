@@ -254,9 +254,19 @@ export default function MessagesPage() {
   // Scrollers
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
+  const initialSyncRef = useRef(false)
 
-  // Combine database channels and custom temporary groups
-  const allChannelsCombined = useMemo(() => [...dbChannels, ...customGroups], [dbChannels, customGroups])
+  // Combine database channels and custom temporary groups, deduplicating by ID
+  const allChannelsCombined = useMemo(() => {
+    const uniq: Record<string, ChatChannel> = {}
+    dbChannels.forEach(c => {
+      if (c && c.id) uniq[c.id] = c
+    })
+    customGroups.forEach(c => {
+      if (c && c.id) uniq[c.id] = c
+    })
+    return Object.values(uniq)
+  }, [dbChannels, customGroups])
 
   // Diagnostic presets for media tests
   const industrialMediaPresets = [
@@ -320,19 +330,37 @@ export default function MessagesPage() {
     }
   }, [dbChannels])
 
-  // Synchronize active channel with URL query parameter on initial load
+  // Synchronize active channel with URL query parameter on initial load only
   useEffect(() => {
+    if (initialSyncRef.current) return
     if (typeof window !== 'undefined' && allChannelsCombined.length > 0) {
       const params = new URLSearchParams(window.location.search)
       const targetChan = params.get('channel')
       if (targetChan) {
         const found = allChannelsCombined.find(c => c.id === targetChan)
-        if (found && (!activeChannel || activeChannel.id !== targetChan)) {
+        if (found) {
           setActiveChannel(found)
+          initialSyncRef.current = true
         }
+      } else {
+        initialSyncRef.current = true
       }
     }
-  }, [allChannelsCombined, activeChannel])
+  }, [allChannelsCombined])
+
+  // Propagate active channel changes cleanly to browser address URL parameter
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeChannel) {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('channel') !== activeChannel.id) {
+        params.set('channel', activeChannel.id)
+        params.delete('msgId') // Clean stale scroll target
+        
+        const newUrl = `${window.location.pathname}?${params.toString()}`
+        window.history.pushState(null, '', newUrl)
+      }
+    }
+  }, [activeChannel])
 
   // Scroll to targeted secure copy jump link message when loaded in DOM
   useEffect(() => {
@@ -438,6 +466,7 @@ export default function MessagesPage() {
   useEffect(() => {
     setMessagesLimit(50)
     setHasMoreMessages(true)
+    setMessages([])
   }, [activeChannel])
 
   // Load on channel transfer (Removed unreadIds dependency to prevent infinite loops)
@@ -1583,9 +1612,33 @@ export default function MessagesPage() {
               )}
 
               {loadingMessages ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                  <span className="font-semibold">Decrypting secure dialogue logs...</span>
+                <div className="space-y-5 py-4 animate-pulse">
+                  {/* Left Bubble Skeleton */}
+                  <div className="flex items-start gap-3 w-full max-w-md">
+                    <div className="w-10 h-10 bg-slate-200 rounded-xl flex-shrink-0" />
+                    <div className="space-y-2 flex-grow">
+                      <div className="h-3 bg-slate-200 rounded-md w-1/4" />
+                      <div className="h-10 bg-slate-200 rounded-2xl w-full" />
+                    </div>
+                  </div>
+                  
+                  {/* Right Bubble Skeleton */}
+                  <div className="flex items-start gap-3 justify-end w-full max-w-md ml-auto">
+                    <div className="space-y-2 flex-grow flex flex-col items-end">
+                      <div className="h-3 bg-slate-200 rounded-md w-1/5" />
+                      <div className="h-8 bg-slate-200 rounded-2xl w-5/6" />
+                    </div>
+                    <div className="w-10 h-10 bg-slate-200 rounded-xl flex-shrink-0" />
+                  </div>
+
+                  {/* Left Bubble Skeleton 2 */}
+                  <div className="flex items-start gap-3 w-full max-w-md">
+                    <div className="w-10 h-10 bg-slate-200 rounded-xl flex-shrink-0" />
+                    <div className="space-y-2 flex-grow">
+                      <div className="h-3 bg-slate-200 rounded-md w-1/3" />
+                      <div className="h-14 bg-slate-200 rounded-2xl w-11/12" />
+                    </div>
+                  </div>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4 max-w-sm mx-auto">

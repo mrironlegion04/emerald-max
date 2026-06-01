@@ -127,7 +127,7 @@ const managerItems = [
     icon: <Upload className="w-4.5 h-4.5" />,
   },
   {
-    label: 'Teams',
+    label: 'Teams / Users',
     href: '/teams',
     icon: <Users className="w-4.5 h-4.5" />,
   },
@@ -135,11 +135,6 @@ const managerItems = [
 
 // Visible to ADMIN only
 const adminItems = [
-  {
-    label: 'Users',
-    href: '/users',
-    icon: <Users className="w-4.5 h-4.5" />,
-  },
   {
     label: 'Sites Overview',
     href: '/sites',

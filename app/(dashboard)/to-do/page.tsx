@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge from '@/components/Badge'
+import TechnicianProcedureView from '@/components/TechnicianProcedureView'
 import {
   CheckCircle2, Clock, AlertCircle, Zap, Check,
   ListChecks, Users, Inbox, ArrowRight, CalendarDays,
@@ -499,116 +500,132 @@ export default async function ToDoPage() {
         />
       </div>
 
-      {/* ══ SECTION 1: MY TASKS ══ */}
-      <Section
-        icon={<UserCircle2 className="w-5 h-5 text-blue-600" />}
-        iconBg="bg-blue-100"
-        title="My Tasks"
-        subtitle={`${myTotal} item${myTotal !== 1 ? 's' : ''} assigned directly to you`}
-        overdueCount={myOverdue}
-        viewAll={{ href: `/work-orders?assignedToId=${user.userId}`, label: 'View all my WOs' }}
-      >
-        {myTotal === 0 ? (
-          <EmptyBox icon={<CheckCircle2 className="w-8 h-8 text-blue-300" />}
-            title="You're all caught up!" subtitle="No work orders or subtasks assigned to you." color="blue" />
-        ) : (
-          <UrgencySection wos={myWOs} subtasks={mySubtasks} />
-        )}
-      </Section>
-
-      {/* ══ SECTION 2: ONE SECTION PER TEAM ══ */}
-      {teamSections.map(({ team, wos, subtasks }: any) => {
-        const wC = categorize(wos)
-        const sC = categorize(subtasks.map((s: any) => ({ ...s, dueDate: s.dueDate ?? s.workOrder.dueDate })))
-        const secOverdue = wC.overdue.length + sC.overdue.length
-        const secTotal   = wos.length + subtasks.length
-        return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left column: Traditional queues */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-10">
+          {/* ══ SECTION 1: MY TASKS ══ */}
           <Section
-            key={team.id}
-            icon={<Users className="w-5 h-5 text-violet-600" />}
-            iconBg="bg-violet-100"
-            title={team.name}
-            subtitle={`${secTotal} item${secTotal !== 1 ? 's' : ''} in team queue`}
-            overdueCount={secOverdue}
-            viewAll={{ href: `/work-orders?teamId=${team.id}`, label: 'View team WOs' }}
+            icon={<UserCircle2 className="w-5 h-5 text-blue-600" />}
+            iconBg="bg-blue-100"
+            title="My Tasks"
+            subtitle={`${myTotal} item${myTotal !== 1 ? 's' : ''} assigned directly to you`}
+            overdueCount={myOverdue}
+            viewAll={{ href: `/work-orders?assignedToId=${user.userId}`, label: 'View all my WOs' }}
           >
-            {secTotal === 0 ? (
-              <EmptyBox icon={<Users className="w-8 h-8 text-violet-300" />}
-                title="Team queue is clear!" subtitle="No active work orders or subtasks for this team." color="violet" />
+            {myTotal === 0 ? (
+              <EmptyBox icon={<CheckCircle2 className="w-8 h-8 text-blue-300" />}
+                title="You're all caught up!" subtitle="No work orders or subtasks assigned to you." color="blue" />
             ) : (
-              <UrgencySection wos={wos} subtasks={subtasks} />
+              <UrgencySection wos={myWOs} subtasks={mySubtasks} />
             )}
           </Section>
-        )
-      })}
 
-      {/* ══ SECTION 3: OPEN POOL ══ */}
-      <Section
-        icon={<Inbox className="w-5 h-5 text-amber-600" />}
-        iconBg="bg-amber-100"
-        title="Open Pool"
-        subtitle={`${openPoolTotal} unassigned work order${openPoolTotal !== 1 ? 's' : ''} available to pick up`}
-        viewAll={hasMoreOpen ? { href: '/work-orders?status=OPEN', label: `View all ${openPoolTotal}` } : undefined}
-      >
-        {openPoolTotal === 0 ? (
-          <EmptyBox icon={<Inbox className="w-8 h-8 text-amber-300" />}
-            title="Open pool is empty" subtitle="All available work orders have been assigned." color="amber" />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {openPoolWOs.map((wo: any) => <WOCard key={wo.id} wo={wo} />)}
-            </div>
-            {hasMoreOpen && (
-              <div className="mt-5 flex justify-center">
-                <Link href="/work-orders?status=OPEN"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors shadow-sm">
-                  <Inbox className="w-4 h-4" />
-                  View all {openPoolTotal} open work orders
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
+          {/* ══ SECTION 2: ONE SECTION PER TEAM ══ */}
+          {teamSections.map(({ team, wos, subtasks }: any) => {
+            const wC = categorize(wos)
+            const sC = categorize(subtasks.map((s: any) => ({ ...s, dueDate: s.dueDate ?? s.workOrder.dueDate })))
+            const secOverdue = wC.overdue.length + sC.overdue.length
+            const secTotal   = wos.length + subtasks.length
+            return (
+              <Section
+                key={team.id}
+                icon={<Users className="w-5 h-5 text-violet-600" />}
+                iconBg="bg-violet-100"
+                title={team.name}
+                subtitle={`${secTotal} item${secTotal !== 1 ? 's' : ''} in team queue`}
+                overdueCount={secOverdue}
+                viewAll={{ href: `/work-orders?teamId=${team.id}`, label: 'View team WOs' }}
+              >
+                {secTotal === 0 ? (
+                  <EmptyBox icon={<Users className="w-8 h-8 text-violet-300" />}
+                    title="Team queue is clear!" subtitle="No active work orders or subtasks for this team." color="violet" />
+                ) : (
+                  <UrgencySection wos={wos} subtasks={subtasks} />
+                )}
+              </Section>
+            )
+          })}
+
+          {/* ══ SECTION 3: OPEN POOL ══ */}
+          <Section
+            icon={<Inbox className="w-5 h-5 text-amber-600" />}
+            iconBg="bg-amber-100"
+            title="Open Pool"
+            subtitle={`${openPoolTotal} unassigned work order${openPoolTotal !== 1 ? 's' : ''} available to pick up`}
+            viewAll={hasMoreOpen ? { href: '/work-orders?status=OPEN', label: `View all ${openPoolTotal}` } : undefined}
+          >
+            {openPoolTotal === 0 ? (
+              <EmptyBox icon={<Inbox className="w-8 h-8 text-amber-300" />}
+                title="Open pool is empty" subtitle="All available work orders have been assigned." color="amber" />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {openPoolWOs.map((wo: any) => <WOCard key={wo.id} wo={wo} />)}
+                </div>
+                {hasMoreOpen && (
+                  <div className="mt-5 flex justify-center">
+                    <Link href="/work-orders?status=OPEN"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors shadow-sm">
+                      <Inbox className="w-4 h-4" />
+                      View all {openPoolTotal} open work orders
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </Section>
+          </Section>
 
-      {/* ══ SECTION 4: RECENTLY COMPLETED ══ */}
-      {myCompletedWOs.length > 0 && (
-        <Section
-          icon={<Check className="w-5 h-5 text-green-600" />}
-          iconBg="bg-green-100"
-          title="Recently Completed"
-          subtitle="Last 9 work orders you completed or were assigned"
-          viewAll={{ href: `/work-orders?status=COMPLETED&assignedToId=${user.userId}`, label: 'View all completed' }}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {myCompletedWOs.map((wo: any) => (
-              <Link key={wo.id} href={`/work-orders/${wo.id}`}
-                className="group flex flex-col rounded-xl border border-green-200 bg-green-50/40 p-4 gap-3 hover:shadow-sm transition-all opacity-80 hover:opacity-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono text-gray-400">{wo.woNumber}</span>
-                  <Badge label="COMPLETED" variant="green" />
-                </div>
-                <p className="font-semibold text-gray-600 text-sm line-clamp-2 line-through group-hover:text-green-700 transition-colors">
-                  {wo.title}
-                </p>
-                <div className="space-y-1">
-                  {wo.asset && <MetaRow icon={<Package className="w-3.5 h-3.5" />} text={wo.asset.name} />}
-                  {wo.team  && <MetaRow icon={<Users   className="w-3.5 h-3.5" />} text={wo.team.name} />}
-                </div>
-                <div className="pt-2 border-t border-green-200 mt-auto flex items-center justify-between">
-                  <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Completed
-                  </span>
-                  <span className="text-[11px] text-green-500 font-semibold flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    View <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+          {/* ══ SECTION 4: RECENTLY COMPLETED ══ */}
+          {myCompletedWOs.length > 0 && (
+            <Section
+              icon={<Check className="w-5 h-5 text-green-600" />}
+              iconBg="bg-green-100"
+              title="Recently Completed"
+              subtitle="Last 9 work orders you completed or were assigned"
+              viewAll={{ href: `/work-orders?status=COMPLETED&assignedToId=${user.userId}`, label: 'View all completed' }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {myCompletedWOs.map((wo: any) => (
+                  <Link key={wo.id} href={`/work-orders/${wo.id}`}
+                    className="group flex flex-col rounded-xl border border-green-200 bg-green-50/40 p-4 gap-3 hover:shadow-sm transition-all opacity-80 hover:opacity-100">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-gray-400">{wo.woNumber}</span>
+                      <Badge label="COMPLETED" variant="green" />
+                    </div>
+                    <p className="font-semibold text-gray-650 text-sm line-clamp-2 line-through group-hover:text-green-700 transition-colors">
+                      {wo.title}
+                    </p>
+                    <div className="space-y-1">
+                      {wo.asset && <MetaRow icon={<Package className="w-3.5 h-3.5" />} text={wo.asset.name} />}
+                      {wo.team  && <MetaRow icon={<Users   className="w-3.5 h-3.5" />} text={wo.team.name} />}
+                    </div>
+                    <div className="pt-2 border-t border-green-200 mt-auto flex items-center justify-between">
+                      <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                      </span>
+                      <span className="text-[11px] text-green-500 font-semibold flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        View <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Section>
+          )}
+        </div>
+
+        {/* Right column: Immersive mobile-first checklist remote with scrolling doc buttons */}
+        <div id="procedures-right-dock" className="lg:col-span-12 xl:col-span-4 lg:col-start-8 lg:sticky lg:top-8 self-start space-y-6">
+          <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm text-center">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">📋 SOP Checklist Simulator</h3>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Test dynamic technical checklists and open safety PDF specifications directly inside this device simulator.
+            </p>
           </div>
-        </Section>
-      )}
+          <TechnicianProcedureView />
+        </div>
+      </div>
     </div>
   )
 }

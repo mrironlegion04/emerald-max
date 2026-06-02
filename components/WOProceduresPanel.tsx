@@ -605,6 +605,45 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               )}
             </div>
 
+            {/* Step-specific SOP documents, blueprints, or reference photos configured on template */}
+            {step.settings?.attachments && step.settings.attachments.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-2 animate-fade-in mb-2">
+                {step.settings.attachments.map((attach: { name: string; url: string; type: string }, idx: number) => {
+                  const isImg = attach.type === 'IMAGE' || attach.url?.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/)
+                  return (
+                    <a
+                      key={idx}
+                      href={attach.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg transition-all shadow-4xs group max-w-[280px]"
+                      title={`Click to open ${attach.name}`}
+                    >
+                      {isImg ? (
+                        <div className="w-8 h-8 rounded bg-white border border-slate-150 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          <img
+                            src={attach.url}
+                            alt={attach.name}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-slate-200 border border-slate-300 text-slate-700 flex-shrink-0 flex items-center justify-center font-bold text-[9px] uppercase font-mono">
+                          {attach.type || 'SOP'}
+                        </div>
+                      )}
+                      <div className="text-left font-sans min-w-0 pr-1">
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider leading-none">{attach.type || 'SOP Reference'}</span>
+                        <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700 truncate block mt-1 max-w-[170px] leading-snug">
+                          {attach.name}
+                        </span>
+                      </div>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Instruction Read-only card with action */}
             {isInstruction && (
               <div className="mt-2 text-xs text-slate-700 bg-slate-50 border border-slate-200 p-3 rounded-lg leading-relaxed shadow-4xs">

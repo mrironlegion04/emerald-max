@@ -921,9 +921,19 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                                 )}
 
                                 {/* Field Type Indicator */}
-                                <span className="px-2 py-1 bg-slate-100 border border-slate-150 text-slate-600 rounded-lg text-[10px] font-bold">
+                                <span className="px-2 py-1 bg-slate-100 border border-slate-150 text-slate-600 rounded-lg text-[10px] font-bold font-mono">
                                   {getStepTypeBadge(step.type)}
                                 </span>
+
+                                {/* Step-specific attachments indicator */}
+                                {step.settings?.attachments && step.settings.attachments.length > 0 && (
+                                  <span 
+                                    className="px-1.5 py-0.5 bg-indigo-50 border border-indigo-200/50 text-indigo-800 text-[10px] font-extrabold uppercase rounded flex items-center gap-1 cursor-pointer"
+                                    onClick={() => setEditingStepIdx(originalIdx)}
+                                  >
+                                    📎 {step.settings.attachments.length} Document{step.settings.attachments.length !== 1 ? 's' : ''}
+                                  </span>
+                                )}
 
                                 {/* Rules tag */}
                                 {hasRules && (
@@ -1093,6 +1103,110 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                     </label>
                   )}
                 </div>
+
+                {/* 1.5 Step Specific Attachments & SOP Reference Documents */}
+                {step.type !== 'SECTION' && (
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">Field Step Attachments</span>
+                      <span className="text-[10px] text-slate-400 font-bold bg-slate-200/50 px-1.5 py-0.5 rounded-full">
+                        {step.settings?.attachments?.length || 0} files
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-normal">
+                      Attach PDFs, specifications, blueprints, or reference photos for this step. Technicians can view them right below the checklist instruction line.
+                    </p>
+
+                    {/* Existing step-specific attachments */}
+                    {step.settings?.attachments && step.settings.attachments.length > 0 && (
+                      <div className="space-y-1.5">
+                        {step.settings.attachments.map((at: { name: string; url: string; type: string }, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs leading-none">
+                            <div className="flex items-center gap-1.5 truncate max-w-[220px]">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[8px] font-extrabold uppercase">{at.type || 'SOP'}</span>
+                              <span className="font-semibold text-slate-705 truncate">{at.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentAttachments = step.settings?.attachments ?? []
+                                const updatedAttachments = currentAttachments.filter((_: unknown, i: number) => i !== idx)
+                                updateStepConfig(editingStepIdx, 'settings', 'attachments', updatedAttachments)
+                              }}
+                              className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Form to add a new step attachment */}
+                    <div className="border-t border-slate-200/50 pt-3 space-y-2 bg-slate-100/30 p-2 rounded-lg">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-550 uppercase tracking-wider mb-0.5">Title Name</label>
+                          <input
+                            type="text"
+                            id="step-attach-name-input"
+                            placeholder="e.g. Wiring Blueprint"
+                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-550 uppercase tracking-wider mb-0.5">Link / File URL</label>
+                          <input
+                            type="text"
+                            id="step-attach-url-input"
+                            placeholder="https://example.com/file"
+                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-500 font-medium">Type:</span>
+                          <select
+                            id="step-attach-type-select"
+                            className="border border-slate-200 rounded bg-white px-2 py-0.5 text-xs text-slate-700 font-semibold cursor-pointer outline-none"
+                          >
+                            <option value="PDF">PDF</option>
+                            <option value="IMAGE">Image</option>
+                            <option value="VIDEO">Video</option>
+                            <option value="MANUAL">Manual</option>
+                            <option value="OTHER">Other</option>
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nameEl = document.getElementById('step-attach-name-input') as HTMLInputElement
+                            const urlEl = document.getElementById('step-attach-url-input') as HTMLInputElement
+                            const typeEl = document.getElementById('step-attach-type-select') as HTMLSelectElement
+                            if (nameEl && urlEl && nameEl.value.trim() && urlEl.value.trim()) {
+                              const currentAttachments = step.settings?.attachments ?? []
+                              const newAt = {
+                                name: nameEl.value.trim(),
+                                url: urlEl.value.trim(),
+                                type: typeEl.value,
+                              }
+                              updateStepConfig(editingStepIdx, 'settings', 'attachments', [...currentAttachments, newAt])
+                              nameEl.value = ''
+                              urlEl.value = ''
+                            } else {
+                              alert('Please fill out both the attachment name and the URL link.')
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-705 text-white font-bold text-[10px] rounded transition-all shadow-3xs"
+                        >
+                          ＋ Add File
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 2. Options list for Selects */}
                 {hasOptions && (

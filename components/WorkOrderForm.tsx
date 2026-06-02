@@ -48,7 +48,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
   const isEdit = !!woId
 
   // Map checklists to procedures
-  const initialProcedures = initialData?.procedureIds || initialData?.checklistTemplateIds || []
+  const initialProcedures = initialData?.procedureIds || []
 
   const [form, setForm] = useState<WOFormData>({
     title:          initialData?.title          ?? '',

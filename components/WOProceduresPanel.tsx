@@ -138,21 +138,46 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
   // We ignore SECTION and INSTRUCTION (unless instructions are mandatory checklists) for completion metrics
   const scoreableSteps = procedures.flatMap(p => p.steps).filter(s => s.type !== 'SECTION' && s.type !== 'INSTRUCTION')
   const totalSteps = scoreableSteps.length
-  const completedSteps = scoreableSteps.filter(s => {
-    if (s.type === 'CHECKBOX') return s.isChecked
-    const rich = parseRichResponse(s.stringValue)
-    return !!rich.value
-  }).length
-
+  
+  const completedSteps = scoreableSteps.filter(s => isStepCompleted(s)).length
   const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
 
-  // Standard step complete check
+  // Standard step complete check with dynamic bounds/photo rule enforcement!
   function isStepCompleted(g: ProcedureStep): boolean {
     if (g.type === 'SECTION') return true
     if (g.type === 'INSTRUCTION') return g.isMandatory ? g.isChecked : true
     if (g.type === 'CHECKBOX') return g.isChecked
+    
     const rich = parseRichResponse(g.stringValue)
-    return !!rich.value
+    if (!rich.value) return false
+
+    // 1. Enforce Photo requirement on fail/flag
+    if (g.type === 'INSPECTION' && g.settings?.requirePhotoOnFail) {
+      if (rich.value === 'FAIL' || rich.value === 'FLAG') {
+        const hasImage = rich.attachments?.some(a => 
+          a.type === 'IMAGE' || 
+          a.url?.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/) || 
+          a.name?.toLowerCase().includes('photo') || 
+          a.name?.toLowerCase().includes('image')
+        )
+        if (!hasImage) return false
+      }
+    }
+
+    // 2. Validate Number limits/bounds
+    if (g.type === 'NUMBER_INPUT') {
+      const valNum = Number(rich.value)
+      if (!isNaN(valNum)) {
+        if (g.settings?.min !== undefined && g.settings?.min !== '' && valNum < Number(g.settings.min)) {
+          return false
+        }
+        if (g.settings?.max !== undefined && g.settings?.max !== '' && valNum > Number(g.settings.max)) {
+          return false
+        }
+      }
+    }
+
+    return true
   }
 
   // Handle direct changes of core values
@@ -275,7 +300,8 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
     setToggling(stepId)
     try {
       const rich = parseRichResponse(stepObj.stringValue)
-      const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: urlStr.toLowerCase().endsWith('.pdf') ? 'PDF' : 'IMAGE' }]
+      const isImg = urlStr.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/) || nameStr.toLowerCase().includes('photo') || nameStr.toLowerCase().includes('image')
+      const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: isImg ? 'IMAGE' : 'PDF' }]
       
       const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
       const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${stepId}`, {
@@ -439,9 +465,37 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
           : parentRich.value
         if (!parentValue) parentValue = ''
         
+        const operator = step.logic.operator || 'equals'
         const targetValue = String(step.logic.parentStepValue).toLowerCase().trim()
-        if (parentValue.toLowerCase().trim() !== targetValue) {
-          return null // hide this step entirely because condition not met
+        const pv = parentValue.toLowerCase().trim()
+        const pvNum = parseFloat(pv)
+        const tvNum = parseFloat(targetValue)
+        
+        let conditionMet = false
+        switch (operator) {
+          case 'equals':
+            conditionMet = pv === targetValue
+            break
+          case 'not_equals':
+            conditionMet = pv !== targetValue
+            break
+          case 'contains':
+            conditionMet = pv.includes(targetValue)
+            break
+          case 'not_contains':
+            conditionMet = !pv.includes(targetValue)
+            break
+          case 'greater_than':
+            conditionMet = !isNaN(pvNum) && !isNaN(tvNum) && pvNum > tvNum
+            break
+          case 'less_than':
+            conditionMet = !isNaN(pvNum) && !isNaN(tvNum) && pvNum < tvNum
+            break
+          default:
+            conditionMet = pv === targetValue
+        }
+        if (!conditionMet) {
+          return null
         }
       }
     }
@@ -455,9 +509,9 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
 
     if (isSection) {
       return (
-        <div key={step.id} className="pt-6 pb-2 first:pt-2 border-b border-slate-105/80 flex items-center gap-3">
-          <span className="text-xs font-black tracking-widest text-slate-850 bg-slate-100/80 border border-slate-200/50 px-2.5 py-1 rounded-md uppercase">
-            📁 {step.label}
+        <div key={step.id} className="pt-6 pb-2 first:pt-2 border-b border-slate-100 flex items-center gap-3">
+          <span className="text-xs font-black tracking-widest text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md uppercase shadow-4xs">
+            📁 Heading: {step.label}
           </span>
           <div className="h-px bg-slate-200 flex-1"></div>
         </div>
@@ -467,8 +521,8 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
     return (
       <div 
         key={step.id} 
-        className={`flex flex-col bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-all shadow-xxs overflow-hidden ${
-          isComp ? 'bg-green-55/10 border-green-200/40' : ''
+        className={`flex flex-col bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-all shadow-4xs overflow-hidden ${
+          isComp ? 'bg-green-50/10 border-green-200/50' : 'border-slate-200'
         }`}
       >
         <div className="flex items-start gap-4 p-4">
@@ -481,7 +535,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               disabled={toggling === step.id || isClosed}
               className={`mt-1.5 w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-all ${
                 step.isChecked
-                  ? 'bg-green-650 border-green-600 text-white hover:bg-green-700'
+                  ? 'bg-green-600 border-green-600 text-white hover:bg-green-700'
                   : 'border-slate-300 hover:border-green-600 hover:bg-green-50/10'
               } disabled:opacity-50`}
             >
@@ -510,7 +564,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 disabled={toggling === step.id || isClosed}
                 className={`px-2.5 py-1 text-[10px] font-black rounded-lg border text-center transition-all ${
                   rich.value === 'FLAG'
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-xs animate-pulse-slow'
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
                     : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                 }`}
               >
@@ -540,7 +594,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 {step.label}
               </span>
               {step.type !== 'CHECKBOX' && (
-                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[8px] font-extrabold tracking-wide uppercase">
+                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[8px] font-extrabold tracking-wide uppercase border border-slate-150">
                   {step.type.replace('_', ' ')}
                 </span>
               )}
@@ -553,20 +607,20 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
 
             {/* Instruction Read-only card with action */}
             {isInstruction && (
-              <div className="mt-2 text-xs text-slate-505 bg-slate-50 border border-slate-100 p-3 rounded-lg leading-relaxed">
+              <div className="mt-2 text-xs text-slate-700 bg-slate-50 border border-slate-200 p-3 rounded-lg leading-relaxed shadow-4xs">
                 <p>{step.label}</p>
                 {step.isMandatory && !step.isChecked && !isClosed && (
                   <button
                     type="button"
                     onClick={() => submitCheckboxToggle(procId, step.id, false)}
-                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold uppercase rounded-lg transition-all"
+                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-650 hover:bg-blue-700 text-white text-[10px] font-extrabold uppercase rounded-lg transition-all shadow-3xs"
                   >
                     Confirm Read & Understood
                   </button>
                 )}
                 {step.isMandatory && step.isChecked && (
-                  <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-green-780">
-                    ✓ Confirmed Readed & Safe
+                  <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-green-700">
+                    ✓ Confirmed Read & Safe
                   </span>
                 )}
               </div>
@@ -577,22 +631,40 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               <textarea
                 defaultValue={rich.value ?? ''}
                 onBlur={e => submitStepValue(procId, step.id, 'TEXT_INPUT', e.target.value || null)}
-                placeholder="Type descriptive inspection log here..."
+                placeholder="Type descriptive inspection response..."
                 rows={1}
-                className="mt-2 w-full text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-2 outline-none resize-none transition-all"
+                className="mt-2 w-full text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-2 outline-none resize-none transition-all shadow-4xs"
               />
             )}
 
-            {/* Number standard input */}
-            {step.type === 'NUMBER_INPUT' && !isClosed && (
-              <input
-                type="number"
-                defaultValue={rich.value ?? ''}
-                onBlur={e => submitStepValue(procId, step.id, 'NUMBER_INPUT', e.target.value || null)}
-                placeholder="Enter numeric response value..."
-                className="mt-2 max-w-sm text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-1.5 outline-none transition-all"
-              />
-            )}
+            {/* Number standard input with dynamic tolerance validation */}
+            {step.type === 'NUMBER_INPUT' && !isClosed && (() => {
+              const valNum = Number(rich.value)
+              const minVal = step.settings?.min !== undefined && step.settings?.min !== '' ? Number(step.settings.min) : null
+              const maxVal = step.settings?.max !== undefined && step.settings?.max !== '' ? Number(step.settings.max) : null
+              const isOutOfRange = rich.value !== null && rich.value !== '' && !isNaN(valNum) && (
+                (minVal !== null && valNum < minVal) || (maxVal !== null && valNum > maxVal)
+              )
+              return (
+                <div className="mt-2 space-y-1.5 max-w-sm">
+                  <input
+                    type="number"
+                    defaultValue={rich.value ?? ''}
+                    onBlur={e => submitStepValue(procId, step.id, 'NUMBER_INPUT', e.target.value || null)}
+                    placeholder={`Enter reading... ${minVal !== null ? `(Min: ${minVal})` : ''} ${maxVal !== null ? `(Max: ${maxVal})` : ''}`}
+                    className={`text-xs border rounded-lg px-3 py-1.5 outline-none transition-all w-full ${
+                      isOutOfRange ? 'border-red-500 bg-red-50/30 focus:border-red-600' : 'border-slate-200 focus:border-blue-500'
+                    }`}
+                  />
+                  {isOutOfRange && (
+                    <p className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md border border-red-200/45 animate-pulse">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                      Limit Violated: Reading should be between {minVal !== null ? minVal : 'any'} and {maxVal !== null ? maxVal : 'any'}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Dropdown list */}
             {step.type === 'DROPDOWN' && !isClosed && (
@@ -600,10 +672,10 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 <select
                   value={rich.value ?? ''}
                   onChange={e => submitStepValue(procId, step.id, 'DROPDOWN', e.target.value || null)}
-                  className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-705 outline-none cursor-pointer appearance-none"
+                  className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-705 outline-none cursor-pointer appearance-none shadow-4xs"
                 >
                   <option value="">Choose item...</option>
-                  {step.options.map(opt => (
+                  {(step.options || []).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
@@ -613,12 +685,12 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
 
             {/* Multiple Choice Option */}
             {step.type === 'MULTIPLE_CHOICE' && !isClosed && (
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50/50 p-2.5 border border-slate-100 rounded-lg">
-                {step.options.map((opt) => {
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg">
+                {(step.options || []).map((opt) => {
                   const currentValueList = rich.value ? rich.value.split(', ') : []
                   const checked = currentValueList.includes(opt)
                   return (
-                    <label key={opt} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer p-1 rounded-md hover:bg-slate-50 transition-colors">
+                    <label key={opt} className="flex items-center gap-2 text-xs text-slate-705 cursor-pointer p-1 rounded-md hover:bg-white transition-colors border border-transparent hover:border-slate-200/50">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -643,13 +715,13 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 type="date"
                 defaultValue={rich.value ?? ''}
                 onChange={e => submitStepValue(procId, step.id, 'DATE', e.target.value || null)}
-                className="mt-2 max-w-xs text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-1.5 bg-white text-slate-705 outline-none transition-all cursor-pointer"
+                className="mt-2 max-w-xs text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-1.5 bg-white text-slate-705 outline-none transition-all cursor-pointer shadow-4xs"
               />
             )}
 
             {/* Signature Area drawing pad or name entry */}
             {step.type === 'SIGNATURE' && !isClosed && (
-              <div className="mt-2 bg-slate-50/50 p-3 border border-slate-205 rounded-xl max-w-md">
+              <div className="mt-2 bg-slate-50/50 p-3 border border-slate-200 rounded-xl max-w-md">
                 {rich.value ? (
                   <div className="space-y-2">
                     <img src={rich.value} alt="Digitally signed audit" className="h-14 border border-slate-200 rounded bg-white shadow-inner" />
@@ -688,17 +760,19 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               </div>
             )}
 
-            {/* Physical mechanical Meters input */}
+            {/* Physical mechanical Meters input with custom unit */}
             {step.type === 'METER' && !isClosed && (
               <div className="mt-2 flex items-center gap-2 max-w-sm">
                 <input
                   type="number"
                   defaultValue={rich.value ?? ''}
                   onBlur={e => submitStepValue(procId, step.id, 'METER', e.target.value || null)}
-                  placeholder="e.g. 14250"
+                  placeholder={`e.g. ${step.settings?.unit ? `Enter ${step.settings.unit}` : '14250'}`}
                   className="text-xs border border-slate-205 focus:border-blue-500 rounded-lg px-3 py-1.5 outline-none transition flex-1"
                 />
-                <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded">Reading Hz/Psi</span>
+                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                  {step.settings?.unit || 'Reading'}
+                </span>
               </div>
             )}
 
@@ -710,15 +784,15 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                     {step.type === 'PHOTO' ? (
                       <img src={rich.value} alt="Operator Upload" className="mx-auto rounded border border-slate-200 max-h-32 shadow-xs bg-white" />
                     ) : (
-                      <div className="inline-flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-100 text-xs">
-                        <FileText className="w-5 h-5 text-indigo-505" />
-                        <span className="text-slate-700 font-bold max-w-xs truncate">{rich.value}</span>
+                      <div className="inline-flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-105 text-xs">
+                        <FileText className="w-5 h-5 text-indigo-500" />
+                        <span className="text-slate-705 font-bold max-w-xs truncate">{rich.value}</span>
                       </div>
                     )}
                     <button
                       type="button"
                       onClick={() => submitStepValue(procId, step.id, step.type, null)}
-                      className="text-[10px] text-red-650 font-bold block mx-auto uppercase hover:underline"
+                      className="text-[10px] text-red-600 font-bold block mx-auto uppercase hover:underline"
                     >
                       Remove File / Upload again
                     </button>
@@ -741,7 +815,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                           const val = (document.getElementById(`file-input-${step.id}`) as HTMLInputElement)?.value
                           if (val) submitStepValue(procId, step.id, step.type, val)
                         }}
-                        className="px-3 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-[10px] rounded"
+                        className="px-3 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-[10px] rounded animate-all"
                       >
                         Add URL
                       </button>
@@ -753,7 +827,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                             : `/docs/uploaded_${step.id}.pdf`
                           submitStepValue(procId, step.id, step.type, mockUrl)
                         }}
-                        className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-[10px] rounded"
+                        className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 font-bold text-[10px] rounded shadow-5xs"
                       >
                         Choose File
                       </button>
@@ -771,7 +845,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 ) : step.type === 'PHOTO' && rich.value ? (
                   <img src={rich.value} alt="Official photo attached" className="max-h-24 rounded border inline-block" />
                 ) : rich.value ? (
-                  <p className="font-semibold text-slate-700 flex items-center gap-1">
+                  <p className="font-semibold text-slate-705 flex items-center gap-1">
                     <span className="text-slate-400 font-normal">Completed Value:</span> &ldquo;{rich.value}&rdquo;
                   </p>
                 ) : (
@@ -780,36 +854,65 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               </div>
             )}
 
-            {/* Display failure alerts supporting correcting actions */}
+            {/* Display failure alerts & enforcing photo rule alerts for Inspections */}
             {step.type === 'INSPECTION' && (rich.value === 'FAIL' || rich.value === 'FLAG') && (
-              <div className="mt-2.5 p-3 bg-red-50 border border-red-200 rounded-xl max-w-lg flex items-start gap-2.5 animate-bounce-short">
-                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 text-xs">
-                  <span className="font-extrabold text-red-800 uppercase tracking-tight block">Inspection Flag raised!</span>
-                  <p className="text-red-700 mt-1 leading-relaxed">This step has been flagged as Failed or Deficient. Compliance protocols recommend creating corrective operations immediately.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const titleUrl = `Corrective: Flagged ${step.label.substring(0, 30)}...`
-                      router.push(`/work-orders/new?title=${encodeURIComponent(titleUrl)}&issueId=OTHER&customIssue=${encodeURIComponent(`Failed inspection step: "${step.label}"`)}`)
-                    }}
-                    className="mt-2.5 inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-rose-700 text-white font-extrabold uppercase text-[10px] rounded-lg shadow-sm"
-                  >
-                    Create Corrective Work Order <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
+              <div className="space-y-2 max-w-lg mt-3">
+                {/* Photo required verification warning if rule active */}
+                {step.settings?.requirePhotoOnFail && (() => {
+                  const hasImage = rich.attachments?.some(a => 
+                    a.type === 'IMAGE' || 
+                    a.url?.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/) || 
+                    a.name?.toLowerCase().includes('photo') || 
+                    a.name?.toLowerCase().includes('image')
+                  )
+                  if (!hasImage) {
+                    return (
+                      <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl flex items-center gap-2.5 shadow-4xs animate-pulse-slow">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                        <div className="text-xs">
+                          <span className="font-bold block">Compliance Warning: Photo Required</span>
+                          <span className="text-amber-800 leading-normal block mt-0.5">MaintainX SOP rules require a proof image for flagged checkpoints. Click the paperclip icon on the far right of this card to attach.</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="p-2 px-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs shadow-4xs">
+                      <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span className="font-semibold">Compliant: Fault verification photo attached successfully!</span>
+                    </div>
+                  )
+                })()}
+
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 shadow-4xs">
+                  <AlertTriangle className="w-5 h-5 text-red-650 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <span className="font-extrabold text-red-800 uppercase tracking-tight block">Inspection Flag raised!</span>
+                    <p className="text-red-700 mt-1 leading-relaxed">This step has been flagged as Failed or Deficient. Compliance protocols recommend creating corrective operations immediately.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const titleUrl = `Corrective: Flagged ${step.label.substring(0, 30)}...`
+                        router.push(`/work-orders/new?title=${encodeURIComponent(titleUrl)}&issueId=OTHER&customIssue=${encodeURIComponent(`Failed inspection step: "${step.label}"`)}`)
+                      }}
+                      className="mt-2.5 inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-rose-700 text-white font-extrabold uppercase text-[10px] rounded-lg shadow-sm"
+                    >
+                      Create Corrective Work Order <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Audit trace meta details showing completedBy */}
             {isComp && step.checkedBy && (
-              <div className="mt-2.5 flex items-center gap-3 text-[10px] text-slate-450 border-t border-slate-50 pt-1.5 flex-wrap">
+              <div className="mt-2.5 flex items-center gap-3 text-[10px] text-slate-500 border-t border-slate-50 pt-1.5 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-slate-350" />
+                  <User className="w-3.5 h-3.5 text-slate-400" />
                   Completed by <strong>{step.checkedBy}</strong>
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-350" />
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
                   {step.checkedAt ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(step.checkedAt)) : 'N/A'}
                 </span>
               </div>
@@ -823,7 +926,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               onClick={() => setExpandedStepId(isExpanded ? null : step.id)}
               className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
                 isExpanded 
-                  ? 'bg-slate-100 hover:bg-slate-205 border-slate-300 text-slate-700' 
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' 
                   : (rich.notes || rich.attachments.length > 0)
                   ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
                   : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-500'
@@ -837,42 +940,42 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
 
         {/* Notes and step-level attachments drawer panel */}
         {isExpanded && (
-          <div className="bg-slate-50/50 border-t border-slate-105 p-4 animate-fade-in space-y-4 text-xs">
+          <div className="bg-slate-50 border-t border-slate-200 p-4 animate-fade-in space-y-4 text-xs">
             {/* Notes view and write */}
             <div>
               <span className="font-extrabold text-slate-700 block uppercase tracking-wide mb-1.5">Comments & Observations</span>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={rich.notes ? `Current note: "${rich.notes}"` : "Enter technical observations..."}
+                  placeholder={rich.notes ? `Current note: "${rich.notes}"` : "Enter observations..."}
                   value={stepNotes[step.id] ?? rich.notes ?? ''}
                   onChange={e => {
                     const text = e.target.value
                     setStepNotes(prev => ({ ...prev, [step.id]: text }))
                   }}
-                  className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none flex-1 focus:border-slate-350"
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-805 outline-none flex-1 focus:border-slate-350 focus:ring-1 focus:ring-blue-100"
                 />
                 <button
                   type="button"
                   onClick={() => handleNotesSave(procId, step.id)}
-                  className="px-3.5 py-2 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-850"
+                  className="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-lg transition"
                 >
-                  Save NOTE
+                  Save Note
                 </button>
               </div>
             </div>
 
             {/* Attachments list and upload */}
-            <div className="pt-3 border-t border-slate-100">
+            <div className="pt-3 border-t border-slate-200">
               <span className="font-extrabold text-slate-700 block uppercase tracking-wide mb-2">Step Attachments ({rich.attachments.length})</span>
               
               {rich.attachments.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                   {rich.attachments.map((at, ai) => (
-                    <div key={ai} className="flex items-center justify-between p-2.5 bg-white border border-slate-105 rounded-lg">
+                    <div key={ai} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg">
                       <div className="truncate pr-4 flex items-center gap-1.5">
                         <span className="font-bold text-slate-700 truncate">{at.name}</span>
-                        <a href={at.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600">
+                        <a href={at.url} target="_blank" rel="noreferrer" className="text-slate-405 hover:text-blue-600">
                           <Download className="w-3.5 h-3.5" />
                         </a>
                       </div>
@@ -889,18 +992,18 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               )}
 
               {/* Add attachment link */}
-              <div className="bg-white p-3 border border-slate-105 rounded-lg space-y-2 max-w-lg">
-                <span className="font-bold text-slate-600 block">Add Photo URL or Technical Document link</span>
+              <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-2 max-w-lg shadow-4xs">
+                <span className="font-bold text-slate-600 block">Add Photo URL or Reference Document Link</span>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="Doc Name (e.g. Belt Photo)"
+                    placeholder="Attachment Name (e.g. Belt Photo)"
                     value={stepAttachName[step.id] ?? ''}
                     onChange={e => {
                       const txt = e.target.value
                       setStepAttachName(prev => ({ ...prev, [step.id]: txt }))
                     }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-xs outline-none focus:border-slate-350"
+                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white"
                   />
                   <input
                     type="text"
@@ -910,7 +1013,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                       const txt = e.target.value
                       setStepAttachUrl(prev => ({ ...prev, [step.id]: txt }))
                     }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-xs outline-none focus:border-slate-350"
+                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white"
                   />
                 </div>
                 <button
@@ -919,7 +1022,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                   disabled={!stepAttachName[step.id] || !stepAttachUrl[step.id]}
                   className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-bold rounded-lg disabled:opacity-40"
                 >
-                  Confirm add attachment
+                  Confirm Add Attachment
                 </button>
               </div>
             </div>
@@ -935,11 +1038,11 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/20">
         <div className="flex items-center gap-2.5">
           <h2 className="font-bold text-slate-805 text-sm tracking-tight flex items-center gap-1.5">
-            <CheckSquare className="w-4 h-4 text-slate-550" />
+            <CheckSquare className="w-4 h-4 text-slate-500" />
             Standard Operating Procedures
           </h2>
           {totalSteps > 0 && (
-            <span className="text-[10px] bg-slate-100 text-slate-600 font-extrabold px-2 py-0.5 rounded-full border border-slate-200/50">
+            <span className="text-[10px] bg-slate-100 text-slate-600 font-extrabold px-2 py-0.5 rounded-full border border-slate-200">
               {completedSteps} / {totalSteps} BLOCKS RECORDED
             </span>
           )}
@@ -965,7 +1068,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 style={{ width: `${pct}%` }} 
               />
             </div>
-            <span className="text-xs font-bold text-slate-705 w-9 text-right">{pct}% completed</span>
+            <span className="text-xs font-bold text-slate-700 w-9 text-right">{pct}% completed</span>
           </div>
         </div>
       )}
@@ -1063,19 +1166,19 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
             return (
               <div key={list.id} className="p-5">
                 {/* SOP Title Bar */}
-                <div className="flex items-center justify-between mb-4 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/50">
+                <div className="flex items-center justify-between mb-4 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
                   <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <span className="font-extrabold text-slate-850 text-sm">{list.title}</span>
-                    <span className="bg-slate-105 border border-slate-200/60 font-bold px-2 py-0.5 rounded-full text-slate-500">
+                    <span className="font-extrabold text-slate-805 text-sm">{list.title}</span>
+                    <span className="bg-slate-100 border border-slate-200 font-bold px-2 py-0.5 rounded-full text-slate-500">
                       {listCompletedCount} / {listSteps.length} Steps
                     </span>
                     {isDone && (
-                      <span className="bg-green-100 border border-green-200 text-green-800 font-extrabold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide">
+                      <span className="bg-emerald-100 border border-emerald-200 text-emerald-850 font-extrabold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide">
                         COMPLIANT
                       </span>
                     )}
                     {list.source && (
-                      <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wide">
+                      <span className="bg-indigo-55 border border-indigo-150 text-indigo-700 font-extrabold px-2 py-0.5 rounded-md text-[9px] uppercase tracking-wide">
                         {list.source}
                       </span>
                     )}
@@ -1084,7 +1187,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                     <button
                       type="button"
                       onClick={() => deleteProcedure(list.id)}
-                      className="text-slate-400 hover:text-red-650 transition-colors bg-white hover:bg-slate-50 p-1.5 border border-slate-100 rounded-lg"
+                      className="text-slate-400 hover:text-red-650 transition-colors bg-white hover:bg-slate-50 p-1.5 border border-slate-200 rounded-lg shadow-4xs"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1093,7 +1196,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
 
                 {/* Steps block contents */}
                 {listSteps.length > 0 ? (
-                  <div className="space-y-3.5 pl-2 border-l-2 border-slate-100/60 ml-2">
+                  <div className="space-y-3.5 pl-2 border-l-2 border-slate-150 ml-2">
                     {listSteps.map(step => renderStepBlock(list.id, step, listSteps))}
                   </div>
                 ) : (

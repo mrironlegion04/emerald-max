@@ -97,9 +97,13 @@ export default function AttachmentsPanel({ attachments, entityType, entityId, ca
               <span className="text-lg bg-slate-100 border border-slate-200/50 p-1.5 rounded-lg flex-shrink-0 flex items-center justify-center">
                 {fileIcon(f.mimeType)}
               </span>
-              <div className="flex-1 min-w-0">
-                <a href={f.url} target="_blank" rel="noreferrer"
-                  className="text-xs font-bold text-slate-800 hover:text-blue-600 truncate block transition-colors leading-tight">{f.originalName}</a>
+              <div className="flex-1 min-w-0 pr-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800 truncate block transition-colors leading-tight">{f.originalName}</span>
+                  <a href={f.url} target="_blank" rel="noreferrer" className="text-[10px] uppercase font-bold text-blue-650 hover:text-blue-800 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded transition">
+                    View
+                  </a>
+                </div>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
                   {fmtSize(f.size)} · {fmt(f.createdAt)}{f.uploadedBy ? ` · ${f.uploadedBy}` : ''}
                 </p>

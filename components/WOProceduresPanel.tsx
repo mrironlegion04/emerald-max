@@ -15,7 +15,9 @@ import {
   CheckSquare, 
   X, 
   ArrowUpRight,
-  Download
+  Download,
+  FileUp,
+  Loader2
 } from 'lucide-react'
 
 interface ProcedureStep {
@@ -113,6 +115,49 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
   const [stepNotes, setStepNotes] = useState<Record<string, string>>({})
   const [stepAttachName, setStepAttachName] = useState<Record<string, string>>({})
   const [stepAttachUrl, setStepAttachUrl] = useState<Record<string, string>>({})
+
+  // Real upload states for MinIO
+  const [uploadingStepId, setUploadingStepId] = useState<string | null>(null)
+
+  async function uploadFileHelper(file: File): Promise<{ url: string; name: string; type: 'PDF' | 'IMAGE' | 'VIDEO' | 'OTHER'; key: string } | null> {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Failed to upload file')
+      }
+
+      const data = await res.json()
+      
+      let type: 'PDF' | 'IMAGE' | 'VIDEO' | 'OTHER' = 'OTHER'
+      const mime = file.type.toLowerCase()
+      if (mime.includes('pdf')) {
+        type = 'PDF'
+      } else if (mime.startsWith('image/')) {
+        type = 'IMAGE'
+      } else if (mime.startsWith('video/')) {
+        type = 'VIDEO'
+      }
+
+      return {
+        url: data.url,
+        name: file.name,
+        type,
+        key: data.key
+      }
+    } catch (err: unknown) {
+      const error = err as Error
+      alert(error.message || 'Error occurred during file upload')
+      return null
+    }
+  }
 
   // Fetch available globals on click "Add Procedure"
   useEffect(() => {
@@ -332,6 +377,14 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
     setToggling(stepId)
     try {
       const rich = parseRichResponse(stepObj.stringValue)
+      const target = rich.attachments[attachIdx]
+      
+      if (target?.url || target?.key) {
+        fetch(`/api/upload?key=${encodeURIComponent(target.key || '')}&url=${encodeURIComponent(target.url || '')}`, {
+          method: 'DELETE'
+        }).catch(err => console.error('Cleanup failed:', err))
+      }
+
       const nextAttach = rich.attachments.filter((_, i) => i !== attachIdx)
       
       const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
@@ -632,11 +685,15 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                           {attach.type || 'SOP'}
                         </div>
                       )}
-                      <div className="text-left font-sans min-w-0 pr-1">
+                      <div className="text-left font-sans min-w-0 pr-1 flex-1">
                         <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider leading-none">{attach.type || 'SOP Reference'}</span>
-                        <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700 truncate block mt-1 max-w-[170px] leading-snug">
+                        <span className="text-xs font-bold text-slate-700 group-hover:text-blue-700 truncate block mt-0.5 max-w-[170px] leading-snug">
                           {attach.name}
                         </span>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">View Document</span>
+                          <ArrowUpRight className="w-2.5 h-2.5 text-blue-400 group-hover:text-blue-600 transition-colors" />
+                        </div>
                       </div>
                     </a>
                   )
@@ -1011,17 +1068,22 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               {rich.attachments.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                   {rich.attachments.map((at, ai) => (
-                    <div key={ai} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg">
-                      <div className="truncate pr-4 flex items-center gap-1.5">
-                        <span className="font-bold text-slate-700 truncate">{at.name}</span>
-                        <a href={at.url} target="_blank" rel="noreferrer" className="text-slate-405 hover:text-blue-600">
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
+                    <div key={ai} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg shadow-4xs">
+                      <div className="truncate pr-2 flex items-center gap-2">
+                        <span className="font-bold text-slate-705 truncate max-w-[140px]">{at.name}</span>
+                        <div className="flex items-center gap-1">
+                          <a href={at.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 border border-blue-200 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                            View <ArrowUpRight className="w-2.5 h-2.5" />
+                          </a>
+                          <a href={at.url} download={at.name} target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-700 p-1 border border-slate-200 rounded">
+                            <Download className="w-3 h-3" />
+                          </a>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleAttachmentRemove(procId, step.id, ai)}
-                        className="text-slate-400 hover:text-red-500 rounded hover:bg-slate-50 p-1"
+                        className="text-slate-400 hover:text-red-500 rounded hover:bg-red-50 p-1 transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -1031,37 +1093,90 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               )}
 
               {/* Add attachment link */}
-              <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-2 max-w-lg shadow-4xs">
-                <span className="font-bold text-slate-600 block">Add Photo URL or Reference Document Link</span>
+              <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-3 max-w-lg shadow-4xs">
+                {/* Real File Uploader Area */}
+                <div className="border border-dashed border-slate-300 rounded-xl bg-slate-50 p-4 text-center hover:bg-blue-50/50 transition-all cursor-pointer relative group">
+                  {uploadingStepId === step.id ? (
+                    <div className="flex flex-col items-center justify-center py-1 text-slate-500 font-bold gap-2">
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                      <span>Syncing with MinIO...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-1 text-slate-500 gap-1 hover:text-blue-650">
+                      <FileUp className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                      <span className="font-bold text-xs text-slate-705">Click to upload file from device</span>
+                      <input
+                        type="file"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          setUploadingStepId(step.id)
+                          const uploaded = await uploadFileHelper(file)
+                          setUploadingStepId(null)
+                          if (uploaded) {
+                            // Automatically add it to the step attachments
+                            const nameStr = uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name
+                            const urlStr = uploaded.url
+                            
+                            const rich = parseRichResponse(step.stringValue)
+                            const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: uploaded.type, key: uploaded.key }]
+                            
+                            const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
+                            const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${stepId}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ stringValue: payload }),
+                            })
+                            const data = await res.json()
+                            if (res.ok) {
+                              setProcedures(prev => prev.map(p => p.id !== procId ? p : {
+                                ...p,
+                                steps: p.steps.map(s => s.id !== stepId ? s : { ...s, stringValue: data.stringValue })
+                              }))
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="h-px bg-slate-100 flex-1" />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">or manually add URL</span>
+                  <div className="h-px bg-slate-100 flex-1" />
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="Attachment Name (e.g. Belt Photo)"
+                    placeholder="Attachment Name"
                     value={stepAttachName[step.id] ?? ''}
                     onChange={e => {
                       const txt = e.target.value
                       setStepAttachName(prev => ({ ...prev, [step.id]: txt }))
                     }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white"
+                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white font-semibold"
                   />
                   <input
                     type="text"
-                    placeholder="URL (e.g. https://...)"
+                    placeholder="URL (https://...)"
                     value={stepAttachUrl[step.id] ?? ''}
                     onChange={e => {
                       const txt = e.target.value
                       setStepAttachUrl(prev => ({ ...prev, [step.id]: txt }))
                     }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white"
+                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white font-semibold"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => handleAttachmentAdd(procId, step.id)}
                   disabled={!stepAttachName[step.id] || !stepAttachUrl[step.id]}
-                  className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-bold rounded-lg disabled:opacity-40"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg disabled:opacity-40 transition-shadow shadow-sm"
                 >
-                  Confirm Add Attachment
+                  Confirm URL Attachment
                 </button>
               </div>
             </div>

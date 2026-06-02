@@ -3,6 +3,36 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
+import { unlink } from 'fs/promises'
+import path from 'path'
+import { deleteFile } from '@/lib/minio'
+
+const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
+
+function isMinioConfigured(): boolean {
+  return !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+}
+
+async function cleanupFile(url: string | null, key: string | null) {
+  if (!url && !key) return
+  const useMinIO = isMinioConfigured()
+  
+  if (key && !key.startsWith('local-') && useMinIO) {
+    try {
+      await deleteFile(key)
+    } catch (err) {
+      console.error(`Cleanup: Failed to delete MinIO key ${key}:`, err)
+    }
+  }
+
+  if (url && url.startsWith('/uploads/')) {
+    try {
+      const filename = path.basename(url)
+      const filepath = path.join(UPLOAD_DIR, filename)
+      await unlink(filepath).catch(() => {})
+    } catch {}
+  }
+}
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -135,8 +165,27 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
-    const existing = await prisma.procedure.findUnique({ where: { id } })
+    const existing = await prisma.procedure.findUnique({
+      where: { id },
+      include: {
+        steps: true
+      }
+    })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // ── Cleanup Storage ───────────────────────────────
+    for (const step of existing.steps) {
+      if (step.settings) {
+        try {
+          const settings = step.settings as any
+          if (settings.attachments && Array.isArray(settings.attachments)) {
+            for (const at of settings.attachments) {
+              await cleanupFile(at.url, at.key || null)
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
 
     await prisma.procedure.delete({ where: { id } })
 

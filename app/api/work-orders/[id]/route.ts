@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
+import { unlink } from 'fs/promises'
+import path from 'path'
+import { deleteFile } from '@/lib/minio'
 import {
   canEditWorkOrder,
   canReassignWorkOrder,
@@ -17,6 +20,37 @@ import {
   resolveProceduresForAssets,
   generatePerAssetProcedures,
 } from '@/lib/work-order-assets'
+
+const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
+
+function isMinioConfigured(): boolean {
+  return !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+}
+
+async function cleanupFile(url: string | null, key: string | null) {
+  if (!url && !key) return
+  const useMinIO = isMinioConfigured()
+  
+  // 1. MinIO deletion
+  if (key && !key.startsWith('local-') && useMinIO) {
+    try {
+      await deleteFile(key)
+    } catch (err) {
+      console.error(`Cleanup: Failed to delete MinIO key ${key}:`, err)
+    }
+  }
+
+  // 2. Local deletion
+  if (url && url.startsWith('/uploads/')) {
+    try {
+      const filename = path.basename(url)
+      const filepath = path.join(UPLOAD_DIR, filename)
+      await unlink(filepath)
+    } catch (err) {
+      // ignore, file might not exist
+    }
+  }
+}
 
 const updateSchema = z.object({
   title:               z.string().min(1).optional(),
@@ -298,9 +332,50 @@ export async function DELETE(
       return NextResponse.json({ error: 'Only admins can delete work orders' }, { status: 403 })
     }
     const { id } = await params
-
-    const wo = await prisma.workOrder.findUnique({ where: { id }, select: { title: true } })
+    const wo = await prisma.workOrder.findUnique({
+      where: { id },
+      select: {
+        title: true,
+        attachments: true,
+        procedures: {
+          include: {
+            steps: true
+          }
+        }
+      }
+    })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
+
+    // ── Cleanup Storage (MinIO / Local) ───────────────────────────────
+    // 1. Top-level attachments
+    for (const at of wo.attachments) {
+      const url = at.url
+      // Extract key if not stored directly as field (attachments table should have key)
+      // I'll need to check if attachment table has key. 
+      // If not, I'll extract it from the URL.
+      let objectKey: string | null = (at as { key?: string }).key || null
+      if (!objectKey && at.url.includes('?')) {
+        const urlObj = new URL(at.url)
+        objectKey = decodeURIComponent(urlObj.pathname.replace(/^\//, '').split('/').slice(1).join('/'))
+      }
+      await cleanupFile(at.url, objectKey)
+    }
+
+    // 2. Procedure step attachments
+    for (const proc of wo.procedures) {
+      for (const step of proc.steps) {
+        if (step.stringValue) {
+          try {
+            const rich = JSON.parse(step.stringValue)
+            if (rich.attachments && Array.isArray(rich.attachments)) {
+              for (const sat of rich.attachments) {
+                await cleanupFile(sat.url, sat.key || null)
+              }
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    }
 
     await prisma.workOrderPart.deleteMany({ where: { workOrderId: id } })
     await prisma.workOrder.delete({ where: { id } })

@@ -346,7 +346,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
     try {
       const rich = parseRichResponse(stepObj.stringValue)
       const isImg = urlStr.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/) || nameStr.toLowerCase().includes('photo') || nameStr.toLowerCase().includes('image')
-      const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: isImg ? 'IMAGE' : 'PDF' }]
+      const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: isImg ? 'IMAGE' : 'PDF', key: undefined }]
       
       const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
       const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${stepId}`, {

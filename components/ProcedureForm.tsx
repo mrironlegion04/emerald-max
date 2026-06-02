@@ -76,6 +76,7 @@ interface Attachment {
   name: string
   url: string
   type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER'
+  key?: string
 }
 
 function parseProcedureDescription(descRaw: string | null | undefined): { text: string; attachments: Attachment[] } {
@@ -266,6 +267,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
         url: data.url,
         name: file.name,
         type,
+        key: data.key
       }
     } catch (err: any) {
       alert(err.message || 'Error occurred during file upload')
@@ -544,6 +546,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
       name: newAttachName.trim(),
       url: newAttachUrl.trim(),
       type: newAttachType,
+      key: undefined,
     }
     setAttachments(prev => [...prev, newAttachment])
     setNewAttachName('')
@@ -703,7 +706,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                               name: uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name,
                               url: uploaded.url,
                               type: uploaded.type,
-                              key: (uploaded as any).key || (uploaded as any).key
+                              key: uploaded.key
                             }
                             setAttachments(prev => [...prev, newAt])
                             setNewAttachName('')
@@ -771,9 +774,17 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {attachments.map((attach, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 border border-slate-150 rounded-lg text-xs transition-all">
-                    <div className="flex items-center gap-1.5 truncate pr-3">
+                    <div className="flex items-center gap-1.5 truncate pr-3 flex-1">
                       <span className="px-1.5 py-0.5 rounded bg-blue-100 border border-blue-200/50 text-blue-800 text-[9px] font-extrabold">{attach.type}</span>
-                      <span className="font-bold text-slate-705 truncate">{attach.name}</span>
+                      <span className="font-bold text-slate-705 truncate max-w-[120px]">{attach.name}</span>
+                      <a 
+                        href={attach.url} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-200/30 transition-all uppercase tracking-tighter"
+                      >
+                        View
+                      </a>
                     </div>
                     <button
                       type="button"
@@ -1178,36 +1189,44 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                       Attach PDFs, specifications, blueprints, or reference photos for this step. Technicians can view them right below the checklist instruction line.
                     </p>
 
-                    {/* Existing step-specific attachments */}
-                    {step.settings?.attachments && step.settings.attachments.length > 0 && (
-                      <div className="space-y-1.5">
-                        {step.settings.attachments.map((at: { name: string; url: string; type: string; key?: string }, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs leading-none">
-                            <div className="flex items-center gap-1.5 truncate max-w-[220px]">
-                              <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[8px] font-extrabold uppercase">{at.type || 'SOP'}</span>
-                              <span className="font-semibold text-slate-705 truncate">{at.name}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentAttachments = step.settings?.attachments ?? []
-                                const target = currentAttachments[idx]
-                                if (target?.key) {
-                                  fetch(`/api/upload?key=${encodeURIComponent(target.key)}&url=${encodeURIComponent(target.url)}`, {
-                                    method: 'DELETE'
-                                  }).catch(err => console.error('Failed to cleanup step file:', err))
-                                }
-                                const updatedAttachments = currentAttachments.filter((_: unknown, i: number) => i !== idx)
-                                updateStepConfig(editingStepIdx, 'settings', 'attachments', updatedAttachments)
-                              }}
-                              className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                     {/* Existing step-specific attachments */}
+                     {step.settings?.attachments && step.settings.attachments.length > 0 && (
+                       <div className="space-y-1.5">
+                         {step.settings.attachments.map((at: Attachment, idx: number) => (
+                           <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs leading-none">
+                             <div className="flex items-center gap-1.5 truncate max-w-[220px] flex-1">
+                               <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[8px] font-extrabold uppercase">{at.type || 'SOP'}</span>
+                               <span className="font-semibold text-slate-705 truncate max-w-[120px]">{at.name}</span>
+                               <a 
+                                 href={at.url} 
+                                 target="_blank" 
+                                 rel="noreferrer" 
+                                 className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-200/30 transition-all uppercase tracking-tighter"
+                               >
+                                 View
+                               </a>
+                             </div>
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 const currentAttachments = step.settings?.attachments ? [...step.settings.attachments] : []
+                                 const target = currentAttachments[idx]
+                                 if (target?.key || target?.url) {
+                                   fetch(`/api/upload?key=${encodeURIComponent(target.key || '')}&url=${encodeURIComponent(target.url || '')}`, {
+                                     method: 'DELETE'
+                                   }).catch(err => console.error('Failed to cleanup step file:', err))
+                                 }
+                                 const updatedAttachments = currentAttachments.filter((_: unknown, i: number) => i !== idx)
+                                 updateStepConfig(editingStepIdx, 'settings', 'attachments', updatedAttachments)
+                               }}
+                               className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-100 transition-colors"
+                             >
+                               <X className="w-3.5 h-3.5" />
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     )}
 
                     {/* Form to add a new step attachment */}
                     <div className="border-t border-slate-200/50 pt-3 space-y-2 bg-slate-100/30 p-2 rounded-lg text-xs">
@@ -1231,16 +1250,16 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                                 setUploadingStepFile(true)
                                 const uploaded = await uploadFileHelper(file)
                                 setUploadingStepFile(false)
-                                if (uploaded) {
-                                  const currentAttachments = step.settings?.attachments ?? []
-                                  const newAt = {
-                                    name: uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name,
-                                    url: uploaded.url,
-                                    type: uploaded.type,
-                                    key: (uploaded as any).key || (uploaded as any).key,
+                                  if (uploaded) {
+                                    const currentAttachments = step.settings?.attachments ?? []
+                                    const newAt: Attachment = {
+                                      name: uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name,
+                                      url: uploaded.url,
+                                      type: uploaded.type,
+                                      key: uploaded.key,
+                                    }
+                                    updateStepConfig(editingStepIdx, 'settings', 'attachments', [...currentAttachments, newAt])
                                   }
-                                  updateStepConfig(editingStepIdx, 'settings', 'attachments', [...currentAttachments, newAt])
-                                }
                               }}
                             />
                           </div>
@@ -1289,10 +1308,11 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                             const typeEl = document.getElementById('step-attach-type-select') as HTMLSelectElement
                             if (nameEl && urlEl && nameEl.value.trim() && urlEl.value.trim()) {
                               const currentAttachments = step.settings?.attachments ?? []
-                              const newAt = {
+                              const newAt: Attachment = {
                                 name: nameEl.value.trim(),
                                 url: urlEl.value.trim(),
-                                type: typeEl.value,
+                                type: typeEl.value as any,
+                                key: undefined,
                               }
                               updateStepConfig(editingStepIdx, 'settings', 'attachments', [...currentAttachments, newAt])
                               nameEl.value = ''

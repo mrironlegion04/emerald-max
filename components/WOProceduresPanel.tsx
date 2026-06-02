@@ -898,36 +898,57 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                     <span className="text-[11px] text-slate-500 font-medium block mb-2">
                       Prompt: Upload executing reference {step.type.toLowerCase()}
                     </span>
-                    <input
-                      type="text"
-                      placeholder={step.type === 'PHOTO' ? "Paste image URL or camera feed..." : "Paste attachment manual URL..."}
-                      id={`file-input-${step.id}`}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-705 outline-none mb-2 focus:border-blue-400"
-                    />
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const val = (document.getElementById(`file-input-${step.id}`) as HTMLInputElement)?.value
-                          if (val) submitStepValue(procId, step.id, step.type, val)
-                        }}
-                        className="px-3 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-[10px] rounded animate-all"
-                      >
-                        Add URL
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const mockUrl = step.type === 'PHOTO' 
-                            ? 'https://picsum.photos/seed/vibrant/400/300'
-                            : `/docs/uploaded_${step.id}.pdf`
-                          submitStepValue(procId, step.id, step.type, mockUrl)
-                        }}
-                        className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-750 font-bold text-[10px] rounded shadow-5xs"
-                      >
-                        Choose File
-                      </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          className="w-full flex flex-col items-center justify-center p-3 border border-dashed border-slate-300 rounded-xl bg-white hover:bg-blue-50/50 transition-all text-slate-500 hover:text-blue-600 gap-1"
+                        >
+                          <FileUp className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                          <span className="font-bold text-[10px]">Upload File</span>
+                        </button>
+                        <input
+                          type="file"
+                          accept={step.type === 'PHOTO' ? 'image/*' : '*'}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const uploaded = await uploadFileHelper(file)
+                            if (uploaded) {
+                              submitStepValue(procId, step.id, step.type, uploaded.url)
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {step.type === 'PHOTO' && (
+                        <div className="relative group">
+                          <button
+                            type="button"
+                            className="w-full flex flex-col items-center justify-center p-3 border border-dashed border-slate-300 rounded-xl bg-white hover:bg-blue-50/50 transition-all text-slate-500 hover:text-blue-600 gap-1"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center text-slate-400 group-hover:text-blue-500 text-lg">📷</div>
+                            <span className="font-bold text-[10px]">Take Photo</span>
+                          </button>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              const uploaded = await uploadFileHelper(file)
+                              if (uploaded) {
+                                submitStepValue(procId, step.id, step.type, uploaded.url)
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
+
                   </div>
                 )}
               </div>
@@ -1095,18 +1116,61 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               {/* Add attachment link */}
               <div className="bg-white p-3 border border-slate-200 rounded-lg space-y-3 max-w-lg shadow-4xs">
                 {/* Real File Uploader Area */}
-                <div className="border border-dashed border-slate-300 rounded-xl bg-slate-50 p-4 text-center hover:bg-blue-50/50 transition-all cursor-pointer relative group">
-                  {uploadingStepId === step.id ? (
-                    <div className="flex flex-col items-center justify-center py-1 text-slate-500 font-bold gap-2">
-                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                      <span>Syncing with MinIO...</span>
-                    </div>
-                  ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="border border-dashed border-slate-300 rounded-xl bg-slate-50 p-4 text-center hover:bg-blue-50/50 transition-all cursor-pointer relative group">
+                    {uploadingStepId === step.id ? (
+                      <div className="flex flex-col items-center justify-center py-1 text-slate-500 font-bold gap-2">
+                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        <span>Syncing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-1 text-slate-500 gap-1 hover:text-blue-650">
+                        <FileUp className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        <span className="font-bold text-[11px] text-slate-705">Upload File</span>
+                        <input
+                          type="file"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            setUploadingStepId(step.id)
+                            const uploaded = await uploadFileHelper(file)
+                            setUploadingStepId(null)
+                            if (uploaded) {
+                              const nameStr = uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name
+                              const urlStr = uploaded.url
+                              const rich = parseRichResponse(step.stringValue)
+                              const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: uploaded.type, key: uploaded.key }]
+                              const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
+                              const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${step.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ stringValue: payload }),
+                              })
+                              const data = await res.json()
+                              if (res.ok) {
+                                setProcedures(prev => prev.map(p => p.id !== procId ? p : {
+                                  ...p,
+                                  steps: p.steps.map(s => s.id !== step.id ? s : { ...s, stringValue: data.stringValue })
+                                }))
+                                router.refresh()
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Camera Option */}
+                  <div className="border border-dashed border-slate-300 rounded-xl bg-slate-50 p-4 text-center hover:bg-blue-50/50 transition-all cursor-pointer relative group">
                     <div className="flex flex-col items-center justify-center py-1 text-slate-500 gap-1 hover:text-blue-650">
-                      <FileUp className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                      <span className="font-bold text-xs text-slate-705">Click to upload file from device</span>
+                      <div className="w-5 h-5 flex items-center justify-center text-slate-400 group-hover:text-blue-500">📷</div>
+                      <span className="font-bold text-[11px] text-slate-705">Take Photo</span>
                       <input
                         type="file"
+                        accept="image/*"
+                        capture="environment"
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         onChange={async (e) => {
                           const file = e.target.files?.[0]
@@ -1115,15 +1179,12 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                           const uploaded = await uploadFileHelper(file)
                           setUploadingStepId(null)
                           if (uploaded) {
-                            // Automatically add it to the step attachments
-                            const nameStr = uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name
+                            const nameStr = `Photo_${new Date().getTime()}`
                             const urlStr = uploaded.url
-                            
                             const rich = parseRichResponse(step.stringValue)
-                            const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: uploaded.type, key: uploaded.key }]
-                            
+                            const nextAttach = [...rich.attachments, { name: nameStr, url: urlStr, type: 'IMAGE', key: uploaded.key }]
                             const payload = serializeRichResponse(rich.value, rich.notes, nextAttach)
-                            const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${stepId}`, {
+                            const res = await fetch(`/api/work-orders/${woId}/procedures/${procId}/steps/${step.id}`, {
                               method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ stringValue: payload }),
@@ -1132,52 +1193,17 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                             if (res.ok) {
                               setProcedures(prev => prev.map(p => p.id !== procId ? p : {
                                 ...p,
-                                steps: p.steps.map(s => s.id !== stepId ? s : { ...s, stringValue: data.stringValue })
+                                steps: p.steps.map(s => s.id !== step.id ? s : { ...s, stringValue: data.stringValue })
                               }))
+                              router.refresh()
                             }
                           }
                         }}
                       />
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="h-px bg-slate-100 flex-1" />
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">or manually add URL</span>
-                  <div className="h-px bg-slate-100 flex-1" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Attachment Name"
-                    value={stepAttachName[step.id] ?? ''}
-                    onChange={e => {
-                      const txt = e.target.value
-                      setStepAttachName(prev => ({ ...prev, [step.id]: txt }))
-                    }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white font-semibold"
-                  />
-                  <input
-                    type="text"
-                    placeholder="URL (https://...)"
-                    value={stepAttachUrl[step.id] ?? ''}
-                    onChange={e => {
-                      const txt = e.target.value
-                      setStepAttachUrl(prev => ({ ...prev, [step.id]: txt }))
-                    }}
-                    className="bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs outline-none focus:border-slate-350 focus:bg-white font-semibold"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleAttachmentAdd(procId, step.id)}
-                  disabled={!stepAttachName[step.id] || !stepAttachUrl[step.id]}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg disabled:opacity-40 transition-shadow shadow-sm"
-                >
-                  Confirm URL Attachment
-                </button>
               </div>
             </div>
           </div>

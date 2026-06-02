@@ -985,43 +985,5 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
-model MaintenanceProcedure {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  steps       MaintenanceStep[]
-
-  @@map("maintenance_procedures")
-}
-
-model MaintenanceStep {
-  id          String            @id @default(cuid())
-  label       String
-  type        String            @default("CHECKBOX")
-  isMandatory Boolean           @default(false)
-  sortOrder   Int               @default(0)
-  procedureId String
-  procedure   MaintenanceProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
-  attachments StepAttachment[]
-
-  @@map("maintenance_steps")
-}
-
-model StepAttachment {
-  id          String            @id @default(cuid())
-  filename    String
-  url         String
-  mimeType    String?
-  size        Int?
-  stepId      String
-  step        MaintenanceStep   @relation(fields: [stepId], references: [id], onDelete: Cascade)
-  createdAt   DateTime          @default(now())
-
-  @@map("step_attachments")
-}
-
-
 
 

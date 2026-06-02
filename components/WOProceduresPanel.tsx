@@ -67,7 +67,7 @@ interface Props {
 interface StepMetaResponse {
   value: string | null
   notes: string | null
-  attachments: { name: string; url: string; type: string }[]
+  attachments: { name: string; url: string; type: string; key?: string }[]
 }
 
 function parseRichResponse(raw: string | null): StepMetaResponse {
@@ -87,7 +87,7 @@ function parseRichResponse(raw: string | null): StepMetaResponse {
   return { value: raw, notes: null, attachments: [] }
 }
 
-function serializeRichResponse(value: string | null, notes: string | null, attachments: { name: string; url: string; type: string }[]): string {
+function serializeRichResponse(value: string | null, notes: string | null, attachments: { name: string; url: string; type: string; key?: string }[]): string {
   return JSON.stringify({ value, notes, attachments })
 }
 

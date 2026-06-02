@@ -702,7 +702,7 @@ export async function DELETE(req: NextRequest) {
     // Process media/file deletion if present
     if (msg.mediaUrl) {
       try {
-        const isMinIO = !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+        const isMinIO = !!(process.env.MINIO_ENDPOINT && process.env.MAX_MINIO_ACCESS_KEY && process.env.MAX_MINIO_SECRET_KEY)
         if (isMinIO && msg.mediaUrl.includes('?')) {
           const urlObj = new URL(msg.mediaUrl)
           const pathname = decodeURIComponent(urlObj.pathname.replace(/^\//, ''))

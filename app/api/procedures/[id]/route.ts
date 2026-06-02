@@ -10,7 +10,7 @@ import { deleteFile } from '@/lib/minio'
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 
 function isMinioConfigured(): boolean {
-  return !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+  return !!(process.env.MINIO_ENDPOINT && process.env.MAX_MINIO_ACCESS_KEY && process.env.MAX_MINIO_SECRET_KEY)
 }
 
 async function cleanupFile(url: string | null, key: string | null) {

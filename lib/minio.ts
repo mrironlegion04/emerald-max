@@ -11,12 +11,12 @@ export function getMinioClient(): Client {
   }
 
   const endpoint = process.env.MINIO_ENDPOINT
-  const accessKey = process.env.MINIO_ACCESS_KEY
-  const secretKey = process.env.MINIO_SECRET_KEY
+  const accessKey = process.env.MAX_MINIO_ACCESS_KEY
+  const secretKey = process.env.MAX_MINIO_SECRET_KEY
   const useSSL = process.env.MINIO_USE_SSL !== 'false'
 
   if (!endpoint || !accessKey || !secretKey) {
-    throw new Error('MinIO configuration missing: MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY required')
+    throw new Error('MinIO configuration missing: MINIO_ENDPOINT, MAX_MINIO_ACCESS_KEY, MAX_MINIO_SECRET_KEY required')
   }
 
   // Parse endpoint - remove protocol if present

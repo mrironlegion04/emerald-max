@@ -18,7 +18,7 @@ const ALLOWED = [
 ]
 
 function isMinioConfigured(): boolean {
-  return !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+  return !!(process.env.MINIO_ENDPOINT && process.env.MAX_MINIO_ACCESS_KEY && process.env.MAX_MINIO_SECRET_KEY)
 }
 
 function generateObjectName(originalName: string): string {

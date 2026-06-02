@@ -234,7 +234,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
   const [uploadingProcFile, setUploadingProcFile] = useState(false)
   const [uploadingStepFile, setUploadingStepFile] = useState(false)
 
-  async function uploadFileHelper(file: File): Promise<{ url: string; name: string; type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER' } | null> {
+  async function uploadFileHelper(file: File): Promise<{ url: string; name: string; type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER'; key?: string } | null> {
     try {
       const formData = new FormData()
       formData.append('file', file)

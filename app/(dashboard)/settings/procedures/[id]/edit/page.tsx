@@ -61,6 +61,8 @@ export default async function EditProcedurePage({
             isMandatory: s.isMandatory,
             options:     s.options,
             sortOrder:   s.sortOrder,
+            settings:    s.settings,
+            logic:       s.logic,
           })),
           assetIds:    procedure.assets.map((a: any) => a.id),
           categoryIds: procedure.categories.map((c: any) => c.id),

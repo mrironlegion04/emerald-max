@@ -11,15 +11,15 @@ import {
   Search, 
   Paperclip, 
   Heading as HeadingIcon, 
-  ArrowUp, 
-  ArrowDown,
   Settings,
   SlidersHorizontal,
   ChevronRight,
   Sliders,
   Check,
   CheckSquare,
-  HelpCircle
+  HelpCircle,
+  FileUp,
+  Loader2
 } from 'lucide-react'
 
 const STEP_TYPE_OPTIONS = [
@@ -228,6 +228,50 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
   const [newAttachUrl, setNewAttachUrl] = useState('')
   const [newAttachType, setNewAttachType] = useState<Attachment['type']>('PDF')
   const [showAttachForm, setShowAttachForm] = useState(false)
+
+  // Real upload states & logic for MinIO
+  const [uploadingProcFile, setUploadingProcFile] = useState(false)
+  const [uploadingStepFile, setUploadingStepFile] = useState(false)
+
+  async function uploadFileHelper(file: File): Promise<{ url: string; name: string; type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER' } | null> {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Failed to upload file')
+      }
+
+      const data = await res.json()
+      
+      let type: 'PDF' | 'IMAGE' | 'VIDEO' | 'MANUAL' | 'OTHER' = 'OTHER'
+      const mime = file.type.toLowerCase()
+      if (mime.includes('pdf')) {
+        type = 'PDF'
+      } else if (mime.startsWith('image/')) {
+        type = 'IMAGE'
+      } else if (mime.startsWith('video/')) {
+        type = 'VIDEO'
+      } else if (mime.includes('msword') || mime.includes('word') || mime.includes('document')) {
+        type = 'MANUAL'
+      }
+
+      return {
+        url: data.url,
+        name: file.name,
+        type,
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error occurred during file upload')
+      return null
+    }
+  }
 
   // Drag and drop state
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
@@ -622,21 +666,59 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
 
             {showAttachForm && (
               <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3 mb-4 animate-fade-in text-xs">
+                {/* Real File Uploader Area directly connected to MinIO helper */}
+                <div className="border border-dashed border-slate-300 rounded-xl bg-white p-4 text-center hover:bg-slate-50 transition-all cursor-pointer relative group">
+                  {uploadingProcFile ? (
+                    <div className="flex flex-col items-center justify-center py-2 text-slate-500 font-bold gap-2">
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                      <span>Uploading to MinIO Bucket...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-2 text-slate-500 gap-1 hover:text-blue-650">
+                      <FileUp className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                      <span className="font-bold text-xs text-slate-705">Drag or click to upload a reference file</span>
+                      <span className="text-[10px] text-slate-400">PDF, image, manual documents up to 25MB</span>
+                      <input
+                        type="file"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          setUploadingProcFile(true)
+                          const uploaded = await uploadFileHelper(file)
+                          setUploadingProcFile(false)
+                          if (uploaded) {
+                            setNewAttachName(uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name)
+                            setNewAttachUrl(uploaded.url)
+                            setNewAttachType(uploaded.type)
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Reference Title (e.g. OEM User Manual)"
-                    value={newAttachName}
-                    onChange={e => setNewAttachName(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="URL (e.g. https://...)"
-                    value={newAttachUrl}
-                    onChange={e => setNewAttachUrl(e.target.value)}
-                    className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500 sm:col-span-2"
-                  />
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Document Title</label>
+                    <input
+                      type="text"
+                      placeholder="Reference Title (e.g. OEM User Manual)"
+                      value={newAttachName}
+                      onChange={e => setNewAttachName(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500 w-full font-semibold"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Verified Resource URL Node</label>
+                    <input
+                      type="text"
+                      placeholder="URL (e.g. https://...)"
+                      value={newAttachUrl}
+                      onChange={e => setNewAttachUrl(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500 w-full font-semibold"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
@@ -815,26 +897,6 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
 
                       {/* Heading actions */}
                       <div className="flex items-center gap-2">
-                        {/* Move headings */}
-                        <div className="flex items-center border border-slate-200 rounded-lg bg-white shadow-3xs">
-                          <button
-                            type="button"
-                            onClick={() => moveHeadingSection(group.headingIdx, -1)}
-                            className="p-1 text-slate-400 hover:text-slate-600"
-                            title="Move Chapter Up"
-                          >
-                            <ArrowUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveHeadingSection(group.headingIdx, 1)}
-                            className="p-1 text-slate-400 hover:text-slate-600 border-l border-slate-200"
-                            title="Move Chapter Down"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
                         {/* Add step here */}
                         <button
                           type="button"
@@ -946,27 +1008,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                                   </span>
                                 )}
 
-                                {/* Reorder Steps */}
-                                <div className="flex items-center border border-slate-100 rounded-md">
-                                  <button
-                                    type="button"
-                                    disabled={originalIdx === 0}
-                                    onClick={() => moveStep(originalIdx, -1)}
-                                    className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30"
-                                  >
-                                    <ArrowUp className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={originalIdx === steps.length - 1}
-                                    onClick={() => moveStep(originalIdx, 1)}
-                                    className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 border-l border-slate-100"
-                                  >
-                                    <ArrowDown className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-
-                                {/* Advanced Slide-out Drawer Trigger */}
+                                {/* Advanced Slide-out Drawer Drawer Trigger */}
                                 <button
                                   type="button"
                                   onClick={() => setEditingStepIdx(isEditTarget ? null : originalIdx)}
@@ -1144,15 +1186,49 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                     )}
 
                     {/* Form to add a new step attachment */}
-                    <div className="border-t border-slate-200/50 pt-3 space-y-2 bg-slate-100/30 p-2 rounded-lg">
-                      <div className="grid grid-cols-2 gap-2">
+                    <div className="border-t border-slate-200/50 pt-3 space-y-2 bg-slate-100/30 p-2 rounded-lg text-xs">
+                      {/* Real File Uploader Area for Step Attachments */}
+                      <div className="border border-dashed border-slate-300 rounded-lg bg-white p-3 text-center hover:bg-slate-50 transition-all cursor-pointer relative group/step-file">
+                        {uploadingStepFile ? (
+                          <div className="flex items-center justify-center py-2 text-slate-500 font-bold gap-1.5 text-xs">
+                            <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                            <span>Uploading to MinIO...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-slate-500 gap-0.5 hover:text-blue-605 text-[11px]">
+                            <FileUp className="w-5 h-5 text-slate-400 group-hover/step-file:text-blue-500 transition-colors" />
+                            <span className="font-bold text-slate-700">Upload document for this checklist step</span>
+                            <input
+                              type="file"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                setUploadingStepFile(true)
+                                const uploaded = await uploadFileHelper(file)
+                                setUploadingStepFile(false)
+                                if (uploaded) {
+                                  const nameEl = document.getElementById('step-attach-name-input') as HTMLInputElement
+                                  const urlEl = document.getElementById('step-attach-url-input') as HTMLInputElement
+                                  const typeEl = document.getElementById('step-attach-type-select') as HTMLSelectElement
+                                  if (nameEl) nameEl.value = uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name
+                                  if (urlEl) urlEl.value = uploaded.url
+                                  if (typeEl) typeEl.value = uploaded.type
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-1">
                         <div>
                           <label className="block text-[9px] font-bold text-slate-550 uppercase tracking-wider mb-0.5">Title Name</label>
                           <input
                             type="text"
                             id="step-attach-name-input"
                             placeholder="e.g. Wiring Blueprint"
-                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400"
+                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400 font-semibold"
                           />
                         </div>
                         <div>
@@ -1161,7 +1237,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                             type="text"
                             id="step-attach-url-input"
                             placeholder="https://example.com/file"
-                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400"
+                            className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-xs w-full focus:border-blue-400 font-semibold"
                           />
                         </div>
                       </div>
@@ -1199,7 +1275,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                               alert('Please fill out both the attachment name and the URL link.')
                             }
                           }}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-705 text-white font-bold text-[10px] rounded transition-all shadow-3xs"
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-750 text-white font-bold text-[10px] rounded transition-all shadow-3xs"
                         >
                           ＋ Add File
                         </button>

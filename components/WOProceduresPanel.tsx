@@ -871,7 +871,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                         <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
                         <div className="text-xs">
                           <span className="font-bold block">Compliance Warning: Photo Required</span>
-                          <span className="text-amber-800 leading-normal block mt-0.5">MaintainX SOP rules require a proof image for flagged checkpoints. Click the paperclip icon on the far right of this card to attach.</span>
+                          <span className="text-amber-800 leading-normal block mt-0.5">Emerald SOP rules require a proof image for flagged checkpoints. Click the paperclip icon on the far right of this card to attach.</span>
                         </div>
                       </div>
                     )

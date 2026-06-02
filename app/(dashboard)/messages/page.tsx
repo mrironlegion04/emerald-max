@@ -1382,7 +1382,7 @@ export default function MessagesPage() {
               </span>
               <div>
                 <h1 className="text-base font-bold text-slate-800 tracking-tight font-sans">Comms Hub</h1>
-                <p className="text-[10px] text-slate-400 font-medium">MaintainX Team Workspace</p>
+                <p className="text-[10px] text-slate-400 font-medium">Emerald Team Workspace</p>
               </div>
             </div>
 
@@ -2130,7 +2130,7 @@ export default function MessagesPage() {
               <div className="flex items-center gap-2">
                 <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><ClipboardList className="w-5 h-5 animate-pulse" /></span>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight">Create MaintainX Work Order</h3>
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">Create Emerald Max Work Order</h3>
                   <p className="text-[10px] text-slate-500 font-medium">Extracting repair request details from frontline chat logs</p>
                 </div>
               </div>

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { Prisma } from '@prisma/client'
+import { unlink } from 'fs/promises'
+import path from 'path'
+import { deleteFile } from '@/lib/minio'
 
 // Helper to check if channel exists and dynamically create it if it doesn't
 async function ensureChannelExists(channelId: string, currentUserId: string): Promise<boolean> {
@@ -696,11 +699,38 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Process media/file deletion if present
+    if (msg.mediaUrl) {
+      try {
+        const isMinIO = !!(process.env.MINIO_ENDPOINT && process.env.MINIO_ACCESS_KEY && process.env.MINIO_SECRET_KEY)
+        if (isMinIO && msg.mediaUrl.includes('?')) {
+          const urlObj = new URL(msg.mediaUrl)
+          const pathname = decodeURIComponent(urlObj.pathname.replace(/^\//, ''))
+          const parts = pathname.split('/')
+          if (parts.length > 1) {
+            const objectName = parts.slice(1).join('/') // strip off the bucket name prefix
+            await deleteFile(objectName)
+            console.log(`Deleted chat attachment from MinIO: ${objectName}`)
+          }
+        } else if (msg.mediaUrl.startsWith('/uploads/')) {
+          const filename = path.basename(msg.mediaUrl)
+          const filepath = path.join(process.cwd(), 'public', 'uploads', filename)
+          await unlink(filepath)
+          console.log(`Deleted chat attachment locally: ${filename}`)
+        }
+      } catch (err) {
+        console.error('Failed to delete chat file attachment:', err)
+      }
+    }
+
     const deleted = await prisma.chatMessage.update({
       where: { id },
       data: {
         content: '🗑️ This message was deleted.',
         isDeleted: true,
+        mediaUrl: null,
+        mediaName: null,
+        mediaType: null,
       },
     })
 

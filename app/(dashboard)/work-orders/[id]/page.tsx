@@ -325,6 +325,8 @@ export default async function WorkOrderDetailPage({
                 checkedBy: s.checkedBy,
                 sortOrder: s.sortOrder,
                 assetId: s.assetId,
+                settings: s.settings,
+                logic: s.logic,
                 asset: s.asset ? {
                   id: s.asset.id,
                   name: s.asset.name,

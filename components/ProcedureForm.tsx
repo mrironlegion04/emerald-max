@@ -552,7 +552,18 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
     setShowAttachForm(false)
   }
 
-  function removeAttachment(idx: number) {
+  async function removeAttachment(idx: number) {
+    const target = attachments[idx]
+    if (target?.key) {
+      try {
+        await fetch(`/api/upload?key=${encodeURIComponent(target.key)}&url=${encodeURIComponent(target.url)}`, {
+          method: 'DELETE'
+        })
+        console.log('File deleted from MinIO storage successfully')
+      } catch (err) {
+        console.error('Failed to clear file from storage:', err)
+      }
+    }
     setAttachments(prev => prev.filter((_, i) => i !== idx))
   }
 
@@ -688,9 +699,16 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                           const uploaded = await uploadFileHelper(file)
                           setUploadingProcFile(false)
                           if (uploaded) {
-                            setNewAttachName(uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name)
-                            setNewAttachUrl(uploaded.url)
-                            setNewAttachType(uploaded.type)
+                            const newAt: Attachment = {
+                              name: uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name,
+                              url: uploaded.url,
+                              type: uploaded.type,
+                              key: (uploaded as any).key || (uploaded as any).key
+                            }
+                            setAttachments(prev => [...prev, newAt])
+                            setNewAttachName('')
+                            setNewAttachUrl('')
+                            setNewAttachType('PDF')
                           }
                         }}
                       />
@@ -1163,7 +1181,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                     {/* Existing step-specific attachments */}
                     {step.settings?.attachments && step.settings.attachments.length > 0 && (
                       <div className="space-y-1.5">
-                        {step.settings.attachments.map((at: { name: string; url: string; type: string }, idx: number) => (
+                        {step.settings.attachments.map((at: { name: string; url: string; type: string; key?: string }, idx: number) => (
                           <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs leading-none">
                             <div className="flex items-center gap-1.5 truncate max-w-[220px]">
                               <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[8px] font-extrabold uppercase">{at.type || 'SOP'}</span>
@@ -1173,6 +1191,12 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                               type="button"
                               onClick={() => {
                                 const currentAttachments = step.settings?.attachments ?? []
+                                const target = currentAttachments[idx]
+                                if (target?.key) {
+                                  fetch(`/api/upload?key=${encodeURIComponent(target.key)}&url=${encodeURIComponent(target.url)}`, {
+                                    method: 'DELETE'
+                                  }).catch(err => console.error('Failed to cleanup step file:', err))
+                                }
                                 const updatedAttachments = currentAttachments.filter((_: unknown, i: number) => i !== idx)
                                 updateStepConfig(editingStepIdx, 'settings', 'attachments', updatedAttachments)
                               }}
@@ -1208,12 +1232,14 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                                 const uploaded = await uploadFileHelper(file)
                                 setUploadingStepFile(false)
                                 if (uploaded) {
-                                  const nameEl = document.getElementById('step-attach-name-input') as HTMLInputElement
-                                  const urlEl = document.getElementById('step-attach-url-input') as HTMLInputElement
-                                  const typeEl = document.getElementById('step-attach-type-select') as HTMLSelectElement
-                                  if (nameEl) nameEl.value = uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name
-                                  if (urlEl) urlEl.value = uploaded.url
-                                  if (typeEl) typeEl.value = uploaded.type
+                                  const currentAttachments = step.settings?.attachments ?? []
+                                  const newAt = {
+                                    name: uploaded.name.split('.').slice(0, -1).join('.') || uploaded.name,
+                                    url: uploaded.url,
+                                    type: uploaded.type,
+                                    key: (uploaded as any).key || (uploaded as any).key,
+                                  }
+                                  updateStepConfig(editingStepIdx, 'settings', 'attachments', [...currentAttachments, newAt])
                                 }
                               }}
                             />

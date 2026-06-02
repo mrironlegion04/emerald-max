@@ -37,7 +37,25 @@ export default async function EditWorkOrderPage({
       orderBy: { name: 'asc' },
     }),
     prisma.procedure.findMany({
-      select: { id: true, name: true, description: true, steps: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        steps: {
+          select: {
+            id: true,
+            label: true,
+            type: true,
+            isMandatory: true,
+            options: true,
+            sortOrder: true,
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+        locations: { select: { id: true } },
+        categories: { select: { id: true } },
+        assets: { select: { id: true } },
+      },
       orderBy: { name: 'asc' },
     }),
   ])

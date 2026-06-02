@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardCheck, Star } from 'lucide-react'
+import { ClipboardCheck, Star, Eye, Check, Square, AlertCircle, FileText, Calendar, PenTool, Hash, FileDown, CheckSquare } from 'lucide-react'
 import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
@@ -12,8 +12,18 @@ interface Location { id: string; name: string; address: string | null; path: str
 interface User  { id: string; name: string; role: string }
 interface Team  { id: string; name: string; trade: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean }
+
+interface ProcedureStep {
+  id: string
+  label: string
+  type: string
+  isMandatory: boolean
+  options: string[]
+  sortOrder: number
+}
+
 interface Procedure {
-  id: string; name: string; description?: string | null; steps?: { id: string }[]
+  id: string; name: string; description?: string | null; steps?: ProcedureStep[]
   locations?: { id: string }[]
   categories?: { id: string }[]
   assets?: { id: string }[]
@@ -79,6 +89,8 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
   const [targetType, setTargetType] = useState<'ASSET' | 'LOCATION'>(
     (initialData?.locationId && !initialData?.assetId && !preselectedAssetId) ? 'LOCATION' : 'ASSET'
   )
+
+  const [previewProcedureId, setPreviewProcedureId] = useState<string | null>(null)
 
   const [assetMode, setAssetMode] = useState<'single' | 'multi'>(
     (initialData?.selectedAssetIds && initialData.selectedAssetIds.length > 1) ? 'multi' : 'single'
@@ -186,6 +198,12 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
   }, [procedures, recommendedIds])
 
   const hasRecommendations = recommendedIds.size > 0 && (!!primaryAssetId || !!form.locationId)
+
+  useEffect(() => {
+    if (!previewProcedureId && sortedProcedures.length > 0) {
+      setPreviewProcedureId(sortedProcedures[0].id)
+    }
+  }, [sortedProcedures, previewProcedureId])
 
   function toggleProcedure(id: string) {
     setForm(prev => {
@@ -561,72 +579,326 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
       {procedures.length > 0 && (
         <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-4 bg-white">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <ClipboardCheck className="w-5 h-5 text-emerald-600" />
-            <h2 className="font-bold text-slate-805 text-sm tracking-tight">Procedures</h2>
+            <ClipboardCheck className="w-5 h-5 text-emerald-650" />
+            <h2 className="font-bold text-slate-805 text-sm tracking-tight">Procedures & Checklists</h2>
           </div>
           <p className="text-xs text-slate-450 leading-relaxed font-medium">
-            Select one or more procedures to snap into this work order. Changes to procedures after creation will not affect existing work orders.
+            Select one or more procedures to snap into this work order. Click &quot;Preview&quot; to inspect instructions and fields on the right side before applying them.
           </p>
 
-          {hasRecommendations && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                <Star className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
-                Recommended
-              </div>
-              {sortedProcedures.filter(t => recommendedIds.has(t.id)).map(procedure => (
-                <label key={procedure.id} className="flex items-start gap-3 p-3.5 border border-emerald-200 bg-emerald-50/20 rounded-xl hover:bg-emerald-50/65 cursor-pointer transition shadow-xs">
-                  <input
-                    type="checkbox"
-                    checked={form.procedureIds.includes(procedure.id)}
-                    onChange={() => toggleProcedure(procedure.id)}
-                    className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer mt-0.5 accent-emerald-600"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-bold text-slate-800">{procedure.name}</p>
-                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-100 text-emerald-850 text-[9px] font-bold rounded-full">
-                        <Star className="w-2.5 h-2.5 fill-emerald-500 text-emerald-600" />
-                        Recommended
-                      </span>
-                    </div>
-                    {procedure.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{procedure.description}</p>}
-                    {procedure.steps && procedure.steps.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{procedure.steps.length} steps</p>}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+            {/* Left Column: Selector */}
+            <div className="lg:col-span-6 space-y-4">
+              {/* Recommended list */}
+              {hasRecommendations && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                    <Star className="w-3.5 h-3.5 fill-emerald-550 text-emerald-500" />
+                    Recommended
                   </div>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            {hasRecommendations && (
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider pt-3">
-                All procedures
-              </div>
-            )}
-            {sortedProcedures.filter(t => !recommendedIds.has(t.id)).map(procedure => (
-              <label key={procedure.id} className="flex items-start gap-3 p-3.5 border border-slate-200 rounded-xl hover:bg-slate-50/60 cursor-pointer transition shadow-xs">
-                <input
-                  type="checkbox"
-                  checked={form.procedureIds.includes(procedure.id)}
-                  onChange={() => toggleProcedure(procedure.id)}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer mt-0.5 accent-blue-600"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-800">{procedure.name}</p>
-                  {procedure.description && <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{procedure.description}</p>}
-                  {procedure.steps && procedure.steps.length > 0 && <p className="text-[10px] font-bold text-slate-400 mt-1.5">{procedure.steps.length} steps</p>}
+                  {sortedProcedures.filter(t => recommendedIds.has(t.id)).map(procedure => {
+                    const isSelected = previewProcedureId === procedure.id
+                    const isChecked = form.procedureIds.includes(procedure.id)
+                    return (
+                      <div
+                        key={procedure.id}
+                        onClick={() => setPreviewProcedureId(procedure.id)}
+                        className={`group relative flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all duration-200 ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-150/40'
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex items-center h-5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleProcedure(procedure.id)}
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer accent-emerald-600"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-bold text-slate-805 leading-tight group-hover:text-blue-900 transition">{procedure.name}</p>
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-850 text-[8px] font-extrabold rounded-full">
+                              REC
+                            </span>
+                          </div>
+                          {procedure.description && (
+                            <p className="text-[10px] text-slate-500 mt-1 truncate max-w-[280px]">
+                              {procedure.description}
+                            </p>
+                          )}
+                          {procedure.steps && procedure.steps.length > 0 && (
+                            <p className="text-[10px] font-semibold text-slate-400 mt-1">
+                              {procedure.steps.length} {procedure.steps.length === 1 ? 'step' : 'steps'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewProcedureId(procedure.id);
+                            }}
+                            className={`flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-md transition ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'text-blue-600 bg-blue-50/60 group-hover:bg-blue-100/70 border border-blue-100/50'
+                            }`}
+                          >
+                            <Eye className="w-3 h-3" />
+                            {isSelected ? 'Viewing' : 'Preview'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              </label>
-            ))}
-          </div>
+              )}
 
-          {form.procedureIds.length > 0 && (
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2.5 rounded-xl border border-emerald-100">
-              <ClipboardCheck className="w-4 h-4" />
-              {form.procedureIds.length} procedure{form.procedureIds.length !== 1 ? 's' : ''} will be snapshotted into this work order
+              {/* All procedures list */}
+              <div className="space-y-2.5">
+                {hasRecommendations && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-505 uppercase tracking-wider pt-2 mb-1">
+                    All procedures
+                  </div>
+                )}
+                {sortedProcedures.filter(t => !recommendedIds.has(t.id)).map(procedure => {
+                  const isSelected = previewProcedureId === procedure.id
+                  const isChecked = form.procedureIds.includes(procedure.id)
+                  return (
+                    <div
+                      key={procedure.id}
+                      onClick={() => setPreviewProcedureId(procedure.id)}
+                      className={`group relative flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all duration-200 ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-150/40'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex items-center h-5" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleProcedure(procedure.id)}
+                          className="w-4 h-4 text-emerald-600 rounded border-slate-350 cursor-pointer accent-blue-600"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 pr-4">
+                        <p className="text-xs font-bold text-slate-805 leading-tight group-hover:text-blue-900 transition">{procedure.name}</p>
+                        {procedure.description && (
+                          <p className="text-[10px] text-slate-500 mt-1 truncate max-w-[280px]">
+                            {procedure.description}
+                          </p>
+                        )}
+                        {procedure.steps && procedure.steps.length > 0 && (
+                          <p className="text-[10px] font-semibold text-slate-400 mt-1">
+                            {procedure.steps.length} {procedure.steps.length === 1 ? 'step' : 'steps'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewProcedureId(procedure.id);
+                          }}
+                          className={`flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-md transition ${
+                            isSelected
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-blue-600 bg-blue-50/60 group-hover:bg-blue-100/70 border border-blue-100/50'
+                          }`}
+                        >
+                          <Eye className="w-3 h-3" />
+                          {isSelected ? 'Viewing' : 'Preview'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {form.procedureIds.length > 0 && (
+                <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 shadow-3xs">
+                  <Check className="w-3.5 h-3.5" />
+                  {form.procedureIds.length} procedure{form.procedureIds.length !== 1 ? 's' : ''} will be applied to this work order
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Right Column: Steps Preview Panel */}
+            <div className="lg:col-span-6">
+              <div className="lg:sticky lg:top-4 bg-slate-50 border border-slate-205 rounded-2xl p-4 min-h-[380px] flex flex-col shadow-inner-light">
+                {(() => {
+                  const previewProc = procedures.find(p => p.id === previewProcedureId)
+                  if (!previewProc) {
+                    return (
+                      <div className="my-auto flex flex-col items-center justify-center p-6 text-center">
+                        <ClipboardCheck className="w-10 h-10 text-slate-300 mb-2.5 stroke-1" />
+                        <p className="text-xs font-extrabold text-slate-650">Select a Procedure to Preview</p>
+                        <p className="text-[10px] text-slate-400 mt-1 max-w-[220px] leading-relaxed">
+                          Click &quot;Preview&quot; on any item on the left to inspect its checklist instructions, fields, and constraints before choosing to apply.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  const isApplied = form.procedureIds.includes(previewProc.id)
+
+                  return (
+                    <div className="flex flex-col h-full flex-1">
+                      {/* Header */}
+                      <div className="pb-3 border-b border-slate-200">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="inline-flex items-center gap-1.5 text-[8px] font-extrabold text-blue-650 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 uppercase tracking-widest mb-1.5 font-mono">
+                              SOP Template Preview
+                            </span>
+                            <h3 className="text-xs font-black text-slate-805 leading-tight">
+                              {previewProc.name}
+                            </h3>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleProcedure(previewProc.id)}
+                            className={`flex items-center gap-1 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition shadow-xs ${
+                              isApplied
+                                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                          >
+                            {isApplied ? 'Remove SOP' : 'Apply SOP'}
+                          </button>
+                        </div>
+                        {previewProc.description ? (
+                          <p className="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">
+                            {previewProc.description}
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 mt-2 italic font-medium">
+                            No description provided.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Steps List */}
+                      <div className="flex-1 py-3 overflow-y-auto max-h-[350px] space-y-2.5 pr-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 font-mono">
+                          Step Checklist ({previewProc.steps?.length || 0})
+                        </p>
+
+                        {previewProc.steps && previewProc.steps.length > 0 ? (
+                          previewProc.steps.map((step, idx) => {
+                            const isSection = step.type === 'SECTION'
+                            const isInstruction = step.type === 'INSTRUCTION'
+
+                            if (isSection) {
+                              return (
+                                <div key={step.id || idx} className="pt-3 pb-1 first:pt-0 flex items-center gap-2">
+                                  <span className="text-[9px] font-black tracking-widest text-slate-700 bg-slate-200/75 border border-slate-300 px-2 py-0.5 rounded uppercase">
+                                    📁 {step.label}
+                                  </span>
+                                  <div className="h-px bg-slate-200 flex-1"></div>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div
+                                key={step.id || idx}
+                                className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-200/60 rounded-xl shadow-4xs"
+                              >
+                                {/* Step Type Icons */}
+                                <div className="mt-0.5 text-slate-400">
+                                  {step.type === 'CHECKBOX' && <Square className="w-3.5 h-3.5" />}
+                                  {step.type === 'INSPECTION' && <CheckSquare className="w-3.5 h-3.5 text-blue-500" />}
+                                  {step.type === 'TEXT_INPUT' && <FileText className="w-3.5 h-3.5" />}
+                                  {step.type === 'NUMBER_INPUT' && <Hash className="w-3.5 h-3.5 text-indigo-500" />}
+                                  {step.type === 'SIGNATURE' && <PenTool className="w-3.5 h-3.5 text-purple-500" />}
+                                  {step.type === 'DATE' && <Calendar className="w-3.5 h-3.5 text-amber-500" />}
+                                  {step.type === 'METER' && <Hash className="w-3.5 h-3.5 text-emerald-500" />}
+                                  {step.type === 'PHOTO' && <FileDown className="w-3.5 h-3.5 text-rose-500" />}
+                                  {step.type === 'FILE' && <FileText className="w-3.5 h-3.5" />}
+                                  {step.type === 'DROPDOWN' && <FileText className="w-3.5 h-3.5" />}
+                                  {step.type === 'MULTIPLE_CHOICE' && <CheckSquare className="w-3.5 h-3.5" />}
+                                  {isInstruction && <ClipboardCheck className="w-3.5 h-3.5 text-cyan-600" />}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[11px] font-bold text-slate-800 leading-normal">
+                                      {step.label}
+                                    </span>
+                                    {step.isMandatory && (
+                                      <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-amber-50 text-amber-800 text-[8px] font-bold rounded-full border border-amber-100">
+                                        Required
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Dummy inputs to show how the fields behave */}
+                                  {isInstruction && (
+                                    <div className="mt-1 pb-1 text-[10px] text-slate-500 bg-slate-50 border border-slate-100 p-2 rounded-lg leading-relaxed">
+                                      {step.label}
+                                    </div>
+                                  )}
+
+                                  {step.type === 'DROPDOWN' && step.options && step.options.length > 0 && (
+                                    <div className="mt-1 pb-1">
+                                      <div className="inline-block max-w-[150px] text-[10px] text-slate-400 border border-slate-200 bg-white rounded-md px-2 py-0.5">
+                                        Dropdown: {step.options[0]}... (+ {step.options.length - 1} more)
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {step.type === 'MULTIPLE_CHOICE' && step.options && step.options.length > 0 && (
+                                    <div className="mt-1 flex gap-1 flex-wrap">
+                                      {step.options.map((opt, oIdx) => (
+                                        <span key={oIdx} className="text-[9px] bg-slate-105 border border-slate-200 px-1.5 py-0.2 rounded-md font-semibold text-slate-500 block">
+                                          {opt}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-[11px] text-slate-400 italic">No steps configured for this procedure.</p>
+                        )}
+                      </div>
+
+                      {/* Apply indicator bar */}
+                      <div className="pt-3 border-t border-slate-200 mt-auto flex items-center justify-between">
+                        <span className="text-[10px] text-slate-450 font-semibold uppercase tracking-wider font-mono">
+                          Status: {isApplied ? (
+                            <span className="text-emerald-600 font-extrabold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Applied</span>
+                          ) : (
+                            <span className="text-slate-400">Not Applied</span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleProcedure(previewProc.id)}
+                          className={`text-xs font-extrabold flex items-center gap-1 px-3 py-1.5 rounded-lg transition ${
+                            isApplied
+                              ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                              : 'bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700'
+                          }`}
+                        >
+                          {isApplied ? 'Remove SOP' : 'Apply SOP to WO'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

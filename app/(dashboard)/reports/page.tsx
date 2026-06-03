@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getCurrentUser } from '@/lib/session'
 import PageHeader from '@/components/PageHeader'
 import ReportsDashboard from '@/components/ReportsDashboard'

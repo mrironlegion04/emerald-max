@@ -2,10 +2,8 @@ import 'dotenv/config'
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
+const prisma = new PrismaClient()
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
-const prisma = new PrismaClient({ adapter })
 
 function parseIssues(filePath: string): string[] {
   return readFileSync(filePath, 'utf-8')

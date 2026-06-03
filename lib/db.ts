@@ -28,3 +28,41 @@ export const prisma =
 
 // Cache the prisma instance globally to avoid creating multiple connections
 globalForPrisma.prisma = prisma
+
+// Warm up the connection pool on startup with retry logic
+async function warmupPool() {
+  const maxRetries = 10
+  let retries = 0
+  let lastError: Error | null = null
+
+  while (retries < maxRetries) {
+    try {
+      // Test the connection
+      await prisma.$queryRaw`SELECT 1`
+      console.log('✓ Database connection pool warmed up successfully')
+      return
+    } catch (error) {
+      lastError = error as Error
+      retries++
+      const delayMs = Math.min(1000 * Math.pow(2, retries - 1), 10000) // Exponential backoff up to 10s
+      console.warn(
+        `Database connection attempt ${retries}/${maxRetries} failed. Retrying in ${delayMs}ms...`,
+        lastError.message
+      )
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+
+  console.error(
+    '✗ Failed to establish database connection after',
+    maxRetries,
+    'retries:',
+    lastError?.message
+  )
+  // Don't throw - let the app start but requests will fail gracefully
+}
+
+// Run warmup immediately (fire and forget, but logged)
+warmupPool().catch((err) =>
+  console.error('Unexpected error during pool warmup:', err)
+)

@@ -43,6 +43,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
+# Copy wait-for-db script
+COPY scripts/wait-for-db.js ./scripts/wait-for-db.js
+
 # Set environment to production
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -58,4 +61,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["sh", "-c", "node scripts/wait-for-db.js && npm start"]
+

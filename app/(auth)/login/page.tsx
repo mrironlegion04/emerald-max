@@ -103,10 +103,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
-          Default admin: admin@cmms.com / admin123
-        </p>
-
         {/* Feature info */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-600 flex items-start gap-2">

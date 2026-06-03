@@ -30,8 +30,10 @@ export const prisma =
 globalForPrisma.prisma = prisma
 
 // Warm up the connection pool on startup with retry logic
+let poolReady = false
+
 async function warmupPool() {
-  const maxRetries = 10
+  const maxRetries = 15
   let retries = 0
   let lastError: Error | null = null
 
@@ -40,6 +42,7 @@ async function warmupPool() {
       // Test the connection
       await prisma.$queryRaw`SELECT 1`
       console.log('✓ Database connection pool warmed up successfully')
+      poolReady = true
       return
     } catch (error) {
       lastError = error as Error
@@ -59,10 +62,14 @@ async function warmupPool() {
     'retries:',
     lastError?.message
   )
-  // Don't throw - let the app start but requests will fail gracefully
+  poolReady = false
 }
 
-// Run warmup immediately (fire and forget, but logged)
-warmupPool().catch((err) =>
-  console.error('Unexpected error during pool warmup:', err)
-)
+// Initialize pool warmup immediately  
+const warmupPromise = warmupPool()
+
+// Export a function to wait for pool readiness
+export async function ensureDbReady() {
+  await warmupPromise
+  return poolReady
+}

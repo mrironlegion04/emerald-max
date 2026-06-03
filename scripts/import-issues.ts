@@ -3,11 +3,8 @@ import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
 
-// Create a fresh Prisma instance for this script (same pattern as seed.ts)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
 function parseIssues(filePath: string): string[] {

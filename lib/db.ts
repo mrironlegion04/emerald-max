@@ -38,19 +38,22 @@ async function warmupPool() {
   let lastError: Error | null = null
 
   while (retries < maxRetries) {
+    let client
     try {
-      // Test the connection
-      await prisma.$queryRaw`SELECT 1`
-      console.log('✓ Database connection pool warmed up successfully')
+      // Test the pool connection directly (not via Prisma)
+      client = await pool.connect()
+      await client.query('SELECT 1')
+      console.log('✓ Database connection pool warmed up successfully (direct pool test)')
       poolReady = true
+      client.release()
       return
     } catch (error) {
+      if (client) client.release(true)
       lastError = error as Error
       retries++
-      const delayMs = Math.min(1000 * Math.pow(2, retries - 1), 10000) // Exponential backoff up to 10s
+      const delayMs = Math.min(1000 * Math.pow(2, retries - 1), 10000)
       console.warn(
-        `Database connection attempt ${retries}/${maxRetries} failed. Retrying in ${delayMs}ms...`,
-        lastError.message
+        `[Pool Warmup] Attempt ${retries}/${maxRetries} failed: ${(error as any)?.message}. Retrying in ${delayMs}ms...`
       )
       await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
@@ -63,13 +66,18 @@ async function warmupPool() {
     lastError?.message
   )
   poolReady = false
+  throw lastError
 }
 
-// Initialize pool warmup immediately  
-const warmupPromise = warmupPool()
+// Start warmup but don't block - we'll handle failures gracefully in requests
+const warmupPromise = warmupPool().catch((err) => {
+  console.error('Pool warmup failed, will retry on first request:', err.message)
+})
 
-// Export a function to wait for pool readiness
+// Export a function to wait for pool readiness before making queries
 export async function ensureDbReady() {
   await warmupPromise
-  return poolReady
+  if (!poolReady) {
+    throw new Error('Database pool failed to warm up')
+  }
 }

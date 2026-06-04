@@ -1158,7 +1158,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                 </div>
 
                 {/* 1.5 Step Specific Attachments & SOP Reference Documents */}
-                {step.type !== 'SECTION' &&
+                {step.type !== 'SECTION' && (
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">Field Step Attachments</span>
@@ -1282,7 +1282,7 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
                       </div>
                     </div>
                   </div>
-                }
+                )}
 
                 {/* 2. Options list for Selects */}
                 {hasOptions && (

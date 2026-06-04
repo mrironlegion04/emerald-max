@@ -14,9 +14,11 @@ const sessionOptions = {
   password: process.env.SESSION_SECRET as string,
   cookieName: 'cmms_session',
   cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
+    sameSite: 'none',
     maxAge: 60 * 60 * 24 * 7, // 7 days
+    partitioned: true,
   },
 }
 

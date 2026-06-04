@@ -70,7 +70,7 @@ export default async function WorkOrderDetailPage({
           }
         }
       },
-      attachments:  true,
+      attachments:  { include: { uploadedBy: { select: { name: true } } } },
     },
   })
 
@@ -345,7 +345,10 @@ export default async function WorkOrderDetailPage({
           />
           <WOCommentsPanel woId={wo.id} woStatus={wo.status} />
           <AttachmentsPanel
-            attachments={wo.attachments}
+            attachments={wo.attachments.map((a: any) => ({
+              ...a,
+              uploadedBy: a.uploadedBy?.name || null,
+            }))}
             entityType="workOrder"
             entityId={wo.id}
             canEdit={canEdit}

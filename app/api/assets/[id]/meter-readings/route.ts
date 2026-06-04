@@ -52,12 +52,15 @@ export async function GET(
         notes: true,
         source: true,
         status: true,
-        recordedBy: true,
+        recordedBy: { select: { name: true } },
         createdAt: true,
       },
     })
 
-    return NextResponse.json(readings)
+    return NextResponse.json(readings.map(r => ({
+      ...r,
+      recordedBy: r.recordedBy?.name || null
+    })))
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch meter readings' }, { status: 500 })

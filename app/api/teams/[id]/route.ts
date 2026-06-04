@@ -3,10 +3,11 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
+import { TeamTrade } from '@prisma/client'
 
 const updateTeamSchema = z.object({
   name:        z.string().min(1, 'Team name is required').optional(),
-  trade:       z.string().min(1, 'Trade is required').optional(),
+  trade:       z.nativeEnum(TeamTrade).optional(),
   description: z.string().nullable().optional(),
 })
 

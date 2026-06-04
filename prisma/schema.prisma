@@ -112,6 +112,50 @@ enum MeterEventType {
   STATUS_CHANGED
 }
 
+enum CompletionType {
+  ASSIGNED
+  ADMIN_OVERRIDE
+  MANAGER_OVERRIDE
+}
+
+enum ProcedureSource {
+  AUTO
+  MANUAL
+  PM
+}
+
+enum RequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TeamTrade {
+  Electrical
+  HVAC
+  Plumbing
+  Mechanical
+  Carpentry
+  Painting
+  Welding
+  HVAC_Refrigeration @map("HVAC Refrigeration")
+  General_Maintenance @map("General Maintenance")
+  Facilities
+  Safety
+  Quality_Assurance @map("Quality Assurance")
+  Automation
+}
+
+enum NotificationType {
+  WORK_ORDER_ASSIGNED
+  WORK_ORDER_COMPLETED
+  METER_ALERT
+  PM_GENERATED
+  STOCK_LOW
+  CHAT
+}
+
 // ── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -156,6 +200,10 @@ model User {
   createdAssets         Asset[]                 @relation("AssetCreatedBy")
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
+
+  uploadedAttachments   Attachment[]            @relation("AttachmentUploadedBy")
+  recordedReadings      MeterReading[]          @relation("MeterReadingRecordedBy")
+  workOrderComments     WorkOrderComment[]      @relation("CommentAuthor")
 
   sentMessages          ChatMessage[]           @relation("ChatMessageSender")
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
@@ -248,7 +296,6 @@ model Asset {
   manufacturer      String?
   purchaseDate      DateTime?
   purchaseCost      Float?
-  assetType         String?    // legacy free-text (kept for backward compat)
   assetTypeId       String?
   criticality       String?
   customFields      Json?
@@ -276,7 +323,7 @@ model Asset {
   location   Location?      @relation(fields: [locationId], references: [id])
   categoryId String?
   category   AssetCategory? @relation(fields: [categoryId], references: [id])
-  assetTypeRel AssetType?   @relation(fields: [assetTypeId], references: [id], onDelete: SetNull)
+  assetType  AssetType?     @relation(fields: [assetTypeId], references: [id], onDelete: SetNull)
   ownerId    String?
   owner      User?          @relation(fields: [ownerId], references: [id])
   createdById String?
@@ -352,7 +399,7 @@ model MeterEvent {
 model Team {
   id          String   @id @default(cuid())
   name        String
-  trade       String // e.g. Electrical, HVAC, Plumbing
+  trade       TeamTrade // e.g. Electrical, HVAC, Plumbing
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -429,7 +476,7 @@ model WorkOrder {
   createdBy    User?   @relation("CreatedBy", fields: [createdById], references: [id])
   completedById String?
   completedBy  User?   @relation("WOCompletedBy", fields: [completedById], references: [id])
-  completionType String @default("ASSIGNED") // "ASSIGNED" | "ADMIN_OVERRIDE" | "MANAGER_OVERRIDE"
+  completionType CompletionType @default(ASSIGNED)
   issueId      String?
   issue        Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
   customIssue  String?   // free-text when user picks "Other"
@@ -447,6 +494,13 @@ model WorkOrder {
   assets        WorkOrderAsset[]
 
   @@index([issueId, createdAt])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([teamId])
+  @@index([assetId])
+  @@index([locationId])
+  @@index([createdAt])
   @@map("work_orders")
 }
 
@@ -648,6 +702,7 @@ model WorkOrderComment {
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   authorId    String?
+  author      User?     @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   authorName  String
   authorRole  String
   createdAt   DateTime  @default(now())
@@ -675,7 +730,7 @@ model Subtask {
   assignedTeam  Team?           @relation("SubtasksAssignedToTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
   completedById String?
   completedBy   User?           @relation("SubtaskCompletedBy", fields: [completedById], references: [id])
-  completionType String @default("ASSIGNED") // "ASSIGNED" | "ADMIN_OVERRIDE" | "MANAGER_OVERRIDE"
+  completionType CompletionType @default(ASSIGNED)
   createdById   String?
   createdBy     User?           @relation("SubtaskCreatedBy", fields: [createdById], references: [id])
 
@@ -696,7 +751,7 @@ model MaintenanceRequest {
   requesterName   String
   requesterEmail  String?
   requesterPhone  String?
-  priority        String        @default("MEDIUM")
+  priority        RequestPriority @default(MEDIUM)
   status          RequestStatus @default(PENDING)
   rejectionReason String?
   createdAt       DateTime      @default(now())
@@ -716,7 +771,7 @@ model WOProcedure {
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   procedureId String?   // Track original Procedure template ID
-  source      String    @default("AUTO") // "AUTO" | "MANUAL" | "PM"
+  source      ProcedureSource    @default(AUTO)
   createdAt   DateTime  @default(now())
 
   steps WOProcedureStep[]
@@ -787,7 +842,7 @@ model Attachment {
   size         Int
   url          String
   uploadedById String?
-  uploadedBy   String?
+  uploadedBy   User?     @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
   createdAt    DateTime  @default(now())
   expiresAt    DateTime? // For presigned URLs
 
@@ -821,7 +876,7 @@ model MeterReading {
   assetId      String
   asset        Asset  @relation(fields: [assetId], references: [id])
   recordedById String?
-  recordedBy   String?
+  recordedBy   User?  @relation("MeterReadingRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
 
   events MeterEvent[]
 
@@ -837,7 +892,7 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String
-  type      String
+  type      NotificationType
   entityId  String?
   href      String?
   isRead    Boolean  @default(false)

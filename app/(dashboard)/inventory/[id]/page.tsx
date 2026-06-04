@@ -41,7 +41,7 @@ export default async function PartDetailPage({
     where: { id },
     include: {
       createdBy: { select: { name: true } },
-      attachments: true,
+      attachments: { include: { uploadedBy: { select: { name: true } } } },
       usedInWorkOrders: {
         include: {
           workOrder: {
@@ -171,10 +171,12 @@ export default async function PartDetailPage({
           )}
         </div>
 
-        {/* Right: attachments and usage history */}
         <div className="lg:col-span-2 space-y-5">
           <AttachmentsPanel
-            attachments={part.attachments}
+            attachments={part.attachments.map((a: any) => ({
+              ...a,
+              uploadedBy: a.uploadedBy?.name || null,
+            }))}
             entityType="part"
             entityId={part.id}
             canEdit={canEdit}

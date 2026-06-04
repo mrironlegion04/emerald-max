@@ -43,7 +43,7 @@ export async function GET(
           source: true,
           status: true,
           createdAt: true,
-          recordedBy: true,
+          recordedBy: { select: { name: true } },
         },
       }),
       prisma.meterReading.count({ where }),
@@ -51,7 +51,10 @@ export async function GET(
 
     return NextResponse.json({
       meter,
-      readings,
+      readings: readings.map(r => ({
+        ...r,
+        recordedBy: r.recordedBy?.name || null
+      })),
       totalCount,
       page,
       limit,

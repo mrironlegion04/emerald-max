@@ -153,7 +153,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               status: 'VALID',
               meterId: meter.id,
               assetId: targetAssetId,
-              recordedBy: user.name,
               recordedById: user.userId
             }
           })

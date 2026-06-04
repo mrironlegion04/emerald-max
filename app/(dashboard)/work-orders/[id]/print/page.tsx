@@ -28,7 +28,7 @@ export default async function WorkOrderPrintPage({
       team: { select: { id: true, name: true, trade: true } },
       createdBy: { select: { name: true } },
       partsUsed: { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
-      attachments: true,
+      attachments: { include: { uploadedBy: { select: { name: true } } } },
       procedures: { include: { steps: true } },
     },
   })

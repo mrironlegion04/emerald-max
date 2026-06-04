@@ -525,7 +525,7 @@ async function main() {
       status: 'VALID' as const,
       meterId: meter1.id,
       assetId: asset1.id,
-      recordedBy: 'Admin User',
+      recordedById: admin.id,
     })
   }
 
@@ -537,7 +537,7 @@ async function main() {
     status: 'SUSPECT' as const,
     meterId: meter1.id,
     assetId: asset1.id,
-    recordedBy: 'Admin User',
+    recordedById: admin.id,
     notes: 'Sudden spike — possible sensor error',
   })
 
@@ -554,7 +554,7 @@ async function main() {
       status: 'VALID' as const,
       meterId: meter2.id,
       assetId: asset3.id,
-      recordedBy: 'Alice Technician',
+      recordedById: tech1.id,
     })
   }
 

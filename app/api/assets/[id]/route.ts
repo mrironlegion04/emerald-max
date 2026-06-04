@@ -19,7 +19,6 @@ const updateSchema = z.object({
   locationId:   z.string().nullable().optional(),
   meterUnit:    z.string().nullable().optional(),
   parentId:     z.string().nullable().optional(),
-  assetType:    z.string().nullable().optional(),
   assetTypeId:  z.string().nullable().optional(),
   criticality:  z.string().nullable().optional(),
   ownerId:      z.string().nullable().optional(),

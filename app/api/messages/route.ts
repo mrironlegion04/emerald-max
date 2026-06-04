@@ -566,7 +566,7 @@ export async function POST(req: NextRequest) {
           userId: member.userId,
           title: `Message inside ${channelName || 'Crew Chat'}`,
           message: `${user.name}: ${content ? (content.substring(0, 60) + (content.length > 60 ? '...' : '')) : 'Sent an attachment'}`,
-          type: 'chat',
+          type: 'CHAT',
           entityId: chatMessage.id,
           href: `/messages?channel=${channelId}`,
           isRead: false,

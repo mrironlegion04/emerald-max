@@ -62,8 +62,8 @@ export default async function AssetDetailPage({
       owner: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
       parent: { select: { id: true, name: true, assetCode: true } },
-      assetTypeRel: { select: { id: true, name: true } },
-      attachments: true,
+      assetType: { select: { id: true, name: true } },
+      attachments: { include: { uploadedBy: { select: { name: true } } } },
       workOrders: {
         include: {
           assignedTo: { select: { name: true } },
@@ -301,7 +301,7 @@ export default async function AssetDetailPage({
               <dl className="space-y-3">
                 {([
                   { label: 'Asset code',    value: asset.assetCode },
-                  { label: 'Asset type',    value: asset.assetTypeRel?.name ?? asset.assetType ?? null },
+                  { label: 'Asset type',    value: asset.assetType?.name ?? null },
                   { label: 'Category',      value: categoryPath || null },
                   { label: 'Serial number', value: asset.serialNumber },
                   { label: 'Manufacturer',  value: asset.manufacturer },
@@ -320,9 +320,9 @@ export default async function AssetDetailPage({
                         <span className="text-emerald-700">{locationPath}</span>
                       ) : row.label === 'Category' && categoryPath ? (
                         <span className="text-indigo-700">{categoryPath}</span>
-                      ) : row.label === 'Asset type' && (asset.assetTypeRel?.name ?? asset.assetType) ? (
+                      ) : row.label === 'Asset type' && (asset.assetType?.name) ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
-                          {asset.assetTypeRel?.name ?? asset.assetType}
+                          {asset.assetType?.name}
                         </span>
                       ) : row.label === 'Criticality' && asset.criticality ? (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
@@ -424,7 +424,10 @@ export default async function AssetDetailPage({
 
             {/* Attachments */}
             <AttachmentsPanel
-              attachments={asset.attachments}
+              attachments={asset.attachments.map((a: any) => ({
+                ...a,
+                uploadedBy: a.uploadedBy?.name || null,
+              }))}
               entityType="asset"
               entityId={asset.id}
               canEdit={canEdit}
@@ -534,7 +537,10 @@ export default async function AssetDetailPage({
       {activeTab === 'history' && (
         <div className="space-y-5">
           <AttachmentsPanel
-            attachments={asset.attachments}
+            attachments={asset.attachments.map((a: any) => ({
+              ...a,
+              uploadedBy: a.uploadedBy?.name || null,
+            }))}
             entityType="asset"
             entityId={asset.id}
             canEdit={canEdit}

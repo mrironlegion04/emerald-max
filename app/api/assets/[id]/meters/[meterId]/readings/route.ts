@@ -54,14 +54,17 @@ export async function GET(
           source: true,
           status: true,
           createdAt: true,
-          recordedBy: true,
+          recordedBy: { select: { name: true } },
         },
       }),
       prisma.meterReading.count({ where }),
     ])
 
     return NextResponse.json({
-      readings,
+      readings: readings.map(r => ({
+        ...r,
+        recordedBy: r.recordedBy?.name || null
+      })),
       totalCount,
       page,
       limit,
@@ -165,7 +168,6 @@ export async function POST(
               meterId,
               assetId: id,
               recordedById: user.userId,
-              recordedBy: user.name,
             },
           })
 
@@ -231,7 +233,6 @@ export async function POST(
           meterId,
           assetId: id,
           recordedById: user.userId,
-          recordedBy: user.name,
         },
       })
 
@@ -250,7 +251,10 @@ export async function POST(
       return reading
     })
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      ...result,
+      recordedBy: user.name,
+    }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })

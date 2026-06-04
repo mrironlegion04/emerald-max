@@ -138,7 +138,6 @@ export async function POST(req: NextRequest) {
         size: file.size,
         url,
         uploadedById: user.userId,
-        uploadedBy: user.name,
         expiresAt,
       }
 

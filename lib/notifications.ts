@@ -1,12 +1,13 @@
 import { prisma } from '@/lib/db'
 import { sendWebPushNotification } from '@/lib/push'
 import { notificationEmitter } from '@/lib/events'
+import { NotificationType } from '@prisma/client'
 
 export interface NotificationPayload {
   userId: string
   title: string
   message: string
-  type: string // e.g., 'WORK_ORDER_ASSIGNED', 'WORK_ORDER_COMPLETED', 'STOCK_LOW'
+  type: NotificationType // e.g., 'WORK_ORDER_ASSIGNED', 'WORK_ORDER_COMPLETED', 'STOCK_LOW'
   entityId?: string
   href?: string
 }

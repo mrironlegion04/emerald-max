@@ -120,6 +120,8 @@ export default function MessagesPage() {
   const [messagesLimit, setMessagesLimit] = useState(50)
   const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const processedMsgIdsRef = useRef<Set<string>>(new Set())
+  const isFetchingRef = useRef(false)
+  const isPollingUnreadsRef = useRef(false)
 
   // Loaders
   const [loadingChannels, setLoadingChannels] = useState(true)
@@ -427,9 +429,10 @@ export default function MessagesPage() {
   const fetchMessagesRef = useRef<() => Promise<void>>(async () => {})
 
   fetchMessagesRef.current = async () => {
-    if (!activeChannel) return
+    if (!activeChannel || isFetchingRef.current) return
 
     try {
+      isFetchingRef.current = true
       const res = await fetch(`/api/messages?channel=${activeChannel.id}&limit=${messagesLimit}`)
       if (res.ok) {
         const data = await res.json()
@@ -459,6 +462,8 @@ export default function MessagesPage() {
       }
     } catch (err) {
       console.error('Failed syncing cloud message feed:', err)
+    } finally {
+      isFetchingRef.current = false
     }
   }
 
@@ -503,14 +508,17 @@ export default function MessagesPage() {
     setThreadParent(null) // Reset active threads sidebar
   }, [activeChannel, messagesLimit])
 
-  // Short-polling interval (3s) for rich live response
+  // Short-polling interval (5s) for rich live response
   useEffect(() => {
     if (!activeChannel) return
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
       fetchMessagesRef.current()
-    }, 3000)
+    }, 5000)
     return () => clearInterval(interval)
-  }, [activeChannel, messagesLimit])
+  }, [activeChannel?.id, messagesLimit])
 
   // Track already-loaded messages to avoid duplicate notifications
   useEffect(() => {
@@ -523,6 +531,8 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!currentUser) return
 
+    const activeChanId = activeChannel?.id
+
     // Auto-ask browser notification permissions on mount
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
@@ -531,7 +541,11 @@ export default function MessagesPage() {
     }
 
     const interval = setInterval(async () => {
+      if (isPollingUnreadsRef.current) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+
       try {
+        isPollingUnreadsRef.current = true
         const res = await fetch('/api/messages?poll_unreads=true')
         if (res.ok) {
           const recentMsgList = await res.json()
@@ -548,14 +562,14 @@ export default function MessagesPage() {
             processedMsgIdsRef.current.add(m.id)
 
             // If it belongs to another channel, mark it unread!
-            if (!activeChannel || m.channel !== activeChannel.id) {
+            if (!activeChanId || m.channel !== activeChanId) {
               addedChannels.push(m.channel)
               // Toast notification inside the app
               displayToast(`💬 New message from ${m.senderName} inside "${m.channelName || 'Crew'}"`)
             }
 
             // Trigger Desktop Browser Notification
-            if (!activeChannel || m.channel !== activeChannel.id || document.visibilityState !== 'visible') {
+            if (!activeChanId || m.channel !== activeChanId || document.visibilityState !== 'visible') {
               if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                 new window.Notification(`New Message from ${m.senderName}`, {
                   body: m.content || 'Sent an attachment',
@@ -586,11 +600,13 @@ export default function MessagesPage() {
         }
       } catch (e) {
         console.error('Unreads background poll issue:', e)
+      } finally {
+        isPollingUnreadsRef.current = false
       }
-    }, 4000)
+    }, 10000)
 
     return () => clearInterval(interval)
-  }, [currentUser, activeChannel])
+  }, [currentUser?.userId, activeChannel?.id])
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {
@@ -1381,7 +1397,7 @@ export default function MessagesPage() {
                 <Users className="w-5 h-5" />
               </span>
               <div>
-                <h1 className="text-base font-bold text-slate-800 tracking-tight font-sans">Comms Hub</h1>
+                <h1 className="text-base font-bold text-slate-800 tracking-tight font-sans">Messages</h1>
                 <p className="text-[10px] text-slate-400 font-medium">Emerald Team Workspace</p>
               </div>
             </div>

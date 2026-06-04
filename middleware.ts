@@ -21,9 +21,6 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/login') || pathname.startsWith('/api/auth')) {
     return NextResponse.next()
   }
-
-  console.log('Middleware - Path:', pathname)
-  console.log('Middleware - Cookies:', request.cookies.getAll().map(c => c.name).join(', '))
   
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)

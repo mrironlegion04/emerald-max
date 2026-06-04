@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import clsx from 'clsx'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Home,
   Box,
@@ -33,6 +33,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  MoreHorizontal,
 } from 'lucide-react'
 
 interface User {
@@ -216,6 +217,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   const pathname = usePathname()
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
@@ -549,36 +551,79 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
       </nav>
 
       {/* User Session Footer */}
-      <div className="border-t border-slate-200/80 p-4 bg-slate-50/50">
-        <div className="flex items-center gap-3 px-2 py-2 mb-2 bg-white rounded-xl border border-slate-200/50 p-2 shadow-3xs select-none">
-          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center flex-shrink-0 font-bold border border-blue-200 shadow-3xs">
+      <div className="relative border-t border-slate-200/60 p-3 bg-slate-50/20 select-none">
+        <AnimatePresence>
+          {isUserMenuOpen && (
+            <>
+              {/* Invisible backdrop to dismiss the popover when clicking outside */}
+              <div 
+                className="fixed inset-0 z-30 cursor-default" 
+                onClick={() => setIsUserMenuOpen(false)} 
+              />
+              
+              {/* Floating Menu popover */}
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="absolute bottom-full left-3 right-3 mb-2 z-40 bg-white border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.08)] rounded-xl py-1.5 overflow-hidden flex flex-col"
+              >
+                <div className="px-3.5 py-2 border-b border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Logged in as</p>
+                  <p className="text-xs font-semibold text-slate-700 truncate mt-1.5">{user.email}</p>
+                </div>
+                
+                <Link
+                  href="/profile"
+                  onClick={() => {
+                    setIsUserMenuOpen(false)
+                    if (onClose) onClose()
+                  }}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  My Security Settings
+                </Link>
+                
+                <div className="border-t border-slate-100 my-1" />
+                
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false)
+                    handleLogout()
+                  }}
+                  disabled={loggingOut}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50/50 transition-colors cursor-pointer text-left disabled:opacity-50"
+                >
+                  <LogOut className="w-4 h-4 text-rose-500" />
+                  {loggingOut ? 'Signing out...' : 'Sign out'}
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* User profile item acting as trigger button */}
+        <button
+          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+          className={clsx(
+            "w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all duration-200 ease-in-out cursor-pointer hover:bg-slate-100/80 active:scale-[0.99] relative z-40",
+            { "bg-slate-100": isUserMenuOpen }
+          )}
+        >
+          <div className="w-9.5 h-9.5 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center flex-shrink-0 font-bold border border-blue-200 shadow-3xs text-sm">
             {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-slate-800 truncate leading-tight">{user.name}</p>
-            <div className="mt-1 flex">
-              <span className={clsx('badge !px-1.5 !py-0.2 border text-[10px] font-bold tracking-wide rounded-md', roleColors[user.role])}>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className={clsx('px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded-md border uppercase leading-none', roleColors[user.role])}>
                 {user.role}
               </span>
             </div>
           </div>
-        </div>
-
-        <Link
-          href="/profile"
-          onClick={onClose}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors font-semibold"
-        >
-          <Settings className="w-3.5 h-3.5" />
-          My Security Settings
-        </Link>
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors font-semibold active:scale-[0.98]"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          {loggingOut ? 'Signing out...' : 'Sign out'}
+          <MoreHorizontal className="w-4.5 h-4.5 text-slate-400 flex-shrink-0 mr-1" />
         </button>
       </div>
     </aside>

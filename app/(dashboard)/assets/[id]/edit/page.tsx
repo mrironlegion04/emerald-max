@@ -14,7 +14,7 @@ export default async function EditAssetPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/assets/${id}`)
 
-  const [asset, categories, assetTypes, locations, assets, users] = await Promise.all([
+  const [asset, categories, assetTypes, locations, assets, users, teams] = await Promise.all([
     prisma.asset.findUnique({ where: { id } }),
     prisma.assetCategory.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }] }),
     prisma.assetType.findMany({ orderBy: { name: 'asc' } }),
@@ -27,6 +27,11 @@ export default async function EditAssetPage({
     prisma.user.findMany({
       select: { id: true, name: true },
       where: { isActive: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.team.findMany({
+      where: { isDeleted: false },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -52,6 +57,7 @@ export default async function EditAssetPage({
     assetTypeId:  asset.assetTypeId  ?? '',
     criticality:  asset.criticality  ?? '',
     ownerId:      asset.ownerId      ?? '',
+    primaryTeamId: asset.primaryTeamId ?? '',
     customFields: (asset.customFields && typeof asset.customFields === 'object' ? asset.customFields : null) as Record<string, any> | null,
   }
 
@@ -69,6 +75,7 @@ export default async function EditAssetPage({
         locations={locations}
         assets={assets}
         users={users}
+        teams={teams}
         initialData={initialData}
         assetId={id}
         currentImageUrl={asset.imageUrl}

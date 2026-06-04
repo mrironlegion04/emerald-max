@@ -176,6 +176,12 @@ const enterpriseSettingsItems = [
     adminOnly: true,
   },
   {
+    label: 'Category PM Templates',
+    href: '/settings/pm-templates',
+    icon: <Calendar className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
     label: 'BOM Templates',
     href: '/settings/bom-templates',
     icon: <ClipboardCheck className="w-4 h-4" />,

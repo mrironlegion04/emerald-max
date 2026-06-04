@@ -218,6 +218,17 @@ export async function PATCH(
 
     const updated = await prisma.workOrder.update({ where: { id }, data: updateData })
 
+    // Create a status history record
+    await prisma.workOrderStatusHistory.create({
+      data: {
+        workOrderId:   id,
+        status:        updated.status,
+        changedById:   user.userId,
+        changedByName: user.name,
+        notes:         notes || `Status transitioned from ${wo.status} to ${updated.status}`,
+      }
+    })
+
     await writeAudit({
       action: 'STATUS_CHANGE',
       entity: 'WorkOrder',

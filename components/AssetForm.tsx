@@ -70,8 +70,11 @@ interface AssetFormData {
   assetTypeId: string
   criticality: string
   ownerId: string
+  primaryTeamId: string
   customFields: Record<string, any> | null
 }
+
+interface Team { id: string; name: string }
 
 interface Props {
   categories: Category[]
@@ -79,6 +82,7 @@ interface Props {
   locations: Location[]
   assets: Asset[]
   users?: User[]
+  teams?: Team[]
   initialData?: Partial<AssetFormData>
   assetId?: string
   currentImageUrl?: string | null
@@ -98,6 +102,7 @@ export default function AssetForm({
   locations,
   assets,
   users = [],
+  teams = [],
   initialData,
   assetId,
   currentImageUrl,
@@ -122,6 +127,7 @@ export default function AssetForm({
     assetTypeId:  initialData?.assetTypeId  ?? '',
     criticality:  initialData?.criticality  ?? '',
     ownerId:      initialData?.ownerId      ?? '',
+    primaryTeamId: initialData?.primaryTeamId ?? '',
     customFields: initialData?.customFields ?? null,
   })
 
@@ -148,6 +154,7 @@ export default function AssetForm({
         purchaseDate: form.purchaseDate || null,
         categoryId:  form.categoryId  || null,
         locationId:  form.locationId  || null,
+        primaryTeamId: form.primaryTeamId || null,
         serialNumber: form.serialNumber || null,
         model:        form.model        || null,
         manufacturer: form.manufacturer || null,
@@ -421,6 +428,22 @@ export default function AssetForm({
                 <option value="">— No owner —</option>
                 {users.map(u => (
                   <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {teams.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Primary Team</label>
+              <select
+                value={form.primaryTeamId}
+                onChange={e => set('primaryTeamId', e.target.value)}
+                className="input-field"
+              >
+                <option value="">— No primary team —</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
             </div>

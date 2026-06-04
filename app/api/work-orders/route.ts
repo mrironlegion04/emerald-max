@@ -135,6 +135,17 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Create initial status history record
+    await prisma.workOrderStatusHistory.create({
+      data: {
+        workOrderId:   wo.id,
+        status:        wo.status,
+        changedById:   user.userId,
+        changedByName: user.name,
+        notes:         'Initial work order creation',
+      }
+    })
+
     // ── Sync WorkOrderAsset rows (freezes the scope at creation) ─────
     if (normalized.entries.length > 0) {
       await syncWorkOrderAssets(wo.id, normalized.entries)

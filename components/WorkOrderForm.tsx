@@ -7,7 +7,7 @@ import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 
-interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null }
+interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; primaryTeamId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
 interface User  { id: string; name: string; role: string }
 interface Team  { id: string; name: string; trade: string }
@@ -72,7 +72,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
     selectedAssetIds: [],
     assignedToId:   initialData?.assignedToId   ?? '',
-    assignedTeamId: initialData?.assignedTeamId ?? '',
+    assignedTeamId: initialData?.assignedTeamId ?? (preselectedAssetId ? (assets.find(a => a.id === preselectedAssetId)?.primaryTeamId ?? '') : ''),
     laborHours:     initialData?.laborHours     ?? '',
     laborCost:      initialData?.laborCost      ?? '',
     partsCost:      initialData?.partsCost      ?? '',
@@ -136,7 +136,17 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
   }, [primaryAssetId, form.locationId, selectedAsset?.categoryId])
 
   function set(field: keyof WOFormData, value: string | string[]) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm(prev => {
+      const next = { ...prev, [field]: value }
+      if (field === 'assetId' && typeof value === 'string' && value) {
+        const assetObj = assets.find(a => a.id === value)
+        if (assetObj?.primaryTeamId) {
+          next.assignedTeamId = assetObj.primaryTeamId
+          next.assignedToId = '' // Clear individual assignee to avoid conflict
+        }
+      }
+      return next
+    })
   }
 
   function generateTitle(assetIds: string[], selectedAssetIds: string[], type: string, issueId: string, customIssue: string): string {

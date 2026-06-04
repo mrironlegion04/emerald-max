@@ -156,6 +156,27 @@ enum NotificationType {
   CHAT
 }
 
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProficiencyLevel {
+  BASIC
+  INTERMEDIATE
+  EXPERT
+}
+
+enum ChatChannelType {
+  general
+  team
+  workorder
+  direct
+  group
+}
+
 // ── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -200,6 +221,7 @@ model User {
   createdAssets         Asset[]                 @relation("AssetCreatedBy")
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
+  statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
 
   uploadedAttachments   Attachment[]            @relation("AttachmentUploadedBy")
   recordedReadings      MeterReading[]          @relation("MeterReadingRecordedBy")
@@ -227,7 +249,7 @@ model UserSkill {
   id        String   @id @default(cuid())
   userId    String
   skillId   String
-  proficiencyLevel String @default("INTERMEDIATE") // BASIC, INTERMEDIATE, EXPERT
+  proficiencyLevel ProficiencyLevel @default(INTERMEDIATE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -271,6 +293,10 @@ model AssetCategory {
   procedures Procedure[] @relation("ProcedureCategories")
   slaPolicies        SLAPolicy[]
 
+  defaultTeamId String?
+  defaultTeam   Team?       @relation("CategoryDefaultTeam", fields: [defaultTeamId], references: [id], onDelete: SetNull)
+  pmTemplates   PMTemplate[]
+
   @@map("asset_categories")
 }
 
@@ -297,7 +323,9 @@ model Asset {
   purchaseDate      DateTime?
   purchaseCost      Float?
   assetTypeId       String?
-  criticality       String?
+  criticality       Criticality?
+  primaryTeamId     String?
+  primaryTeam       Team?       @relation("AssetPrimaryTeam", fields: [primaryTeamId], references: [id], onDelete: SetNull)
   customFields      Json?
   // Warranty fields (Part 7)
   warrantyExpiry    DateTime?
@@ -408,6 +436,9 @@ model Team {
   workOrders          WorkOrder[]
   subtasksAssigned    Subtask[]           @relation("SubtasksAssignedToTeam")
 
+  primaryAssets       Asset[]             @relation("AssetPrimaryTeam")
+  defaultCategories   AssetCategory[]     @relation("CategoryDefaultTeam")
+
   // Soft-delete (archive) support
   isDeleted  Boolean   @default(false)
   deletedAt  DateTime?
@@ -492,6 +523,7 @@ model WorkOrder {
   attachments   Attachment[]        @relation("WOAttachments")
   breachHistory SLABreachHistory[]  @relation("SLABreachHistory")
   assets        WorkOrderAsset[]
+  statusHistory WorkOrderStatusHistory[]
 
   @@index([issueId, createdAt])
   @@index([status])
@@ -920,6 +952,7 @@ model Procedure {
   locations   Location[]         @relation("ProcedureLocations")
   categories  AssetCategory[]    @relation("ProcedureCategories")
   assets      Asset[]            @relation("ProcedureAssets")
+  pmTemplates PMTemplateProcedure[]
 
   @@map("procedures")
 }
@@ -968,7 +1001,7 @@ model PushSubscription {
 model ChatChannel {
   id          String   @id @default(cuid())
   name        String
-  type        String   // "general" | "team" | "workorder" | "direct" | "group"
+  type        ChatChannelType
   description String?
   avatarText  String?
   entityId    String?  // References teamId, workOrderId, etc., if linked
@@ -1039,6 +1072,51 @@ model ChatMessage {
   @@index([parentId])
   @@index([createdAt])
   @@map("chat_messages")
+}
+
+model PMTemplate {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  triggerType PMTriggerType @default(TIME)
+  frequency   PMFrequency
+  interval    Int           @default(1)
+  
+  categoryId  String
+  category    AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  procedures PMTemplateProcedure[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("pm_templates")
+}
+
+model PMTemplateProcedure {
+  templateId  String
+  template    PMTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  procedureId String
+  procedure   Procedure  @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  sortOrder   Int        @default(0)
+
+  @@id([templateId, procedureId])
+  @@map("pm_template_procedures")
+}
+
+model WorkOrderStatusHistory {
+  id            String          @id @default(cuid())
+  workOrderId   String
+  workOrder     WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  status        WorkOrderStatus
+  changedById   String?
+  changedBy     User?           @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  changedByName String
+  notes         String?
+  createdAt     DateTime        @default(now())
+
+  @@index([workOrderId, createdAt])
+  @@map("work_order_status_history")
 }
 
 

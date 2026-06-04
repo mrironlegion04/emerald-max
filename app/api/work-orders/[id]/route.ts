@@ -259,6 +259,18 @@ export async function PUT(
       },
     })
 
+    if (data.status && data.status !== existingWo.status) {
+      await prisma.workOrderStatusHistory.create({
+        data: {
+          workOrderId:   id,
+          status:        wo.status,
+          changedById:   user.userId,
+          changedByName: user.name,
+          notes:         `Status changed from ${existingWo.status} to ${wo.status} during work order update`,
+        }
+      })
+    }
+
     // ── Update asset metrics on completion ────────────────────────────
     if (data.status === 'COMPLETED' && wo.assetId) {
       try {

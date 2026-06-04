@@ -14,7 +14,7 @@ export default async function NewAssetPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect('/assets')
 
-  const [categories, assetTypes, locations, assets, users] = await Promise.all([
+  const [categories, assetTypes, locations, assets, users, teams] = await Promise.all([
     prisma.assetCategory.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }] }),
     prisma.assetType.findMany({ orderBy: { name: 'asc' } }),
     prisma.location.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }], select: { id: true, name: true, parentId: true, path: true } }),
@@ -26,6 +26,11 @@ export default async function NewAssetPage({
     prisma.user.findMany({
       select: { id: true, name: true },
       where: { isActive: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.team.findMany({
+      where: { isDeleted: false },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -44,6 +49,7 @@ export default async function NewAssetPage({
         locations={locations}
         assets={assets}
         users={users}
+        teams={teams}
         initialData={{ parentId: parentId || '' }}
       />
     </div>

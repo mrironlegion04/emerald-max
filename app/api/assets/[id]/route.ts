@@ -22,6 +22,7 @@ const updateSchema = z.object({
   assetTypeId:  z.string().nullable().optional(),
   criticality:  z.string().nullable().optional(),
   ownerId:      z.string().nullable().optional(),
+  primaryTeamId: z.string().nullable().optional(),
   customFields: z.any().nullable().optional(),
 })
 

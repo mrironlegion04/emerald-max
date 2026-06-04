@@ -279,7 +279,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           href="/scan"
           onClick={onClose}
           className={clsx(
-            'sidebar-link justify-center bg-blue-50/40 text-blue-600 border border-blue-200/60 hover:bg-blue-50 mb-3.5 shadow-3xs',
+            'sidebar-link justify-center bg-blue-50/40 text-blue-600 border border-blue-200/60 hover:bg-blue-50 mb-3.5 shadow-3xs lg:hidden',
             { '!bg-blue-600 !text-white !border-blue-700': isActive('/scan') }
           )}
         >

@@ -368,10 +368,11 @@ export default function AssetForm({
           </div>
 
           {/* ── Asset Type: flat dropdown ── */}
-          {assetTypes.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Asset type</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Asset type</label>
+            {assetTypes.length > 0 ? (
               <select
+                id="asset-type-select"
                 value={form.assetTypeId}
                 onChange={e => set('assetTypeId', e.target.value)}
                 className="input-field"
@@ -381,16 +382,24 @@ export default function AssetForm({
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
-              {assetTypes.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1">
-                  No asset types configured yet.{' '}
-                  <a href="/settings/asset-types" className="text-blue-600 hover:underline">
-                    Add them in Settings →
+            ) : (
+              <div>
+                <select
+                  id="asset-type-select-disabled"
+                  disabled
+                  className="input-field bg-gray-50 opacity-75 cursor-not-allowed text-gray-400"
+                >
+                  <option value="">— No custom types —</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  No custom types active.{' '}
+                  <a href="/settings/asset-types" className="text-blue-600 hover:underline font-medium">
+                    Configure them in Settings →
                   </a>
                 </p>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>

@@ -3,10 +3,8 @@
 import { useState, useMemo } from 'react'
 import {
   Plus, Pencil, Trash2, AlertCircle, X, Check,
-  FolderTree, ChevronRight, ChevronDown, Search, Layers, LayoutGrid,
-  Calendar, ClipboardCheck, Clock, RefreshCw
+  FolderTree, ChevronRight, ChevronDown, Search, Layers, LayoutGrid
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'motion/react'
 
 interface Category {
   id: string
@@ -25,28 +23,10 @@ interface Domain {
   name: string
 }
 
-interface PMTemplate {
-  id: string
-  title: string
-  description: string | null
-  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'
-  interval: number
-  categoryId: string
-  procedures: {
-    procedure: {
-      id: string
-      name: string
-    }
-  }[]
-  createdAt: Date | string
-}
-
 interface Props {
   initialCategories: Category[]
   domains: Domain[]
   initialDomainMap: Record<string, string[]>  // categoryId → domainId[]
-  procedures?: { id: string; name: string }[]
-  initialTemplates?: PMTemplate[]
 }
 
 function buildTree(items: Category[], parentId: string | null = null, depth = 0): TreeNode[] {
@@ -78,13 +58,7 @@ function buildPath(categories: Category[], id: string): string {
   return crumbs.join(' › ')
 }
 
-export default function AssetCategoriesManager({ 
-  initialCategories, 
-  domains, 
-  initialDomainMap,
-  procedures = [],
-  initialTemplates = []
-}: Props) {
+export default function AssetCategoriesManager({ initialCategories, domains, initialDomainMap }: Props) {
   const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -100,27 +74,6 @@ export default function AssetCategoriesManager({
   const [domainMap, setDomainMap] = useState<Record<string, string[]>>(initialDomainMap)
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set())
   const [savingDomains, setSavingDomains] = useState<Set<string>>(new Set())
-
-  // Category PM Templates state
-  const [templates, setTemplates] = useState<PMTemplate[]>(initialTemplates)
-  const [expandedTemplates, setExpandedTemplates] = useState<Set<string>>(new Set())
-
-  const toggleTemplatePanel = (id: string) => {
-    setExpandedTemplates(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-    // Auto-close domains panel if open
-    setExpandedDomains(prev => {
-      if (prev.has(id)) {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      }
-      return prev
-    })
-  }
 
   const tree = useMemo(() => buildTree(categories), [categories])
   const flat = useMemo(() => flattenTree(tree), [tree])
@@ -254,15 +207,6 @@ export default function AssetCategoriesManager({
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
-    })
-    // Auto-close templates panel if open
-    setExpandedTemplates(prev => {
-      if (prev.has(id)) {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      }
-      return prev
     })
   }
 
@@ -515,17 +459,6 @@ export default function AssetCategoriesManager({
                           <Layers className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          title="Manage PM Templates"
-                          onClick={() => toggleTemplatePanel(cat.id)}
-                          className={`p-1.5 rounded-lg border transition-all ${
-                            expandedTemplates.has(cat.id)
-                              ? 'text-blue-700 bg-blue-100/80 border-blue-200'
-                              : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-100 border-transparent'
-                          }`}
-                        >
-                          <Calendar className="w-3.5 h-3.5" />
-                        </button>
-                        <button
                           title="Add nested subcategory"
                           onClick={() => openAdd(cat.id)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors"
@@ -591,23 +524,6 @@ export default function AssetCategoriesManager({
                     </div>
                   )}
 
-                  {/* Category PM Templates Tray */}
-                  {expandedTemplates.has(cat.id) && (
-                    <CategoryPMTemplatesPanel
-                      categoryId={cat.id}
-                      categoryName={cat.name}
-                      templates={templates.filter(t => t.categoryId === cat.id)}
-                      procedures={procedures}
-                      depth={cat.depth}
-                      onAddTemplate={(newTemplate) => {
-                        setTemplates(prev => [newTemplate, ...prev])
-                      }}
-                      onDeleteTemplate={(id) => {
-                        setTemplates(prev => prev.filter(t => t.id !== id))
-                      }}
-                    />
-                  )}
-
                   {/* Inline Delete Errors */}
                   {deleteErrors[cat.id] && (
                     <div className="flex items-center gap-2.5 px-4 py-2 bg-red-50 text-xs text-red-700 border-t border-red-100/50">
@@ -629,307 +545,6 @@ export default function AssetCategoriesManager({
         <p className="text-center text-xs text-slate-400 tracking-normal leading-relaxed mt-2 select-none">
           Click <span className="bg-slate-100 px-1 py-0.5 rounded border border-slate-200">▶</span> to expand lists · Hover rows to access quick <span className="font-semibold text-slate-600">+ Subcategory</span> triggers.
         </p>
-      )}
-    </div>
-  )
-}
-
-// Helper Panel Component for Inline PM Template configuration inside categories directory
-interface CategoryPMTemplatesPanelProps {
-  categoryId: string
-  categoryName: string
-  templates: PMTemplate[]
-  procedures: { id: string; name: string }[]
-  depth: number
-  onAddTemplate: (newTemplate: PMTemplate) => void
-  onDeleteTemplate: (id: string) => void
-}
-
-function CategoryPMTemplatesPanel({
-  categoryId,
-  categoryName,
-  templates,
-  procedures,
-  depth,
-  onAddTemplate,
-  onDeleteTemplate,
-}: CategoryPMTemplatesPanelProps) {
-  const [showForm, setShowForm] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [frequency, setFrequency] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'>('MONTHLY')
-  const [interval, setIntervalVal] = useState(1)
-  const [selectedProcedures, setSelectedProcedures] = useState<string[]>([])
-  const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [error, setError] = useState('')
-
-  const handleToggleProcedure = (id: string) => {
-    setSelectedProcedures(prev =>
-      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
-    )
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSaving(true)
-
-    if (!title.trim()) {
-      setError('Title is required')
-      setSaving(false)
-      return
-    }
-
-    if (selectedProcedures.length === 0) {
-      setError('At least one checklist procedure is required')
-      setSaving(false)
-      return
-    }
-
-    try {
-      const res = await fetch('/api/settings/pm-templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          frequency,
-          interval,
-          categoryId,
-          procedureIds: selectedProcedures,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? 'Failed to save template')
-        setSaving(false)
-        return
-      }
-
-      onAddTemplate(data)
-      setTitle('')
-      setDescription('')
-      setIntervalVal(1)
-      setSelectedProcedures([])
-      setShowForm(false)
-    } catch {
-      setError('Failed to save PM template')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDelete = async (templateId: string) => {
-    if (!confirm('Are you sure you want to delete this PM template? Future assets of this category will no longer receive these schedules.')) {
-      return
-    }
-
-    setDeletingId(templateId)
-    setError('')
-
-    try {
-      const res = await fetch(`/api/settings/pm-templates/${templateId}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error ?? 'Failed to delete template')
-        return
-      }
-
-      onDeleteTemplate(templateId)
-    } catch {
-      setError('Failed to delete PM template')
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  const FREQUENCY_LABELS: Record<string, string> = {
-    DAILY: 'Day(s)',
-    WEEKLY: 'Week(s)',
-    MONTHLY: 'Month(s)',
-    QUARTERLY: 'Quarter(s)',
-    YEARLY: 'Year(s)',
-  }
-
-  return (
-    <div 
-      className="p-4 bg-blue-50/30 border-y border-blue-105/40 border-blue-100 flex flex-col gap-4 animate-in slide-in-from-top-1 duration-150"
-      style={{ paddingLeft: `${Math.max(28, 28 + depth * 20)}px` }}
-    >
-      <div className="flex items-center justify-between gap-4 select-none">
-        <div className="flex items-center gap-2 text-blue-700 font-bold text-xs">
-          <Calendar className="w-4 h-4 text-blue-500 animate-pulse" />
-          <span>PM Recurring Templates for &ldquo;{categoryName}&rdquo;</span>
-          <span className="bg-blue-105 bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-            {templates.length}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setShowForm(!showForm)
-            setError('')
-          }}
-          className="inline-flex items-center gap-1 text-[11px] font-extrabold text-blue-600 hover:text-blue-800 bg-white border border-blue-200 hover:border-blue-300 py-1 px-2.5 rounded-xl transition-colors cursor-pointer shadow-3xs"
-        >
-          {showForm ? 'Cancel' : '+ New PM Template'}
-        </button>
-      </div>
-
-      {error && (
-        <div className="flex gap-2 p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs leading-relaxed animate-shake">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Template creation form */}
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 shadow-xs max-w-xl animate-in slide-in-from-top duration-200">
-          <p className="text-xs font-bold text-slate-800 border-b border-slate-100 pb-1.5">Add Template Rule for {categoryName}</p>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Template Name *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="e.g. Monthly Lubrication Checklist"
-                style={{ height: '36px' }}
-                className="input-field p-2 text-xs"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Description (optional)</label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Instructions on performing this checklist..."
-                className="input-field p-2 text-xs"
-                rows={2}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Frequency *</label>
-                <select
-                  value={frequency}
-                  onChange={e => setFrequency(e.target.value as any)}
-                  style={{ height: '36px' }}
-                  className="input-field p-2 text-xs bg-white"
-                >
-                  <option value="DAILY">Daily</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="QUARTERLY">Quarterly</option>
-                  <option value="YEARLY">Yearly</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Interval (Every) *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={interval}
-                  style={{ height: '36px' }}
-                  onChange={e => setIntervalVal(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="input-field p-2 text-xs"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Select Checklist Procedure(s) *</label>
-              <div className="border border-slate-200 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 bg-slate-50">
-                {procedures.length === 0 ? (
-                  <p className="text-[11px] text-slate-500 text-center py-2">No checklists created yet. Define them under <a href="/settings/procedures" className="underline font-bold text-blue-600">Procedures Settings</a>.</p>
-                ) : (
-                  procedures.map(proc => {
-                    const active = selectedProcedures.includes(proc.id)
-                    return (
-                      <label key={proc.id} className="flex items-center gap-2 px-1.5 py-1 hover:bg-white rounded cursor-pointer transition-colors text-xs">
-                        <input
-                          type="checkbox"
-                          checked={active}
-                          onChange={() => handleToggleProcedure(proc.id)}
-                          className="rounded-sm text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                        />
-                        <span className="text-slate-700 font-medium truncate">{proc.name}</span>
-                      </label>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-3 py-1.5 text-xs text-slate-650 hover:text-slate-750 bg-slate-100 hover:bg-slate-200 font-bold rounded-lg transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-3.5 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
-              <span>{saving ? 'Creating...' : 'Create Template'}</span>
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* List of existing rules */}
-      {templates.length === 0 ? (
-        <p className="text-[11px] font-medium text-slate-400 italic">No PM templates configured for this category yet. Click &ldquo;+ New PM Template&rdquo; to auto-generate schedules for any new class members.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl">
-          {templates.map(tpl => (
-            <div key={tpl.id} className="bg-white hover:border-blue-300 transition-colors border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-3xs animate-in zoom-in-95 duration-150 select-none">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-105/30 text-blue-700 font-extrabold text-[9px] px-2 py-0.5 rounded-full uppercase">
-                    Every {tpl.interval} {FREQUENCY_LABELS[tpl.frequency]}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(tpl.id)}
-                    disabled={deletingId === tpl.id}
-                    className="text-slate-400 hover:text-red-650 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-colors disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <h4 className="font-extrabold text-slate-800 text-xs mt-1.5">{tpl.title}</h4>
-                {tpl.description && <p className="text-[11px] text-slate-500 line-clamp-1">{tpl.description}</p>}
-
-                <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-slate-50">
-                  <ClipboardCheck className="w-3 h-3 text-emerald-500" />
-                  {tpl.procedures.map((p, idx) => (
-                    <span key={idx} className="bg-slate-100 text-slate-650 px-1.5 py-0.5 rounded text-[9px] font-bold border border-slate-200 max-w-[120px] truncate" title={p.procedure.name}>
-                      {p.procedure.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   )

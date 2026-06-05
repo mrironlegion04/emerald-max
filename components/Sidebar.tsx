@@ -170,9 +170,15 @@ const enterpriseSettingsItems = [
     adminOnly: true,
   },
   {
-    label: 'Asset Categories & PM Templates',
+    label: 'Asset Categories',
     href: '/settings/asset-categories',
     icon: <FolderTree className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
+    label: 'Category PM Templates',
+    href: '/settings/pm-templates',
+    icon: <Calendar className="w-4 h-4" />,
     adminOnly: true,
   },
   {

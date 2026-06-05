@@ -8,13 +8,26 @@ export default async function AssetCategoriesPage() {
   const user = await getCurrentUser()
   if (user?.role !== 'ADMIN') redirect('/dashboard')
 
-  const [categories, domains, categoryDomainLinks] = await Promise.all([
+  const [categories, domains, categoryDomainLinks, pmTemplates, procedures] = await Promise.all([
     prisma.assetCategory.findMany({
       orderBy: [{ parentId: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { children: true, assets: true } } },
     }),
     prisma.maintenanceDomain.findMany({ orderBy: { name: 'asc' } }),
     prisma.categoryDomain.findMany({ select: { categoryId: true, domainId: true } }),
+    prisma.pMTemplate.findMany({
+      include: {
+        procedures: {
+          include: { procedure: { select: { id: true, name: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.procedure.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true },
+    }),
   ])
 
   // Build a map: categoryId → domainId[]
@@ -27,13 +40,15 @@ export default async function AssetCategoriesPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <PageHeader
-        title="Asset Categories"
-        subtitle="Hierarchical classification for assets. Assign maintenance domains to each category."
+        title="Asset Categories & PM Templates"
+        subtitle="Hierarchical classification for assets. Assign maintenance domains and recurrence PM templates to each category."
       />
       <AssetCategoriesManager
         initialCategories={categories}
         domains={domains}
         initialDomainMap={domainMap}
+        procedures={procedures}
+        initialTemplates={pmTemplates}
       />
     </div>
   )

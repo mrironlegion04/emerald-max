@@ -295,7 +295,6 @@ model AssetCategory {
 
   defaultTeamId String?
   defaultTeam   Team?       @relation("CategoryDefaultTeam", fields: [defaultTeamId], references: [id], onDelete: SetNull)
-  pmTemplates   PMTemplate[]
 
   @@map("asset_categories")
 }
@@ -952,7 +951,6 @@ model Procedure {
   locations   Location[]         @relation("ProcedureLocations")
   categories  AssetCategory[]    @relation("ProcedureCategories")
   assets      Asset[]            @relation("ProcedureAssets")
-  pmTemplates PMTemplateProcedure[]
 
   @@map("procedures")
 }
@@ -1072,36 +1070,6 @@ model ChatMessage {
   @@index([parentId])
   @@index([createdAt])
   @@map("chat_messages")
-}
-
-model PMTemplate {
-  id          String        @id @default(cuid())
-  title       String
-  description String?
-  triggerType PMTriggerType @default(TIME)
-  frequency   PMFrequency
-  interval    Int           @default(1)
-  
-  categoryId  String
-  category    AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  procedures PMTemplateProcedure[]
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@map("pm_templates")
-}
-
-model PMTemplateProcedure {
-  templateId  String
-  template    PMTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  procedureId String
-  procedure   Procedure  @relation(fields: [procedureId], references: [id], onDelete: Cascade)
-  sortOrder   Int        @default(0)
-
-  @@id([templateId, procedureId])
-  @@map("pm_template_procedures")
 }
 
 model WorkOrderStatusHistory {

@@ -60,6 +60,7 @@ export default async function AssetDetailPage({
       category: true,
       location: true,
       owner: { select: { id: true, name: true } },
+      primaryTeam: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
       parent: { select: { id: true, name: true, assetCode: true } },
       assetType: { select: { id: true, name: true } },
@@ -303,6 +304,7 @@ export default async function AssetDetailPage({
                   { label: 'Asset code',    value: asset.assetCode },
                   { label: 'Asset type',    value: asset.assetType?.name ?? null },
                   { label: 'Category',      value: categoryPath || null },
+                  { label: 'Primary team',  value: asset.primaryTeam?.name ?? null },
                   { label: 'Serial number', value: asset.serialNumber },
                   { label: 'Manufacturer',  value: asset.manufacturer },
                   { label: 'Model',         value: asset.model },
@@ -320,6 +322,8 @@ export default async function AssetDetailPage({
                         <span className="text-emerald-700">{locationPath}</span>
                       ) : row.label === 'Category' && categoryPath ? (
                         <span className="text-indigo-700">{categoryPath}</span>
+                      ) : row.label === 'Primary team' && asset.primaryTeam ? (
+                        <span className="text-blue-700 font-semibold">{asset.primaryTeam.name}</span>
                       ) : row.label === 'Asset type' && (asset.assetType?.name) ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
                           {asset.assetType?.name}

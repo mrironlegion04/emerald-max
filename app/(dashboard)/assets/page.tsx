@@ -25,6 +25,7 @@ interface AssetWithRelations {
   model?: string | null
   category?: { id: string; name: string } | null
   location?: { id: string; name: string } | null
+  primaryTeam?: { id: string; name: string } | null
   _count?: { workOrders: number; children: number } | null
 }
 
@@ -74,6 +75,7 @@ async function getAssets(filters: SearchParams) {
       include: {
         category: { select: { id: true, name: true } },
         location: { select: { id: true, name: true } },
+        primaryTeam: { select: { id: true, name: true } },
         _count: { select: { workOrders: true, children: true } },
       },
       orderBy: { name: 'asc' },
@@ -166,6 +168,7 @@ export default async function AssetsPage({
                   <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Code</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Category</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Location</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Primary Team</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Status</th>
                   {viewMode === 'hierarchy' && (
                     <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">Children</th>
@@ -211,6 +214,7 @@ export default async function AssetsPage({
                     </td>
                     <td className="px-4 py-3 text-gray-600">{asset.category?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{asset.location?.name ?? '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-blue-700">{asset.primaryTeam?.name ?? '—'}</td>
                     <td className="px-4 py-3">
                       {asset.isDeleted ? (
                         <Badge label="Deleted" variant="red" />
@@ -322,6 +326,11 @@ export default async function AssetsPage({
                       {asset.category?.name && (
                         <span className="text-[10px] text-slate-500 font-semibold bg-purple-50/50 border border-purple-100/30 px-1.5 py-0.5 rounded">
                           📁 {asset.category.name}
+                        </span>
+                      )}
+                      {asset.primaryTeam?.name && (
+                        <span className="text-[10px] text-blue-700 font-semibold bg-blue-50/55 border border-blue-100/30 px-1.5 py-0.5 rounded">
+                          👥 {asset.primaryTeam.name}
                         </span>
                       )}
                     </div>

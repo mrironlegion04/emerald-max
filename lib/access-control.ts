@@ -38,8 +38,7 @@ export async function canCompleteWorkOrder(
     where: { id: workOrderId },
     select: {
       assignedToId: true,
-      teamId: true,
-      team: { select: { members: { select: { userId: true } } } },
+      domainId: true,
     },
   })
 
@@ -52,9 +51,15 @@ export async function canCompleteWorkOrder(
     return { allowed: true, isOverride: false }
   }
 
-  // Check if user is in assigned team
-  if (wo.teamId && wo.team?.members.some((m) => m.userId === user.userId)) {
-    return { allowed: true, isOverride: false }
+  // Check if user is in assigned domain
+  if (wo.domainId) {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { domainId: true },
+    })
+    if (userRecord?.domainId === wo.domainId) {
+      return { allowed: true, isOverride: false }
+    }
   }
 
   return { allowed: false, reason: 'User is not assigned to this work order' }
@@ -92,8 +97,7 @@ export async function canCompleteSubtask(
     where: { id: subtaskId },
     select: {
       assignedToId: true,
-      assignedTeamId: true,
-      assignedTeam: { select: { members: { select: { userId: true } } } },
+      assignedDomainId: true,
     },
   })
 
@@ -106,12 +110,15 @@ export async function canCompleteSubtask(
     return { allowed: true, isOverride: false }
   }
 
-  // Check if user is in assigned team
-  if (
-    subtask.assignedTeamId &&
-    subtask.assignedTeam?.members.some((m) => m.userId === user.userId)
-  ) {
-    return { allowed: true, isOverride: false }
+  // Check if user is in assigned domain
+  if (subtask.assignedDomainId) {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { domainId: true },
+    })
+    if (userRecord?.domainId === subtask.assignedDomainId) {
+      return { allowed: true, isOverride: false }
+    }
   }
 
   return {
@@ -139,8 +146,7 @@ export async function canViewWorkOrder(
     where: { id: workOrderId },
     select: {
       assignedToId: true,
-      teamId: true,
-      team: { select: { members: { select: { userId: true } } } },
+      domainId: true,
     },
   })
 
@@ -153,9 +159,15 @@ export async function canViewWorkOrder(
     return { allowed: true }
   }
 
-  // Check if user is in assigned team
-  if (wo.teamId && wo.team?.members.some((m) => m.userId === user.userId)) {
-    return { allowed: true }
+  // Check if user is in assigned domain
+  if (wo.domainId) {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { domainId: true },
+    })
+    if (userRecord?.domainId === wo.domainId) {
+      return { allowed: true }
+    }
   }
 
   return {

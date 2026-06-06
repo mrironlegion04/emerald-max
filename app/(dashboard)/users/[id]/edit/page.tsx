@@ -45,6 +45,7 @@ export default async function EditUserPage({
           phone: target.phone ?? '',
           bio: target.bio ?? '',
           department: target.department ?? '',
+          domainId: target.domainId ?? '',
           userSkills: target.skills,
           hasFaceVerification: target.hasFaceVerification,
           lastFaceVerifyAt: target.lastFaceVerifyAt,

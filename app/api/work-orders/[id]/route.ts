@@ -64,7 +64,7 @@ const updateSchema = z.object({
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional(),
   assignedToId:        z.string().nullable().optional(),
-  teamId:              z.string().nullable().optional(),
+  domainId:            z.string().nullable().optional(),
   laborHours:          z.number().nullable().optional(),
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),
@@ -97,15 +97,19 @@ export async function GET(
         issue:       true,
         partsUsed:   { include: { part: true } },
         subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true } },
-        team:        { include: { members: true } },
+        domain:      true,
       },
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
       const isAssigned = wo.assignedToId === user.userId
-      const isTeamMember = wo.team?.members.some(m => m.userId === user.userId)
-      if (!isAssigned && !isTeamMember) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { domainId: true }
+      })
+      const isDomainMember = wo.domainId && dbUser?.domainId === wo.domainId
+      if (!isAssigned && !isDomainMember) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
@@ -132,7 +136,7 @@ export async function PUT(
     const existingWo = await prisma.workOrder.findUnique({
       where: { id },
       include: {
-        team: { include: { members: true } },
+        domain: true,
         assets: { select: { assetId: true } },
       },
     })
@@ -159,7 +163,7 @@ export async function PUT(
       )
     }
 
-    if ((data.assignedToId || data.teamId) && !isAdmin(user)) {
+    if ((data.assignedToId || data.domainId) && !isAdmin(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign work order' },
         { status: 403 }
@@ -184,7 +188,7 @@ export async function PUT(
     }
 
     // ── Mutual exclusion: team vs individual ──────────────────────────
-    if (data.teamId) {
+    if (data.domainId) {
       data.assignedToId = null
     }
 
@@ -240,7 +244,7 @@ export async function PUT(
       ...Object.fromEntries(
         Object.entries(data).filter(([key]) =>
           ['title','description','type','priority','status','assetId','locationId',
-           'locationScope','assignedToId','teamId','laborHours','laborCost',
+           'locationScope','assignedToId','domainId','laborHours','laborCost',
            'partsCost','notes','issueId','customIssue'].includes(key)
         )
       ),
@@ -253,7 +257,7 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        team: { select: { id: true, name: true, trade: true } },
+        domain: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
       },

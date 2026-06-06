@@ -22,7 +22,7 @@ const assetSchema = z.object({
   assetTypeId:  z.string().nullable().optional(),
   criticality:  z.string().nullable().optional(),
   ownerId:      z.string().nullable().optional(),
-  primaryTeamId: z.string().nullable().optional(),
+  domainId:     z.string().nullable().optional(),
   customFields: z.any().nullable().optional(), // JSON field
 })
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         assetTypeId:  data.assetTypeId  ?? null,
         criticality:  (data.criticality as any)  ?? null,
         ownerId:      data.ownerId      ?? null,
-        primaryTeamId: data.primaryTeamId ?? null,
+        domainId:     data.domainId     ?? null,
         customFields: data.customFields ?? null,
         createdById:  user.userId,
       },

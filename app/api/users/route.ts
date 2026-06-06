@@ -14,6 +14,7 @@ const createSchema = z.object({
   phone:      z.string().nullable().optional(),
   bio:        z.string().nullable().optional(),
   department: z.string().nullable().optional(),
+  domainId:   z.string().nullable().optional(),
 })
 
 export async function GET() {
@@ -35,6 +36,13 @@ export async function GET() {
         bio: true,
         department: true,
         lastActiveAt: true,
+        domainId: true,
+        domain: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         _count: {
           select: {
             assignedWorkOrders: true,
@@ -76,8 +84,9 @@ export async function POST(request: NextRequest) {
         phone: data.phone || null,
         bio: data.bio || null,
         department: data.department || null,
+        domainId: data.domainId || null,
       },
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true },
+      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, domainId: true },
     })
 
     await writeAudit({

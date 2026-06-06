@@ -12,7 +12,7 @@ const subtaskSchema = z.object({
   dueDate: z.string().nullable().optional(),
   workOrderId: z.string().min(1, 'Work Order ID is required'),
   assignedToId: z.string().nullable().optional(),
-  assignedTeamId: z.string().nullable().optional(),
+  assignedDomainId: z.string().nullable().optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedTeam: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },
@@ -67,20 +67,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify assigned team exists if provided
-    if (data.assignedTeamId) {
-      const assignedTeam = await prisma.team.findUnique({
-        where: { id: data.assignedTeamId },
+    // Verify assigned domain exists if provided
+    if (data.assignedDomainId) {
+      const assignedDomain = await prisma.maintenanceDomain.findUnique({
+        where: { id: data.assignedDomainId },
       })
-      if (!assignedTeam) {
-        return NextResponse.json({ error: 'Assigned team not found' }, { status: 404 })
+      if (!assignedDomain) {
+        return NextResponse.json({ error: 'Assigned domain not found' }, { status: 404 })
       }
     }
 
-    // Ensure mutual exclusivity: can't assign to both user and team
-    if (data.assignedToId && data.assignedTeamId) {
+    // Ensure mutual exclusivity: can't assign to both user and domain
+    if (data.assignedToId && data.assignedDomainId) {
       return NextResponse.json(
-        { error: 'Cannot assign to both user and team' },
+        { error: 'Cannot assign to both user and industrial domain' },
         { status: 400 }
       )
     }
@@ -94,12 +94,12 @@ export async function POST(request: NextRequest) {
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         workOrderId: data.workOrderId,
         assignedToId: data.assignedToId ?? null,
-        assignedTeamId: data.assignedTeamId ?? null,
+        assignedDomainId: data.assignedDomainId ?? null,
         createdById: user.userId,
       },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedTeam: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },
       },

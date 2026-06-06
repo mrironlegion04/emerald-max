@@ -24,7 +24,7 @@ const woSchema = z.object({
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional().default([]),
   assignedToId:        z.string().nullable().optional(),
-  teamId:              z.string().nullable().optional(),
+  domainId:            z.string().nullable().optional(),
   laborHours:          z.number().nullable().optional(),
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),
@@ -55,12 +55,21 @@ export async function GET() {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    let userDomainId: string | null = null
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { domainId: true }
+      })
+      userDomainId = dbUser?.domainId ?? null
+    }
+
     const whereClause = user.role === 'ADMIN' || user.role === 'MANAGER'
       ? {}
       : {
           OR: [
             { assignedToId: user.userId },
-            { team: { members: { some: { userId: user.userId } } } },
+            ...(userDomainId ? [{ domainId: userDomainId }] : []),
           ],
         }
 
@@ -122,7 +131,7 @@ export async function POST(request: NextRequest) {
         locationId:     data.locationId   ?? null,
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,
-        teamId:         data.teamId       ?? null,
+        domainId:       data.domainId     ?? null,
         createdById:    user.userId,
         laborHours:     data.laborHours   ?? null,
         laborCost:      data.laborCost    ?? null,
@@ -198,21 +207,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (data.teamId) {
-      const teamMembers = await prisma.teamMember.findMany({
-        where: { teamId: data.teamId },
-        include: { user: true },
+    if (data.domainId) {
+      const domainUsers = await prisma.user.findMany({
+        where: { domainId: data.domainId },
       })
-      for (const member of teamMembers) {
+      for (const dUser of domainUsers) {
         await createNotification({
-          userId: member.user.id,
-          title: `WO ${wo.woNumber} Assigned to Your Team`,
+          userId: dUser.id,
+          title: `WO ${wo.woNumber} Assigned to Your Domain`,
           message: wo.title, type: 'WORK_ORDER_ASSIGNED',
           entityId: wo.id, href: `/work-orders/${wo.id}`,
         }).catch(console.error)
-        // Send email to each team member
+        // Send email to each domain member
         await sendWOAssigned({
-          toEmail: member.user.email, toName: member.user.name,
+          toEmail: dUser.email, toName: dUser.name,
           woNumber: wo.woNumber, woTitle: wo.title, woId: wo.id,
           priority: wo.priority, dueDate: wo.dueDate?.toISOString() ?? null,
           assetName: null,

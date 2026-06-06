@@ -35,7 +35,7 @@ export async function PATCH(
     // Load current WO
     const wo = await prisma.workOrder.findUnique({ 
       where: { id },
-      include: { team: { select: { members: { select: { userId: true } } } } }
+      include: { domain: true }
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 

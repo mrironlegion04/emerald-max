@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import UserSkillsManager from './UserSkillsManager'
 import { AlertCircle, Shield, CheckCircle, X } from 'lucide-react'
@@ -14,6 +14,7 @@ interface UserFormData {
   phone: string
   bio: string
   department: string
+  domainId: string
 }
 
 interface UserSkill {
@@ -53,6 +54,19 @@ export default function UserForm({ initialData, userId }: Props) {
   const router = useRouter()
   const isEdit = !!userId
 
+  const [domains, setDomains] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/domains')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setDomains(data)
+        }
+      })
+      .catch(err => console.error('Error fetching domains', err))
+  }, [])
+
   const [form, setForm] = useState<UserFormData>({
     name: initialData?.name ?? '',
     email: initialData?.email ?? '',
@@ -62,6 +76,7 @@ export default function UserForm({ initialData, userId }: Props) {
     phone: (initialData as any)?.phone ?? '',
     bio: (initialData as any)?.bio ?? '',
     department: (initialData as any)?.department ?? '',
+    domainId: (initialData as any)?.domainId ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -91,6 +106,7 @@ export default function UserForm({ initialData, userId }: Props) {
         phone: form.phone || null,
         bio: form.bio || null,
         department: form.department || null,
+        domainId: form.domainId || null,
       }
       if (form.password) payload.password = form.password
 
@@ -306,6 +322,23 @@ export default function UserForm({ initialData, userId }: Props) {
             className="input-field"
             placeholder="Maintenance, Operations, etc."
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Maintenance Domain (Engineering Group)
+          </label>
+          <select
+            value={form.domainId}
+            onChange={e => set('domainId', e.target.value)}
+            className="input-field cursor-pointer"
+          >
+            <option value="">No Assigned Domain</option>
+            {domains.map(d => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

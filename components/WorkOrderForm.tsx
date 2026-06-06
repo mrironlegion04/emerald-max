@@ -603,7 +603,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
               <ClipboardCheck className="w-5 h-5 text-blue-600 animate-pulse" />
               <div>
                 <h2 className="font-bold text-slate-805 text-sm tracking-tight">Procedures & Checklists</h2>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">MaintainX-Style SOP Engine</p>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">SOP Engine</p>
               </div>
             </div>
             {form.procedureIds.length > 0 && (

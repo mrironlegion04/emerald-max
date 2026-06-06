@@ -44,7 +44,7 @@ interface WO {
   dueDate: Date | null
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
-  team: { id: string; name: string } | null
+  domain: { id: string; name: string } | null
 }
 
 interface ST {
@@ -54,7 +54,7 @@ interface ST {
   priority: string
   dueDate: Date | null
   assignedTo: { id: string; name: string } | null
-  assignedTeam: { id: string; name: string } | null
+  assignedDomain: { id: string; name: string } | null
   workOrder: {
     id: string
     woNumber: string
@@ -111,16 +111,16 @@ export default async function ToDoPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const userWithTeam = await prisma.user.findUnique({
+  const dbUser = await prisma.user.findUnique({
     where: { id: user.userId },
     include: {
-      teamMembers: { include: { team: { select: { id: true, name: true } } } },
+      domain: { select: { id: true, name: true } },
     },
   })
-  if (!userWithTeam) redirect('/login')
+  if (!dbUser) redirect('/login')
 
-  const userTeams = userWithTeam.teamMembers.map((tm: any) => ({ id: tm.team.id, name: tm.team.name }))
-  const userTeamIds = userTeams.map((t: any) => t.id)
+  const userDomain = dbUser.domain ? { id: dbUser.domain.id, name: dbUser.domain.name } : null
+  const userDomainId = dbUser.domainId
 
   const woOrder = [{ priority: 'desc' as const }, { dueDate: 'asc' as const }]
 
@@ -140,7 +140,7 @@ export default async function ToDoPage() {
     include: {
       asset:      { select: { id: true, name: true, assetCode: true } },
       assignedTo: { select: { id: true, name: true } },
-      team:       { select: { id: true, name: true } },
+      domain:     { select: { id: true, name: true } },
     },
     orderBy: woOrder,
   })
@@ -155,7 +155,7 @@ export default async function ToDoPage() {
     },
     include: {
       assignedTo:   { select: { id: true, name: true } },
-      assignedTeam: { select: { id: true, name: true } },
+      assignedDomain: { select: { id: true, name: true } },
       workOrder: {
         select: {
           id: true, woNumber: true, title: true, status: true, dueDate: true,
@@ -173,16 +173,16 @@ export default async function ToDoPage() {
   //   then in JS we exclude the ones already in myWOs by ID.
   //   This avoids any Prisma NULL-comparison weirdness entirely.
   // ════════════════════════════════════════════════════════════════════════
-  const rawTeamWOs = userTeamIds.length > 0
+  const rawTeamWOs = userDomainId
     ? await prisma.workOrder.findMany({
         where: {
-          teamId: { in: userTeamIds },
+          domainId: userDomainId,
           status: { in: ACTIVE_WO },
         },
         include: {
           asset:      { select: { id: true, name: true, assetCode: true } },
           assignedTo: { select: { id: true, name: true } },
-          team:       { select: { id: true, name: true } },
+          domain:     { select: { id: true, name: true } },
         },
         orderBy: woOrder,
       })
@@ -198,15 +198,15 @@ export default async function ToDoPage() {
   //   KEY FIX: Same approach — fetch all, exclude mine by ID in JS.
   //   This is the fix for subtasks with assignedToId=null disappearing.
   // ════════════════════════════════════════════════════════════════════════
-  const rawTeamSubtasks = userTeamIds.length > 0
+  const rawTeamSubtasks = userDomainId
     ? await prisma.subtask.findMany({
         where: {
-          assignedTeamId: { in: userTeamIds },
+          assignedDomainId: userDomainId,
           status: { in: ACTIVE_ST },
         },
         include: {
           assignedTo:   { select: { id: true, name: true } },
-          assignedTeam: { select: { id: true, name: true } },
+          assignedDomain: { select: { id: true, name: true } },
           workOrder: {
             select: {
               id: true, woNumber: true, title: true, status: true, dueDate: true,
@@ -228,11 +228,11 @@ export default async function ToDoPage() {
   const openPoolWhere = {
     assignedToId: null,
     status: { in: ['OPEN', 'IN_PROGRESS'] as any[] },
-    ...(userTeamIds.length > 0
+    ...(userDomainId
       ? {
           OR: [
-            { teamId: null },
-            { teamId: { notIn: userTeamIds } },
+            { domainId: null },
+            { domainId: { not: userDomainId } },
           ],
         }
       : {}),
@@ -243,7 +243,7 @@ export default async function ToDoPage() {
       include: {
         asset:      { select: { id: true, name: true, assetCode: true } },
         assignedTo: { select: { id: true, name: true } },
-        team:       { select: { id: true, name: true } },
+        domain:     { select: { id: true, name: true } },
       },
       orderBy: woOrder,
       take: OPEN_POOL_PREVIEW,
@@ -265,18 +265,20 @@ export default async function ToDoPage() {
     include: {
       asset:      { select: { id: true, name: true, assetCode: true } },
       assignedTo: { select: { id: true, name: true } },
-      team:       { select: { id: true, name: true } },
+      domain:     { select: { id: true, name: true } },
     },
     orderBy: { updatedAt: 'desc' },
     take: 9,
   })
 
-  // ── Group per-team ─────────────────────────────────────────────────────
-  const teamSections = userTeams.map((team: any) => ({
-    team,
-    wos:      teamWOs.filter((wo: any) => wo.team?.id === team.id),
-    subtasks: teamSubtasks.filter((st: any) => st.assignedTeam?.id === team.id),
-  }))
+  // ── Group per-domain ───────────────────────────────────────────────────
+  const teamSections = userDomain
+    ? [{
+        team: userDomain,
+        wos:      teamWOs.filter((wo: any) => wo.domain?.id === userDomain.id),
+        subtasks: teamSubtasks.filter((st: any) => st.assignedDomain?.id === userDomain.id),
+      }]
+    : []
 
   // ── Stats ──────────────────────────────────────────────────────────────
   const myWOCat = categorize(myWOs)
@@ -340,8 +342,8 @@ export default async function ToDoPage() {
             ? <MetaRow icon={<UserCircle2 className="w-3.5 h-3.5" />} text={wo.assignedTo.name} />
             : <MetaRow icon={<Inbox className="w-3.5 h-3.5 text-amber-400" />} text="Unassigned" muted />
           }
-          {wo.team && (
-            <MetaRow icon={<Users className="w-3.5 h-3.5" />} text={wo.team.name} muted />
+          {wo.domain && (
+            <MetaRow icon={<Users className="w-3.5 h-3.5" />} text={wo.domain.name} muted />
           )}
         </div>
 
@@ -411,9 +413,9 @@ export default async function ToDoPage() {
           {st.assignedTo && (
             <MetaRow icon={<UserCircle2 className="w-3.5 h-3.5" />} text={st.assignedTo.name} />
           )}
-          {st.assignedTeam && (
+          {st.assignedDomain && (
             <MetaRow icon={<Users className="w-3.5 h-3.5 text-violet-400" />}
-              text={`${st.assignedTeam.name}${st.assignedTo ? '' : ' (team)'}`} />
+              text={`${st.assignedDomain.name}${st.assignedTo ? '' : ' (domain)'}`} />
           )}
         </div>
 
@@ -480,8 +482,8 @@ export default async function ToDoPage() {
       {/* ── Top stats strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <TopStat label="My Tasks"    value={myTotal}       sub={myOverdue > 0 ? `${myOverdue} overdue` : 'all good'}         subColor={myOverdue > 0 ? 'text-red-500' : 'text-green-500'}   color="blue"   icon={<UserCircle2 className="w-5 h-5" />} />
-        {userTeams.length > 0 && (
-          <TopStat label={userTeams.length === 1 ? userTeams[0].name : `${userTeams.length} Teams`}
+        {userDomain && (
+          <TopStat label={`Domain: ${userDomain.name}`}
             value={teamTotal}
             sub={teamOverdue > 0 ? `${teamOverdue} overdue` : 'all good'}
             subColor={teamOverdue > 0 ? 'text-red-500' : 'text-green-500'}
@@ -530,7 +532,7 @@ export default async function ToDoPage() {
             title={team.name}
             subtitle={`${secTotal} item${secTotal !== 1 ? 's' : ''} in team queue`}
             overdueCount={secOverdue}
-            viewAll={{ href: `/work-orders?teamId=${team.id}`, label: 'View team WOs' }}
+            viewAll={{ href: `/work-orders?domainId=${team.id}`, label: 'View domain WOs' }}
           >
             {secTotal === 0 ? (
               <EmptyBox icon={<Users className="w-8 h-8 text-violet-300" />}
@@ -594,7 +596,7 @@ export default async function ToDoPage() {
                 </p>
                 <div className="space-y-1">
                   {wo.asset && <MetaRow icon={<Package className="w-3.5 h-3.5" />} text={wo.asset.name} />}
-                  {wo.team  && <MetaRow icon={<Users   className="w-3.5 h-3.5" />} text={wo.team.name} />}
+                  {wo.domain  && <MetaRow icon={<Users   className="w-3.5 h-3.5" />} text={wo.domain.name} />}
                 </div>
                 <div className="pt-2 border-t border-green-200 mt-auto flex items-center justify-between">
                   <span className="text-xs text-green-600 font-semibold flex items-center gap-1">

@@ -99,8 +99,8 @@ const navItems = [
 // Visible to ADMIN and MANAGER
 const managerItems = [
   {
-    label: 'Teams / Users',
-    href: '/teams',
+    label: 'Users',
+    href: '/users',
     icon: <Users className="w-4.5 h-4.5" />,
   },
 ]

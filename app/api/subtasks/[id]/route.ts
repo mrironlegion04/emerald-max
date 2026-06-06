@@ -12,7 +12,7 @@ const updateSubtaskSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   dueDate: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
-  assignedTeamId: z.string().nullable().optional(),
+  assignedDomainId: z.string().nullable().optional(),
 })
 
 export async function GET(
@@ -26,7 +26,7 @@ export async function GET(
       where: { id },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedTeam: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },
@@ -60,7 +60,7 @@ export async function PUT(
     const existingSubtask = await prisma.subtask.findUnique({
       where: { id },
       include: {
-        assignedTeam: { select: { members: { select: { userId: true } } } }
+        assignedDomain: true
       }
     })
     if (!existingSubtask) {
@@ -86,19 +86,19 @@ export async function PUT(
       }
     }
 
-    // Verify assigned team exists if provided
-    if (data.assignedTeamId) {
-      const assignedTeam = await prisma.team.findUnique({
-        where: { id: data.assignedTeamId },
+    // Verify assigned domain exists if provided
+    if (data.assignedDomainId) {
+      const assignedDomain = await prisma.maintenanceDomain.findUnique({
+        where: { id: data.assignedDomainId },
       })
-      if (!assignedTeam) {
-        return NextResponse.json({ error: 'Assigned team not found' }, { status: 404 })
+      if (!assignedDomain) {
+        return NextResponse.json({ error: 'Assigned domain not found' }, { status: 404 })
       }
     }
 
     // ===== PERMISSION CHECKS FOR REASSIGNMENT =====
     // Only admins/managers can reassign
-    if ((data.assignedToId || data.assignedTeamId) && !isAdmin(user)) {
+    if ((data.assignedToId || data.assignedDomainId) && !isAdmin(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign subtask' },
         { status: 403 }
@@ -106,9 +106,9 @@ export async function PUT(
     }
 
     // Ensure mutual exclusivity: can't assign to both user and team
-    if (data.assignedToId && data.assignedTeamId) {
+    if (data.assignedToId && data.assignedDomainId) {
       return NextResponse.json(
-        { error: 'Cannot assign to both user and team' },
+        { error: 'Cannot assign to both user and industrial domain' },
         { status: 400 }
       )
     }
@@ -126,7 +126,7 @@ export async function PUT(
       updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
     }
     if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId
-    if (data.assignedTeamId !== undefined) updateData.assignedTeamId = data.assignedTeamId
+    if (data.assignedDomainId !== undefined) updateData.assignedDomainId = data.assignedDomainId
 
     // Track completion
     if (isCompleting) {
@@ -143,7 +143,7 @@ export async function PUT(
       data: updateData,
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedTeam: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },

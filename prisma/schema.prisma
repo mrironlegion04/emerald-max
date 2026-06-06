@@ -131,21 +131,7 @@ enum RequestPriority {
   CRITICAL
 }
 
-enum TeamTrade {
-  Electrical
-  HVAC
-  Plumbing
-  Mechanical
-  Carpentry
-  Painting
-  Welding
-  HVAC_Refrigeration @map("HVAC Refrigeration")
-  General_Maintenance @map("General Maintenance")
-  Facilities
-  Safety
-  Quality_Assurance @map("Quality Assurance")
-  Automation
-}
+
 
 enum NotificationType {
   WORK_ORDER_ASSIGNED
@@ -171,7 +157,7 @@ enum ProficiencyLevel {
 
 enum ChatChannelType {
   general
-  team
+  domain
   workorder
   direct
   group
@@ -212,7 +198,8 @@ model User {
   reviewedRequests      MaintenanceRequest[]    @relation("RequestReviewer")
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
-  teamMembers           TeamMember[]            @relation("TeamMembers")
+  domainId              String?
+  domain                MaintenanceDomain?      @relation("UserDomain", fields: [domainId], references: [id], onDelete: SetNull)
   assignedSubtasks      Subtask[]               @relation("SubtaskAssignedTo")
   completedSubtasks     Subtask[]               @relation("SubtaskCompletedBy")
   createdSubtasks       Subtask[]               @relation("SubtaskCreatedBy")
@@ -292,8 +279,8 @@ model AssetCategory {
   domains  CategoryDomain[]
   procedures Procedure[] @relation("ProcedureCategories")
 
-  defaultTeamId String?
-  defaultTeam   Team?       @relation("CategoryDefaultTeam", fields: [defaultTeamId], references: [id], onDelete: SetNull)
+  defaultDomainId String?
+  defaultDomain   MaintenanceDomain? @relation("CategoryDefaultDomain", fields: [defaultDomainId], references: [id], onDelete: SetNull)
 
   @@map("asset_categories")
 }
@@ -322,8 +309,8 @@ model Asset {
   purchaseCost      Float?
   assetTypeId       String?
   criticality       Criticality?
-  primaryTeamId     String?
-  primaryTeam       Team?       @relation("AssetPrimaryTeam", fields: [primaryTeamId], references: [id], onDelete: SetNull)
+  domainId          String?
+  domain            MaintenanceDomain? @relation("AssetDomain", fields: [domainId], references: [id], onDelete: SetNull)
   customFields      Json?
   // Warranty fields (Part 7)
   warrantyExpiry    DateTime?
@@ -422,42 +409,7 @@ model MeterEvent {
   @@map("meter_events")
 }
 
-model Team {
-  id          String   @id @default(cuid())
-  name        String
-  trade       TeamTrade // e.g. Electrical, HVAC, Plumbing
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  members             TeamMember[]
-  workOrders          WorkOrder[]
-  subtasksAssigned    Subtask[]           @relation("SubtasksAssignedToTeam")
-
-  primaryAssets       Asset[]             @relation("AssetPrimaryTeam")
-  defaultCategories   AssetCategory[]     @relation("CategoryDefaultTeam")
-
-  // Soft-delete (archive) support
-  isDeleted  Boolean   @default(false)
-  deletedAt  DateTime?
-  deletedBy  String?
-  restoredAt DateTime?
-  restoredBy String?
-
-  @@map("teams")
-}
-
-model TeamMember {
-  id        String   @id @default(cuid())
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation("TeamMembers", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([teamId, userId])
-  @@map("team_members")
-}
 
 model WorkOrder {
   id          String            @id @default(cuid())
@@ -497,8 +449,8 @@ model WorkOrder {
   locationScope LocationScope? // null for asset-based WOs, set for location-based WOs
   assignedToId String?
   assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
-  teamId       String?
-  team         Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  domainId     String?
+  domain       MaintenanceDomain? @relation("WorkOrderDomain", fields: [domainId], references: [id], onDelete: SetNull)
   createdById  String?
   createdBy    User?   @relation("CreatedBy", fields: [createdById], references: [id])
   completedById String?
@@ -524,7 +476,7 @@ model WorkOrder {
   @@index([status])
   @@index([priority])
   @@index([assignedToId])
-  @@index([teamId])
+  @@index([domainId])
   @@index([assetId])
   @@index([locationId])
   @@index([createdAt])
@@ -555,8 +507,13 @@ model MaintenanceDomain {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  issues     IssueDomain[]
-  categories CategoryDomain[]
+  issues             IssueDomain[]
+  categories         CategoryDomain[]
+  users              User[]             @relation("UserDomain")
+  workOrders         WorkOrder[]        @relation("WorkOrderDomain")
+  assets             Asset[]            @relation("AssetDomain")
+  assignedSubtasks   Subtask[]          @relation("SubtasksAssignedToDomain")
+  defaultCategories  AssetCategory[]    @relation("CategoryDefaultDomain")
 
   @@map("maintenance_domains")
 }
@@ -753,8 +710,8 @@ model Subtask {
   workOrder     WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   assignedToId  String?
   assignedTo    User?           @relation("SubtaskAssignedTo", fields: [assignedToId], references: [id])
-  assignedTeamId String?
-  assignedTeam  Team?           @relation("SubtasksAssignedToTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+  assignedDomainId String?
+  assignedDomain   MaintenanceDomain? @relation("SubtasksAssignedToDomain", fields: [assignedDomainId], references: [id], onDelete: SetNull)
   completedById String?
   completedBy   User?           @relation("SubtaskCompletedBy", fields: [completedById], references: [id])
   completionType CompletionType @default(ASSIGNED)
@@ -763,7 +720,7 @@ model Subtask {
 
   @@index([workOrderId])
   @@index([assignedToId])
-  @@index([assignedTeamId])
+  @@index([assignedDomainId])
   @@index([completedById])
   @@map("subtasks")
 }
@@ -1010,7 +967,7 @@ model ChatMessage {
   // Optional relations
   workOrderId   String?
   receiverId    String?
-  teamId        String?
+  domainId      String?
   
   // Attachment fields
   mediaUrl      String?

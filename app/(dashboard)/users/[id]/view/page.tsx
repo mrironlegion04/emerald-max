@@ -14,6 +14,7 @@ export default async function ViewUserPage({
   const target = await prisma.user.findUnique({
     where: { id },
     include: {
+      domain: true,
       skills: {
         include: {
           skill: true,
@@ -41,6 +42,7 @@ export default async function ViewUserPage({
           phone: target.phone ?? undefined,
           bio: target.bio ?? undefined,
           department: target.department ?? undefined,
+          domain: target.domain,
           hasFaceVerification: target.hasFaceVerification,
           facePhotoUrl: target.facePhotoUrl ?? undefined,
           lastFaceVerifyAt: target.lastFaceVerifyAt,

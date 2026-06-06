@@ -14,6 +14,7 @@ interface UserData {
   phone?: string
   bio?: string
   department?: string
+  domain?: { id: string; name: string } | null
   hasFaceVerification: boolean
   facePhotoUrl?: string
   lastFaceVerifyAt?: Date | null
@@ -104,6 +105,12 @@ export default function UserDisplay({ user, userId }: UserDisplayProps) {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-600 font-medium">Department</p>
           <p className="text-sm font-medium text-gray-900 mt-2">{user.department || '—'}</p>
+        </div>
+
+        {/* Maintenance Domain */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <p className="text-xs text-gray-600 font-medium">Maintenance Domain</p>
+          <p className="text-sm font-medium text-gray-900 mt-2">{user.domain?.name || '—'}</p>
         </div>
 
         {/* Face Verification */}

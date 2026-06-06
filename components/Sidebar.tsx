@@ -307,6 +307,61 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           })}
         </div>
 
+        {/* Collapsible: Assets Folder */}
+        <div className="space-y-1 mt-4">
+          <button
+            onClick={() => toggleGroup('assets')}
+            className={clsx(
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
+                <Building2 className="w-4.5 h-4.5" />
+              </span>
+              <span>Assets Folder</span>
+            </div>
+            <span>
+              {openGroups.assets ? (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              )}
+            </span>
+          </button>
+
+          {openGroups.assets && (
+            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+              {assetGroupItems.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <div key={item.href} className="relative">
+                    {active && (
+                      <motion.div 
+                        layoutId="activeSideIndicator"
+                        className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={clsx(
+                        'sidebar-link group text-xs !py-1.5 pl-2',
+                        { 'active !bg-blue-50/70': active }
+                      )}
+                    >
+                      <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Privileged Controls for Admin / Manager */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
           <>
@@ -361,61 +416,6 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                   </div>
                 )
               })}
-
-              {/* Collapsible: Assets Folder */}
-              <div className="space-y-1">
-                <button
-                  onClick={() => toggleGroup('assets')}
-                  className={clsx(
-                    'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
-                    { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
-                  )}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
-                      <Building2 className="w-4.5 h-4.5" />
-                    </span>
-                    <span>Assets Folder</span>
-                  </div>
-                  <span>
-                    {openGroups.assets ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    )}
-                  </span>
-                </button>
-
-                {openGroups.assets && (
-                  <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
-                    {assetGroupItems.map(item => {
-                      const active = isActive(item.href)
-                      return (
-                        <div key={item.href} className="relative">
-                          {active && (
-                            <motion.div 
-                              layoutId="activeSideIndicator"
-                              className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
-                              transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                            />
-                          )}
-                          <Link
-                            href={item.href}
-                            onClick={onClose}
-                            className={clsx(
-                              'sidebar-link group text-xs !py-1.5 pl-2',
-                              { 'active !bg-blue-50/70': active }
-                            )}
-                          >
-                            <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
-                            <span className="truncate">{item.label}</span>
-                          </Link>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
 
               {/* Collapsible: Reports */}
               <div className="space-y-1">

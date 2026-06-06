@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wrench, Package, Clock, QrCode } from 'lucide-react'
+import { LayoutDashboard, Wrench, Package, MessageCircle, QrCode } from 'lucide-react'
 import { motion } from 'motion/react'
 
 interface Props {
@@ -17,7 +17,7 @@ export default function BottomNav({ user }: Props) {
     { href: '/work-orders', label: 'Tasks', icon: Wrench },
     { href: '/scan', label: 'Scan', icon: QrCode, isAction: true },
     { href: '/assets', label: 'Assets', icon: Package },
-    { href: '/preventive-maintenance', label: 'PM', icon: Clock },
+    { href: '/messages', label: 'Messages', icon: MessageCircle },
   ]
 
   const isActive = (href: string) => {

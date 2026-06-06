@@ -338,13 +338,13 @@ export default async function WorkOrderDetailPage({
               createdAt: s.createdAt.toISOString(),
               workOrderId: s.workOrderId,
               assignedTo: s.assignedTo,
-              assignedTeam: s.assignedDomain,
+              assignedDomain: s.assignedDomain,
               completedBy: s.completedBy,
               createdBy: s.createdBy,
             }))}
             woStatus={wo.status}
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
-            allTeams={allDomains.map((t: any) => ({ id: t.id, name: t.name, trade: '' }))}
+            allDomains={allDomains.map((t: any) => ({ id: t.id, name: t.name }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
           />
           <WOProceduresPanel

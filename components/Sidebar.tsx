@@ -140,11 +140,6 @@ const reportGroupItems = [
     icon: <BarChart3 className="w-4 h-4" />,
   },
   {
-    label: 'SLA Breach Reports',
-    href: '/sla-breach-reports',
-    icon: <AlertCircle className="w-4 h-4" />,
-  },
-  {
     label: 'Sites Overview',
     href: '/sites',
     icon: <Globe className="w-4 h-4" />,
@@ -191,12 +186,6 @@ const enterpriseSettingsItems = [
     label: 'Issues',
     href: '/settings/issues',
     icon: <AlertCircle className="w-4 h-4" />,
-    adminOnly: true,
-  },
-  {
-    label: 'SLA Policies',
-    href: '/sla-policies',
-    icon: <Shield className="w-4 h-4" />,
     adminOnly: true,
   },
   {

@@ -96,7 +96,7 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
     // Fallback: If we couldn't match or find the entity in DB, create a generic placeholder Channel
     // to absolutely prevent ForeignKey errors of ChatChannelMember.
     let fallbackName = 'Discussion Room'
-    let fallbackType = 'general'
+    let fallbackType: any = 'general'
     let fallbackText = '💬'
     if (channelId.startsWith('WO_')) {
       fallbackName = `Work Order Room (${channelId.substring(3).substring(0, 6)})`
@@ -507,7 +507,7 @@ export async function POST(req: NextRequest) {
     let channelRecord = await prisma.chatChannel.findUnique({ where: { id: channelId } })
     if (!channelRecord) {
       // Determine type from channel prefix
-      let type = 'general'
+      let type: any = 'general'
       if (channelId.startsWith('TEAM_')) type = 'team'
       else if (channelId.startsWith('WO_')) type = 'workorder'
       else if (channelId.startsWith('DIRECT_')) type = 'direct'

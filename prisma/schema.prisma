@@ -291,7 +291,6 @@ model AssetCategory {
   assets   Asset[]
   domains  CategoryDomain[]
   procedures Procedure[] @relation("ProcedureCategories")
-  slaPolicies        SLAPolicy[]
 
   defaultTeamId String?
   defaultTeam   Team?       @relation("CategoryDefaultTeam", fields: [defaultTeamId], references: [id], onDelete: SetNull)
@@ -486,8 +485,6 @@ model WorkOrder {
   timerElapsedSeconds Int     @default(0)
   isTimerActive       Boolean @default(false)
 
-  // SLA fields
-  slaBreached          Boolean @default(false)
   isMandatorySignature Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -520,7 +517,6 @@ model WorkOrder {
   procedures    WOProcedure[]
   requests      MaintenanceRequest[]
   attachments   Attachment[]        @relation("WOAttachments")
-  breachHistory SLABreachHistory[]  @relation("SLABreachHistory")
   assets        WorkOrderAsset[]
   statusHistory WorkOrderStatusHistory[]
 
@@ -831,38 +827,6 @@ model WOProcedureStep {
   asset       Asset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
   @@map("wo_procedure_steps")
-}
-
-model SLAPolicy {
-  id               String            @id @default(cuid())
-  name             String
-  priority         WorkOrderPriority?
-  assetCategoryId  String?
-  assetCategory    AssetCategory?    @relation(fields: [assetCategoryId], references: [id], onDelete: SetNull)
-  responseTarget   Int               // minutes until first response
-  resolutionTarget Int               // minutes until resolution
-  isActive         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-
-  @@map("sla_policies")
-}
-
-model SLABreachHistory {
-  id                 String            @id @default(cuid())
-  workOrderId        String
-  workOrder          WorkOrder         @relation("SLABreachHistory", fields: [workOrderId], references: [id], onDelete: Cascade)
-  slaPolicy          String            // Name of the policy that was breached
-  breachType         String            // "RESPONSE" or "RESOLUTION"
-  targetMinutes      Int               // How many minutes target was
-  actualMinutes      Int               // How many minutes actually taken
-  breachedAt         DateTime          @default(now())
-  alertSentAt        DateTime?         // When the breach alert email was sent
-  createdAt          DateTime          @default(now())
-
-  @@index([workOrderId])
-  @@index([breachedAt])
-  @@map("sla_breach_history")
 }
 
 model Attachment {

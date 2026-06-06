@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
               serialNumber:      row.serial_number || null,
               purchaseDate:      row.purchase_date ? new Date(row.purchase_date) : null,
               purchaseCost:      row.purchase_cost ? parseFloat(row.purchase_cost) : null,
-              criticality:       row.criticality || null,
+              criticality:       (row.criticality as any) || null,
               warrantyExpiry:    row.warranty_expiry ? new Date(row.warranty_expiry) : null,
               warrantyNotes:     row.warranty_notes || null,
               meterUnit:         row.meter_unit || null,

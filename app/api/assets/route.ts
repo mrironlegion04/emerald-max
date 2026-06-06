@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         meterUnit:    data.meterUnit    ?? null,
         parentId:     data.parentId     ?? null,
         assetTypeId:  data.assetTypeId  ?? null,
-        criticality:  data.criticality  ?? null,
+        criticality:  (data.criticality as any)  ?? null,
         ownerId:      data.ownerId      ?? null,
         primaryTeamId: data.primaryTeamId ?? null,
         customFields: data.customFields ?? null,

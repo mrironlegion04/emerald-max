@@ -142,12 +142,6 @@ export default async function WorkOrderDetailPage({
               userRole={user?.role ?? 'TECHNICIAN'}
               userId={user?.userId ?? ''}
             />
-            {wo.slaBreached && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-150 rounded-xl">
-                <p className="text-xs font-bold text-rose-700 uppercase tracking-wider">⚠️ SLA BREACHED</p>
-                <p className="text-xs text-rose-600 mt-1 font-medium leading-relaxed">Response or resolution time exceeded.</p>
-              </div>
-            )}
           </div>
 
           {/* Timer panel */}

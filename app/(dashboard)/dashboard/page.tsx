@@ -27,7 +27,6 @@ async function getDashboardStats() {
     openWOs, inProgressWOs, overdueWOs, completedThisMonth,
     recentWorkOrders, criticalWorkOrders,
     overduePM, dueSoonPM,
-    totalTeams, teamWorkOrders,
   ] = await Promise.all([
     prisma.asset.count({ where: { isDeleted: false } }),
     prisma.asset.count({ where: { isDeleted: false, status: 'ACTIVE' } }),
@@ -83,7 +82,7 @@ async function getDashboardStats() {
   return {
     totalAssets, activeAssets, openWOs, inProgressWOs, overdueWOs,
     completedThisMonth, recentWorkOrders, criticalWorkOrders, lowStockParts: [],
-    overduePM, dueSoonPM, totalTeams, teamWorkOrders,
+    overduePM, dueSoonPM,
   }
 }
 
@@ -131,18 +130,6 @@ export default async function DashboardPage() {
         <StatCard title="Completed this month" value={stats.completedThisMonth}
           subtitle="work orders closed" color="green"
           icon={<CheckCircle className="w-5 h-5" />}
-        />
-      </div>
-
-      {/* Team stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <StatCard title="Teams" value={stats.totalTeams}
-          subtitle="active trade teams" color="purple"
-          icon={<Users className="w-5 h-5" />}
-        />
-        <StatCard title="Team WOs" value={stats.teamWorkOrders.length}
-          subtitle="assigned to teams" color="purple"
-          icon={<Users className="w-5 h-5" />}
         />
       </div>
 

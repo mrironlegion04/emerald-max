@@ -13,7 +13,7 @@ interface SearchParams {
   priority?:    string
   type?:        string
   assignedToId?:string
-  teamId?:      string
+  domainId?:    string
   assetId?:     string
   dueDateFrom?: string
   dueDateTo?:   string
@@ -46,7 +46,7 @@ async function getWorkOrders(filters: SearchParams) {
   if (filters.priority)     where.priority     = filters.priority
   if (filters.type)         where.type         = filters.type
   if (filters.assignedToId) where.assignedToId = filters.assignedToId
-  if (filters.teamId)       where.teamId       = filters.teamId
+  if (filters.domainId)     where.domainId     = filters.domainId
   
 
 
@@ -85,13 +85,13 @@ async function getWorkOrders(filters: SearchParams) {
   const page = Math.max(1, parseInt(filters.page ?? '1', 10))
   const skip = (page - 1) * ITEMS_PER_PAGE
 
-  const [workOrders, totalCount, technicians, teams, assets] = await Promise.all([
+  const [workOrders, totalCount, technicians, domains, assets] = await Promise.all([
     prisma.workOrder.findMany({
       where,
       include: {
         asset:        { select: { id: true, name: true, assetCode: true } },
         assignedTo:   { select: { id: true, name: true } },
-        team:         { select: { id: true, name: true, trade: true } },
+        domain:       { select: { id: true, name: true } },
         createdBy:    { select: { name: true } },
       },
       orderBy: [{ createdAt: 'desc' }],
@@ -104,9 +104,9 @@ async function getWorkOrders(filters: SearchParams) {
       select:  { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.team.findMany({
-      where:   { isDeleted: false },
-      select:  { id: true, name: true, trade: true },
+    prisma.maintenanceDomain.findMany({
+      where:   { isActive: true },
+      select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
     prisma.asset.findMany({
@@ -116,7 +116,7 @@ async function getWorkOrders(filters: SearchParams) {
     }),
   ])
 
-  return { workOrders, technicians, teams, assets, totalCount, page }
+  return { workOrders, technicians, domains, assets, totalCount, page }
 }
 
 export default async function WorkOrdersPage({
@@ -126,7 +126,7 @@ export default async function WorkOrdersPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
-  const { workOrders, technicians, teams, assets, totalCount, page } = await getWorkOrders(params)
+  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const overdueCount = workOrders.filter(
@@ -148,7 +148,7 @@ export default async function WorkOrdersPage({
         }
       />
 
-      <AdvancedWOFilters technicians={technicians} teams={teams} assets={assets} canExport={canExport} />
+      <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
 
       {workOrders.length === 0 ? (
         <EmptyState

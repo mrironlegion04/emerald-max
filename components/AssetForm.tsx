@@ -70,11 +70,11 @@ interface AssetFormData {
   assetTypeId: string
   criticality: string
   ownerId: string
-  primaryTeamId: string
+  domainId: string
   customFields: Record<string, any> | null
 }
 
-interface Team { id: string; name: string }
+interface Domain { id: string; name: string }
 
 interface Props {
   categories: Category[]
@@ -82,7 +82,7 @@ interface Props {
   locations: Location[]
   assets: Asset[]
   users?: User[]
-  teams?: Team[]
+  domains?: Domain[]
   initialData?: Partial<AssetFormData>
   assetId?: string
   currentImageUrl?: string | null
@@ -102,7 +102,7 @@ export default function AssetForm({
   locations,
   assets,
   users = [],
-  teams = [],
+  domains = [],
   initialData,
   assetId,
   currentImageUrl,
@@ -127,7 +127,7 @@ export default function AssetForm({
     assetTypeId:  initialData?.assetTypeId  ?? '',
     criticality:  initialData?.criticality  ?? '',
     ownerId:      initialData?.ownerId      ?? '',
-    primaryTeamId: initialData?.primaryTeamId ?? '',
+    domainId:     initialData?.domainId     ?? '',
     customFields: initialData?.customFields ?? null,
   })
 
@@ -154,7 +154,7 @@ export default function AssetForm({
         purchaseDate: form.purchaseDate || null,
         categoryId:  form.categoryId  || null,
         locationId:  form.locationId  || null,
-        primaryTeamId: form.primaryTeamId || null,
+        domainId:    form.domainId    || null,
         serialNumber: form.serialNumber || null,
         model:        form.model        || null,
         manufacturer: form.manufacturer || null,
@@ -433,16 +433,16 @@ export default function AssetForm({
             </div>
           )}
 
-          {teams.length > 0 && (
+          {domains.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Primary Team</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Industrial Domain</label>
               <select
-                value={form.primaryTeamId}
-                onChange={e => set('primaryTeamId', e.target.value)}
+                value={form.domainId}
+                onChange={e => set('domainId', e.target.value)}
                 className="input-field"
               >
-                <option value="">— No primary team —</option>
-                {teams.map(t => (
+                <option value="">— No industrial domain —</option>
+                {domains.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>

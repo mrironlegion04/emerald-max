@@ -6,6 +6,7 @@ import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Bad
 import Link from 'next/link'
 import { Building2, ClipboardList, Clock, CheckCircle, Users } from 'lucide-react'
 
+
 interface RecentWO {
   id: string
   title: string
@@ -13,7 +14,7 @@ interface RecentWO {
   priority: string
   status: string
   asset?: { name: string } | null
-  team?: { name: string } | null
+  domain?: { name: string } | null
   assignedTo?: { name: string } | null
 }
 
@@ -43,7 +44,7 @@ async function getDashboardStats() {
       include: {
         asset:      { select: { name: true } },
         assignedTo: { select: { name: true } },
-        team:       { select: { name: true } },
+        domain:     { select: { name: true } },
       },
     }),
     prisma.workOrder.findMany({
@@ -71,10 +72,10 @@ async function getDashboardStats() {
       orderBy: { nextDueDate: 'asc' },
       take: 5,
     }),
-    prisma.team.count({ where: { isDeleted: false } }),
+    prisma.maintenanceDomain.count({ where: { isActive: true } }),
     prisma.workOrder.groupBy({
-      by: ['teamId'],
-      where: { teamId: { not: null } },
+      by: ['domainId'],
+      where: { domainId: { not: null } },
       _count: true,
     }),
   ])
@@ -150,7 +151,7 @@ export default async function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {wo.woNumber}{wo.asset ? ` · ${wo.asset.name}` : ''}{wo.team ? ` · 👥 ${wo.team.name}` : wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
+                      {wo.woNumber}{wo.asset ? ` · ${wo.asset.name}` : ''}{wo.domain ? ` · 👥 ${wo.domain.name}` : wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">

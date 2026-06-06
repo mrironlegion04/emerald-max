@@ -14,7 +14,7 @@ interface Subtask {
   completedAt: string | null
   createdAt: string
   assignedTo: { id: string; name: string; email: string } | null
-  assignedTeam: { id: string; name: string; trade: string } | null
+  assignedDomain: { id: string; name: string } | null
   completedBy: { id: string; name: string; email: string } | null
   createdBy: { id: string; name: string } | null
   workOrderId: string
@@ -26,10 +26,9 @@ interface User {
   email: string
 }
 
-interface Team {
+interface Domain {
   id: string
   name: string
-  trade: string
 }
 
 const statusLabels: Record<string, string> = {
@@ -65,14 +64,14 @@ export default function SubtasksPanel({
   initialSubtasks = [],
   woStatus,
   allUsers = [],
-  allTeams = [],
+  allDomains = [],
   canEdit = false,
 }: {
   woId: string
   initialSubtasks?: Subtask[]
   woStatus: string
   allUsers?: User[]
-  allTeams?: Team[]
+  allDomains?: Domain[]
   canEdit?: boolean
 }) {
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialSubtasks)
@@ -85,7 +84,7 @@ export default function SubtasksPanel({
     priority: 'MEDIUM',
     dueDate: '',
     assignedToId: '',
-    assignedTeamId: '',
+    assignedDomainId: '',
   })
 
   // Load subtasks from API if not provided
@@ -115,9 +114,9 @@ export default function SubtasksPanel({
     try {
       setLoading(true)
 
-      // Validate: can't assign to both user and team
-      if (formData.assignedToId && formData.assignedTeamId) {
-        alert('Assign to either a team or an individual, not both')
+      // Validate: can't assign to both user and domain
+      if (formData.assignedToId && formData.assignedDomainId) {
+        alert('Assign to either a domain or an individual, not both')
         setLoading(false)
         return
       }
@@ -128,8 +127,8 @@ export default function SubtasksPanel({
         priority: formData.priority,
         dueDate: formData.dueDate || null,
         workOrderId: woId,
-        assignedToId: formData.assignedTeamId ? null : (formData.assignedToId || null),
-        assignedTeamId: formData.assignedTeamId || null,
+        assignedToId: formData.assignedDomainId ? null : (formData.assignedToId || null),
+        assignedDomainId: formData.assignedDomainId || null,
       }
 
       if (editingId) {
@@ -200,7 +199,7 @@ export default function SubtasksPanel({
       priority: subtask.priority,
       dueDate: subtask.dueDate ? new Date(subtask.dueDate).toISOString().split('T')[0] : '',
       assignedToId: subtask.assignedTo?.id || '',
-      assignedTeamId: subtask.assignedTeam?.id || '',
+      assignedDomainId: subtask.assignedDomain?.id || '',
     })
     setEditingId(subtask.id)
     setShowForm(true)
@@ -213,7 +212,7 @@ export default function SubtasksPanel({
       priority: 'MEDIUM',
       dueDate: '',
       assignedToId: '',
-      assignedTeamId: '',
+      assignedDomainId: '',
     })
     setEditingId(null)
     setShowForm(false)
@@ -310,7 +309,7 @@ export default function SubtasksPanel({
                   value={formData.assignedToId}
                   onChange={e => setFormData({ ...formData, assignedToId: e.target.value })}
                   className="input-field text-sm bg-white"
-                  disabled={formData.assignedTeamId ? true : false}
+                  disabled={formData.assignedDomainId ? true : false}
                 >
                   <option value="">Select user...</option>
                   {allUsers.map(user => (
@@ -323,18 +322,18 @@ export default function SubtasksPanel({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Assign to Team
+                  Assign to Domain
                 </label>
                 <select
-                  value={formData.assignedTeamId}
-                  onChange={e => setFormData({ ...formData, assignedTeamId: e.target.value })}
+                  value={formData.assignedDomainId}
+                  onChange={e => setFormData({ ...formData, assignedDomainId: e.target.value })}
                   className="input-field text-sm bg-white"
                   disabled={formData.assignedToId ? true : false}
                 >
-                  <option value="">Select team...</option>
-                  {allTeams.map(team => (
-                    <option key={team.id} value={team.id}>
-                      {team.name} ({team.trade})
+                  <option value="">Select domain...</option>
+                  {allDomains.map(domain => (
+                    <option key={domain.id} value={domain.id}>
+                      {domain.name}
                     </option>
                   ))}
                 </select>
@@ -470,9 +469,9 @@ export default function SubtasksPanel({
                             </span>
                           )}
 
-                          {subtask.assignedTeam && (
+                          {subtask.assignedDomain && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
-                              👥 {subtask.assignedTeam.name} ({subtask.assignedTeam.trade})
+                              👥 {subtask.assignedDomain.name}
                             </span>
                           )}
 

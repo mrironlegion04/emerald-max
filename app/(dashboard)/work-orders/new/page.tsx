@@ -10,10 +10,10 @@ export default async function NewWorkOrderPage({
 }) {
   const { assetId } = await searchParams
 
-  const [assets, locations, users, teams, procedures] = await Promise.all([
+  const [assets, locations, users, domains, procedures] = await Promise.all([
     prisma.asset.findMany({
       where: { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
-      select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, primaryTeamId: true },
+      select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, domainId: true },
       orderBy: { name: 'asc' },
     }),
     prisma.location.findMany({
@@ -25,9 +25,9 @@ export default async function NewWorkOrderPage({
       select: { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.team.findMany({
-      where: { isDeleted: false },
-      select: { id: true, name: true, trade: true },
+    prisma.maintenanceDomain.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
     prisma.procedure.findMany({
@@ -62,7 +62,7 @@ export default async function NewWorkOrderPage({
         </Link>
       </div>
       <PageHeader title="New work order" subtitle="Fill in the details to create a new work order." />
-      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} procedures={procedures} preselectedAssetId={assetId} />
+      <WorkOrderForm assets={assets} locations={locations} users={users} domains={domains} procedures={procedures} preselectedAssetId={assetId} />
     </div>
   )
 }

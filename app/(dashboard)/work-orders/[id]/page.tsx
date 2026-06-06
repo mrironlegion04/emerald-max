@@ -51,12 +51,12 @@ export default async function WorkOrderDetailPage({
       assets:       { include: { asset: { select: { id: true, name: true, assetCode: true } } } },
       location:     { select: { id: true, name: true, address: true } },
       assignedTo:   { select: { id: true, name: true, email: true } },
-      team:         { select: { id: true, name: true, trade: true } },
+      domain:       { select: { id: true, name: true } },
       createdBy:    { select: { name: true } },
       completedBy:  { select: { id: true, name: true, email: true } },
       issue:        true,
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
-      subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedTeam: { select: { id: true, name: true, trade: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
+      subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
       procedures: {
         include: {
           steps: {
@@ -79,7 +79,7 @@ export default async function WorkOrderDetailPage({
 
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
   const allUsers = await prisma.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
-  const allTeams = await prisma.team.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
+  const allDomains = await prisma.maintenanceDomain.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
   const allLocations = await prisma.location.findMany({ select: { id: true, name: true, parentId: true } })
 
   const isOverdue =
@@ -171,9 +171,9 @@ export default async function WorkOrderDetailPage({
                   </Link>
                 ) : '—' },
                 { label: 'Location',    value: wo.asset?.location?.name ?? '—' },
-                { label: 'Assigned to', value: wo.team ? (
+                { label: 'Assigned to', value: wo.domain ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
-                    👥 {wo.team.name} ({wo.team.trade})
+                    👥 {wo.domain.name}
                   </span>
                 ) : wo.assignedTo?.name ? (
                   wo.assignedTo.name
@@ -338,13 +338,13 @@ export default async function WorkOrderDetailPage({
               createdAt: s.createdAt.toISOString(),
               workOrderId: s.workOrderId,
               assignedTo: s.assignedTo,
-              assignedTeam: s.assignedTeam,
+              assignedTeam: s.assignedDomain,
               completedBy: s.completedBy,
               createdBy: s.createdBy,
             }))}
             woStatus={wo.status}
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
-            allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name, trade: t.trade }))}
+            allTeams={allDomains.map((t: any) => ({ id: t.id, name: t.name, trade: '' }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
           />
           <WOProceduresPanel

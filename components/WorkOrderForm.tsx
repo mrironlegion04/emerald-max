@@ -7,10 +7,9 @@ import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 
-interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; primaryTeamId?: string | null }
+interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; domainId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
 interface User  { id: string; name: string; role: string }
-interface Team  { id: string; name: string; trade: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean }
 
 interface ProcedureStep {
@@ -33,13 +32,13 @@ interface WOFormData {
   title: string; description: string; type: string; priority: string
   status: string; dueDate: string; assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
-  assignedToId: string; assignedTeamId: string; laborHours: string; laborCost: string; partsCost: string
+  assignedToId: string; assignedDomainId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
   procedureIds: string[]
 }
 
 interface Props {
-  assets: Asset[]; locations: Location[]; users: User[]; teams: Team[]
+  assets: Asset[]; locations: Location[]; users: User[]; domains: { id: string; name: string }[]
   procedures?: Procedure[]
   initialData?: Partial<WOFormData>
   woId?: string
@@ -53,7 +52,7 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels: Record<string,string>   = { OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled' }
 
-export default function WorkOrderForm({ assets, locations, users, teams, procedures = [], initialData, woId, preselectedAssetId }: Props) {
+export default function WorkOrderForm({ assets, locations, users, domains = [], procedures = [], initialData, woId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!woId
 
@@ -72,7 +71,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
     selectedAssetIds: [],
     assignedToId:   initialData?.assignedToId   ?? '',
-    assignedTeamId: initialData?.assignedTeamId ?? (preselectedAssetId ? (assets.find(a => a.id === preselectedAssetId)?.primaryTeamId ?? '') : ''),
+    assignedDomainId: initialData?.assignedDomainId ?? (preselectedAssetId ? (assets.find(a => a.id === preselectedAssetId)?.domainId ?? '') : ''),
     laborHours:     initialData?.laborHours     ?? '',
     laborCost:      initialData?.laborCost      ?? '',
     partsCost:      initialData?.partsCost      ?? '',
@@ -140,8 +139,8 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
       const next = { ...prev, [field]: value }
       if (field === 'assetId' && typeof value === 'string' && value) {
         const assetObj = assets.find(a => a.id === value)
-        if (assetObj?.primaryTeamId) {
-          next.assignedTeamId = assetObj.primaryTeamId
+        if (assetObj?.domainId) {
+          next.assignedDomainId = assetObj.domainId
           next.assignedToId = '' // Clear individual assignee to avoid conflict
         }
       }
@@ -243,7 +242,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
     setError(''); setSaving(true)
     try {
       if (!form.title.trim()) { setError('Title is required'); setSaving(false); return }
-      if (form.assignedTeamId && form.assignedToId) { setError('Assign to either a team or an individual, not both'); setSaving(false); return }
+      if (form.assignedDomainId && form.assignedToId) { setError('Assign to either a domain or an individual, not both'); setSaving(false); return }
 
       const mergedAssetIds = [
         ...(form.assetId ? [form.assetId] : []),
@@ -262,8 +261,8 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
         locationId:   form.locationId     || null,
         locationScope: form.locationId && form.selectedAssetIds.length === 0 ? form.locationScope : null,
         selectedAssetIds: uniqueAssetIds,
-        assignedToId: form.assignedTeamId ? null : (form.assignedToId || null),
-        teamId:       form.assignedTeamId || null,
+        assignedToId: form.assignedDomainId ? null : (form.assignedToId || null),
+        domainId:     form.assignedDomainId || null,
         laborHours:   form.laborHours     ? parseFloat(form.laborHours)  : null,
         laborCost:    form.laborCost      ? parseFloat(form.laborCost)   : null,
         partsCost:    form.partsCost      ? parseFloat(form.partsCost)   : null,
@@ -499,14 +498,14 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
         <div className="space-y-3 pt-3 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Assign work to:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {inputRow('Team', false,
-              <select value={form.assignedTeamId} onChange={e => { set('assignedTeamId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
-                <option value="">— No team —</option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.trade})</option>)}
+            {inputRow('Industrial Domain', false,
+              <select value={form.assignedDomainId} onChange={e => { set('assignedDomainId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
+                <option value="">— No domain —</option>
+                {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
             {inputRow('Individual', false,
-              <select value={form.assignedToId} onChange={e => { set('assignedToId', e.target.value); if (e.target.value) set('assignedTeamId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
+              <select value={form.assignedToId} onChange={e => { set('assignedToId', e.target.value); if (e.target.value) set('assignedDomainId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
                 <option value="">— Unassigned —</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
               </select>
@@ -603,7 +602,7 @@ export default function WorkOrderForm({ assets, locations, users, teams, procedu
               <ClipboardCheck className="w-5 h-5 text-blue-600 animate-pulse" />
               <div>
                 <h2 className="font-bold text-slate-805 text-sm tracking-tight">Procedures & Checklists</h2>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">SOP Engine</p>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">MaintainX-Style SOP Engine</p>
               </div>
             </div>
             {form.procedureIds.length > 0 && (

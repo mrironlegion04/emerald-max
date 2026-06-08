@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-xl mb-4">
           <Settings className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">EMERALD MAX</h1>
+        <h1 className="text-2xl font-bold text-gray-900">EMERALD MAINTENANCE</h1>
         <p className="text-gray-500 text-sm mt-1">Computerized Maintenance Management System</p>
       </div>
 

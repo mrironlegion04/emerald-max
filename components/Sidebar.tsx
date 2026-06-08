@@ -248,7 +248,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
             <Settings className="w-5 h-5 text-white animate-spin-slow" />
           </div>
           <div>
-            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD MAX</p>
+            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD MAINTENANCE</p>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maintenance System</p>
           </div>
         </div>

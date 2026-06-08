@@ -824,13 +824,13 @@ export default function ProcedureForm({ templateId, initialData, assets, assetCa
         </div>
       </div>
 
-      {/* Emerald Max Structured Procedures Editor */}
+      {/* Emerald Maintenance Structured Procedures Editor */}
       <div className="premium-card p-6 border border-slate-200 bg-white shadow-xs rounded-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
               <CheckSquare className="w-5 h-5 text-blue-600" />
-              Emerald Max Procedure Builder
+              Emerald Maintenance Procedure Builder
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">Divide your checklist into Chapters (Headings) and add specific response field types below.</p>
           </div>

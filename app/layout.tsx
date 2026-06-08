@@ -3,7 +3,7 @@ import './globals.css'
 import NotificationPermissionRequest from '@/components/NotificationPermissionRequest'
 
 export const metadata: Metadata = {
-  title: 'Emerald MAX - Asset & Maintenance Management',
+  title: 'Emerald Maintenance - Asset & Maintenance Management',
   description: 'Computerized Maintenance Management System',
 }
 

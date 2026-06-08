@@ -36,7 +36,7 @@ export default function MobileHeader({ user }: MobileHeaderProps) {
             <div className="w-7.5 h-7.5 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-600/30">
               <Settings className="w-4 h-4 text-white animate-spin-slow" />
             </div>
-            <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none">EMERALD MAX</span>
+            <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none">EMERALD MAINTENANCE</span>
           </div>
         </div>
 

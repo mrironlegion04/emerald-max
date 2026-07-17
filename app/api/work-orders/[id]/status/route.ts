@@ -161,6 +161,18 @@ export async function PATCH(
       if (notes) updateData.notes = notes
     }
 
+    // Unlock: CLOSED → COMPLETED — Admin only, reason required
+    if (status === 'COMPLETED' && wo.status === 'CLOSED') {
+      if (user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Only admins can unlock closed work orders' }, { status: 403 })
+      }
+      if (!notes || !notes.trim()) {
+        return NextResponse.json({ error: 'Unlock reason is required' }, { status: 400 })
+      }
+      updateData.closedAt = null
+      updateData.notes = notes
+    }
+
     if (status === 'IN_PROGRESS' && !wo.startedAt) {
       updateData.startedAt = startedAt ? new Date(startedAt) : new Date()
     }
@@ -230,17 +242,20 @@ export async function PATCH(
         status:        updated.status,
         changedById:   user.userId,
         changedByName: user.name,
-        notes:         notes || `Status transitioned from ${wo.status} to ${updated.status}`,
+        notes:         wo.status === 'CLOSED' && updated.status === 'COMPLETED'
+          ? `Admin unlocked: ${notes}`
+          : notes || `Status transitioned from ${wo.status} to ${updated.status}`,
       }
     })
 
     await writeAudit({
-      action: 'STATUS_CHANGE',
+      action: wo.status === 'CLOSED' && updated.status === 'COMPLETED' ? 'UPDATE' : 'STATUS_CHANGE',
       entity: 'WorkOrder',
       entityId: updated.id,
       entityName: updated.title,
       changes: {
-        status: { before: wo.status, after: updated.status }
+        status: { before: wo.status, after: updated.status },
+        ...(wo.status === 'CLOSED' && updated.status === 'COMPLETED' ? { unlockReason: { before: null, after: notes } } : {})
       },
       userId: user.userId,
       userName: user.name,

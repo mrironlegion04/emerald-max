@@ -43,6 +43,10 @@ export async function POST(
     const wo = await prisma.workOrder.findUnique({ where: { id } })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
 
+    if (['CLOSED', 'CANCELLED'].includes(wo.status)) {
+      return NextResponse.json({ error: 'Cannot comment on a closed or cancelled work order' }, { status: 403 })
+    }
+
     const comment = await prisma.workOrderComment.create({
       data: {
         workOrderId: id,

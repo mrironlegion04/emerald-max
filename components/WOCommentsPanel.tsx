@@ -58,7 +58,7 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
     finally  { setPosting(false) }
   }
 
-  const isClosed = ['COMPLETED','CANCELLED'].includes(woStatus)
+  const isReadOnly = ['CLOSED', 'CANCELLED'].includes(woStatus)
 
   return (
     <div className="premium-card p-0 overflow-hidden border border-slate-200/50 shadow-sm flex flex-col">
@@ -102,7 +102,7 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
       </div>
 
       {/* Post comment */}
-      {!isClosed && (
+      {!isReadOnly && (
         <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/55">
           <form onSubmit={post} className="space-y-3">
             <textarea

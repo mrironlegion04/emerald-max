@@ -68,6 +68,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [showStartWork, setShowStartWork] = useState(false)
   const [startedAtValue, setStartedAtValue] = useState(() => toLocalDatetimeString(new Date()))
 
+  // Unlock form state (admin-only)
+  const [showUnlock, setShowUnlock] = useState(false)
+  const [unlockReason, setUnlockReason] = useState('')
+
   // Tech completion form state
   const [requestedTime, setRequestedTime] = useState(() => toLocalDatetimeString(new Date()))
   const [requestNotes, setRequestNotes] = useState('')
@@ -102,6 +106,12 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     if (newStatus === 'IN_PROGRESS') {
       setShowStartWork(true)
       setStartedAtValue(toLocalDatetimeString(new Date()))
+      return
+    }
+
+    if (newStatus === 'COMPLETED' && currentStatus === 'CLOSED') {
+      setShowUnlock(true)
+      setUnlockReason('')
       return
     }
 
@@ -267,12 +277,71 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     }
   }
 
+  // Admin unlocks CLOSED → COMPLETED
+  const handleUnlock = async () => {
+    if (!unlockReason.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/work-orders/${woId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'COMPLETED',
+          notes: unlockReason,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Failed'); return }
+      router.refresh()
+      setShowUnlock(false)
+      setUnlockReason('')
+    } catch {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // ── Terminal states ──
   if (currentStatus === 'CLOSED') {
     return (
-      <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50/50 border border-emerald-150 px-4 py-3 rounded-xl text-xs font-bold shadow-xs">
-        <CheckCircle className="w-4 h-4 text-emerald-500" />
-        Work Order Closed — Verified &amp; Finalized
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50/50 border border-emerald-150 px-4 py-3 rounded-xl text-xs font-bold shadow-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-500" />
+          Work Order Closed — Verified &amp; Finalized
+        </div>
+
+        {showUnlock && isAdminOrManager && (
+          <div className="space-y-3 p-4 bg-amber-50/35 rounded-xl border border-amber-100 shadow-inner-light">
+            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Unlock for administrative correction</p>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Reason (required)</label>
+              <textarea value={unlockReason}
+                onChange={e => setUnlockReason(e.target.value)}
+                placeholder="Why does this closed work order need to be unlocked?"
+                className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={3} />
+            </div>
+            {error && <p className="text-xs text-rose-650 bg-rose-50 border border-rose-100 px-3 py-2 rounded-xl font-bold">{error}</p>}
+            <div className="flex gap-2.5 flex-col xs:flex-row">
+              <button onClick={handleUnlock} disabled={loading || !unlockReason.trim()}
+                className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1 disabled:opacity-50">
+                {loading ? 'Unlocking...' : 'Confirm Unlock'}
+              </button>
+              <button onClick={() => { setShowUnlock(false); setUnlockReason(''); setError('') }}
+                className="btn-secondary text-xs font-bold py-2 px-4 border-slate-200 flex-1">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!showUnlock && isAdminOrManager && (
+          <button onClick={() => doTransition('COMPLETED')} disabled={loading}
+            className="w-full py-2.5 px-4 rounded-xl text-xs transition-all tracking-wide bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/50 font-semibold disabled:opacity-50">
+            Unlock WO (Admin)
+          </button>
+        )}
       </div>
     )
   }

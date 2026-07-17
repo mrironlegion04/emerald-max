@@ -237,7 +237,7 @@ export function isValidWOStatusTransition(
     ON_HOLD: ['IN_PROGRESS', 'CANCELLED'],
     PENDING_APPROVAL: ['COMPLETED', 'IN_PROGRESS'],
     COMPLETED: ['OPEN', 'CLOSED'],
-    CLOSED: [],
+    CLOSED: ['COMPLETED'],
     CANCELLED: ['OPEN'],
   }
 

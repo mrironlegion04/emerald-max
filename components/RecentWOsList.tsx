@@ -2,6 +2,7 @@
 
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { WO_STATUS_PILL } from '@/lib/work-order-status'
 
 interface WorkOrder {
   id: string
@@ -28,13 +29,7 @@ const priorityEmoji = {
   LOW: '⚪',
 }
 
-const statusColors = {
-  OPEN: 'bg-blue-50 text-blue-900 border border-blue-200',
-  IN_PROGRESS: 'bg-yellow-50 text-yellow-900 border border-yellow-200',
-  ON_HOLD: 'bg-orange-50 text-orange-900 border border-orange-200',
-  COMPLETED: 'bg-green-50 text-green-900 border border-green-200',
-  CANCELLED: 'bg-gray-50 text-gray-900 border border-gray-200',
-}
+const statusColors = WO_STATUS_PILL
 
 export default function RecentWOsList({ workOrders, locationId }: Props) {
   return (

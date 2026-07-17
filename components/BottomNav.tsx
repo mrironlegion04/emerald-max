@@ -2,27 +2,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wrench, Package, MessageCircle, QrCode } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal } from 'lucide-react'
 import { motion } from 'motion/react'
 
-interface Props {
-  user: { name: string; email: string; role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' }
-}
-
-export default function BottomNav({ user }: Props) {
+export default function BottomNav() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-    { href: '/work-orders', label: 'Tasks', icon: Wrench },
-    { href: '/scan', label: 'Scan', icon: QrCode, isAction: true },
+    { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+    { href: '/work-orders', label: 'Work Orders', icon: ClipboardList },
     { href: '/assets', label: 'Assets', icon: Package },
     { href: '/messages', label: 'Messages', icon: MessageCircle },
+    { href: '/more', label: 'More', icon: MoreHorizontal },
   ]
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    if (href === '/scan') return pathname === '/scan'
+    if (href === '/overview') return pathname === '/overview' || pathname === '/dashboard'
     return pathname?.startsWith(href)
   }
 
@@ -30,24 +25,10 @@ export default function BottomNav({ user }: Props) {
     <>
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 select-none pb-safe pointer-events-none">
         <div className="mx-4 mb-4 pointer-events-auto">
-          <div className="relative flex items-center justify-between h-16 px-2 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[24px] overflow-hidden">
-            {navItems.map((item, idx) => {
+          <div className="relative flex items-center justify-between h-16 px-1 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[24px] overflow-hidden">
+            {navItems.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
-
-              if (item.isAction) {
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="relative -top-1 px-1"
-                  >
-                    <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/20 transition-transform active:scale-95 ${active ? 'ring-2 ring-slate-900 ring-offset-2' : ''}`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                  </Link>
-                )
-              }
 
               return (
                 <Link

@@ -230,7 +230,7 @@ export default function SubtasksPanel({
             {completedCount} of {totalCount} completed
           </p>
         </div>
-        {canEdit && woStatus !== 'COMPLETED' && woStatus !== 'CANCELLED' && (
+        {canEdit && woStatus !== 'COMPLETED' && woStatus !== 'CANCELLED' && woStatus !== 'CLOSED' && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 border-slate-200 font-bold hover:bg-slate-50 transition"

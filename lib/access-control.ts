@@ -5,6 +5,7 @@
 
 import { prisma } from './db'
 import type { Role } from '@prisma/client'
+import { hasPermission, type Permission } from './permissions'
 
 export interface User {
   userId: string
@@ -23,13 +24,12 @@ export function isAdmin(user: User): boolean {
  * Rules:
  * - ADMIN/MANAGER: always allowed (override)
  * - Assigned user: can complete their own WO
- * - Team member: can complete if team is assigned
+ * - Team/domain member: can complete if team/domain is assigned
  */
 export async function canCompleteWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string; isOverride?: boolean }> {
-  // Admin/Manager always allowed (but it's an override)
   if (isAdmin(user)) {
     return { allowed: true, isOverride: true }
   }
@@ -39,6 +39,7 @@ export async function canCompleteWorkOrder(
     select: {
       assignedToId: true,
       domainId: true,
+      teamId: true,
     },
   })
 
@@ -46,12 +47,10 @@ export async function canCompleteWorkOrder(
     return { allowed: false, reason: 'Work order not found' }
   }
 
-  // Check if user is directly assigned
   if (wo.assignedToId === user.userId) {
     return { allowed: true, isOverride: false }
   }
 
-  // Check if user is in assigned domain
   if (wo.domainId) {
     const userRecord = await prisma.user.findUnique({
       where: { id: user.userId },
@@ -62,12 +61,20 @@ export async function canCompleteWorkOrder(
     }
   }
 
+  if (wo.teamId) {
+    const membership = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId: wo.teamId, userId: user.userId } },
+    })
+    if (membership) {
+      return { allowed: true, isOverride: false }
+    }
+  }
+
   return { allowed: false, reason: 'User is not assigned to this work order' }
 }
 
 /**
  * Check if user can upload attachments to a work order
- * Same rules as completion
  */
 export async function canUploadWOAttachment(
   user: User,
@@ -79,16 +86,11 @@ export async function canUploadWOAttachment(
 
 /**
  * Check if user can complete a subtask
- * Rules:
- * - ADMIN/MANAGER: always allowed (override)
- * - Assigned user: can complete their own subtask
- * - Team member: can complete if team is assigned
  */
 export async function canCompleteSubtask(
   user: User,
   subtaskId: string
 ): Promise<{ allowed: boolean; reason?: string; isOverride?: boolean }> {
-  // Admin/Manager always allowed (but it's an override)
   if (isAdmin(user)) {
     return { allowed: true, isOverride: true }
   }
@@ -98,6 +100,7 @@ export async function canCompleteSubtask(
     select: {
       assignedToId: true,
       assignedDomainId: true,
+      assignedTeamId: true,
     },
   })
 
@@ -105,12 +108,10 @@ export async function canCompleteSubtask(
     return { allowed: false, reason: 'Subtask not found' }
   }
 
-  // Check if user is directly assigned
   if (subtask.assignedToId === user.userId) {
     return { allowed: true, isOverride: false }
   }
 
-  // Check if user is in assigned domain
   if (subtask.assignedDomainId) {
     const userRecord = await prisma.user.findUnique({
       where: { id: user.userId },
@@ -121,23 +122,25 @@ export async function canCompleteSubtask(
     }
   }
 
-  return {
-    allowed: false,
-    reason: 'User is not assigned to this subtask',
+  if (subtask.assignedTeamId) {
+    const membership = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId: subtask.assignedTeamId, userId: user.userId } },
+    })
+    if (membership) {
+      return { allowed: true, isOverride: false }
+    }
   }
+
+  return { allowed: false, reason: 'User is not assigned to this subtask' }
 }
 
 /**
- * Check if user can view a work order
- * Rules:
- * - ADMIN/MANAGER: can view all
- * - Assigned user or team member: can view
+ * Check if user can view a work order (respects WO visibility setting)
  */
 export async function canViewWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Admin/Manager can view all
   if (isAdmin(user)) {
     return { allowed: true }
   }
@@ -147,6 +150,8 @@ export async function canViewWorkOrder(
     select: {
       assignedToId: true,
       domainId: true,
+      teamId: true,
+      createdById: true,
     },
   })
 
@@ -154,12 +159,14 @@ export async function canViewWorkOrder(
     return { allowed: false, reason: 'Work order not found' }
   }
 
-  // Check if user is directly assigned
   if (wo.assignedToId === user.userId) {
     return { allowed: true }
   }
 
-  // Check if user is in assigned domain
+  if (wo.createdById === user.userId) {
+    return { allowed: true }
+  }
+
   if (wo.domainId) {
     const userRecord = await prisma.user.findUnique({
       where: { id: user.userId },
@@ -170,28 +177,29 @@ export async function canViewWorkOrder(
     }
   }
 
-  return {
-    allowed: false,
-    reason: 'You do not have access to this work order',
+  if (wo.teamId) {
+    const membership = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId: wo.teamId, userId: user.userId } },
+    })
+    if (membership) {
+      return { allowed: true }
+    }
   }
+
+  return { allowed: false, reason: 'You do not have access to this work order' }
 }
 
 /**
  * Check if user can edit a work order
- * Rules:
- * - ADMIN/MANAGER: can edit all
- * - Assigned user or team member: can edit (except status/assignment)
  */
 export async function canEditWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Admin/Manager can edit all
   if (isAdmin(user)) {
     return { allowed: true }
   }
 
-  // Technician can only edit if assigned
   const result = await canViewWorkOrder(user, workOrderId)
   return result
 }
@@ -211,9 +219,6 @@ export function getCompletionType(
 
 /**
  * Check if user can reassign a work order
- * Rules:
- * - ADMIN/MANAGER: can reassign
- * - Others: cannot
  */
 export function canReassignWorkOrder(user: User): boolean {
   return isAdmin(user)
@@ -221,7 +226,6 @@ export function canReassignWorkOrder(user: User): boolean {
 
 /**
  * Validate work order status transition
- * Returns true if transition is allowed
  */
 export function isValidWOStatusTransition(
   from: string,
@@ -229,9 +233,11 @@ export function isValidWOStatusTransition(
 ): boolean {
   const allowed: Record<string, string[]> = {
     OPEN: ['IN_PROGRESS', 'CANCELLED'],
-    IN_PROGRESS: ['COMPLETED', 'ON_HOLD'],
+    IN_PROGRESS: ['PENDING_APPROVAL', 'ON_HOLD', 'CANCELLED'],
     ON_HOLD: ['IN_PROGRESS', 'CANCELLED'],
-    COMPLETED: [],
+    PENDING_APPROVAL: ['COMPLETED', 'IN_PROGRESS'],
+    COMPLETED: ['OPEN', 'CLOSED'],
+    CLOSED: [],
     CANCELLED: ['OPEN'],
   }
 
@@ -239,7 +245,7 @@ export function isValidWOStatusTransition(
 }
 
 /**
- * Check if user can delete a work order (only admins)
+ * Check if user can delete a work order
  */
 export function canDeleteWorkOrder(user: User): boolean {
   return user.role === 'ADMIN'
@@ -247,7 +253,6 @@ export function canDeleteWorkOrder(user: User): boolean {
 
 /**
  * Get completion label for display
- * Used to show "Completed by Manager" vs no label
  */
 export function getCompletionLabel(
   completionType: string,
@@ -260,4 +265,35 @@ export function getCompletionLabel(
     return `Completed by Manager`
   }
   return null
+}
+
+/**
+ * Build WO visibility filter for Prisma queries.
+ * Returns a where clause filter that restricts WOs based on user visibility.
+ */
+export async function buildWOVisibilityFilter(
+  user: User
+): Promise<Record<string, unknown> | null> {
+  if (isAdmin(user)) return null
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { woVisibility: true, domainId: true },
+  })
+
+  if (!dbUser || dbUser.woVisibility === 'FULL') return null
+
+  const teamIds = (await prisma.teamMember.findMany({
+    where: { userId: user.userId },
+    select: { teamId: true },
+  })).map(t => t.teamId)
+
+  return {
+    OR: [
+      { assignedToId: user.userId },
+      { createdById: user.userId },
+      ...(dbUser.domainId ? [{ domainId: dbUser.domainId }] : []),
+      ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
+    ],
+  }
 }

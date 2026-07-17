@@ -1,12 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings, CheckCircle } from 'lucide-react'
 
 export default function PublicRequestPage() {
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: string } | null>(null)
   const [form, setForm] = useState({ title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '', priority: 'MEDIUM' })
   const [saving, setSaving]   = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError]     = useState('')
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(data => {
+      if (data?.userId) {
+        setCurrentUser(data)
+        setForm(p => ({ ...p, requesterName: data.name ?? '', requesterEmail: data.email ?? '' }))
+      }
+    }).catch(() => {})
+  }, [])
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
@@ -29,7 +39,7 @@ export default function PublicRequestPage() {
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Request submitted!</h2>
           <p className="text-gray-500 text-sm">Your maintenance request has been received. The maintenance team will review it shortly.</p>
-          <button onClick={() => { setSuccess(false); setForm({ title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '', priority: 'MEDIUM' }) }}
+          <button onClick={() => { setSuccess(false); setForm({ title: '', description: '', location: '', requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '', requesterPhone: '', priority: 'MEDIUM' }) }}
             className="mt-6 btn-secondary text-sm">Submit another request</button>
         </div>
       </div>
@@ -72,25 +82,32 @@ export default function PublicRequestPage() {
                 </select>
               </div>
             </div>
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Your contact details</p>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Your name <span className="text-red-500">*</span></label>
-                  <input type="text" value={form.requesterName} onChange={e => set('requesterName', e.target.value)} className="input-field" placeholder="Full name" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+            {!currentUser && (
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Your contact details</p>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" value={form.requesterEmail} onChange={e => set('requesterEmail', e.target.value)} className="input-field" placeholder="you@example.com" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Your name <span className="text-red-500">*</span></label>
+                    <input type="text" value={form.requesterName} onChange={e => set('requesterName', e.target.value)} className="input-field" placeholder="Full name" required />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input type="text" value={form.requesterPhone} onChange={e => set('requesterPhone', e.target.value)} className="input-field" placeholder="+1 555 000 0000" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input type="email" value={form.requesterEmail} onChange={e => set('requesterEmail', e.target.value)} className="input-field" placeholder="you@example.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input type="text" value={form.requesterPhone} onChange={e => set('requesterPhone', e.target.value)} className="input-field" placeholder="+1 555 000 0000" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+            {currentUser && (
+              <div className="border-t border-gray-100 pt-4 text-sm text-gray-600">
+                Submitting as <span className="font-medium text-gray-900">{currentUser.name}</span> ({currentUser.email})
+              </div>
+            )}
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
             <button type="submit" disabled={saving} className="btn-primary w-full py-3 text-base">
               {saving ? 'Submitting...' : 'Submit request'}

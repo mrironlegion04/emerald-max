@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
 
@@ -40,7 +41,7 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'part:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
@@ -103,7 +104,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'part:delete'))) {
       return NextResponse.json({ error: 'Only admins can archive parts' }, { status: 403 })
     }
     const { id } = await params
@@ -160,7 +161,7 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'part:edit'))) {
       return NextResponse.json({ error: 'Only admins can restore parts' }, { status: 403 })
     }
 

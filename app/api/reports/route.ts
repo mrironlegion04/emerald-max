@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
       return {
         month:     b.label,
         created:   inBucket.length,
-        completed: inBucket.filter(w => w.status === 'COMPLETED').length,
-        open:      inBucket.filter(w => !['COMPLETED','CANCELLED'].includes(w.status)).length,
+        completed: inBucket.filter(w => ['COMPLETED', 'CLOSED'].includes(w.status)).length,
+        open:      inBucket.filter(w => !['COMPLETED','CLOSED','CANCELLED'].includes(w.status)).length,
       }
     })
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     // ── Completion rate by month ──────────────────────────────────────────────
     const completionRate = monthBuckets.map(b => {
       const created   = wos.filter(w => w.createdAt >= b.start && w.createdAt <= b.end)
-      const completed = created.filter(w => w.status === 'COMPLETED').length
+      const completed = created.filter(w => ['COMPLETED', 'CLOSED'].includes(w.status)).length
       return {
         month: b.label,
         rate:  created.length > 0 ? Math.round((completed / created.length) * 100) : 0,
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     })
 
     // ── Summary KPIs ──────────────────────────────────────────────────────────
-    const allCompleted = wos.filter(w => w.status === 'COMPLETED')
+    const allCompleted = wos.filter(w => ['COMPLETED', 'CLOSED'].includes(w.status))
     const totalLaborCost  = allCompleted.reduce((s, w) => s + (w.laborCost ?? 0), 0)
     const totalPartsCost  = allCompleted.reduce((s, w) => s + (w.partsCost ?? 0), 0)
     const totalLaborHours = allCompleted.reduce((s, w) => s + (w.laborHours ?? 0), 0)

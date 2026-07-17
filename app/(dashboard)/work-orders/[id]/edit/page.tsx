@@ -61,6 +61,7 @@ export default async function EditWorkOrderPage({
   ])
 
   if (!wo) notFound()
+  if (wo.status === 'CLOSED') redirect(`/work-orders/${id}`)
 
   const selectedAssetIds = wo.assets.map((a: any) => a.assetId)
 
@@ -70,7 +71,10 @@ export default async function EditWorkOrderPage({
     type:            wo.type,
     priority:        wo.priority,
     status:          wo.status,
+    startDate:       wo.startDate ? new Date(wo.startDate).toISOString().split('T')[0] : '',
+    startTime:       wo.startDate ? new Date(wo.startDate).toTimeString().slice(0, 5) : '',
     dueDate:         wo.dueDate ? new Date(wo.dueDate).toISOString().split('T')[0] : '',
+    dueTime:         wo.dueDate ? new Date(wo.dueDate).toTimeString().slice(0, 5) : '',
     assetId:         wo.assetId       ?? '',
     locationId:      wo.locationId    ?? '',
     locationScope:   wo.locationScope ?? 'ALL_ASSETS',

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { sendRequestApproved, sendRequestRejected, sendRequestConverted } from '@/lib/email'
 
@@ -13,7 +14,7 @@ async function generateWONumber() {
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
-  if (!user || user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  if (!user || !(await hasPermission(user, 'request:approve'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   const { id } = await params
   const { action, reason } = await req.json()

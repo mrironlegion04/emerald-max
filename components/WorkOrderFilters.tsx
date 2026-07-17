@@ -4,16 +4,13 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useTransition, useState } from 'react'
 import { Search, Filter, X } from 'lucide-react'
 import FilterDrawer from './FilterDrawer'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface User { id: string; name: string; role: string }
 
 const statusOptions = [
   { value: '', label: 'All statuses' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'ON_HOLD', label: 'On Hold' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  ...Object.entries(WO_STATUS_LABELS).map(([value, label]) => ({ value, label })),
 ]
 const priorityOptions = [
   { value: '', label: 'All priorities' },

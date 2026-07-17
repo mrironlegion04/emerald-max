@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!user || !(await hasPermission(user, 'bom:delete'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     const { id } = await params
     await prisma.bOMTemplate.delete({ where: { id } })
     return NextResponse.json({ success: true })
@@ -17,7 +18,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!user || !(await hasPermission(user, 'bom:edit'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     const { id } = await params
     const { name, description } = await request.json()
     

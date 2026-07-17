@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -15,7 +16,7 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'category_domain:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { categoryId, domainIds } = schema.parse(await request.json())

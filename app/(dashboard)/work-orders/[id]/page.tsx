@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Printer } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from '@/components/WOStatusActions'
 import WOPartsPanel from '@/components/WOPartsPanel'
 import WOCommentsPanel from '@/components/WOCommentsPanel'
@@ -14,9 +15,7 @@ import AttachmentsPanel from '@/components/AttachmentsPanel'
 import TimerPanel from '@/components/TimerPanel'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
-const statusLabels: Record<string,string> = {
-  OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled',
-}
+const statusLabels = WO_STATUS_LABELS
 const typeLabels: Record<string,string> = {
   BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive',
 }
@@ -72,6 +71,7 @@ export default async function WorkOrderDetailPage({
       },
       attachments:  { include: { uploadedBy: { select: { name: true } } } },
       statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
+      repairSessions: { orderBy: { sessionNo: 'asc' } },
     },
   })
 
@@ -117,7 +117,7 @@ export default async function WorkOrderDetailPage({
                 <Printer className="w-4 h-4 text-slate-500" />
                 Print
               </Link>
-              {canEdit && (
+              {canEdit && wo.status !== 'CLOSED' && (
                 <Link href={`/work-orders/${wo.id}/edit`} className="btn-secondary text-xs py-2 px-3.5 border-slate-200 font-bold hover:bg-slate-50 transition shadow-xs">
                   Edit work order
                 </Link>
@@ -141,11 +141,56 @@ export default async function WorkOrderDetailPage({
               currentStatus={wo.status}
               userRole={user?.role ?? 'TECHNICIAN'}
               userId={user?.userId ?? ''}
+              requestedCompletionTime={wo.requestedCompletionTime?.toISOString() ?? null}
+              requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
             />
           </div>
 
           {/* Timer panel */}
           <TimerPanel woId={wo.id} woStatus={wo.status} />
+
+          {/* Repair Sessions */}
+          {(wo.repairSessions as any[]).length > 0 && (
+            <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-4 pb-2 border-b border-slate-100">
+                Repair Sessions
+                <span className="ml-2 text-slate-400 font-normal font-normal">({(wo.repairSessions as any[]).length})</span>
+              </h2>
+              <div className="space-y-2">
+                {(wo.repairSessions as any[]).map((session: any) => (
+                  <div key={session.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-2 py-0.5">
+                        #{session.sessionNo}
+                      </span>
+                      <div className="text-xs text-slate-700">
+                        <span className="font-medium">
+                          {new Date(session.startedAt).toLocaleDateString()}{' '}
+                          {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {session.completedAt && (
+                          <>
+                            <span className="text-slate-400 mx-1">&rarr;</span>
+                            <span className="font-medium">
+                              {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </>
+                        )}
+                        {!session.completedAt && (
+                          <span className="text-amber-600 ml-1 font-semibold">in progress</span>
+                        )}
+                      </div>
+                    </div>
+                    {session.durationMinutes != null && (
+                      <span className="text-xs font-bold text-slate-600">
+                        {Math.floor(session.durationMinutes / 60)}h {session.durationMinutes % 60}m
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Details */}
           <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
@@ -182,6 +227,7 @@ export default async function WorkOrderDetailPage({
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
+                { label: 'Start date',  value: fmtDateTime(wo.startDate) },
                 { label: 'Due date',    value: (
                   <span className={isOverdue ? 'text-rose-650 font-bold' : ''}>
                     {isOverdue ? '⚠ ' : ''}{fmtDateTime(wo.dueDate)}

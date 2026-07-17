@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 const schema = z.object({
   title: z.string().min(1), description: z.string().min(1),
-  location: z.string().optional(), requesterName: z.string().min(1),
+  location: z.string().optional(), requesterName: z.string().min(1).optional(),
   requesterEmail: z.string().email().optional().or(z.literal('')),
   requesterPhone: z.string().optional(),
   priority: z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
@@ -23,16 +23,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const data = schema.parse(await req.json())
+    const user = await getCurrentUser().catch(() => null)
+
     const request = await prisma.maintenanceRequest.create({
       data: {
         title: data.title, description: data.description,
-        location: data.location || null, requesterName: data.requesterName,
-        requesterEmail: data.requesterEmail || null, requesterPhone: data.requesterPhone || null,
+        location: data.location || null, requesterName: user?.name ?? data.requesterName ?? 'Anonymous',
+        requesterEmail: user?.email ?? (data.requesterEmail || null), requesterPhone: data.requesterPhone || null,
         priority: data.priority,
+        requesterId: user?.userId ?? null,
       },
     })
 
-    const user = await getCurrentUser().catch(() => null)
     await writeAudit({
       action: 'CREATE',
       entity: 'Request',

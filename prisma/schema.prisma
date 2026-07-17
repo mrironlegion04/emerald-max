@@ -20,6 +20,17 @@ enum Role {
   ADMIN
   MANAGER
   TECHNICIAN
+  REQUESTER
+}
+
+enum WOVisibility {
+  FULL
+  LIMITED
+}
+
+enum TeamMemberRole {
+  ADMIN
+  MEMBER
 }
 
 enum AssetStatus {
@@ -33,7 +44,9 @@ enum WorkOrderStatus {
   OPEN
   IN_PROGRESS
   ON_HOLD
+  PENDING_APPROVAL
   COMPLETED
+  CLOSED
   CANCELLED
 }
 
@@ -165,6 +178,57 @@ enum ChatChannelType {
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions Json     @default("[]")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[] @relation("CustomUserRole")
+
+  @@map("custom_roles")
+}
+
+model Team {
+  id          String    @id @default(cuid())
+  name        String
+  trade       String
+  description String?
+  isActive    Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  deletedBy   String?
+  restoredAt  DateTime?
+  restoredBy  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members    TeamMember[]
+  workOrders WorkOrder[]
+  subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String         @id @default(cuid())
+  role     TeamMemberRole @default(MEMBER)
+
+  teamId   String
+  team     Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  userId   String
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -181,6 +245,11 @@ model User {
   department   String?
   assignedLocationId String?
 
+  // Visibility & permissions
+  woVisibility WOVisibility @default(FULL)
+  customRoleId String?
+  customRole   CustomRole?  @relation("CustomUserRole", fields: [customRoleId], references: [id], onDelete: SetNull)
+
   // Performance tracking
   totalAssignedWOs   Int     @default(0)
   totalCompletedWOs  Int     @default(0)
@@ -196,6 +265,7 @@ model User {
   createdWorkOrders     WorkOrder[]             @relation("CreatedBy")
   completedWorkOrders   WorkOrder[]             @relation("WOCompletedBy")
   reviewedRequests      MaintenanceRequest[]    @relation("RequestReviewer")
+  submittedRequests     MaintenanceRequest[]    @relation("RequestRequester")
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
   domainId              String?
@@ -209,6 +279,8 @@ model User {
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
   statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
+  repairSessionsStarted   RepairSession[] @relation("RepairSessionStartedBy")
+  repairSessionsCompleted RepairSession[] @relation("RepairSessionCompletedBy")
 
   uploadedAttachments   Attachment[]            @relation("AttachmentUploadedBy")
   recordedReadings      MeterReading[]          @relation("MeterReadingRecordedBy")
@@ -216,6 +288,8 @@ model User {
 
   sentMessages          ChatMessage[]           @relation("ChatMessageSender")
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
+
+  teamMemberships       TeamMember[]
 
   @@map("users")
 }
@@ -318,13 +392,12 @@ model Asset {
   // Meter-based PM fields
   meterUnit         String?
   currentMeterValue Float?
-  // Maintenance metrics
-  mttrMinutes       Int      @default(0)  // Mean Time To Repair (in minutes)
-  mtbfDays          Float    @default(0)  // Mean Time Between Failures (in days)
-  totalFailures     Int      @default(0)
-  lastFailureDate   DateTime?
-  lastRepairDate    DateTime?
-  totalRepairTime   Int      @default(0)  // cumulative minutes
+  // Maintenance metrics (source data only — derived metrics computed on the fly)
+  totalFailures        Int      @default(0)
+  lastFailureDate      DateTime?
+  lastRepairDate       DateTime?
+  totalRepairTime      Int      @default(0)  // cumulative repair minutes
+  totalDowntimeMinutes Int      @default(0)  // cumulative downtime minutes
   // Hierarchy (Part 7)
   parentId          String?
   parent            Asset?      @relation("AssetHierarchy", fields: [parentId], references: [id])
@@ -420,9 +493,13 @@ model WorkOrder {
   status      WorkOrderStatus   @default(OPEN)
   priority    WorkOrderPriority @default(MEDIUM)
   dueDate     DateTime?
+  startDate   DateTime?
   startedAt   DateTime?
   respondedAt DateTime?
   completedAt DateTime?
+  closedAt    DateTime?
+  requestedCompletionTime  DateTime?
+  requestedCompletionNotes String?
   laborHours  Float?
   laborCost   Float?
   partsCost   Float?
@@ -463,6 +540,9 @@ model WorkOrder {
   maintenanceScheduleId String?
   maintenanceSchedule   MaintenanceSchedule? @relation("PMScheduleWorkOrders", fields: [maintenanceScheduleId], references: [id])
 
+  teamId String?
+  team   Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
   partsUsed     WorkOrderPart[]
   comments      WorkOrderComment[]
   subtasks      Subtask[]
@@ -471,6 +551,7 @@ model WorkOrder {
   attachments   Attachment[]        @relation("WOAttachments")
   assets        WorkOrderAsset[]
   statusHistory WorkOrderStatusHistory[]
+  repairSessions RepairSession[]
 
   @@index([issueId, createdAt])
   @@index([status])
@@ -479,6 +560,7 @@ model WorkOrder {
   @@index([domainId])
   @@index([assetId])
   @@index([locationId])
+  @@index([teamId])
   @@index([createdAt])
   @@map("work_orders")
 }
@@ -712,6 +794,8 @@ model Subtask {
   assignedTo    User?           @relation("SubtaskAssignedTo", fields: [assignedToId], references: [id])
   assignedDomainId String?
   assignedDomain   MaintenanceDomain? @relation("SubtasksAssignedToDomain", fields: [assignedDomainId], references: [id], onDelete: SetNull)
+  assignedTeamId   String?
+  assignedTeam     Team?              @relation("SubtasksAssignedToTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
   completedById String?
   completedBy   User?           @relation("SubtaskCompletedBy", fields: [completedById], references: [id])
   completionType CompletionType @default(ASSIGNED)
@@ -721,6 +805,7 @@ model Subtask {
   @@index([workOrderId])
   @@index([assignedToId])
   @@index([assignedDomainId])
+  @@index([assignedTeamId])
   @@index([completedById])
   @@map("subtasks")
 }
@@ -741,8 +826,10 @@ model MaintenanceRequest {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  requesterId  String?
+  requester    User?    @relation("RequestRequester", fields: [requesterId], references: [id], onDelete: SetNull)
   reviewedById String?
-  reviewedBy   User?      @relation("RequestReviewer", fields: [reviewedById], references: [id])
+  reviewedBy   User?    @relation("RequestReviewer", fields: [reviewedById], references: [id])
   workOrderId  String?
   workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
 
@@ -1006,6 +1093,25 @@ model WorkOrderStatusHistory {
 
   @@index([workOrderId, createdAt])
   @@map("work_order_status_history")
+}
+
+model RepairSession {
+  id              String    @id @default(cuid())
+  workOrderId     String
+  workOrder       WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  sessionNo       Int       // 1, 2, 3 — per WO, increments on each reopen cycle
+  startedAt       DateTime
+  completedAt     DateTime?
+  durationMinutes Int?      // completedAt - startedAt in minutes (set on completion)
+  startedById     String?
+  startedBy       User?     @relation("RepairSessionStartedBy", fields: [startedById], references: [id], onDelete: SetNull)
+  completedById   String?
+  completedBy     User?     @relation("RepairSessionCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+
+  @@unique([workOrderId, sessionNo])
+  @@index([workOrderId])
+  @@map("repair_sessions")
 }
 
 

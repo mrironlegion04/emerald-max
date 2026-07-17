@@ -1,61 +1,45 @@
 /**
- * Maintenance Metrics Calculation Utilities
- * Calculates MTTR (Mean Time To Repair) and MTBF (Mean Time Between Failures)
+ * Maintenance Metrics — Single source of truth
+ *
+ * Source data stored on Asset (cumulative counters):
+ *   totalFailures, lastFailureDate, lastRepairDate, totalRepairTime, totalDowntimeMinutes
+ *
+ * Derived metrics computed on the fly by getAssetMetrics():
+ *   MTTR = totalRepairTime / totalFailures
+ *   Avg Downtime = totalDowntimeMinutes / totalFailures
+ *   MTBF = query completed BREAKDOWN WOs, compute gaps between failures
+ *
+ * Fleet metrics for dashboard:
+ *   Fleet MTTR = sum(all asset repair times) / sum(all asset failures)  [weighted]
+ *   Fleet MTBF = computed from global failure timeline
  */
 
 import { prisma } from './db'
 
 export interface AssetMetrics {
-  mttrMinutes: number
-  mtbfDays: number
   totalFailures: number
   lastFailureDate: Date | null
   lastRepairDate: Date | null
+  totalRepairTime: number
+  totalDowntimeMinutes: number
+  // Derived (computed on the fly)
+  mttr: number            // minutes — totalRepairTime / totalFailures
+  avgDowntime: number     // minutes — totalDowntimeMinutes / totalFailures
+  mtbf: number            // days — computed from failure timeline
 }
 
-/**
- * Calculate MTTR (Mean Time To Repair)
- * Formula: Total repair time / Number of repairs
- * Returns: Minutes
- */
-export async function calculateMTTR(assetId: string): Promise<number> {
-  const workOrders = await prisma.workOrder.findMany({
-    where: {
-      assetId,
-      status: 'COMPLETED',
-      completedAt: { not: null },
-    },
-    select: {
-      createdAt: true,
-      completedAt: true,
-    },
-  })
-
-  if (workOrders.length === 0) return 0
-
-  // Calculate total repair time (difference between created and completed)
-  const totalMinutes = workOrders.reduce((sum, wo) => {
-    if (!wo.completedAt) return sum
-    const repairTimeMs = wo.completedAt.getTime() - wo.createdAt.getTime()
-    const repairMinutes = Math.floor(repairTimeMs / (1000 * 60))
-    return sum + repairMinutes
-  }, 0)
-
-  // Return average
-  return Math.floor(totalMinutes / workOrders.length)
+export interface FleetMetrics {
+  totalAssets: number
+  totalFailures: number
+  totalRepairTime: number
+  totalDowntimeMinutes: number
+  fleetMttr: number       // minutes — weighted: totalRepairTime / totalFailures
+  fleetMtbf: number       // days — computed from global failure timeline
 }
 
-/**
- * Calculate MTBF (Mean Time Between Failures)
- * Formula: Total time span / Number of failures
- * Returns: Days
- *
- * Logic:
- * - Look at all completed BREAKDOWN work orders (failures)
- * - Find the time span between each failure
- * - Calculate average
- */
-export async function calculateMTBF(assetId: string): Promise<number> {
+// ── Internal helpers ──────────────────────────────────────────────
+
+async function computeMTBF(assetId: string): Promise<number> {
   const failures = await prisma.workOrder.findMany({
     where: {
       assetId,
@@ -63,144 +47,203 @@ export async function calculateMTBF(assetId: string): Promise<number> {
       status: 'COMPLETED',
       completedAt: { not: null },
     },
-    select: {
-      completedAt: true,
-    },
-    orderBy: {
-      completedAt: 'asc',
-    },
+    select: { completedAt: true },
+    orderBy: { completedAt: 'asc' },
   })
 
   if (failures.length <= 1) return 0
 
-  // Calculate time between failures
-  let totalDaysBetweenFailures = 0
-
+  let totalDaysBetween = 0
   for (let i = 1; i < failures.length; i++) {
     const prev = failures[i - 1].completedAt!
     const curr = failures[i].completedAt!
-    const daysBetween = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
-    totalDaysBetweenFailures += daysBetween
+    totalDaysBetween += (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
   }
 
-  // Return average
-  return Math.floor(totalDaysBetweenFailures / (failures.length - 1) * 100) / 100
+  return Math.floor(totalDaysBetween / (failures.length - 1) * 100) / 100
 }
 
-/**
- * Get total number of failures for an asset
- */
-export async function getTotalFailures(assetId: string): Promise<number> {
-  const count = await prisma.workOrder.count({
+async function computeFleetMTBF(): Promise<number> {
+  const failures = await prisma.workOrder.findMany({
     where: {
-      assetId,
-      type: 'BREAKDOWN',
-      status: 'COMPLETED',
-    },
-  })
-  return count
-}
-
-/**
- * Get last failure date
- */
-export async function getLastFailureDate(assetId: string): Promise<Date | null> {
-  const wo = await prisma.workOrder.findFirst({
-    where: {
-      assetId,
       type: 'BREAKDOWN',
       status: 'COMPLETED',
       completedAt: { not: null },
     },
-    select: {
-      completedAt: true,
-    },
-    orderBy: {
-      completedAt: 'desc',
-    },
+    select: { completedAt: true },
+    orderBy: { completedAt: 'asc' },
   })
 
-  return wo?.completedAt || null
+  if (failures.length <= 1) return 0
+
+  let totalDaysBetween = 0
+  for (let i = 1; i < failures.length; i++) {
+    const prev = failures[i - 1].completedAt!
+    const curr = failures[i].completedAt!
+    totalDaysBetween += (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+  }
+
+  return Math.floor(totalDaysBetween / (failures.length - 1) * 100) / 100
 }
 
+// ── Per-asset metrics (used on asset detail page) ─────────────────
+
 /**
- * Get last repair date (any completed work order)
+ * Get computed metrics for a single asset.
+ * Reads source data from the Asset row, computes derived values on the fly.
  */
-export async function getLastRepairDate(assetId: string): Promise<Date | null> {
-  const wo = await prisma.workOrder.findFirst({
-    where: {
-      assetId,
-      status: 'COMPLETED',
-      completedAt: { not: null },
-    },
+export async function getAssetMetrics(assetId: string): Promise<AssetMetrics> {
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
     select: {
-      completedAt: true,
-    },
-    orderBy: {
-      completedAt: 'desc',
+      totalFailures: true,
+      lastFailureDate: true,
+      lastRepairDate: true,
+      totalRepairTime: true,
+      totalDowntimeMinutes: true,
     },
   })
 
-  return wo?.completedAt || null
+  if (!asset) {
+    return { totalFailures: 0, lastFailureDate: null, lastRepairDate: null, totalRepairTime: 0, totalDowntimeMinutes: 0, mttr: 0, avgDowntime: 0, mtbf: 0 }
+  }
+
+  const totalFailures = asset.totalFailures
+  const mttr = totalFailures > 0 ? Math.floor(asset.totalRepairTime / totalFailures) : 0
+  const avgDowntime = totalFailures > 0 ? Math.floor(asset.totalDowntimeMinutes / totalFailures) : 0
+  const mtbf = await computeMTBF(assetId)
+
+  return {
+    totalFailures,
+    lastFailureDate: asset.lastFailureDate,
+    lastRepairDate: asset.lastRepairDate,
+    totalRepairTime: asset.totalRepairTime,
+    totalDowntimeMinutes: asset.totalDowntimeMinutes,
+    mttr,
+    avgDowntime,
+    mtbf,
+  }
 }
 
-/**
- * Calculate all metrics for an asset and update the database
- */
-export async function updateAssetMetrics(assetId: string): Promise<AssetMetrics> {
-  // Calculate metrics
-  const mttr = await calculateMTTR(assetId)
-  const mtbf = await calculateMTBF(assetId)
-  const totalFailures = await getTotalFailures(assetId)
-  const lastFailureDate = await getLastFailureDate(assetId)
-  const lastRepairDate = await getLastRepairDate(assetId)
+// ── Fleet-wide metrics (used on dashboard) ────────────────────────
 
-  // Get total repair time from all completed work orders
-  const workOrders = await prisma.workOrder.findMany({
-    where: {
-      assetId,
-      status: 'COMPLETED',
-      completedAt: { not: null },
-    },
+/**
+ * Compute fleet-wide metrics across all assets.
+ * Uses weighted average: sum of all repair times / sum of all failures.
+ */
+export async function getFleetMetrics(): Promise<FleetMetrics> {
+  const assets = await prisma.asset.findMany({
+    where: { isDeleted: false },
     select: {
-      createdAt: true,
-      completedAt: true,
+      totalFailures: true,
+      totalRepairTime: true,
+      totalDowntimeMinutes: true,
     },
   })
 
-  const totalRepairTime = workOrders.reduce((sum, wo) => {
+  const totalAssets = assets.length
+  const totalFailures = assets.reduce((sum, a) => sum + a.totalFailures, 0)
+  const totalRepairTime = assets.reduce((sum, a) => sum + a.totalRepairTime, 0)
+  const totalDowntimeMinutes = assets.reduce((sum, a) => sum + a.totalDowntimeMinutes, 0)
+
+  const fleetMttr = totalFailures > 0 ? Math.floor(totalRepairTime / totalFailures) : 0
+  const fleetMtbf = await computeFleetMTBF()
+
+  return {
+    totalAssets,
+    totalFailures,
+    totalRepairTime,
+    totalDowntimeMinutes,
+    fleetMttr,
+    fleetMtbf,
+  }
+}
+
+// ── Write source data (called after WO completion, reopen, edit) ──
+
+/**
+ * Recalculate and write source data for an asset from WO history.
+ * Only writes the 5 source fields — derived metrics are computed on the fly.
+ */
+export async function updateAssetMetrics(assetId: string): Promise<void> {
+  // Total failures
+  const totalFailures = await prisma.workOrder.count({
+    where: { assetId, type: 'BREAKDOWN', status: 'COMPLETED' },
+  })
+
+  // Last failure date
+  const lastFailureWO = await prisma.workOrder.findFirst({
+    where: { assetId, type: 'BREAKDOWN', status: 'COMPLETED', completedAt: { not: null } },
+    select: { completedAt: true },
+    orderBy: { completedAt: 'desc' },
+  })
+
+  // Last repair date (any completed WO)
+  const lastRepairWO = await prisma.workOrder.findFirst({
+    where: { assetId, status: 'COMPLETED', completedAt: { not: null } },
+    select: { completedAt: true },
+    orderBy: { completedAt: 'desc' },
+  })
+
+  // Total repair time = sum of RepairSession.durationMinutes for completed WOs on this asset
+  const repairSessions = await prisma.repairSession.findMany({
+    where: {
+      workOrder: { assetId, status: 'COMPLETED' },
+      durationMinutes: { not: null },
+    },
+    select: { durationMinutes: true },
+  })
+  const totalRepairTime = repairSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0)
+
+  // Total downtime = sum of (completedAt - createdAt)
+  const downtimeWOs = await prisma.workOrder.findMany({
+    where: { assetId, status: 'COMPLETED', completedAt: { not: null } },
+    select: { createdAt: true, completedAt: true },
+  })
+  const totalDowntimeMinutes = downtimeWOs.reduce((sum, wo) => {
     if (!wo.completedAt) return sum
-    const repairTimeMs = wo.completedAt.getTime() - wo.createdAt.getTime()
-    const repairMinutes = Math.floor(repairTimeMs / (1000 * 60))
-    return sum + repairMinutes
+    return sum + Math.floor((wo.completedAt.getTime() - wo.createdAt.getTime()) / (1000 * 60))
   }, 0)
 
-  // Update asset
   await prisma.asset.update({
     where: { id: assetId },
     data: {
-      mttrMinutes: mttr,
-      mtbfDays: mtbf,
       totalFailures,
-      lastFailureDate,
-      lastRepairDate,
+      lastFailureDate: lastFailureWO?.completedAt ?? null,
+      lastRepairDate: lastRepairWO?.completedAt ?? null,
       totalRepairTime,
+      totalDowntimeMinutes,
     },
   })
-
-  return {
-    mttrMinutes: mttr,
-    mtbfDays: mtbf,
-    totalFailures,
-    lastFailureDate,
-    lastRepairDate,
-  }
 }
 
 /**
- * Format MTTR for display
+ * Recalculate asset metrics for ALL assets linked to a work order.
+ * Handles multi-asset WOs (primary assetId + WorkOrderAsset junction rows).
+ * Deduplicates in case the primary asset is also in the junction table.
  */
-export function formatMTTR(minutes: number): string {
+export async function updateWorkOrderLinkedAssetMetrics(workOrderId: string): Promise<void> {
+  const wo = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { assetId: true },
+  })
+  if (!wo) return
+
+  const junctionAssets = await prisma.workOrderAsset.findMany({
+    where: { workOrderId },
+    select: { assetId: true },
+  })
+
+  const assetIds = new Set<string>()
+  if (wo.assetId) assetIds.add(wo.assetId)
+  for (const ja of junctionAssets) assetIds.add(ja.assetId)
+
+  await Promise.all([...assetIds].map(id => updateAssetMetrics(id)))
+}
+
+// ── Formatting helpers ────────────────────────────────────────────
+
+export function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes} min`
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
@@ -210,10 +253,7 @@ export function formatMTTR(minutes: number): string {
   return `${days}d ${hrs}h`
 }
 
-/**
- * Format MTBF for display
- */
-export function formatMTBF(days: number): string {
+export function formatDays(days: number): string {
   if (days < 1) return `${Math.round(days * 24)} hours`
   if (days < 7) return `${Math.round(days)} days`
   const weeks = Math.round(days / 7)
@@ -223,3 +263,7 @@ export function formatMTBF(days: number): string {
   const years = Math.round(days / 365)
   return `${years} years`
 }
+
+// Keep old names as aliases for backward compatibility
+export const formatMTTR = formatMinutes
+export const formatMTBF = formatDays

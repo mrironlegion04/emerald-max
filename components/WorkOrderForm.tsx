@@ -6,6 +6,7 @@ import { ClipboardCheck, Star, Eye, Check, Square, AlertCircle, FileText, Calend
 import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; domainId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
@@ -30,7 +31,8 @@ interface Procedure {
 
 interface WOFormData {
   title: string; description: string; type: string; priority: string
-  status: string; dueDate: string; assetId: string; locationId: string; locationScope: string
+  status: string; startDate: string; startTime: string; dueDate: string; dueTime: string
+  assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
   assignedToId: string; assignedDomainId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
@@ -47,10 +49,10 @@ interface Props {
 
 const typeOptions     = ['BREAKDOWN','PREVENTIVE','PREDICTIVE']
 const priorityOptions = ['LOW','MEDIUM','HIGH','CRITICAL']
-const statusOptions   = ['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CANCELLED']
+const statusOptions   = Object.keys(WO_STATUS_LABELS).filter(s => !['PENDING_APPROVAL','CLOSED'].includes(s))
 const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive' }
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
-const statusLabels: Record<string,string>   = { OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled' }
+const statusLabels = WO_STATUS_LABELS
 
 export default function WorkOrderForm({ assets, locations, users, domains = [], procedures = [], initialData, woId, preselectedAssetId }: Props) {
   const router = useRouter()
@@ -65,7 +67,10 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
     type:           initialData?.type           ?? 'BREAKDOWN',
     priority:       initialData?.priority       ?? 'MEDIUM',
     status:         initialData?.status         ?? 'OPEN',
+    startDate:      initialData?.startDate      ?? '',
+    startTime:      initialData?.startTime      ?? '',
     dueDate:        initialData?.dueDate        ?? '',
+    dueTime:        initialData?.dueTime        ?? '',
     assetId:        initialData?.assetId        ?? preselectedAssetId ?? '',
     locationId:     initialData?.locationId     ?? '',
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
@@ -256,7 +261,8 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
         type:         form.type,
         priority:     form.priority,
         status:       form.status,
-        dueDate:      form.dueDate        || null,
+        startDate:    form.startDate ? (form.startDate + (form.startTime ? 'T' + form.startTime : 'T00:00')) : null,
+        dueDate:      form.dueDate ? (form.dueDate + (form.dueTime ? 'T' + form.dueTime : 'T12:00')) : null,
         assetId:      form.assetId        || null,
         locationId:   form.locationId     || null,
         locationScope: form.locationId && form.selectedAssetIds.length === 0 ? form.locationScope : null,
@@ -332,9 +338,24 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
               {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
             </select>
           )}
-          {inputRow('Due date', false,
-            <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} className="input-field text-xs sm:text-sm bg-white cursor-pointer" />
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {inputRow('Start date', false,
+              <div className="flex gap-2">
+                <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
+                  className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+                <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
+                  className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28" />
+              </div>
+            )}
+            {inputRow('Due date', false,
+              <div className="flex gap-2">
+                <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
+                  className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+                <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
+                  className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28" />
+              </div>
+            )}
+          </div>
         </div>
         {inputRow('Description', false,
           <textarea value={form.description} onChange={e => set('description', e.target.value)}

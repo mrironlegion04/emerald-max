@@ -1,17 +1,19 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import EmptyState from '@/components/EmptyState'
 import AdvancedWOFilters from '@/components/AdvancedWOFilters'
-import WorkOrdersTable from '@/components/WorkOrdersTable'
+import WorkOrderViewShell from '@/components/WorkOrderViewShell'
+import { WO_STATUS_LABELS, ACTIVE_STATUSES, DONE_STATUSES } from '@/lib/work-order-status'
 
 interface SearchParams {
   search?:      string
-  status?:      string
-  priority?:    string
-  type?:        string
+  status?:      string | string[]
+  priority?:    string | string[]
+  type?:        string | string[]
   assignedToId?:string
   domainId?:    string
   assetId?:     string
@@ -19,21 +21,23 @@ interface SearchParams {
   dueDateTo?:   string
   createdFrom?: string
   createdTo?:   string
+  overdue?:     string
   page?:        string
 }
 
 const ITEMS_PER_PAGE = 25
 
-const statusLabels: Record<string, string> = {
-  OPEN: 'Open', IN_PROGRESS: 'In Progress', ON_HOLD: 'On Hold',
-  COMPLETED: 'Completed', CANCELLED: 'Cancelled',
-}
+const statusLabels = WO_STATUS_LABELS
 const typeLabels: Record<string, string> = {
   BREAKDOWN: 'Breakdown', PREVENTIVE: 'Preventive', PREDICTIVE: 'Predictive',
 }
 
-async function getWorkOrders(filters: SearchParams) {
+async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<string, unknown> | null) {
   const where: Record<string, unknown> = {}
+
+  if (visibilityFilter) {
+    where.AND = [visibilityFilter]
+  }
 
   if (filters.search) {
     where.OR = [
@@ -42,13 +46,27 @@ async function getWorkOrders(filters: SearchParams) {
       { description: { contains: filters.search, mode: 'insensitive' } },
     ]
   }
-  if (filters.status)       where.status       = filters.status
-  if (filters.priority)     where.priority     = filters.priority
-  if (filters.type)         where.type         = filters.type
+
+  if (filters.status) {
+    const v = filters.status
+    where.status = Array.isArray(v) && v.length > 1 ? { in: [...v] } : (Array.isArray(v) ? v[0] : v)
+  }
+  if (filters.priority) {
+    const v = filters.priority
+    where.priority = Array.isArray(v) && v.length > 1 ? { in: [...v] } : (Array.isArray(v) ? v[0] : v)
+  }
+  if (filters.type) {
+    const v = filters.type
+    where.type = Array.isArray(v) && v.length > 1 ? { in: [...v] } : (Array.isArray(v) ? v[0] : v)
+  }
+
   if (filters.assignedToId) where.assignedToId = filters.assignedToId
   if (filters.domainId)     where.domainId     = filters.domainId
-  
 
+  if (filters.overdue === 'true') {
+    where.dueDate = { lt: new Date() }
+    where.status  = { notIn: ['COMPLETED', 'CANCELLED'] }
+  }
 
   if (filters.assetId) {
     const allAssets = await prisma.asset.findMany({
@@ -119,6 +137,93 @@ async function getWorkOrders(filters: SearchParams) {
   return { workOrders, technicians, domains, assets, totalCount, page }
 }
 
+async function getPanelViewData(userId: string, userDomainId: string | null, visibilityFilter: Record<string, unknown> | null) {
+  const woSelect = {
+    id: true, woNumber: true, title: true, type: true, status: true,
+    priority: true, dueDate: true, createdAt: true,
+    asset: { select: { id: true, name: true, assetCode: true } },
+    assignedTo: { select: { id: true, name: true } },
+    domain: { select: { id: true, name: true } },
+    createdBy: { select: { name: true } },
+  }
+
+  const woOrder = [{ priority: 'desc' as const }, { dueDate: 'asc' as const }]
+  const visAnd = visibilityFilter ? [visibilityFilter] : []
+
+  const [myWOs, mySubtasks, rawTeamWOs, rawTeamSubtasks, createdWOs, allOpen, done] = await Promise.all([
+    prisma.workOrder.findMany({
+      where: { AND: visAnd, assignedToId: userId, status: { in: ACTIVE_STATUSES as any } },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      orderBy: woOrder,
+    }),
+    prisma.subtask.findMany({
+      where: { assignedToId: userId, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
+      include: {
+        assignedTo: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
+        workOrder: { select: { id: true, woNumber: true, title: true, status: true, dueDate: true, asset: { select: { id: true, name: true, assetCode: true } } } },
+      },
+      orderBy: woOrder,
+    }),
+    userDomainId ? prisma.workOrder.findMany({
+      where: { AND: visAnd, domainId: userDomainId, status: { in: ACTIVE_STATUSES as any } },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      orderBy: woOrder,
+    }) : [],
+    userDomainId ? prisma.subtask.findMany({
+      where: { assignedDomainId: userDomainId, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
+      include: {
+        assignedTo: { select: { id: true, name: true } },
+        assignedDomain: { select: { id: true, name: true } },
+        workOrder: { select: { id: true, woNumber: true, title: true, status: true, dueDate: true, asset: { select: { id: true, name: true, assetCode: true } } } },
+      },
+      orderBy: woOrder,
+    }) : [],
+    prisma.workOrder.findMany({
+      where: { AND: visAnd, createdById: userId, status: { in: ACTIVE_STATUSES as any } },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      orderBy: woOrder,
+    }),
+    prisma.workOrder.findMany({
+      where: { AND: visAnd, status: { in: ACTIVE_STATUSES as any } },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      orderBy: woOrder,
+    }),
+    prisma.workOrder.findMany({
+      where: { AND: visAnd, status: { in: DONE_STATUSES as any } },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      orderBy: { updatedAt: 'desc' as const },
+      take: 100,
+    }),
+  ])
+
+  const myWOIds = new Set(myWOs.map((w: any) => w.id))
+  const teamWOs = rawTeamWOs.filter((wo: any) => !myWOIds.has(wo.id))
+  const mySTIds = new Set(mySubtasks.map((s: any) => s.id))
+  const teamSubtasks = rawTeamSubtasks.filter((st: any) => !mySTIds.has(st.id))
+
+  const createdWOIds = new Set<string>([...myWOIds, ...teamWOs.map((w: any) => w.id)])
+  const uniqueCreatedWOs = createdWOs.filter((wo: any) => !createdWOIds.has(wo.id))
+
+  const allOpenIds = new Set<string>([
+    ...myWOs.map((w: any) => w.id),
+    ...teamWOs.map((w: any) => w.id),
+    ...uniqueCreatedWOs.map((w: any) => w.id),
+  ])
+  const poolWOs = allOpen.filter((wo: any) => !allOpenIds.has(wo.id))
+
+  return {
+    myWOs,
+    mySubtasks,
+    teamWOs,
+    teamSubtasks,
+    createdWOs: uniqueCreatedWOs,
+    allOpen: [...myWOs, ...teamWOs, ...uniqueCreatedWOs, ...poolWOs],
+    done,
+    totalCount: allOpen.length + done.length,
+  }
+}
+
 export default async function WorkOrdersPage({
   searchParams,
 }: {
@@ -126,20 +231,29 @@ export default async function WorkOrdersPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
-  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params)
+  const visibilityFilter = user ? await buildWOVisibilityFilter(user) : null
+  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+
+  const panelData = user ? await (async () => {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { domainId: true },
+    })
+    return getPanelViewData(user.userId, dbUser?.domainId ?? null, visibilityFilter)
+  })() : null
 
   const overdueCount = workOrders.filter(
     (wo: any) => wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED','CANCELLED'].includes(wo.status)
   ).length
-  
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
   const queryString = new URLSearchParams(params as Record<string, string>)
   queryString.delete('page')
   const baseUrl = `/work-orders?${queryString.toString()}`
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
       <PageHeader
         title="Work Orders"
         subtitle={`${totalCount} total · ${workOrders.length} showing${overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}`}
@@ -150,7 +264,7 @@ export default async function WorkOrdersPage({
 
       <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
 
-      {workOrders.length === 0 ? (
+      {workOrders.length === 0 && !panelData ? (
         <EmptyState
           title="No work orders found"
           description={
@@ -166,45 +280,16 @@ export default async function WorkOrdersPage({
           icon={<ClipboardList className="w-7 h-7" />}
         />
       ) : (
-        <>
-          <WorkOrdersTable
-            workOrders={workOrders}
-            technicians={technicians}
-            typeLabels={typeLabels}
-            statusLabels={statusLabels}
-          />
-          
-          {/* Pagination controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                Page <span className="font-semibold">{page}</span> of <span className="font-semibold">{totalPages}</span>
-              </div>
-              <div className="flex gap-2">
-                {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page=1'} className="btn-secondary text-sm">
-                    ← First
-                  </Link>
-                )}
-                {page > 1 && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page - 1}`} className="btn-secondary text-sm">
-                    ← Previous
-                  </Link>
-                )}
-                {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${page + 1}`} className="btn-secondary text-sm">
-                    Next →
-                  </Link>
-                )}
-                {page < totalPages && (
-                  <Link href={baseUrl + (baseUrl.includes('?') ? '&' : '?') + `page=${totalPages}`} className="btn-secondary text-sm">
-                    Last →
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-        </>
+        <WorkOrderViewShell
+          panelData={panelData}
+          tableData={workOrders}
+          technicians={technicians}
+          typeLabels={typeLabels}
+          statusLabels={statusLabels}
+          totalPages={totalPages}
+          currentPage={String(page)}
+          baseUrl={baseUrl}
+        />
       )}
     </div>
   )

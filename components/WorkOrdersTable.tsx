@@ -143,7 +143,7 @@ export default function WorkOrdersTable({
                 const overdue =
                   wo.dueDate &&
                   new Date(wo.dueDate) < new Date() &&
-                  !['COMPLETED', 'CANCELLED'].includes(wo.status)
+                  !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
                 return (
                   <tr 
@@ -263,7 +263,7 @@ export default function WorkOrdersTable({
             const overdue =
               wo.dueDate &&
               new Date(wo.dueDate) < new Date() &&
-              !['COMPLETED', 'CANCELLED'].includes(wo.status)
+              !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
             const isSelected = selectedIds.includes(wo.id)
 

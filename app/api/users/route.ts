@@ -3,24 +3,27 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hashPassword } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const createSchema = z.object({
   name:       z.string().min(1, 'Name is required'),
   email:      z.string().email('Invalid email'),
   password:   z.string().min(6, 'Password must be at least 6 characters'),
-  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN']).default('TECHNICIAN'),
+  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER']).default('TECHNICIAN'),
   isActive:   z.boolean().default(true),
   phone:      z.string().nullable().optional(),
   bio:        z.string().nullable().optional(),
   department: z.string().nullable().optional(),
   domainId:   z.string().nullable().optional(),
+  woVisibility: z.enum(['FULL','LIMITED']).default('FULL'),
+  customRoleId: z.string().nullable().optional(),
 })
 
 export async function GET() {
   try {
     const user = await getCurrentUser()
-    if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+    if (!user || !(await hasPermission(user, 'user:read'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const users = await prisma.user.findMany({
@@ -62,7 +65,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'user:create'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const body = await request.json()
@@ -85,8 +88,10 @@ export async function POST(request: NextRequest) {
         bio: data.bio || null,
         department: data.department || null,
         domainId: data.domainId || null,
+        woVisibility: data.woVisibility,
+        customRoleId: data.customRoleId || null,
       },
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, domainId: true },
+      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, domainId: true, woVisibility: true, customRoleId: true },
     })
 
     await writeAudit({

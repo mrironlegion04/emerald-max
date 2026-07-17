@@ -83,7 +83,7 @@ export interface UserProfile {
   userId: string
   id: string
   name: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
   email?: string
 }
 

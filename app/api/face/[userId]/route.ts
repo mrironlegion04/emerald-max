@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { removeFaceEnrollment, checkFaceServiceHealth } from '@/lib/face-service'
+import { hasPermission } from '@/lib/permissions'
 
 export async function DELETE(
   request: NextRequest,
@@ -15,7 +16,7 @@ export async function DELETE(
     const { userId } = await params
 
     // Check permissions - user can delete their own or admins can delete anyone's
-    if (user.userId !== userId && user.role !== 'ADMIN') {
+    if (user.userId !== userId && !(await hasPermission(user, 'user:edit'))) {
       return NextResponse.json(
         { error: 'You can only delete your own face data' },
         { status: 403 }
@@ -90,7 +91,7 @@ export async function GET(
     const { userId } = await params
 
     // Check permissions
-    if (user.userId !== userId && user.role !== 'ADMIN') {
+    if (user.userId !== userId && !(await hasPermission(user, 'user:edit'))) {
       return NextResponse.json(
         { error: 'You can only view your own face data' },
         { status: 403 }

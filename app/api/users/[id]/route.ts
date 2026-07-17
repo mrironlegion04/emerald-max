@@ -3,18 +3,21 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hashPassword } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const updateSchema = z.object({
   name:       z.string().min(1).optional(),
   email:      z.string().email().optional(),
   password:   z.string().min(6).optional(),
-  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN']).optional(),
+  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER']).optional(),
   isActive:   z.boolean().optional(),
   phone:      z.string().nullable().optional(),
   bio:        z.string().nullable().optional(),
   department: z.string().nullable().optional(),
   domainId:   z.string().nullable().optional(),
+  woVisibility: z.enum(['FULL','LIMITED']).optional(),
+  customRoleId: z.string().nullable().optional(),
 })
 
 export async function GET(
@@ -45,7 +48,7 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'user:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
@@ -69,6 +72,8 @@ export async function PUT(
       bio:        data.bio ?? null,
       department: data.department ?? null,
       domainId:   data.domainId ?? null,
+      woVisibility: data.woVisibility,
+      customRoleId: data.customRoleId ?? null,
     }
     if (data.email)    updateData.email        = data.email.toLowerCase()
     if (data.password) updateData.passwordHash = await hashPassword(data.password)
@@ -79,7 +84,7 @@ export async function PUT(
     const updated = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, domainId: true },
+      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, domainId: true, woVisibility: true, customRoleId: true },
     })
 
     await writeAudit({

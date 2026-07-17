@@ -10,7 +10,7 @@ interface User {
   userId: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
 }
 
 interface MobileHeaderProps {

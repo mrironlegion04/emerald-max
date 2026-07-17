@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { hasPermission } from '@/lib/permissions'
+import { canViewWorkOrder } from '@/lib/access-control'
 import { z } from 'zod'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -13,7 +15,7 @@ import {
   canCompleteWorkOrder,
   isAdmin,
 } from '@/lib/access-control'
-import { updateAssetMetrics } from '@/lib/metrics'
+import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
@@ -57,8 +59,9 @@ const updateSchema = z.object({
   description:         z.string().nullable().optional(),
   type:                z.enum(['BREAKDOWN','PREVENTIVE','PREDICTIVE']).optional(),
   priority:            z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).optional(),
-  status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CANCELLED']).optional(),
+  status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CLOSED','CANCELLED']).optional(),
   dueDate:             z.string().nullable().optional(),
+  startDate:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
@@ -96,22 +99,18 @@ export async function GET(
         completedBy: true,
         issue:       true,
         partsUsed:   { include: { part: true } },
-        subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true } },
+        subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true, assignedDomain: true } },
         domain:      true,
+        procedures:  { include: { steps: { include: { asset: { include: { location: true } } } } } },
+        attachments: { include: { uploadedBy: { select: { name: true } } } },
+        statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' as const } },
       },
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
-      const isAssigned = wo.assignedToId === user.userId
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.userId },
-        select: { domainId: true }
-      })
-      const isDomainMember = wo.domainId && dbUser?.domainId === wo.domainId
-      if (!isAssigned && !isDomainMember) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      }
+    const { allowed } = await canViewWorkOrder(user, wo.id)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     return NextResponse.json(wo)
@@ -175,6 +174,14 @@ export async function PUT(
       if (!completionAccess.allowed) {
         return NextResponse.json({ error: completionAccess.reason }, { status: 403 })
       }
+    }
+
+    // Block edits on CLOSED work orders
+    if (existingWo.status === 'CLOSED' && !isAdmin(user)) {
+      return NextResponse.json(
+        { error: 'Closed work orders cannot be edited' },
+        { status: 403 }
+      )
     }
 
     // ── Auto-timestamps ───────────────────────────────────────────────
@@ -245,11 +252,12 @@ export async function PUT(
         Object.entries(data).filter(([key]) =>
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','domainId','laborHours','laborCost',
-           'partsCost','notes','issueId','customIssue'].includes(key)
+           'partsCost','notes','issueId','customIssue','startDate'].includes(key)
         )
       ),
       ...extra,
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
       assetId: normalized.assetId, // use normalized single-asset display value
     }
 
@@ -276,9 +284,9 @@ export async function PUT(
     }
 
     // ── Update asset metrics on completion ────────────────────────────
-    if (data.status === 'COMPLETED' && wo.assetId) {
+    if (data.status === 'COMPLETED') {
       try {
-        await updateAssetMetrics(wo.assetId)
+        await updateWorkOrderLinkedAssetMetrics(id)
       } catch (err) {
         console.error('Failed to update asset metrics:', err)
       }
@@ -291,7 +299,7 @@ export async function PUT(
           where: { id: wo.assetId },
           data: { status: 'UNDER_MAINTENANCE' },
         })
-      } else if (data.status === 'COMPLETED' || data.status === 'CANCELLED') {
+      } else if (data.status === 'COMPLETED' || data.status === 'CANCELLED' || data.status === 'CLOSED') {
         await prisma.asset.update({
           where: { id: wo.assetId },
           data: { status: 'ACTIVE' },
@@ -344,7 +352,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'wo:delete'))) {
       return NextResponse.json({ error: 'Only admins can delete work orders' }, { status: 403 })
     }
     const { id } = await params
@@ -352,7 +360,9 @@ export async function DELETE(
       where: { id },
       select: {
         title: true,
+        assetId: true,
         attachments: true,
+        assets: { select: { assetId: true } },
         procedures: {
           include: {
             steps: true
@@ -395,6 +405,18 @@ export async function DELETE(
 
     await prisma.workOrderPart.deleteMany({ where: { workOrderId: id } })
     await prisma.workOrder.delete({ where: { id } })
+
+    // Recalculate metrics for all assets that were linked to this WO
+    const linkedAssetIds = new Set<string>()
+    if (wo.assetId) linkedAssetIds.add(wo.assetId)
+    for (const a of wo.assets) linkedAssetIds.add(a.assetId)
+    for (const assetId of linkedAssetIds) {
+      try {
+        await updateAssetMetrics(assetId)
+      } catch (err) {
+        console.error('Failed to update asset metrics after WO delete:', err)
+      }
+    }
 
     await writeAudit({
       action: 'DELETE',

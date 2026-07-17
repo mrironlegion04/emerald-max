@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const statusUpdateSchema = z.object({
@@ -15,7 +16,7 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'meter:edit'))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

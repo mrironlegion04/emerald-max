@@ -19,7 +19,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
   isActive: boolean
   createdAt: string
   phone?: string | null

@@ -16,6 +16,7 @@ import {
   Package,
   TrendingUp,
 } from 'lucide-react'
+import { WO_STATUS_LABELS, WO_STATUS_HEX } from '@/lib/work-order-status'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface KPIs {
@@ -41,10 +42,7 @@ interface ReportData {
 }
 
 // ── Colours ──────────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<string,string> = {
-  OPEN:'#3b82f6', IN_PROGRESS:'#f59e0b', ON_HOLD:'#f97316',
-  COMPLETED:'#22c55e', CANCELLED:'#9ca3af',
-}
+const STATUS_COLORS = WO_STATUS_HEX
 const TYPE_COLORS  = ['#6366f1','#14b8a6','#f59e0b','#ef4444']
 const PRIORITY_COLORS: Record<string,string> = {
   LOW:'#9ca3af', MEDIUM:'#3b82f6', HIGH:'#f97316', CRITICAL:'#ef4444',
@@ -63,9 +61,7 @@ function fmt(date: string | null) {
   return new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric' }).format(new Date(date))
 }
 
-const STATUS_LABELS: Record<string,string> = {
-  OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled',
-}
+const STATUS_LABELS = WO_STATUS_LABELS
 const TYPE_LABELS: Record<string,string> = {
   BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive',
 }

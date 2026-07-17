@@ -5,6 +5,7 @@ import { useCallback, useTransition, useState, useEffect } from 'react'
 import { Search, Filter, X, Download, ChevronDown } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import FilterDrawer from './FilterDrawer'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null }
 interface User { id: string; name: string; role: string }
@@ -19,11 +20,7 @@ interface Props {
 
 const statusOptions = [
   { value: '', label: 'All statuses' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'ON_HOLD', label: 'On Hold' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  ...Object.entries(WO_STATUS_LABELS).map(([value, label]) => ({ value, label })),
 ]
 const priorityOptions = [
   { value: '', label: 'All priorities' },

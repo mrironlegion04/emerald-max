@@ -30,8 +30,9 @@ export default function LoginPage() {
         return
       }
 
-      // Login successful - redirect to dashboard
-      router.push('/dashboard')
+      // Login successful - redirect based on role
+      const role = data.role
+      router.push(role === 'REQUESTER' ? '/request' : '/work-orders')
       router.refresh()
     } catch {
       setError('Something went wrong. Please try again.')

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge, { assetStatusVariant, workOrderStatusVariant, priorityVariant } from '@/components/Badge'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import DeleteAssetButton from '@/components/DeleteAssetButton'
 import RestoreAssetButton from '@/components/RestoreAssetButton'
 import QRCodeButton from '@/components/QRCodeButton'
@@ -11,10 +12,11 @@ import AttachmentsPanel from '@/components/AttachmentsPanel'
 import AssetPhotoDisplay from '@/components/AssetPhotoDisplay'
 import AssetBreadcrumbs from '@/components/AssetBreadcrumbs'
 import AssetChildrenPanel from '@/components/AssetChildrenPanel'
-import AssetBOMPanel from '@/components/AssetBOMPanel'
+import AssetPartsTab from '@/components/AssetPartsTab'
 import AssetTabs from '@/components/AssetTabs'
 import MeterListPanel from '@/components/MeterListPanel'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
+import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
 
 function formatDate(date: Date | string | null) {
   if (!date) return '—'
@@ -35,13 +37,7 @@ const statusLabels: Record<string, string> = {
   DECOMMISSIONED: 'Decommissioned',
 }
 
-const woStatusLabels: Record<string, string> = {
-  OPEN: 'Open',
-  IN_PROGRESS: 'In Progress',
-  ON_HOLD: 'On Hold',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-}
+const woStatusLabels = WO_STATUS_LABELS
 
 export default async function AssetDetailPage({
   params,
@@ -93,6 +89,30 @@ export default async function AssetDetailPage({
   })
 
   if (!asset) notFound()
+
+  // Parts usage history: find WOs linked to this asset, then their parts
+  const assetWOIds = await prisma.workOrderAsset.findMany({
+    where: { assetId: id },
+    select: { workOrderId: true },
+  })
+  const partsUsage = await prisma.workOrderPart.findMany({
+    where: { workOrderId: { in: assetWOIds.map(w => w.workOrderId) } },
+    include: {
+      part: { select: { id: true, name: true, partNumber: true, unit: true, unitCost: true } },
+      workOrder: { select: { id: true, woNumber: true, title: true, status: true, completedAt: true, createdAt: true } },
+    },
+    orderBy: { workOrder: { createdAt: 'desc' } },
+  })
+
+  const totalPartsValue = asset.assetParts.reduce(
+    (sum, ap) => sum + ap.expectedQuantity * (ap.part.unitCost ?? 0), 0
+  )
+  const totalPartsUsedQty = partsUsage.reduce((s, p) => s + p.quantity, 0)
+  const totalPartsUsedCost = partsUsage.reduce(
+    (s, p) => s + p.quantity * (p.unitCost ?? p.part.unitCost ?? 0), 0
+  )
+
+  const metrics = await getAssetMetrics(id)
 
   const isDeleted = asset.isDeleted
 
@@ -245,34 +265,46 @@ export default async function AssetDetailPage({
               <h2 className="font-semibold text-gray-900 text-sm mb-4">Maintenance Metrics</h2>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-xs text-gray-600">MTTR (Mean Time to Repair)</span>
+                  <span className="text-xs text-gray-600">MTTR (Repair Time)</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {asset.mttrMinutes ? (
-                      <>
-                        {Math.floor(asset.mttrMinutes / 60)}h {asset.mttrMinutes % 60}m
-                      </>
-                    ) : (
-                      '—'
-                    )}
+                    {metrics.mttr > 0 ? formatMinutes(metrics.mttr) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-xs text-gray-600">Avg Downtime (Asset Unavailable)</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {metrics.avgDowntime > 0 ? formatMinutes(metrics.avgDowntime) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">MTBF (Mean Time Between Failures)</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {asset.mtbfDays ? `${Math.floor(asset.mtbfDays)} days` : '—'}
+                    {metrics.mtbf > 0 ? formatDays(metrics.mtbf) : '—'}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 pt-2 flex justify-between items-center">
                   <span className="text-xs text-gray-600">Total Failures</span>
-                  <span className="text-sm font-semibold text-gray-900">{asset.totalFailures || 0}</span>
+                  <span className="text-sm font-semibold text-gray-900">{metrics.totalFailures}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-xs text-gray-600">Total Repair Time</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {metrics.totalRepairTime > 0 ? formatMinutes(metrics.totalRepairTime) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-xs text-gray-600">Total Downtime</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {metrics.totalDowntimeMinutes > 0 ? formatMinutes(metrics.totalDowntimeMinutes) : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">Last Failure</span>
-                  <span className="text-xs text-gray-600">{formatDate(asset.lastFailureDate)}</span>
+                  <span className="text-xs text-gray-600">{formatDate(metrics.lastFailureDate)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">Last Repair</span>
-                  <span className="text-xs text-gray-600">{formatDate(asset.lastRepairDate)}</span>
+                  <span className="text-xs text-gray-600">{formatDate(metrics.lastRepairDate)}</span>
                 </div>
               </div>
             </div>
@@ -417,15 +449,6 @@ export default async function AssetDetailPage({
             {/* Children */}
             <AssetChildrenPanel assetId={asset.id} children={children} canEdit={canEdit} />
 
-            {/* BOM Panel */}
-            <AssetBOMPanel 
-              assetId={asset.id}
-              assetParts={asset.assetParts}
-              allParts={allParts}
-              bomTemplates={bomTemplates}
-              canEdit={canEdit}
-            />
-
             {/* Attachments */}
             <AttachmentsPanel
               attachments={asset.attachments.map((a: any) => ({
@@ -484,6 +507,20 @@ export default async function AssetDetailPage({
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'parts' && (
+        <AssetPartsTab
+          assetId={asset.id}
+          assetParts={asset.assetParts}
+          allParts={allParts}
+          bomTemplates={bomTemplates}
+          partsUsage={partsUsage}
+          totalPartsValue={totalPartsValue}
+          totalPartsUsedQty={totalPartsUsedQty}
+          totalPartsUsedCost={totalPartsUsedCost}
+          canEdit={canEdit}
+        />
       )}
 
       {activeTab === 'meters' && (

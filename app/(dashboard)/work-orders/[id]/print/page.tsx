@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/session'
 import { notFound } from 'next/navigation'
 import PrintButton from '@/components/PrintButton'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 const typeLabels: Record<string, string> = {
   BREAKDOWN: 'Breakdown', PREVENTIVE: 'Preventive', PREDICTIVE: 'Predictive',
@@ -10,9 +11,7 @@ const typeLabels: Record<string, string> = {
 const priorityLabels: Record<string, string> = {
   LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical',
 }
-const statusLabels: Record<string, string> = {
-  OPEN: 'Open', IN_PROGRESS: 'In Progress', ON_HOLD: 'On Hold', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
-}
+const statusLabels = WO_STATUS_LABELS
 
 export default async function WorkOrderPrintPage({
   params,
@@ -30,6 +29,7 @@ export default async function WorkOrderPrintPage({
       partsUsed: { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       attachments: { include: { uploadedBy: { select: { name: true } } } },
       procedures: { include: { steps: true } },
+      repairSessions: { orderBy: { sessionNo: 'asc' } },
     },
   })
 
@@ -109,6 +109,7 @@ export default async function WorkOrderPrintPage({
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Dates</h3>
           <div className="space-y-1 text-sm">
             <p><strong>Created:</strong> {fmtDateTime(wo.createdAt)}</p>
+            {wo.startDate && <p><strong>Start date:</strong> {fmtDateTime(wo.startDate)}</p>}
             {wo.startedAt && <p><strong>Started:</strong> {fmtDateTime(wo.startedAt)}</p>}
             {wo.respondedAt && <p><strong>Responded:</strong> {fmtDateTime(wo.respondedAt)}</p>}
             {wo.completedAt && <p><strong>Completed:</strong> {fmtDateTime(wo.completedAt)}</p>}
@@ -123,6 +124,19 @@ export default async function WorkOrderPrintPage({
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Labor & Cost</h3>
           <div className="space-y-1 text-sm">
+            {(wo.repairSessions as any[]).length > 0 && (
+              <div className="mb-2">
+                <p className="font-semibold text-gray-700 mb-1">Repair Sessions:</p>
+                {(wo.repairSessions as any[]).map((s: any) => (
+                  <p key={s.id} className="ml-2 text-gray-600">
+                    #{s.sessionNo}: {new Date(s.startedAt).toLocaleDateString()}{' '}
+                    {new Date(s.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {s.completedAt && ` → ${new Date(s.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                    {s.durationMinutes != null && ` (${Math.floor(s.durationMinutes / 60)}h ${s.durationMinutes % 60}m)`}
+                  </p>
+                ))}
+              </div>
+            )}
             {wo.laborHours && <p><strong>Labor hours:</strong> {wo.laborHours} hrs</p>}
             <p><strong>Labor cost:</strong> {fmtCurrency(wo.laborCost)}</p>
             <p><strong>Parts cost:</strong> {fmtCurrency(wo.partsCost)}</p>

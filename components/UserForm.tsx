@@ -15,6 +15,8 @@ interface UserFormData {
   bio: string
   department: string
   domainId: string
+  woVisibility: string
+  customRoleId: string
 }
 
 interface UserSkill {
@@ -48,6 +50,7 @@ const roleOptions = [
   { value: 'ADMIN', label: 'Admin — full access' },
   { value: 'MANAGER', label: 'Manager — create/edit, no delete' },
   { value: 'TECHNICIAN', label: 'Technician — view + update WOs' },
+  { value: 'REQUESTER', label: 'Requester — submit requests only' },
 ]
 
 export default function UserForm({ initialData, userId }: Props) {
@@ -55,16 +58,16 @@ export default function UserForm({ initialData, userId }: Props) {
   const isEdit = !!userId
 
   const [domains, setDomains] = useState<{ id: string; name: string }[]>([])
+  const [customRoles, setCustomRoles] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    fetch('/api/domains')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setDomains(data)
-        }
-      })
-      .catch(err => console.error('Error fetching domains', err))
+    Promise.all([
+      fetch('/api/domains').then(r => r.json()),
+      fetch('/api/roles').then(r => r.json()),
+    ]).then(([doms, roles]) => {
+      if (Array.isArray(doms)) setDomains(doms)
+      if (Array.isArray(roles)) setCustomRoles(roles)
+    }).catch(err => console.error('Error fetching data', err))
   }, [])
 
   const [form, setForm] = useState<UserFormData>({
@@ -77,6 +80,8 @@ export default function UserForm({ initialData, userId }: Props) {
     bio: (initialData as any)?.bio ?? '',
     department: (initialData as any)?.department ?? '',
     domainId: (initialData as any)?.domainId ?? '',
+    woVisibility: (initialData as any)?.woVisibility ?? 'FULL',
+    customRoleId: (initialData as any)?.customRoleId ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -107,6 +112,8 @@ export default function UserForm({ initialData, userId }: Props) {
         bio: form.bio || null,
         department: form.department || null,
         domainId: form.domainId || null,
+        woVisibility: form.woVisibility,
+        customRoleId: form.customRoleId || null,
       }
       if (form.password) payload.password = form.password
 
@@ -382,6 +389,33 @@ export default function UserForm({ initialData, userId }: Props) {
             ))}
           </select>
         </div>
+        {isEdit && customRoles.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custom Role <span className="text-gray-400 font-normal">(overrides default permissions)</span>
+            </label>
+            <select value={form.customRoleId} onChange={e => set('customRoleId', e.target.value)} className="input-field">
+              <option value="">Use default role permissions</option>
+              {customRoles.map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {isEdit && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Work Order Visibility
+            </label>
+            <select value={form.woVisibility} onChange={e => set('woVisibility', e.target.value)} className="input-field">
+              <option value="FULL">Full — see all work orders</option>
+              <option value="LIMITED">Limited — only assigned/created/team WOs</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Limited visibility restricts the user to only see WOs assigned to them, created by them, or in their team/domain.
+            </p>
+          </div>
+        )}
         {isEdit && (
           <div className="flex items-center gap-3">
             <input

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 
 function parseCSV(text: string): Record<string, string>[] {
@@ -27,7 +28,7 @@ function parseCSV(text: string): Record<string, string>[] {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'import:data'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

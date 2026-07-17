@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -19,7 +20,7 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'issue:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
@@ -60,7 +61,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'issue:delete'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params

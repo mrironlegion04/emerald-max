@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { hasPermission } from '@/lib/permissions'
 
 export async function GET(
   req: NextRequest,
@@ -9,7 +10,7 @@ export async function GET(
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    if (user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Technicians cannot export data' }, { status: 403 })
+    if (!(await hasPermission(user, 'report:view'))) return NextResponse.json({ error: 'Technicians cannot export data' }, { status: 403 })
 
     const { locationId } = await params
     const searchParams = req.nextUrl.searchParams
@@ -112,16 +113,16 @@ export async function GET(
 
     // Build data for JSON response
     const typeStatusMatrix = [
-      { type: 'BREAKDOWN', open: 0, inProgress: 0, onHold: 0, completed: 0, cancelled: 0, total: 0 },
-      { type: 'PREVENTIVE', open: 0, inProgress: 0, onHold: 0, completed: 0, cancelled: 0, total: 0 },
-      { type: 'PREDICTIVE', open: 0, inProgress: 0, onHold: 0, completed: 0, cancelled: 0, total: 0 },
+      { type: 'BREAKDOWN', open: 0, inProgress: 0, onHold: 0, completed: 0, closed: 0, cancelled: 0, total: 0 },
+      { type: 'PREVENTIVE', open: 0, inProgress: 0, onHold: 0, completed: 0, closed: 0, cancelled: 0, total: 0 },
+      { type: 'PREDICTIVE', open: 0, inProgress: 0, onHold: 0, completed: 0, closed: 0, cancelled: 0, total: 0 },
     ]
 
     const priorityStatusMatrix = [
-      { priority: 'CRITICAL', open: 0, inProgress: 0, completed: 0, total: 0 },
-      { priority: 'HIGH', open: 0, inProgress: 0, completed: 0, total: 0 },
-      { priority: 'MEDIUM', open: 0, inProgress: 0, completed: 0, total: 0 },
-      { priority: 'LOW', open: 0, inProgress: 0, completed: 0, total: 0 },
+      { priority: 'CRITICAL', open: 0, inProgress: 0, completed: 0, closed: 0, total: 0 },
+      { priority: 'HIGH', open: 0, inProgress: 0, completed: 0, closed: 0, total: 0 },
+      { priority: 'MEDIUM', open: 0, inProgress: 0, completed: 0, closed: 0, total: 0 },
+      { priority: 'LOW', open: 0, inProgress: 0, completed: 0, closed: 0, total: 0 },
     ]
 
     // Fill matrices
@@ -133,6 +134,7 @@ export async function GET(
         else if (wo.status === 'IN_PROGRESS') typeRow.inProgress += 1
         else if (wo.status === 'ON_HOLD') typeRow.onHold += 1
         else if (wo.status === 'COMPLETED') typeRow.completed += 1
+        else if (wo.status === 'CLOSED') typeRow.closed += 1
         else if (wo.status === 'CANCELLED') typeRow.cancelled += 1
       }
 
@@ -142,6 +144,7 @@ export async function GET(
         if (wo.status === 'OPEN') priorityRow.open += 1
         else if (wo.status === 'IN_PROGRESS') priorityRow.inProgress += 1
         else if (wo.status === 'COMPLETED') priorityRow.completed += 1
+        else if (wo.status === 'CLOSED') priorityRow.closed += 1
       }
     })
 
@@ -179,16 +182,18 @@ export async function GET(
       assetName: wo.asset?.name || '—',
       dueDate: wo.dueDate,
       createdAt: wo.createdAt,
-      isOverdue: wo.dueDate && wo.dueDate < now && wo.status !== 'COMPLETED',
+      isOverdue: wo.dueDate && wo.dueDate < now && !['COMPLETED', 'CLOSED'].includes(wo.status),
     }))
 
     const completed = workOrders.filter(wo => wo.status === 'COMPLETED').length
+    const closed = workOrders.filter(wo => wo.status === 'CLOSED').length
     const open = workOrders.filter(wo => wo.status === 'OPEN').length
-    const overdue = workOrders.filter(wo => wo.dueDate && wo.dueDate < now && wo.status !== 'COMPLETED').length
+    const overdue = workOrders.filter(wo => wo.dueDate && wo.dueDate < now && !['COMPLETED', 'CLOSED'].includes(wo.status)).length
 
     const totals = {
       total: workOrders.length,
       completed,
+      closed,
       open,
       overdue,
       avgResolutionHours: 0,

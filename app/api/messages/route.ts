@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
 import { Prisma } from '@prisma/client'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -187,7 +188,11 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
     }
 
     // 3. Sync Active Work Orders
+    const visibilityFilter = await buildWOVisibilityFilter({ userId, role: role as any })
     const queryConditions: Prisma.WorkOrderWhereInput = {}
+    if (visibilityFilter) {
+      queryConditions.AND = [visibilityFilter as any]
+    }
     if (role === 'TECHNICIAN') {
       queryConditions.OR = [
         { assignedToId: userId },

@@ -1,0 +1,168 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getCurrentUser } from '@/lib/session'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
+
+export async function GET() {
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { domainId: true },
+  })
+  const domainId = dbUser?.domainId ?? null
+  const visibilityFilter = await buildWOVisibilityFilter(user)
+  const visAnd = visibilityFilter ? [visibilityFilter] : []
+
+  const now = new Date()
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  const domainFilter = domainId ? { domainId } : undefined
+  const myOrDomain = domainId
+    ? [{ assignedToId: user.userId }, { domainId }]
+    : [{ assignedToId: user.userId }]
+
+  const [
+    highPriorityWOs,
+    overdueWOs,
+    pendingRequests,
+    completedLast7Days,
+    myAssignedWOs,
+    teamWOs,
+    unassignedWOs,
+    recentActivity,
+    totalOpen,
+  ] = await Promise.all([
+    // High priority WOs assigned to user or their domain
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        priority: { in: ['HIGH', 'CRITICAL'] },
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+        OR: myOrDomain,
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
+        asset: { select: { name: true } },
+      },
+      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
+      take: 10,
+    }),
+    // Overdue WOs assigned to user or their domain
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+        dueDate: { lt: now },
+        OR: myOrDomain,
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
+        asset: { select: { name: true } },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: 10,
+    }),
+    // Pending requests
+    prisma.maintenanceRequest.count({
+      where: { status: 'PENDING' },
+    }),
+    // Completed in last 7 days (assigned to user or their domain)
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        status: { in: ['COMPLETED', 'CLOSED'] },
+        completedAt: { gte: sevenDaysAgo },
+        OR: myOrDomain,
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, completedAt: true,
+        asset: { select: { name: true } },
+      },
+      orderBy: { completedAt: 'desc' },
+      take: 10,
+    }),
+    // TO-DO: Assigned to me
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        assignedToId: user.userId,
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
+        asset: { select: { name: true } },
+      },
+      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
+      take: 10,
+    }),
+    // TO-DO: Assigned to my teams
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        ...domainFilter,
+        assignedToId: { not: user.userId },
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
+        assignedTo: { select: { name: true } },
+        asset: { select: { name: true } },
+      },
+      orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
+      take: 10,
+    }),
+    // TO-DO: Unassigned / everything else
+    prisma.workOrder.findMany({
+      where: {
+        AND: visAnd,
+        assignedToId: null,
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
+      },
+      select: {
+        id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
+        asset: { select: { name: true } },
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      take: 10,
+    }),
+    // Recent activity (audit log)
+    prisma.auditLog.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: {
+        id: true, action: true, entity: true, entityName: true, createdAt: true, userName: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 15,
+    }),
+    // Total open WOs count
+    prisma.workOrder.count({
+      where: { AND: visAnd, status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] } },
+    }),
+  ])
+
+  return NextResponse.json({
+   WOStats: {
+      highPriority: highPriorityWOs.length,
+      overdue: overdueWOs.length,
+      pendingApprovals: pendingRequests,
+      completedLast7Days: completedLast7Days.length,
+      totalOpen,
+    },
+    highPriorityWOs,
+    overdueWOs,
+    completedLast7Days,
+    myAssignedWOs,
+    teamWOs,
+    unassignedWOs,
+    recentActivity: recentActivity.map(a => ({
+      id: a.id,
+      action: a.action,
+      entity: a.entity,
+      entityName: a.entityName,
+      userName: a.userName ?? 'System',
+      createdAt: a.createdAt,
+    })),
+  })
+}

@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { WO_STATUS_VARIANTS } from '@/lib/work-order-status'
 
 export type BadgeVariant = 'green' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'
 
@@ -29,14 +30,7 @@ export default function Badge({ label, variant = 'gray' }: BadgeProps) {
 
 // Helpers for consistent status/priority coloring used across all pages
 export function workOrderStatusVariant(status: string): BadgeVariant {
-  const map: Record<string, BadgeVariant> = {
-    OPEN: 'blue',
-    IN_PROGRESS: 'yellow',
-    ON_HOLD: 'orange',
-    COMPLETED: 'green',
-    CANCELLED: 'gray',
-  }
-  return map[status] ?? 'gray'
+  return WO_STATUS_VARIANTS[status] ?? 'gray'
 }
 
 export function priorityVariant(priority: string): BadgeVariant {

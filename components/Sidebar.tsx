@@ -6,13 +6,11 @@ import { useState } from 'react'
 import clsx from 'clsx'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Home,
   Box,
   Building2,
   MapPin,
   ClipboardList,
   Calendar,
-  Clock,
   MessageSquare,
   MessageCircle,
   BarChart3,
@@ -21,6 +19,7 @@ import {
   Globe,
   Shield,
   Settings,
+  Cog,
   QrCode,
   LogOut,
   ClipboardCheck,
@@ -28,7 +27,6 @@ import {
   Tag,
   Layers,
   AlertCircle,
-  CheckSquare,
   Gauge,
   X,
   ChevronDown,
@@ -40,19 +38,14 @@ interface User {
   userId: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
 }
 
 const navItems = [
   {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: <Home className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'To Do',
-    href: '/to-do',
-    icon: <CheckSquare className="w-4.5 h-4.5" />,
+    label: 'Work Orders',
+    href: '/work-orders',
+    icon: <ClipboardList className="w-4.5 h-4.5" />,
   },
   {
     label: 'Messages',
@@ -65,23 +58,8 @@ const navItems = [
     icon: <Gauge className="w-4.5 h-4.5" />,
   },
   {
-    label: 'Work Orders',
-    href: '/work-orders',
-    icon: <ClipboardList className="w-4.5 h-4.5" />,
-  },
-  {
     label: 'Preventive Maint.',
     href: '/preventive-maintenance',
-    icon: <Calendar className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Schedule',
-    href: '/schedule',
-    icon: <Clock className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Calendar',
-    href: '/calendar',
     icon: <Calendar className="w-4.5 h-4.5" />,
   },
   {
@@ -102,6 +80,16 @@ const managerItems = [
     label: 'Users',
     href: '/users',
     icon: <Users className="w-4.5 h-4.5" />,
+  },
+  {
+    label: 'Teams',
+    href: '/teams',
+    icon: <Users className="w-4.5 h-4.5" />,
+  },
+  {
+    label: 'Custom Roles',
+    href: '/settings/roles',
+    icon: <Shield className="w-4.5 h-4.5" />,
   },
 ]
 
@@ -227,7 +215,6 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   }
 
   function isActive(href: string) {
-    if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
   }
 
@@ -245,10 +232,10 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
       <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-linear-to-b from-slate-50/20 to-white">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/30">
-            <Settings className="w-5 h-5 text-white animate-spin-slow" />
+            <Cog className="w-5 h-5 text-white animate-spin-slow" />
           </div>
           <div>
-            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD MAINTENANCE</p>
+            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD</p>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maintenance System</p>
           </div>
         </div>

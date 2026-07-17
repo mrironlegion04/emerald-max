@@ -14,22 +14,64 @@ const sessionOptions = {
   },
 }
 
+// Routes that only non-REQUESTER roles can access
+const STAFF_ONLY_PATHS = [
+  '/work-orders',
+  '/assets',
+  '/overview',
+  '/more',
+  '/dashboard',
+  '/calendar',
+  '/schedule',
+  '/to-do',
+  '/settings',
+  '/teams',
+  '/parts',
+  '/meters',
+  '/procedures',
+  '/reports',
+  '/audit',
+  '/domains',
+  '/issues',
+  '/skills',
+]
+
+// Routes only REQUESTER can access
+const REQUESTER_ONLY_PATHS = [
+  '/my-requests',
+]
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth needed
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth')) {
+  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth') || pathname === '/request') {
     return NextResponse.next()
   }
-  
+
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)
 
-  console.log('Middleware - IsLoggedIn:', session.isLoggedIn)
-
   if (!session.isLoggedIn) {
-    console.log('Middleware - Not logged in, redirecting to /login')
     return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  const role = session.role
+
+  // REQUESTER trying to access staff-only routes → redirect to /request
+  if (role === 'REQUESTER') {
+    const isStaffPath = STAFF_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+    if (isStaffPath) {
+      return NextResponse.redirect(new URL('/request', request.url))
+    }
+  }
+
+  // Non-REQUESTER trying to access requester-only routes → redirect to /work-orders
+  if (role && role !== 'REQUESTER') {
+    const isRequesterPath = REQUESTER_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+    if (isRequesterPath) {
+      return NextResponse.redirect(new URL('/work-orders', request.url))
+    }
   }
 
   return response

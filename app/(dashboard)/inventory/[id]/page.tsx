@@ -7,6 +7,7 @@ import DeletePartButton from '@/components/DeletePartButton'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import RestorePartButton from '@/components/RestorePartButton'
 import PartQRButton from '@/components/PartQRButton'
+import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
 
 function fmtCurrency(v: number | null) {
   if (v === null || v === undefined) return '—'
@@ -19,16 +20,8 @@ function fmt(date: Date | string | null) {
 
 
 
-const woStatusColors: Record<string, string> = {
-  OPEN: 'bg-blue-100 text-blue-700',
-  IN_PROGRESS: 'bg-yellow-100 text-yellow-700',
-  ON_HOLD: 'bg-orange-100 text-orange-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-gray-100 text-gray-500',
-}
-const woStatusLabels: Record<string,string> = {
-  OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled',
-}
+const woStatusColors = WO_STATUS_PILL
+const woStatusLabels = WO_STATUS_LABELS
 
 export default async function PartDetailPage({
   params,

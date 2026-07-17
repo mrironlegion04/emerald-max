@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const bulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one work order required'),
   action: z.enum(['assign', 'status', 'export']),
   technicianId: z.string().optional(),
-  status: z.enum(['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED']).optional(),
+  status: z.enum(['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CLOSED', 'CANCELLED']).optional(),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'MANAGER')) {
+    if (!user || !(await hasPermission(user, 'wo:assign'))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
 import { z } from 'zod'
 import {
   normalizeWorkOrderAssets,
@@ -19,6 +20,7 @@ const woSchema = z.object({
   priority:            z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
   status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CANCELLED']).default('OPEN'),
   dueDate:             z.string().nullable().optional(),
+  startDate:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
@@ -55,23 +57,9 @@ export async function GET() {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    let userDomainId: string | null = null
-    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.userId },
-        select: { domainId: true }
-      })
-      userDomainId = dbUser?.domainId ?? null
-    }
+    const visibilityFilter = await buildWOVisibilityFilter(user)
 
-    const whereClause = user.role === 'ADMIN' || user.role === 'MANAGER'
-      ? {}
-      : {
-          OR: [
-            { assignedToId: user.userId },
-            ...(userDomainId ? [{ domainId: userDomainId }] : []),
-          ],
-        }
+    const whereClause = visibilityFilter ? { AND: [visibilityFilter] } : {}
 
     const wos = await prisma.workOrder.findMany({
       where: whereClause,
@@ -127,6 +115,7 @@ export async function POST(request: NextRequest) {
         priority:       data.priority,
         status:         data.status,
         dueDate:        data.dueDate      ? new Date(data.dueDate) : null,
+        startDate:      data.startDate    ? new Date(data.startDate) : null,
         assetId:        normalized.assetId,
         locationId:     data.locationId   ?? null,
         locationScope:  data.locationScope ?? null,

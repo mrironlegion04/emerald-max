@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Screen bottom padding + Bottom Nav - shown on mobile screens */}
       <div className="lg:hidden">
-        <BottomNav user={user} />
+        <BottomNav />
       </div>
     </div>
   )

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'audit:view'))) {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 })
     }
 

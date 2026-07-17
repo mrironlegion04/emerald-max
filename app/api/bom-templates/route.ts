@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!user || !(await hasPermission(user, 'bom:create'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     const { name, description } = await request.json()
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     

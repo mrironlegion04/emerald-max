@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
 import { unlink } from 'fs/promises'
@@ -98,7 +99,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser()
-    if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+    if (!user || !(await hasPermission(user, 'procedure:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
@@ -161,7 +162,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const user = await getCurrentUser()
-    if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+    if (!user || !(await hasPermission(user, 'procedure:delete'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params

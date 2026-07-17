@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       preventive: allWorkOrders.filter(w => w.type === 'PREVENTIVE').length,
       open: allWorkOrders.filter(w => w.status === 'OPEN').length,
       completed: allWorkOrders.filter(w => w.status === 'COMPLETED').length,
+      closed: allWorkOrders.filter(w => w.status === 'CLOSED').length,
     }
 
     const locationsData = parentLocations.map(loc => {
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
         IN_PROGRESS: wos.filter(w => w.status === 'IN_PROGRESS').length,
         ON_HOLD: wos.filter(w => w.status === 'ON_HOLD').length,
         COMPLETED: wos.filter(w => w.status === 'COMPLETED').length,
+        CLOSED: wos.filter(w => w.status === 'CLOSED').length,
         CANCELLED: wos.filter(w => w.status === 'CANCELLED').length,
       }
       const byPriority = {

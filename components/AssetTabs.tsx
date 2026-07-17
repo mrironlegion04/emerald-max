@@ -11,6 +11,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { label: 'Overview', id: 'overview' },
+  { label: 'Parts', id: 'parts' },
   { label: 'Meters', id: 'meters' },
   { label: 'Work Orders', id: 'work-orders' },
   { label: 'History', id: 'history' },

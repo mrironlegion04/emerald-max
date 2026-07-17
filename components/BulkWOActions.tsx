@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown, Download, Users, AlertCircle, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface BulkActionsProps {
   selectedIds: string[]
@@ -12,13 +13,9 @@ interface BulkActionsProps {
   onAction: (action: string, payload: any) => Promise<void>
 }
 
-const statusOptions = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'ON_HOLD', label: 'On Hold' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-]
+const statusOptions = Object.entries(WO_STATUS_LABELS)
+  .filter(([key]) => key !== 'CLOSED')
+  .map(([value, label]) => ({ value, label }))
 
 export default function BulkActions({
   selectedIds,

@@ -93,7 +93,7 @@ function serializeRichResponse(value: string | null, notes: string | null, attac
 
 export default function WOProceduresPanel({ woId, initialProcedures, woStatus }: Props) {
   const router = useRouter()
-  const isClosed = ['COMPLETED', 'CANCELLED'].includes(woStatus)
+  const isClosed = ['COMPLETED', 'CANCELLED', 'CLOSED'].includes(woStatus)
 
   const [procedures, setProcedures] = useState(initialProcedures)
   const [adding, setAdding] = useState(false)

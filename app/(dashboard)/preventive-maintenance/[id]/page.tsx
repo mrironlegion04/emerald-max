@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
+import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import PMGenerateButton from '@/components/PMGenerateButton'
 import PMToggleButton from '@/components/PMToggleButton'
 import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
@@ -13,9 +14,7 @@ const freqLabels: Record<string, string> = {
   DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly', YEARLY: 'Yearly',
 }
-const woStatusLabels: Record<string,string> = {
-  OPEN:'Open', IN_PROGRESS:'In Progress', ON_HOLD:'On Hold', COMPLETED:'Completed', CANCELLED:'Cancelled',
-}
+const woStatusLabels = WO_STATUS_LABELS
 
 export default async function PMDetailPage({
   params,

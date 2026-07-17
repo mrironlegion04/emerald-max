@@ -34,7 +34,7 @@ export default function WOPartsPanel({ woId, partsUsed, allParts, canEdit, woSta
   const [removing, setRemoving] = useState<string | null>(null)
   const [error, setError]     = useState('')
 
-  const canModify = canEdit && !['COMPLETED','CANCELLED'].includes(woStatus)
+  const canModify = canEdit && !['COMPLETED','CANCELLED','CLOSED'].includes(woStatus)
   const totalPartsCost = parts.reduce((s, p) => s + p.quantity * p.unitCost, 0)
 
   async function addPart(e: React.FormEvent) {

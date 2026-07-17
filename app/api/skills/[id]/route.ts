@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function DELETE(
   req: Request,
@@ -7,7 +8,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (user?.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'skill:delete'))) {
       return Response.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

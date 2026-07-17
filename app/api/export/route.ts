@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 
 function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return ''
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (user.role === 'TECHNICIAN') return NextResponse.json({ error: 'Technicians cannot export data' }, { status: 403 })
+    if (!(await hasPermission(user, 'export:data'))) return NextResponse.json({ error: 'Technicians cannot export data' }, { status: 403 })
 
     const sp = new URL(request.url).searchParams
     const type = sp.get('type') ?? 'work-orders'
@@ -34,7 +36,8 @@ export async function GET(request: NextRequest) {
 
     if (type === 'work-orders') {
       // Advanced filters
-      const where: Record<string, unknown> = {}
+      const visibilityFilter = await buildWOVisibilityFilter(user)
+      const where: Record<string, unknown> = visibilityFilter ? { AND: [visibilityFilter] } : {}
       const search      = sp.get('search')
       const status      = sp.get('status')
       const priority    = sp.get('priority')
@@ -195,8 +198,8 @@ export async function GET(request: NextRequest) {
       csv = toCSV(headers, rows)
 
     } else if (type === 'audit') {
-      if (user.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+      if (!(await hasPermission(user, 'audit:view'))) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
       const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 10000 })
       filename = `audit-log-${new Date().toISOString().slice(0,10)}.csv`

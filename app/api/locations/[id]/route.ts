@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationPath, refreshLocationPaths } from '@/lib/location-path'
 import { z } from 'zod'
@@ -17,7 +18,7 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'location:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -98,7 +99,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role === 'TECHNICIAN') {
+    if (!user || !(await hasPermission(user, 'location:delete'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

@@ -170,7 +170,7 @@ enum ProficiencyLevel {
 
 enum ChatChannelType {
   general
-  domain
+  team
   workorder
   direct
   group
@@ -207,6 +207,7 @@ model Team {
   updatedAt   DateTime  @updatedAt
 
   members    TeamMember[]
+  domains    TeamDomain[]
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
 
@@ -227,6 +228,17 @@ model TeamMember {
 
   @@unique([teamId, userId])
   @@map("team_members")
+}
+
+model TeamDomain {
+  teamId     String
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  domainId   String
+  domain     MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([teamId, domainId])
+  @@map("team_domains")
 }
 
 model User {
@@ -268,8 +280,6 @@ model User {
   submittedRequests     MaintenanceRequest[]    @relation("RequestRequester")
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
-  domainId              String?
-  domain                MaintenanceDomain?      @relation("UserDomain", fields: [domainId], references: [id], onDelete: SetNull)
   assignedSubtasks      Subtask[]               @relation("SubtaskAssignedTo")
   completedSubtasks     Subtask[]               @relation("SubtaskCompletedBy")
   createdSubtasks       Subtask[]               @relation("SubtaskCreatedBy")
@@ -591,7 +601,7 @@ model MaintenanceDomain {
 
   issues             IssueDomain[]
   categories         CategoryDomain[]
-  users              User[]             @relation("UserDomain")
+  teams              TeamDomain[]
   workOrders         WorkOrder[]        @relation("WorkOrderDomain")
   assets             Asset[]            @relation("AssetDomain")
   assignedSubtasks   Subtask[]          @relation("SubtasksAssignedToDomain")

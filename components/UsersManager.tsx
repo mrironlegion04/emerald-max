@@ -11,8 +11,7 @@ import {
   RefreshCw,
   FolderLock,
   Lock,
-  Shield,
-  CircleDot
+  Shield
 } from 'lucide-react'
 
 interface User {
@@ -25,8 +24,6 @@ interface User {
   phone?: string | null
   bio?: string | null
   department?: string | null
-  domainId?: string | null
-  domain?: { id: string; name: string } | null
   lastActiveAt?: string | null
   _count: {
     assignedWorkOrders: number
@@ -35,17 +32,11 @@ interface User {
   }
 }
 
-interface Domain {
-  id: string
-  name: string
-}
-
 export default function UsersManager() {
   const router = useRouter()
   
   // Data State
   const [allUsers, setAllUsers] = useState<User[]>([])
-  const [domains, setDomains] = useState<Domain[]>([])
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -53,7 +44,6 @@ export default function UsersManager() {
   // Search/Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
-  const [domainFilter, setDomainFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
   const refreshData = () => {
@@ -62,9 +52,8 @@ export default function UsersManager() {
     Promise.all([
       fetch('/api/auth/me').then(r => r.json()),
       fetch('/api/users').then(r => r.json()),
-      fetch('/api/domains').then(r => r.json())
     ])
-      .then(([meData, usersData, domainsData]) => {
+      .then(([meData, usersData]) => {
         if (meData?.user) {
           setCurrentUser({
             id: meData.user.userId,
@@ -77,11 +66,6 @@ export default function UsersManager() {
           setAllUsers(usersData)
         } else {
           setAllUsers([])
-        }
-        if (Array.isArray(domainsData)) {
-          setDomains(domainsData)
-        } else {
-          setDomains([])
         }
       })
       .catch(err => {
@@ -104,13 +88,12 @@ export default function UsersManager() {
       (u.phone && u.phone.includes(q))
 
     const matchesRole = roleFilter === '' || u.role === roleFilter
-    const matchesDomain = domainFilter === '' || u.domainId === domainFilter
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && u.isActive) ||
       (statusFilter === 'inactive' && !u.isActive)
 
-    return matchesSearch && matchesRole && matchesDomain && matchesStatus
+    return matchesSearch && matchesRole && matchesStatus
   })
 
   const isUserAdmin = currentUser?.role === 'ADMIN'
@@ -178,17 +161,6 @@ export default function UsersManager() {
             </select>
 
             <select
-              value={domainFilter}
-              onChange={e => setDomainFilter(e.target.value)}
-              className="input-field max-w-xs cursor-pointer text-xs"
-            >
-              <option value="">All Domains</option>
-              {domains.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-
-            <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
               className="input-field max-w-xs cursor-pointer text-xs"
@@ -216,7 +188,6 @@ export default function UsersManager() {
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-400 font-extrabold text-xs uppercase tracking-wider text-left select-none">
                 <th className="px-5 py-3">User</th>
                 <th className="px-5 py-3">Role</th>
-                <th className="px-5 py-3">Maintenance Domain</th>
                 <th className="px-5 py-3">Department</th>
                 <th className="px-5 py-3">WorkOrders</th>
                 <th className="px-5 py-3">Status</th>
@@ -226,7 +197,7 @@ export default function UsersManager() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center text-slate-400">
+                  <td colSpan={6} className="px-5 py-16 text-center text-slate-400">
                     No registry users found matching your criteria.
                   </td>
                 </tr>
@@ -261,18 +232,6 @@ export default function UsersManager() {
                       {/* Role Badge */}
                       <td className="px-5 py-3.5">
                         <Badge label={u.role} variant={roleColors[u.role] || 'gray'} />
-                      </td>
-
-                      {/* Maintenance Domain */}
-                      <td className="px-5 py-3.5">
-                        {u.domain ? (
-                          <span className="text-slate-800 text-xs font-bold leading-none bg-indigo-50 border border-indigo-150 py-1 px-2 rounded-md inline-flex items-center gap-1.5 select-none">
-                            <CircleDot className="w-2.5 h-2.5 text-indigo-500" />
-                            {u.domain.name}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
                       </td>
 
                       {/* Department */}

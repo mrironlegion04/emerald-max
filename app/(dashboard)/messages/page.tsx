@@ -717,7 +717,7 @@ export default function MessagesPage() {
       if (activeChannel.type === 'workorder') {
         workOrderId = activeChannel.id.substring(3)
       } else if (activeChannel.type === 'team') {
-        teamId = activeChannel.id.substring(5)
+        teamId = activeChannel.id.substring(5) // TEAM_xxxxx → teamId
       } else if (activeChannel.type === 'direct') {
         const ids = activeChannel.id.substring(7).split('_')
         const myId = currentUser.userId || currentUser.id

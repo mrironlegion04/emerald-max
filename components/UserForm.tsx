@@ -14,7 +14,6 @@ interface UserFormData {
   phone: string
   bio: string
   department: string
-  domainId: string
   woVisibility: string
   customRoleId: string
 }
@@ -57,17 +56,12 @@ export default function UserForm({ initialData, userId }: Props) {
   const router = useRouter()
   const isEdit = !!userId
 
-  const [domains, setDomains] = useState<{ id: string; name: string }[]>([])
   const [customRoles, setCustomRoles] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/domains').then(r => r.json()),
-      fetch('/api/roles').then(r => r.json()),
-    ]).then(([doms, roles]) => {
-      if (Array.isArray(doms)) setDomains(doms)
+    fetch('/api/roles').then(r => r.json()).then(roles => {
       if (Array.isArray(roles)) setCustomRoles(roles)
-    }).catch(err => console.error('Error fetching data', err))
+    }).catch(err => console.error('Error fetching roles', err))
   }, [])
 
   const [form, setForm] = useState<UserFormData>({
@@ -79,7 +73,6 @@ export default function UserForm({ initialData, userId }: Props) {
     phone: (initialData as any)?.phone ?? '',
     bio: (initialData as any)?.bio ?? '',
     department: (initialData as any)?.department ?? '',
-    domainId: (initialData as any)?.domainId ?? '',
     woVisibility: (initialData as any)?.woVisibility ?? 'FULL',
     customRoleId: (initialData as any)?.customRoleId ?? '',
   })
@@ -111,7 +104,6 @@ export default function UserForm({ initialData, userId }: Props) {
         phone: form.phone || null,
         bio: form.bio || null,
         department: form.department || null,
-        domainId: form.domainId || null,
         woVisibility: form.woVisibility,
         customRoleId: form.customRoleId || null,
       }
@@ -329,23 +321,6 @@ export default function UserForm({ initialData, userId }: Props) {
             className="input-field"
             placeholder="Maintenance, Operations, etc."
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Maintenance Domain (Engineering Group)
-          </label>
-          <select
-            value={form.domainId}
-            onChange={e => set('domainId', e.target.value)}
-            className="input-field cursor-pointer"
-          >
-            <option value="">No Assigned Domain</option>
-            {domains.map(d => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

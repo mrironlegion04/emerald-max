@@ -225,11 +225,12 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
           createdAt: new Date(s.createdAt).toISOString(),
           workOrderId: s.workOrderId,
           assignedTo: s.assignedTo, assignedDomain: s.assignedDomain,
+          assignedTeam: s.assignedTeam,
           completedBy: s.completedBy, createdBy: s.createdBy,
         }))}
         woStatus={wo.status}
         allUsers={[]}
-        allDomains={[]}
+        allTeams={[]}
         canEdit={true}
       />
 

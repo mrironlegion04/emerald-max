@@ -7,20 +7,20 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.userId },
-    select: { domainId: true },
+  const memberships = await prisma.teamMember.findMany({
+    where: { userId: user.userId },
+    select: { teamId: true },
   })
-  const domainId = dbUser?.domainId ?? null
+  const teamIds = memberships.map(m => m.teamId)
   const visibilityFilter = await buildWOVisibilityFilter(user)
   const visAnd = visibilityFilter ? [visibilityFilter] : []
 
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-  const domainFilter = domainId ? { domainId } : undefined
-  const myOrDomain = domainId
-    ? [{ assignedToId: user.userId }, { domainId }]
+  const teamFilter = teamIds.length ? { teamId: { in: teamIds } } : undefined
+  const myOrTeam = teamIds.length
+    ? [{ assignedToId: user.userId }, { teamId: { in: teamIds } }]
     : [{ assignedToId: user.userId }]
 
   const [
@@ -40,7 +40,7 @@ export async function GET() {
         AND: visAnd,
         priority: { in: ['HIGH', 'CRITICAL'] },
         status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
-        OR: myOrDomain,
+        OR: myOrTeam,
       },
       select: {
         id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
@@ -49,13 +49,13 @@ export async function GET() {
       orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
       take: 10,
     }),
-    // Overdue WOs assigned to user or their domain
+    // Overdue WOs assigned to user or their team
     prisma.workOrder.findMany({
       where: {
         AND: visAnd,
         status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
         dueDate: { lt: now },
-        OR: myOrDomain,
+        OR: myOrTeam,
       },
       select: {
         id: true, woNumber: true, title: true, priority: true, status: true, dueDate: true,
@@ -68,13 +68,13 @@ export async function GET() {
     prisma.maintenanceRequest.count({
       where: { status: 'PENDING' },
     }),
-    // Completed in last 7 days (assigned to user or their domain)
+    // Completed in last 7 days (assigned to user or their team)
     prisma.workOrder.findMany({
       where: {
         AND: visAnd,
         status: { in: ['COMPLETED', 'CLOSED'] },
         completedAt: { gte: sevenDaysAgo },
-        OR: myOrDomain,
+        OR: myOrTeam,
       },
       select: {
         id: true, woNumber: true, title: true, priority: true, completedAt: true,
@@ -101,7 +101,7 @@ export async function GET() {
     prisma.workOrder.findMany({
       where: {
         AND: visAnd,
-        ...domainFilter,
+        ...(teamFilter && { OR: [teamFilter] }),
         assignedToId: { not: user.userId },
         status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
       },

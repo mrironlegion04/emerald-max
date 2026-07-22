@@ -67,7 +67,7 @@ const updateSchema = z.object({
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional(),
   assignedToId:        z.string().nullable().optional(),
-  domainId:            z.string().nullable().optional(),
+  teamId:              z.string().nullable().optional(),
   laborHours:          z.number().nullable().optional(),
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),
@@ -162,7 +162,7 @@ export async function PUT(
       )
     }
 
-    if ((data.assignedToId || data.domainId) && !isAdmin(user)) {
+    if ((data.assignedToId || data.teamId) && !isAdmin(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign work order' },
         { status: 403 }
@@ -195,8 +195,21 @@ export async function PUT(
     }
 
     // ── Mutual exclusion: team vs individual ──────────────────────────
-    if (data.domainId) {
+    if (data.teamId) {
       data.assignedToId = null
+    }
+    if (data.assignedToId) {
+      data.teamId = null
+    }
+
+    // ── Auto-derive domainId from team ───────────────────────────────
+    let derivedDomainId: string | null = null
+    if (data.teamId) {
+      const teamDomain = await prisma.teamDomain.findFirst({
+        where: { teamId: data.teamId },
+        include: { domain: true },
+      })
+      derivedDomainId = teamDomain?.domainId ?? null
     }
 
     // ── Normalize asset scope ─────────────────────────────────────────
@@ -251,10 +264,11 @@ export async function PUT(
       ...Object.fromEntries(
         Object.entries(data).filter(([key]) =>
           ['title','description','type','priority','status','assetId','locationId',
-           'locationScope','assignedToId','domainId','laborHours','laborCost',
+           'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','issueId','customIssue','startDate'].includes(key)
         )
       ),
+      ...(data.teamId ? { domainId: derivedDomainId } : {}),
       ...extra,
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
       startDate: data.startDate ? new Date(data.startDate) : undefined,

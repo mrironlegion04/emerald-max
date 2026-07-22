@@ -55,7 +55,7 @@ export default async function WorkOrderDetailPage({
       completedBy:  { select: { id: true, name: true, email: true } },
       issue:        true,
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
-      subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
+      subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, assignedTeam: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
       procedures: {
         include: {
           steps: {
@@ -80,6 +80,7 @@ export default async function WorkOrderDetailPage({
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
   const allUsers = await prisma.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
   const allDomains = await prisma.maintenanceDomain.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
+  const allTeams = await prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
   const allLocations = await prisma.location.findMany({ select: { id: true, name: true, parentId: true } })
 
   const isOverdue =
@@ -385,12 +386,13 @@ export default async function WorkOrderDetailPage({
               workOrderId: s.workOrderId,
               assignedTo: s.assignedTo,
               assignedDomain: s.assignedDomain,
+              assignedTeam: s.assignedTeam,
               completedBy: s.completedBy,
               createdBy: s.createdBy,
             }))}
             woStatus={wo.status}
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
-            allDomains={allDomains.map((t: any) => ({ id: t.id, name: t.name }))}
+            allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
           />
           <WOProceduresPanel

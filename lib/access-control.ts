@@ -24,7 +24,7 @@ export function isAdmin(user: User): boolean {
  * Rules:
  * - ADMIN/MANAGER: always allowed (override)
  * - Assigned user: can complete their own WO
- * - Team/domain member: can complete if team/domain is assigned
+ * - Team member: can complete if team is assigned
  */
 export async function canCompleteWorkOrder(
   user: User,
@@ -38,7 +38,6 @@ export async function canCompleteWorkOrder(
     where: { id: workOrderId },
     select: {
       assignedToId: true,
-      domainId: true,
       teamId: true,
     },
   })
@@ -49,16 +48,6 @@ export async function canCompleteWorkOrder(
 
   if (wo.assignedToId === user.userId) {
     return { allowed: true, isOverride: false }
-  }
-
-  if (wo.domainId) {
-    const userRecord = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { domainId: true },
-    })
-    if (userRecord?.domainId === wo.domainId) {
-      return { allowed: true, isOverride: false }
-    }
   }
 
   if (wo.teamId) {
@@ -99,7 +88,6 @@ export async function canCompleteSubtask(
     where: { id: subtaskId },
     select: {
       assignedToId: true,
-      assignedDomainId: true,
       assignedTeamId: true,
     },
   })
@@ -110,16 +98,6 @@ export async function canCompleteSubtask(
 
   if (subtask.assignedToId === user.userId) {
     return { allowed: true, isOverride: false }
-  }
-
-  if (subtask.assignedDomainId) {
-    const userRecord = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { domainId: true },
-    })
-    if (userRecord?.domainId === subtask.assignedDomainId) {
-      return { allowed: true, isOverride: false }
-    }
   }
 
   if (subtask.assignedTeamId) {
@@ -149,7 +127,6 @@ export async function canViewWorkOrder(
     where: { id: workOrderId },
     select: {
       assignedToId: true,
-      domainId: true,
       teamId: true,
       createdById: true,
     },
@@ -165,16 +142,6 @@ export async function canViewWorkOrder(
 
   if (wo.createdById === user.userId) {
     return { allowed: true }
-  }
-
-  if (wo.domainId) {
-    const userRecord = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { domainId: true },
-    })
-    if (userRecord?.domainId === wo.domainId) {
-      return { allowed: true }
-    }
   }
 
   if (wo.teamId) {
@@ -278,7 +245,7 @@ export async function buildWOVisibilityFilter(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: { woVisibility: true, domainId: true },
+    select: { woVisibility: true },
   })
 
   if (!dbUser || dbUser.woVisibility === 'FULL') return null
@@ -292,7 +259,6 @@ export async function buildWOVisibilityFilter(
     OR: [
       { assignedToId: user.userId },
       { createdById: user.userId },
-      ...(dbUser.domainId ? [{ domainId: dbUser.domainId }] : []),
       ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
     ],
   }

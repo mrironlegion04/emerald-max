@@ -34,13 +34,13 @@ interface WOFormData {
   status: string; startDate: string; startTime: string; dueDate: string; dueTime: string
   assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
-  assignedToId: string; assignedDomainId: string; laborHours: string; laborCost: string; partsCost: string
+  assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
   procedureIds: string[]
 }
 
 interface Props {
-  assets: Asset[]; locations: Location[]; users: User[]; domains: { id: string; name: string }[]
+  assets: Asset[]; locations: Location[]; users: User[]; teams: { id: string; name: string }[]
   procedures?: Procedure[]
   initialData?: Partial<WOFormData>
   woId?: string
@@ -54,7 +54,7 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
 
-export default function WorkOrderForm({ assets, locations, users, domains = [], procedures = [], initialData, woId, preselectedAssetId }: Props) {
+export default function WorkOrderForm({ assets, locations, users, teams = [], procedures = [], initialData, woId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!woId
 
@@ -76,7 +76,7 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
     selectedAssetIds: [],
     assignedToId:   initialData?.assignedToId   ?? '',
-    assignedDomainId: initialData?.assignedDomainId ?? (preselectedAssetId ? (assets.find(a => a.id === preselectedAssetId)?.domainId ?? '') : ''),
+    teamId:         initialData?.teamId         ?? '',
     laborHours:     initialData?.laborHours     ?? '',
     laborCost:      initialData?.laborCost      ?? '',
     partsCost:      initialData?.partsCost      ?? '',
@@ -142,13 +142,6 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
   function set(field: keyof WOFormData, value: string | string[]) {
     setForm(prev => {
       const next = { ...prev, [field]: value }
-      if (field === 'assetId' && typeof value === 'string' && value) {
-        const assetObj = assets.find(a => a.id === value)
-        if (assetObj?.domainId) {
-          next.assignedDomainId = assetObj.domainId
-          next.assignedToId = '' // Clear individual assignee to avoid conflict
-        }
-      }
       return next
     })
   }
@@ -247,7 +240,7 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
     setError(''); setSaving(true)
     try {
       if (!form.title.trim()) { setError('Title is required'); setSaving(false); return }
-      if (form.assignedDomainId && form.assignedToId) { setError('Assign to either a domain or an individual, not both'); setSaving(false); return }
+      if (form.teamId && form.assignedToId) { setError('Assign to either a team or an individual, not both'); setSaving(false); return }
 
       const mergedAssetIds = [
         ...(form.assetId ? [form.assetId] : []),
@@ -267,8 +260,8 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
         locationId:   form.locationId     || null,
         locationScope: form.locationId && form.selectedAssetIds.length === 0 ? form.locationScope : null,
         selectedAssetIds: uniqueAssetIds,
-        assignedToId: form.assignedDomainId ? null : (form.assignedToId || null),
-        domainId:     form.assignedDomainId || null,
+        assignedToId: form.teamId ? null : (form.assignedToId || null),
+        teamId:       form.teamId || null,
         laborHours:   form.laborHours     ? parseFloat(form.laborHours)  : null,
         laborCost:    form.laborCost      ? parseFloat(form.laborCost)   : null,
         partsCost:    form.partsCost      ? parseFloat(form.partsCost)   : null,
@@ -519,14 +512,14 @@ export default function WorkOrderForm({ assets, locations, users, domains = [], 
         <div className="space-y-3 pt-3 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Assign work to:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {inputRow('Industrial Domain', false,
-              <select value={form.assignedDomainId} onChange={e => { set('assignedDomainId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
-                <option value="">— No domain —</option>
-                {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {inputRow('Team', false,
+              <select value={form.teamId} onChange={e => { set('teamId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
+                <option value="">— No team —</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             )}
             {inputRow('Individual', false,
-              <select value={form.assignedToId} onChange={e => { set('assignedToId', e.target.value); if (e.target.value) set('assignedDomainId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
+              <select value={form.assignedToId} onChange={e => { set('assignedToId', e.target.value); if (e.target.value) set('teamId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
                 <option value="">— Unassigned —</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
               </select>

@@ -12,7 +12,7 @@ export default async function EditWorkOrderPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/work-orders/${id}`)
 
-  const [wo, assets, locations, users, domains, procedures] = await Promise.all([
+  const [wo, assets, locations, users, teams, procedures] = await Promise.all([
     prisma.workOrder.findUnique({
       where: { id },
       include: { assets: { select: { assetId: true } } },
@@ -31,7 +31,7 @@ export default async function EditWorkOrderPage({
       select:  { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.maintenanceDomain.findMany({
+    prisma.team.findMany({
       where:   { isActive: true },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
@@ -80,7 +80,7 @@ export default async function EditWorkOrderPage({
     locationScope:   wo.locationScope ?? 'ALL_ASSETS',
     selectedAssetIds,
     assignedToId:    wo.assignedToId  ?? '',
-    assignedDomainId:  wo.domainId    ?? '',
+    teamId:          wo.teamId        ?? '',
     laborHours:      wo.laborHours    != null ? String(wo.laborHours) : '',
     laborCost:       wo.laborCost     != null ? String(wo.laborCost)  : '',
     partsCost:       wo.partsCost     != null ? String(wo.partsCost)  : '',
@@ -97,7 +97,7 @@ export default async function EditWorkOrderPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${wo.title}`} subtitle={wo.woNumber} />
-      <WorkOrderForm assets={assets} locations={locations} users={users} domains={domains} procedures={procedures} initialData={initialData} woId={id} />
+      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} procedures={procedures} initialData={initialData} woId={id} />
     </div>
   )
 }

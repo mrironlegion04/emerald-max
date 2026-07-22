@@ -50,20 +50,20 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
       }
     }
 
-    if (channelId.startsWith('DOMAIN_')) {
-      const domainId = channelId.substring(7)
-      const domain = await prisma.maintenanceDomain.findUnique({
-        where: { id: domainId }
+    if (channelId.startsWith('TEAM_')) {
+      const teamId = channelId.substring(5)
+      const team = await prisma.team.findUnique({
+        where: { id: teamId }
       })
-      if (domain) {
+      if (team) {
         await prisma.chatChannel.create({
           data: {
             id: channelId,
-            name: `${domain.name} (Engineering Group)`,
-            type: 'domain',
-            description: domain.description || `Industrial domain workspace for ${domain.name}`,
-            avatarText: '⚙️',
-            entityId: domain.id,
+            name: team.name,
+            type: 'team',
+            description: `Team workspace for ${team.name}`,
+            avatarText: '🛠️',
+            entityId: team.id,
           }
         })
         return true
@@ -103,10 +103,10 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
       fallbackName = `Work Order Room (${channelId.substring(3).substring(0, 6)})`
       fallbackType = 'workorder'
       fallbackText = '📋'
-    } else if (channelId.startsWith('DOMAIN_')) {
-      fallbackName = 'Domain Space'
-      fallbackType = 'domain'
-      fallbackText = '⚙️'
+    } else if (channelId.startsWith('TEAM_')) {
+      fallbackName = 'Team Space'
+      fallbackType = 'team'
+      fallbackText = '🛠️'
     } else if (channelId.startsWith('DIRECT_')) {
       fallbackName = 'Private Chat'
       fallbackType = 'direct'
@@ -152,37 +152,41 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
       create: { channelId: generalChannelId, userId },
     })
 
-    // 2. Sync Domains
-    const userObj = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { domainId: true }
+    // 2. Sync Teams — create a channel per team the user belongs to
+    const userTeams = await prisma.teamMember.findMany({
+      where: { userId },
+      select: { teamId: true },
     })
-    const userDomainId = userObj?.domainId
+    const teamIds = userTeams.map(m => m.teamId)
 
-    const domains = await prisma.maintenanceDomain.findMany()
-    for (const domain of domains) {
-      const domainChannelId = `DOMAIN_${domain.id}`
-      let domainChan = await prisma.chatChannel.findUnique({ where: { id: domainChannelId } })
-      if (!domainChan) {
-        domainChan = await prisma.chatChannel.create({
+    // Technicians see their teams; managers/admins see all teams
+    const teamsToSync = role === 'ADMIN' || role === 'MANAGER'
+      ? await prisma.team.findMany({ where: { isDeleted: false }, select: { id: true, name: true } })
+      : await prisma.team.findMany({ where: { id: { in: teamIds }, isDeleted: false }, select: { id: true, name: true } })
+
+    for (const team of teamsToSync) {
+      const teamChannelId = `TEAM_${team.id}`
+      let teamChan = await prisma.chatChannel.findUnique({ where: { id: teamChannelId } })
+      if (!teamChan) {
+        teamChan = await prisma.chatChannel.create({
           data: {
-            id: domainChannelId,
-            name: `${domain.name} (Engineering Group)`,
-            type: 'domain',
-            description: `Industrial domain workspace for ${domain.name}`,
-            avatarText: '⚙️',
-            entityId: domain.id,
+            id: teamChannelId,
+            name: team.name,
+            type: 'team',
+            description: `Team workspace for ${team.name}`,
+            avatarText: '🛠️',
+            entityId: team.id,
           },
         })
       }
 
-      // Technicians must belong to the domain to join, managers/admins get auto-joined
-      const isDomainMember = userDomainId === domain.id
-      if (isDomainMember || role === 'ADMIN' || role === 'MANAGER') {
+      // Auto-join: user must be a member of this team, or be admin/manager
+      const isMember = teamIds.includes(team.id)
+      if (isMember || role === 'ADMIN' || role === 'MANAGER') {
         await prisma.chatChannelMember.upsert({
-          where: { channelId_userId: { channelId: domainChannelId, userId } },
+          where: { channelId_userId: { channelId: teamChannelId, userId } },
           update: {},
-          create: { channelId: domainChannelId, userId },
+          create: { channelId: teamChannelId, userId },
         })
       }
     }
@@ -517,7 +521,7 @@ export async function POST(req: NextRequest) {
     if (!channelRecord) {
       // Determine type from channel prefix
       let type: any = 'general'
-      if (channelId.startsWith('DOMAIN_')) type = 'domain'
+      if (channelId.startsWith('TEAM_')) type = 'team'
       else if (channelId.startsWith('WO_')) type = 'workorder'
       else if (channelId.startsWith('DIRECT_')) type = 'direct'
       else if (channelId.startsWith('GROUP_')) type = 'group'
@@ -528,8 +532,8 @@ export async function POST(req: NextRequest) {
           name: channelName || 'Crew Space',
           type,
           description: type === 'group' ? 'Private group conversation' : 'Discussion zone',
-          avatarText: type === 'workorder' ? '📋' : type === 'domain' ? '⚙️' : type === 'direct' ? '👤' : '👥',
-          entityId: workOrderId || domainId || receiverId || null,
+          avatarText: type === 'workorder' ? '📋' : type === 'team' ? '🛠️' : type === 'direct' ? '👤' : '👥',
+          entityId: workOrderId || receiverId || null,
         },
       })
     }

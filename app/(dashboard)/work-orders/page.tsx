@@ -137,7 +137,7 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
   return { workOrders, technicians, domains, assets, totalCount, page }
 }
 
-async function getPanelViewData(userId: string, userDomainId: string | null, visibilityFilter: Record<string, unknown> | null) {
+async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null) {
   const woSelect = {
     id: true, woNumber: true, title: true, type: true, status: true,
     priority: true, dueDate: true, createdAt: true,
@@ -165,13 +165,13 @@ async function getPanelViewData(userId: string, userDomainId: string | null, vis
       },
       orderBy: woOrder,
     }),
-    userDomainId ? prisma.workOrder.findMany({
-      where: { AND: visAnd, domainId: userDomainId, status: { in: ACTIVE_STATUSES as any } },
+    teamIds.length ? prisma.workOrder.findMany({
+      where: { AND: visAnd, teamId: { in: teamIds }, status: { in: ACTIVE_STATUSES as any } },
       include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }) : [],
-    userDomainId ? prisma.subtask.findMany({
-      where: { assignedDomainId: userDomainId, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
+    teamIds.length ? prisma.subtask.findMany({
+      where: { assignedDomainId: { in: teamIds }, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
       include: {
         assignedTo: { select: { id: true, name: true } },
         assignedDomain: { select: { id: true, name: true } },
@@ -236,11 +236,12 @@ export default async function WorkOrdersPage({
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const panelData = user ? await (async () => {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { domainId: true },
+    const memberships = await prisma.teamMember.findMany({
+      where: { userId: user.userId },
+      select: { teamId: true },
     })
-    return getPanelViewData(user.userId, dbUser?.domainId ?? null, visibilityFilter)
+    const teamIds = memberships.map(m => m.teamId)
+    return getPanelViewData(user.userId, teamIds, visibilityFilter)
   })() : null
 
   const overdueCount = workOrders.filter(

@@ -16,7 +16,8 @@ import {
   UserCheck,
   Award,
   Lock,
-  ClipboardList
+  ClipboardList,
+  Layers
 } from 'lucide-react'
 
 // Interfaces matching Prisma schema
@@ -60,11 +61,10 @@ interface Team {
   deletedBy?: string | null
 }
 
-const TRADES = [
-  'Electrical', 'HVAC', 'Plumbing', 'Mechanical', 'Carpentry',
-  'Painting', 'Welding', 'HVAC Refrigeration', 'General Maintenance',
-  'Facilities', 'Safety', 'Quality Assurance', 'Automation'
-]
+interface Domain {
+  id: string
+  name: string
+}
 
 export default function TeamsAndUsersManager() {
   const router = useRouter()
@@ -96,6 +96,12 @@ export default function TeamsAndUsersManager() {
   const [teamSearch, setTeamSearch] = useState('')
   const [teamTradeFilter, setTeamTradeFilter] = useState('')
 
+  // Domain state
+  const [allDomains, setAllDomains] = useState<Domain[]>([])
+  const [teamDomainMap, setTeamDomainMap] = useState<Record<string, string[]>>({})
+  const [showDomainTray, setShowDomainTray] = useState(false)
+  const [savingDomains, setSavingDomains] = useState(false)
+
   // Users query/filter state
   const [userSearch, setUserSearch] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('')
@@ -119,9 +125,10 @@ export default function TeamsAndUsersManager() {
     Promise.all([
       fetch('/api/auth/me').then(r => r.json()),
       fetch(teamsUrl).then(r => r.json()),
-      fetch('/api/users').then(r => r.json())
+      fetch('/api/users').then(r => r.json()),
+      fetch('/api/domains').then(r => r.json()),
     ])
-      .then(([sessionData, teamsData, usersData]: [{ user: { userId: string; name: string; email: string; role: string } | null }, Team[], User[]]) => {
+      .then(([sessionData, teamsData, usersData, domainsData]: [{ user: { userId: string; name: string; email: string; role: string } | null }, Team[], User[], Domain[]]) => {
         if (sessionData?.user) {
           setCurrentUser({
             id: sessionData.user.userId,
@@ -132,6 +139,22 @@ export default function TeamsAndUsersManager() {
         }
         setTeams(teamsData)
         setAllUsers(usersData)
+        setAllDomains(domainsData)
+
+        // Fetch team-domain links for all teams in parallel
+        if (teamsData.length > 0) {
+          Promise.all(
+            teamsData.map(t =>
+              fetch(`/api/team-domains?teamId=${t.id}`).then(r => r.ok ? r.json() : [])
+            )
+          ).then((results: Domain[][]) => {
+            const map: Record<string, string[]> = {}
+            teamsData.forEach((t, i) => {
+              map[t.id] = (results[i] ?? []).map(d => d.id)
+            })
+            setTeamDomainMap(map)
+          }).catch(console.error)
+        }
       })
       .catch((err) => {
         console.error(err)
@@ -143,6 +166,11 @@ export default function TeamsAndUsersManager() {
   useEffect(() => {
     refreshData()
   }, [refreshData])
+
+  // Reset domain tray when team selection changes
+  useEffect(() => {
+    setShowDomainTray(false)
+  }, [selectedTeamId])
 
   const setTab = (tab: 'teams' | 'users') => {
     setActiveTab(tab)
@@ -168,6 +196,29 @@ export default function TeamsAndUsersManager() {
       if (!res.ok) throw new Error(await res.text())
       
       const newTeam = await res.json()
+
+      // Auto-map trade to domain
+      let domain = allDomains.find(d => d.name === teamForm.trade)
+      if (!domain) {
+        const domRes = await fetch('/api/domains', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: teamForm.trade }),
+        })
+        if (domRes.ok) {
+          domain = await domRes.json()
+          setAllDomains(prev => [...prev, domain!])
+        }
+      }
+      if (domain) {
+        await fetch('/api/team-domains', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId: newTeam.id, domainIds: [domain.id] }),
+        })
+        setTeamDomainMap(prev => ({ ...prev, [newTeam.id]: [domain!.id] }))
+      }
+
       setTeams([...teams, newTeam])
       setSelectedTeamId(newTeam.id)
       setTeamForm({ name: '', trade: '', description: '' })
@@ -324,6 +375,29 @@ export default function TeamsAndUsersManager() {
     setShowNewTeamForm(false)
   }
 
+  async function toggleTeamDomain(domainId: string) {
+    if (!selectedTeam) return
+    const current = teamDomainMap[selectedTeam.id] ?? []
+    const newIds = current.includes(domainId)
+      ? current.filter(d => d !== domainId)
+      : [...current, domainId]
+
+    setTeamDomainMap(prev => ({ ...prev, [selectedTeam.id]: newIds }))
+    setSavingDomains(true)
+    try {
+      const res = await fetch('/api/team-domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: selectedTeam.id, domainIds: newIds }),
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      setTeamDomainMap(prev => ({ ...prev, [selectedTeam.id]: current }))
+    } finally {
+      setSavingDomains(false)
+    }
+  }
+
   // --- Dynamic Filtering Lists ---
   const filteredTeams = teams.filter(team => {
     const matchesSearch = !teamSearch || 
@@ -463,8 +537,8 @@ export default function TeamsAndUsersManager() {
                 onChange={e => setTeamTradeFilter(e.target.value)}
                 className="input-field text-sm cursor-pointer py-1.5 h-full"
               >
-                <option value="">All Trades / Specs</option>
-                {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
+                <option value="">All Domains</option>
+                {allDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
               </select>
 
               <label className="inline-flex items-center gap-2 text-xs text-slate-600 pr-2 cursor-pointer select-none font-bold">
@@ -527,6 +601,15 @@ export default function TeamsAndUsersManager() {
                                   <ClipboardList className="w-3 h-3" /> {team.workOrders.length} assigned work orders
                                 </span>
                               )}
+                              {(teamDomainMap[team.id] ?? []).map(dId => {
+                                const dom = allDomains.find(d => d.id === dId)
+                                if (!dom) return null
+                                return (
+                                  <span key={dId} className="text-[10px] font-extrabold bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-md flex items-center gap-1 uppercase tracking-wider">
+                                    <Layers className="w-2.5 h-2.5" /> {dom.name}
+                                  </span>
+                                )
+                              })}
                             </div>
                           </div>
 
@@ -595,15 +678,15 @@ export default function TeamsAndUsersManager() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-550 uppercase tracking-wider mb-1.5">Trade / Specialty *</label>
+                      <label className="block text-xs font-bold text-slate-550 uppercase tracking-wider mb-1.5">Domain *</label>
                       <select
                         value={teamForm.trade}
                         onChange={e => setTeamForm({ ...teamForm, trade: e.target.value })}
                         className="input-field text-sm cursor-pointer"
                         required
                       >
-                        <option value="">— Select trade specialization —</option>
-                        {TRADES.map(t => <option key={t} value={t}>{t}</option>)}
+                        <option value="">— Select domain —</option>
+                        {allDomains.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                       </select>
                     </div>
 
@@ -677,6 +760,51 @@ export default function TeamsAndUsersManager() {
                       <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-105">
                         {selectedTeam.description}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Domain Assignment Tray */}
+                  <div className="border-b border-slate-100">
+                    <button
+                      onClick={() => setShowDomainTray(!showDomainTray)}
+                      className="w-full flex items-center justify-between px-5 py-3 text-xs font-bold text-slate-500 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                        <Layers className="w-3.5 h-3.5 text-violet-500" />
+                        Domains ({(teamDomainMap[selectedTeam.id] ?? []).length})
+                      </span>
+                      <span className="text-[10px] text-slate-400">{showDomainTray ? '▾' : '▸'}</span>
+                    </button>
+                    {showDomainTray && (
+                      <div className="px-5 pb-4 pt-1 space-y-2.5 animate-in slide-in-from-top-1 duration-150">
+                        {allDomains.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No domains configured. Register domains under <a href="/settings/domains" className="underline hover:text-indigo-700 font-semibold text-slate-600">Domains Settings</a>.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {allDomains.map(d => {
+                              const active = (teamDomainMap[selectedTeam.id] ?? []).includes(d.id)
+                              return (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  onClick={() => toggleTeamDomain(d.id)}
+                                  disabled={savingDomains || selectedTeam.isDeleted}
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase border transition-all ${
+                                    active
+                                      ? 'bg-violet-600 border-violet-600 text-white shadow-3xs'
+                                      : 'bg-white border-slate-250 text-slate-600 hover:border-violet-300'
+                                  } ${selectedTeam.isDeleted ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                  {d.name}
+                                </button>
+                              )
+                            })}
+                            {savingDomains && (
+                              <span className="text-[10px] font-bold text-violet-400 animate-pulse ml-1 tracking-wider uppercase">Syncing…</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 

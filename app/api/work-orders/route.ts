@@ -26,7 +26,7 @@ const woSchema = z.object({
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional().default([]),
   assignedToId:        z.string().nullable().optional(),
-  domainId:            z.string().nullable().optional(),
+  teamId:              z.string().nullable().optional(),
   laborHours:          z.number().nullable().optional(),
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),
@@ -106,6 +106,16 @@ export async function POST(request: NextRequest) {
       data.locationScope,
     )
 
+    // ── Auto-derive domainId from team ───────────────────────────────
+    let derivedDomainId: string | null = null
+    if (data.teamId) {
+      const teamDomain = await prisma.teamDomain.findFirst({
+        where: { teamId: data.teamId },
+        include: { domain: true },
+      })
+      derivedDomainId = teamDomain?.domainId ?? null
+    }
+
     const wo = await prisma.workOrder.create({
       data: {
         woNumber,
@@ -120,7 +130,8 @@ export async function POST(request: NextRequest) {
         locationId:     data.locationId   ?? null,
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,
-        domainId:       data.domainId     ?? null,
+        teamId:         data.teamId       ?? null,
+        domainId:       derivedDomainId,
         createdById:    user.userId,
         laborHours:     data.laborHours   ?? null,
         laborCost:      data.laborCost    ?? null,
@@ -196,20 +207,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (data.domainId) {
-      const domainUsers = await prisma.user.findMany({
-        where: { domainId: data.domainId },
+    if (data.teamId) {
+      const teamMembers = await prisma.teamMember.findMany({
+        where: { teamId: data.teamId },
+        include: { user: true },
       })
-      for (const dUser of domainUsers) {
+      for (const member of teamMembers) {
         await createNotification({
-          userId: dUser.id,
-          title: `WO ${wo.woNumber} Assigned to Your Domain`,
+          userId: member.user.id,
+          title: `WO ${wo.woNumber} Assigned to Your Team`,
           message: wo.title, type: 'WORK_ORDER_ASSIGNED',
           entityId: wo.id, href: `/work-orders/${wo.id}`,
         }).catch(console.error)
-        // Send email to each domain member
         await sendWOAssigned({
-          toEmail: dUser.email, toName: dUser.name,
+          toEmail: member.user.email, toName: member.user.name,
           woNumber: wo.woNumber, woTitle: wo.title, woId: wo.id,
           priority: wo.priority, dueDate: wo.dueDate?.toISOString() ?? null,
           assetName: null,

@@ -10,6 +10,7 @@ import {
   ChevronDown, 
   Clock, 
   User, 
+  Users,
   AlertTriangle, 
   FileText, 
   CheckSquare, 
@@ -35,6 +36,11 @@ interface ProcedureStep {
   settings?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logic?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  links?: any
+  assignedUserIds?: string[]
+  assignedTeamIds?: string[]
+  nestedProcedureId?: string | null
   assetId?: string | null
   asset?: {
     id: string
@@ -107,6 +113,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [newLabels, setNewLabels] = useState('')
+  const [saveToLibrary, setSaveToLibrary] = useState(false)
 
   // State for expanded notes/attachments editor for any step
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null)
@@ -220,6 +227,12 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
           return false
         }
       }
+    }
+
+    // 3. Validate AMOUNT is a valid number
+    if (g.type === 'AMOUNT') {
+      const valNum = Number(rich.value)
+      if (rich.value && isNaN(valNum)) return false
     }
 
     return true
@@ -480,8 +493,34 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
       setSelectedTemplateId('')
       setNewTitle('')
       setNewLabels('')
+      setSaveToLibrary(false)
       setAdding(false)
       router.refresh()
+
+      // Save to library if checkbox was checked
+      if (saveToLibrary && addMode === 'CUSTOM' && data.steps?.length > 0) {
+        try {
+          await fetch('/api/procedures', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: newTitle.trim() || data.title,
+              description: `Created from Work Order ${woId}`,
+              steps: data.steps.map((s: any) => ({
+                label: s.label,
+                type: s.type || 'CHECKBOX',
+                isMandatory: s.isMandatory ?? false,
+                options: s.options ?? [],
+                sortOrder: s.sortOrder ?? 0,
+                settings: s.settings ?? {},
+                logic: s.logic ?? {},
+              })),
+            }),
+          })
+        } catch {
+          // Silent fail for library save
+        }
+      }
     } catch {
       setError('Network request failed')
     } finally {
@@ -701,6 +740,40 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
               </div>
             )}
 
+            {/* Reference Links */}
+            {step.links && step.links.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {step.links.map((link: { label: string; url: string }, idx: number) => (
+                  <a
+                    key={idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-[10px] font-bold rounded-md transition-colors"
+                  >
+                    <ArrowUpRight className="w-2.5 h-2.5" />
+                    {link.label || 'Reference'}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Assignment Badges */}
+            {((step.assignedUserIds && step.assignedUserIds.length > 0) || (step.assignedTeamIds && step.assignedTeamIds.length > 0)) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {step.assignedUserIds?.map((uid: string) => (
+                  <span key={uid} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded border border-indigo-200/50">
+                    <User className="w-2.5 h-2.5" /> User
+                  </span>
+                ))}
+                {step.assignedTeamIds?.map((tid: string) => (
+                  <span key={tid} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 text-purple-700 text-[9px] font-bold rounded border border-purple-200/50">
+                    <Users className="w-2.5 h-2.5" /> Team
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Instruction Read-only card with action */}
             {isInstruction && (
               <div className="mt-2 text-xs text-slate-700 bg-slate-50 border border-slate-200 p-3 rounded-lg leading-relaxed shadow-4xs">
@@ -813,6 +886,52 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 onChange={e => submitStepValue(procId, step.id, 'DATE', e.target.value || null)}
                 className="mt-2 max-w-xs text-xs border border-slate-200 focus:border-blue-500 rounded-lg px-3 py-1.5 bg-white text-slate-705 outline-none transition-all cursor-pointer shadow-4xs"
               />
+            )}
+
+            {/* Yes / No / N/A Toggle */}
+            {step.type === 'YES_NO_NA' && (
+              <div className="flex gap-2 mt-2">
+                {(['Yes', 'No', 'N/A'] as const).map(val => {
+                  const isSelected = rich.value === val
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => !isClosed && submitStepValue(procId, step.id, 'YES_NO_NA', val)}
+                      disabled={isClosed}
+                      className={`px-4 py-2 text-xs font-black rounded-lg border transition-all ${
+                        isSelected
+                          ? val === 'Yes'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : val === 'No'
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                            : 'bg-slate-500 text-white border-slate-500 shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                      } ${isClosed ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {val === 'Yes' && '✓ '}{val === 'No' && '✗ '}{val === 'N/A' && '— '}{val}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Currency Amount */}
+            {step.type === 'AMOUNT' && !isClosed && (
+              <div className="mt-2 max-w-xs relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  defaultValue={rich.value ?? ''}
+                  onBlur={e => submitStepValue(procId, step.id, 'AMOUNT', e.target.value || null)}
+                  placeholder="0.00"
+                  className="w-full text-xs border border-slate-200 focus:border-blue-500 rounded-lg pl-7 pr-3 py-2 outline-none transition-all shadow-4xs"
+                />
+              </div>
+            )}
+            {step.type === 'AMOUNT' && isClosed && rich.value && (
+              <div className="mt-2 text-sm font-semibold text-slate-700">${Number(rich.value).toFixed(2)}</div>
             )}
 
             {/* Signature Area drawing pad or name entry */}
@@ -1248,7 +1367,7 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                 style={{ width: `${pct}%` }} 
               />
             </div>
-            <span className="text-xs font-bold text-slate-700 w-9 text-right">{pct}% completed</span>
+            <span className="text-xs font-bold text-slate-700 w-9 text-right">{pct}%</span>
           </div>
         </div>
       )}
@@ -1316,6 +1435,18 @@ export default function WOProceduresPanel({ woId, initialProcedures, woStatus }:
                   placeholder={`Confirm pressure drops\nCheck safety valve release\nLog ambient reading psi`}
                 />
               </div>
+              <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-lg p-2.5 hover:bg-slate-50 transition">
+                <input
+                  type="checkbox"
+                  checked={saveToLibrary}
+                  onChange={e => setSaveToLibrary(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 accent-blue-600"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-700">Save to Procedure Library</span>
+                  <span className="text-slate-400 block text-[10px]">Create a reusable template from this custom procedure</span>
+                </div>
+              </label>
             </>
           )}
 

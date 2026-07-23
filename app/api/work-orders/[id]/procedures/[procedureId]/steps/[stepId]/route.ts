@@ -32,6 +32,7 @@ function validateValue(type: string, value: string | null, options: string[]): s
   switch (type) {
     case 'NUMBER_INPUT':
     case 'METER':
+    case 'AMOUNT':
       if (isNaN(Number(parsedValue))) return 'Value must be a valid number'
       break
     case 'SINGLE_SELECT':
@@ -40,6 +41,9 @@ function validateValue(type: string, value: string | null, options: string[]): s
       break
     case 'INSPECTION':
       if (parsedValue !== 'PASS' && parsedValue !== 'FLAG' && parsedValue !== 'FAIL') return 'Value must be PASS, FLAG, or FAIL'
+      break
+    case 'YES_NO_NA':
+      if (parsedValue !== 'Yes' && parsedValue !== 'No' && parsedValue !== 'N/A') return 'Value must be Yes, No, or N/A'
       break
     case 'SIGNATURE':
       if (!parsedValue) return 'Signature is required'

@@ -42,6 +42,8 @@ const stepTypeEnum = z.enum([
   'INSTRUCTION',
   'CHECKBOX',
   'INSPECTION',
+  'YES_NO_NA',
+  'AMOUNT',
   'TEXT_INPUT',
   'NUMBER_INPUT',
   'SINGLE_SELECT',
@@ -62,6 +64,10 @@ const stepSchema = z.object({
   sortOrder:  z.number().int().default(0),
   settings:   z.any().optional(),
   logic:      z.any().optional(),
+  links:      z.any().optional(),
+  assignedUserIds:  z.array(z.string()).default([]),
+  assignedTeamIds:  z.array(z.string()).default([]),
+  nestedProcedureId: z.string().nullable().optional(),
 }).refine(
   step => !['SINGLE_SELECT', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(step.type) || step.options.length >= 1,
   { message: 'Multiple choice, single select, and dropdown steps must have at least one option', path: ['options'] }
@@ -74,6 +80,7 @@ const updateSchema = z.object({
   assetIds:   z.array(z.string()).optional().default([]),
   categoryIds:z.array(z.string()).optional().default([]),
   locationIds:z.array(z.string()).optional().default([]),
+  teamId:     z.string().nullable().optional(),
 })
 
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -111,12 +118,36 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     // Replace all steps and update tag associations atomically
     const procedure = await prisma.$transaction(async (tx: any) => {
+      // Create version snapshot before updating
+      const currentVersion = await tx.procedureVersion.findFirst({
+        where: { procedureId: id },
+        orderBy: { versionNumber: 'desc' },
+      })
+      const nextVersionNumber = (currentVersion?.versionNumber ?? 0) + 1
+
+      // Snapshot current state
+      await tx.procedureVersion.create({
+        data: {
+          procedureId: id,
+          versionNumber: nextVersionNumber,
+          snapshot: {
+            name: existing.name,
+            description: existing.description,
+            steps: data.steps,
+            teamId: data.teamId,
+          },
+          editedById: user.userId,
+          editedByName: user.name,
+        },
+      })
+
       await tx.procedureStep.deleteMany({ where: { procedureId: id } })
       return tx.procedure.update({
         where: { id },
         data: {
           name:       data.name,
           description:data.description ?? null,
+          teamId:     data.teamId ?? null,
           steps: { create: data.steps },
           locations: { set: data.locationIds.map(id => ({ id })) },
           categories:{ set: data.categoryIds.map(id => ({ id })) },

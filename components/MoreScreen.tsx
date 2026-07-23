@@ -38,7 +38,7 @@ const adminItems = [
   { label: 'Custom Roles', href: '/settings/roles', icon: Shield, color: 'text-purple-600 bg-purple-50' },
   { label: 'Audit Log', href: '/audit-log', icon: Shield, color: 'text-slate-600 bg-slate-100' },
   { label: 'Import Data', href: '/import', icon: Upload, color: 'text-amber-600 bg-amber-50' },
-  { label: 'Procedures', href: '/settings/procedures', icon: ClipboardCheck, color: 'text-emerald-600 bg-emerald-50' },
+  { label: 'Procedures', href: '/procedures', icon: ClipboardCheck, color: 'text-emerald-600 bg-emerald-50' },
   { label: 'Settings', href: '/settings', icon: Settings, color: 'text-slate-600 bg-slate-100' },
 ]
 

@@ -16,7 +16,7 @@ export default function DeleteProcedureButton({ id, name, onSuccess }: { id: str
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push('/settings/procedures')
+        router.push('/procedures')
         router.refresh()
       }
     }

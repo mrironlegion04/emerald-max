@@ -40,24 +40,59 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       })
       if (!procTemplate) return NextResponse.json({ error: 'Procedure template not found' }, { status: 404 })
 
+      // Build steps list, expanding nested procedures inline
+      const woSteps: any[] = []
+      let sortOrder = 0
+
+      for (const step of procTemplate.steps) {
+        if (step.type === 'NESTED_PROCEDURE' && step.nestedProcedureId) {
+          // Fetch nested procedure and clone its steps inline
+          const nestedProc = await prisma.procedure.findUnique({
+            where: { id: step.nestedProcedureId },
+            include: { steps: { orderBy: { sortOrder: 'asc' } } }
+          })
+          if (nestedProc) {
+            for (const nestedStep of nestedProc.steps) {
+              woSteps.push({
+                label: nestedStep.label,
+                type: nestedStep.type,
+                isMandatory: nestedStep.isMandatory,
+                sortOrder: sortOrder++,
+                options: nestedStep.options,
+                isChecked: false,
+                settings: nestedStep.settings ?? {},
+                logic: nestedStep.logic ?? {},
+                links: nestedStep.links ?? undefined,
+                assignedUserIds: nestedStep.assignedUserIds ?? [],
+                assignedTeamIds: nestedStep.assignedTeamIds ?? [],
+              })
+            }
+          }
+        } else {
+          woSteps.push({
+            label: step.label,
+            type: step.type,
+            isMandatory: step.isMandatory,
+            sortOrder: sortOrder++,
+            options: step.options,
+            isChecked: false,
+            settings: step.settings ?? {},
+            logic: step.logic ?? {},
+            links: step.links ?? undefined,
+            assignedUserIds: step.assignedUserIds ?? [],
+            assignedTeamIds: step.assignedTeamIds ?? [],
+            nestedProcedureId: step.nestedProcedureId ?? undefined,
+          })
+        }
+      }
+
       const woProcedure = await prisma.wOProcedure.create({
         data: {
           title: procTemplate.name,
           workOrderId: id,
           procedureId,
           source: 'MANUAL',
-          steps: {
-            create: procTemplate.steps.map(step => ({
-              label: step.label,
-              type: step.type,
-              isMandatory: step.isMandatory,
-              sortOrder: step.sortOrder,
-              options: step.options,
-              isChecked: false,
-              settings: step.settings ?? {},
-              logic: step.logic ?? {},
-            }))
-          }
+          steps: { create: woSteps }
         },
         include: { steps: { orderBy: { sortOrder: 'asc' } } }
       })

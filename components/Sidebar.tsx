@@ -58,12 +58,12 @@ const navItems = [
     icon: <Gauge className="w-4.5 h-4.5" />,
   },
   {
-    label: 'Preventive Maint.',
+    label: 'Maintenance Plans',
     href: '/preventive-maintenance',
     icon: <Calendar className="w-4.5 h-4.5" />,
   },
   {
-    label: 'Inventory',
+    label: 'Parts Inventory',
     href: '/inventory',
     icon: <Box className="w-4.5 h-4.5" />,
   },
@@ -135,10 +135,11 @@ const reportGroupItems = [
   },
 ]
 
-const enterpriseSettingsItems = [
+// Library group items (collapsible)
+const libraryGroupItems = [
   {
-    label: 'Procedures',
-    href: '/settings/procedures',
+    label: 'Procedure Library',
+    href: '/procedures',
     icon: <ClipboardCheck className="w-4 h-4" />,
   },
   {
@@ -159,12 +160,6 @@ const enterpriseSettingsItems = [
     adminOnly: true,
   },
   {
-    label: 'BOM Templates',
-    href: '/settings/bom-templates',
-    icon: <ClipboardCheck className="w-4 h-4" />,
-    adminOnly: true,
-  },
-  {
     label: 'Domains',
     href: '/settings/domains',
     icon: <Layers className="w-4 h-4" />,
@@ -174,6 +169,16 @@ const enterpriseSettingsItems = [
     label: 'Issues',
     href: '/settings/issues',
     icon: <AlertCircle className="w-4 h-4" />,
+    adminOnly: true,
+  },
+]
+
+// Slim Settings group (only non-library admin items)
+const enterpriseSettingsItems = [
+  {
+    label: 'BOM Templates',
+    href: '/settings/bom-templates',
+    icon: <ClipboardCheck className="w-4 h-4" />,
     adminOnly: true,
   },
   {
@@ -200,10 +205,12 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
     const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
     const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
     const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
+    const isLibraryActive = pathname.startsWith('/procedures') || pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues')
     return {
       assets: isAssetsActive,
       reports: isReportsActive,
       settings: isSettingsActive,
+      library: isLibraryActive,
     }
   })
 
@@ -225,6 +232,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
   const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
   const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
+  const isLibraryActive = pathname.startsWith('/procedures') || pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues')
 
   return (
     <aside className="w-full h-full bg-white border-r border-slate-200 flex flex-col flex-shrink-0 shadow-xs">
@@ -345,6 +353,63 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+
+        {/* Collapsible: Library */}
+        <div className="space-y-1 mt-4">
+          <button
+            onClick={() => toggleGroup('library')}
+            className={clsx(
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              { 'text-blue-600 bg-blue-50/20': isLibraryActive && !openGroups.library }
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className={clsx('transition-colors', isLibraryActive ? 'text-blue-600' : 'text-slate-400')}>
+                <ClipboardCheck className="w-4.5 h-4.5" />
+              </span>
+              <span>Library</span>
+            </div>
+            <span>
+              {openGroups.library ? (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              )}
+            </span>
+          </button>
+
+          {openGroups.library && (
+            <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
+              {libraryGroupItems
+                .filter(item => !item.adminOnly || user.role === 'ADMIN')
+                .map(item => {
+                  const active = isActive(item.href)
+                  return (
+                    <div key={item.href} className="relative">
+                      {active && (
+                        <motion.div 
+                          layoutId="activeSideIndicator"
+                          className="absolute left-[-15px] top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-600 rounded-r-lg z-10"
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <Link
+                        href={item.href}
+                        onClick={onClose}
+                        className={clsx(
+                          'sidebar-link group text-xs !py-1.5 pl-2',
+                          { 'active !bg-blue-50/70': active }
+                        )}
+                      >
+                        <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-750')}>{item.icon}</span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </div>
+                  )
+                })}
             </div>
           )}
         </div>

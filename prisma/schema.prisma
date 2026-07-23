@@ -210,6 +210,7 @@ model Team {
   domains    TeamDomain[]
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
+  procedures Procedure[]
 
   @@map("teams")
 }
@@ -874,6 +875,12 @@ model WOProcedureStep {
 
   settings    Json?
   logic       Json?
+  links       Json?
+
+  assignedUserIds  String[]
+  assignedTeamIds  String[]
+
+  nestedProcedureId String?
 
   procedureId String
   procedure   WOProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
@@ -962,7 +969,12 @@ model Procedure {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  steps       ProcedureStep[]
+  teamId      String?
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  steps       ProcedureStep[] @relation("ProcedureSteps")
+  versions    ProcedureVersion[]
+  nestedBy    ProcedureStep[] @relation("NestedProcedures")
   // MaintenanceSchedule procedures (many-to-many intermediate)
   pmSchedules MaintenanceScheduleProcedure[] @relation("PMProcedurePMSchedules")
 
@@ -971,6 +983,21 @@ model Procedure {
   assets      Asset[]            @relation("ProcedureAssets")
 
   @@map("procedures")
+}
+
+model ProcedureVersion {
+  id            String   @id @default(cuid())
+  procedureId   String
+  procedure     Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  snapshot      Json
+  editedById    String?
+  editedByName  String?
+  changeNote    String?
+  createdAt     DateTime @default(now())
+
+  @@index([procedureId])
+  @@map("procedure_versions")
 }
 
 model ProcedureStep {
@@ -983,9 +1010,16 @@ model ProcedureStep {
   
   settings    Json?
   logic       Json?
+  links       Json?
+
+  assignedUserIds  String[]
+  assignedTeamIds  String[]
+
+  nestedProcedureId String?
+  nestedProcedure   Procedure? @relation("NestedProcedures", fields: [nestedProcedureId], references: [id], onDelete: SetNull)
 
   procedureId String
-  procedure   Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
+  procedure   Procedure @relation("ProcedureSteps", fields: [procedureId], references: [id], onDelete: Cascade)
 
   @@map("procedure_steps")
 }

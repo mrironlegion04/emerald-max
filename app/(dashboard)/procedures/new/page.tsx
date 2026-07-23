@@ -9,7 +9,7 @@ export default async function NewProcedurePage() {
   const user = await getCurrentUser()
   if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) redirect('/dashboard')
 
-  const [assets, locations, assetCategories] = await Promise.all([
+  const [assets, locations, assetCategories, teams] = await Promise.all([
     prisma.asset.findMany({
       where: { isDeleted: false, status: 'ACTIVE' },
       select: { id: true, name: true },
@@ -23,13 +23,18 @@ export default async function NewProcedurePage() {
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
+    prisma.team.findMany({
+      where: { isActive: true, isDeleted: false },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-1">
-        <Link href="/settings/procedures" className="text-sm text-gray-400 hover:text-gray-600">
-          ← Back to Procedures
+        <Link href="/procedures" className="text-sm text-gray-400 hover:text-gray-600">
+          ← Back to Procedure Library
         </Link>
       </div>
       <PageHeader title="New Procedure" subtitle="Create a reusable procedure containing specific required actions." />
@@ -37,6 +42,7 @@ export default async function NewProcedurePage() {
         assets={assets}
         locations={locations}
         assetCategories={assetCategories}
+        teams={teams}
       />
     </div>
   )

@@ -4,6 +4,15 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
+
+const nestedTierSchema = z.object({
+  label:     z.string(),
+  frequency: z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
+  interval:  z.number().int().min(1),
+  runEvery:  z.number().int().min(1),
+  enabled:   z.boolean(),
+})
 
 const pmSchema = z.object({
   title:                z.string().min(1, 'Title is required'),
@@ -20,6 +29,10 @@ const pmSchema = z.object({
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
   procedureIds:         z.array(z.string()).optional().default([]),
+  // MaintainX-style fields
+  scheduleBehavior:     z.enum(['FIXED','FLOATING']).default('FIXED'),
+  schedulingHorizon:    z.number().int().min(1).max(52).default(1),
+  nestedConfig:         z.array(nestedTierSchema).nullable().optional(),
 }).refine(data => data.assetId || data.locationId, {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -72,6 +85,9 @@ export async function POST(request: NextRequest) {
         meterInterval:       data.meterInterval        ?? null,
         meterUnit:           data.meterUnit            ?? null,
         createdById:         user.userId,
+        scheduleBehavior:    data.scheduleBehavior,
+        schedulingHorizon:   data.schedulingHorizon,
+        nestedConfig:        data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig,
         procedures: {
           create: procedureIds.map((procedureId, index) => ({
             procedureId,

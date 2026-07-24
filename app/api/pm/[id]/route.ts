@@ -4,6 +4,15 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
+
+const nestedTierSchema = z.object({
+  label:     z.string(),
+  frequency: z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
+  interval:  z.number().int().min(1),
+  runEvery:  z.number().int().min(1),
+  enabled:   z.boolean(),
+})
 
 const updateSchema = z.object({
   title:                z.string().min(1).optional(),
@@ -19,7 +28,11 @@ const updateSchema = z.object({
   meterInterval:        z.number().nullable().optional(),
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
-  procedureIds:        z.array(z.string()).optional(),
+  procedureIds:         z.array(z.string()).optional(),
+  // MaintainX-style fields
+  scheduleBehavior:     z.enum(['FIXED','FLOATING']).optional(),
+  schedulingHorizon:    z.number().int().min(1).max(52).optional(),
+  nestedConfig:         z.array(nestedTierSchema).nullable().optional(),
 })
 
 export async function GET(
@@ -85,6 +98,11 @@ export async function PUT(
         meterId:             data.meterId              ?? null,
         meterInterval:       data.meterInterval        ?? null,
         meterUnit:           data.meterUnit            ?? null,
+        scheduleBehavior:    data.scheduleBehavior,
+        schedulingHorizon:   data.schedulingHorizon,
+        nestedConfig:        data.nestedConfig !== undefined
+          ? (data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig)
+          : undefined,
         procedures: data.procedureIds !== undefined ? {
           deleteMany: {},
           create: data.procedureIds.map((procedureId, index) => ({

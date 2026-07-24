@@ -95,6 +95,11 @@ enum PMTriggerType {
   METER
 }
 
+enum ScheduleBehavior {
+  FIXED      // Next WO due date calculated from current due date
+  FLOATING   // Next WO due date calculated from completion date
+}
+
 enum MeterType {
   RUNTIME
   DISTANCE
@@ -551,6 +556,10 @@ model WorkOrder {
   maintenanceScheduleId String?
   maintenanceSchedule   MaintenanceSchedule? @relation("PMScheduleWorkOrders", fields: [maintenanceScheduleId], references: [id])
 
+  // Nested PM tracking
+  nestedLevel   Int?     // Index in the nestedConfig array (0 = base)
+  nestedLabel   String?  // Display label like "Quarterly Deep Clean"
+
   teamId String?
   team   Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
@@ -742,6 +751,17 @@ model MaintenanceSchedule {
   isActive           Boolean            @default(true)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  // Schedule behavior (MaintainX-style)
+  scheduleBehavior  ScheduleBehavior @default(FIXED)
+  lastCompletedAt   DateTime?        // When the last WO from this schedule was completed
+
+  // Scheduling horizon — how many future WOs to pre-generate
+  schedulingHorizon Int  @default(1)
+
+  // Nested PM — array of { label, frequency, interval, runEvery, enabled }
+  nestedConfig      Json?
+  nestedCounter     Int  @default(0)  // Increments each time WOs are generated
 
   assetId             String?
   asset               Asset?             @relation(fields: [assetId], references: [id])

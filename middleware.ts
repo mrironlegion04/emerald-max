@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth needed
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth') || pathname === '/request') {
+  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/cron/') || pathname === '/request') {
     return NextResponse.next()
   }
 

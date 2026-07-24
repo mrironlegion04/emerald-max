@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardCheck, Star } from 'lucide-react'
+import { ClipboardCheck, Star, Plus, X, Layers } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 
@@ -24,19 +24,29 @@ interface Procedure {
   assets?: { id: string }[]
 }
 
+interface NestedTier {
+  label: string
+  frequency: string
+  interval: number
+  runEvery: number
+  enabled: boolean
+}
+
 interface PMFormData {
   title: string; description: string
   triggerType: string; frequency: string; interval: string
   meterInterval: string; meterUnit: string; meterId: string
   nextDueDate: string; assetId: string; locationId: string; locationScope: string; isActive: boolean
   procedureIds: string[]
+  // MaintainX-style fields
+  scheduleBehavior: string; schedulingHorizon: string
 }
 
 interface Props {
   assets:     Asset[]
   locations:  Location[]
   procedures?: Procedure[]
-  initialData?: Partial<PMFormData>
+  initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null }
   scheduleId?: string
   preselectedAssetId?: string
 }
@@ -115,7 +125,14 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
     locationScope:      initialData?.locationScope      ?? 'ALL_ASSETS',
     isActive:           initialData?.isActive           ?? true,
     procedureIds:       (initialData as any)?.procedures?.map((p: any) => p.procedure?.id || p.procedureId).filter(Boolean) ?? (initialData as any)?.procedureIds ?? [],
+    scheduleBehavior:   (initialData as any)?.scheduleBehavior ?? 'FIXED',
+    schedulingHorizon:  (initialData as any)?.schedulingHorizon ?? '1',
   })
+
+  const [nestedTiers, setNestedTiers] = useState<NestedTier[]>(
+    (initialData as any)?.nestedConfig ?? []
+  )
+  const nestedEnabled = nestedTiers.length > 0
 
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -187,6 +204,28 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
     }
   }
 
+  // Nested PM tier management
+  function addNestedTier() {
+    setNestedTiers(prev => [
+      ...prev,
+      {
+        label: '',
+        frequency: form.frequency,
+        interval: 1,
+        runEvery: prev.length + 2,
+        enabled: true,
+      },
+    ])
+  }
+
+  function updateNestedTier(index: number, field: keyof NestedTier, value: string | number | boolean) {
+    setNestedTiers(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)))
+  }
+
+  function removeNestedTier(index: number) {
+    setNestedTiers(prev => prev.filter((_, i) => i !== index))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setSaving(true)
@@ -206,6 +245,9 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
         procedureIds:         form.procedureIds,
+        scheduleBehavior:     form.scheduleBehavior,
+        schedulingHorizon:    parseInt(form.schedulingHorizon) || 1,
+        nestedConfig:         nestedTiers.length > 0 ? nestedTiers : null,
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -473,6 +515,130 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
             <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
               Schedule is active
             </label>
+          </div>
+        )}
+      </div>
+
+      {/* Schedule Behavior & Horizon */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <h2 className="font-semibold text-gray-900 text-sm">Schedule Settings</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Behavior</label>
+            <select
+              value={form.scheduleBehavior}
+              onChange={e => set('scheduleBehavior', e.target.value)}
+              className="input-field"
+            >
+              <option value="FIXED">Fixed Intervals</option>
+              <option value="FLOATING">Floating Intervals</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              {form.scheduleBehavior === 'FIXED'
+                ? 'Next WO fires on a fixed cadence regardless of completion.'
+                : 'Next WO fires after the previous one is completed + the interval.'}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Scheduling Horizon</label>
+            <input
+              type="number"
+              min="1"
+              max="52"
+              value={form.schedulingHorizon}
+              onChange={e => set('schedulingHorizon', e.target.value)}
+              className="input-field"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              How many WOs to pre-generate at once (1 = one at a time).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Nested PM */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-purple-600" />
+            <h2 className="font-semibold text-gray-900 text-sm">Nested Maintenance</h2>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={nestedEnabled}
+              onChange={e => {
+                if (e.target.checked && nestedTiers.length === 0) {
+                  addNestedTier()
+                } else if (!e.target.checked) {
+                  setNestedTiers([])
+                }
+              }}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+          </label>
+        </div>
+
+        <p className="text-xs text-gray-500">
+          Run different maintenance tiers at different frequencies (e.g., monthly inspection + quarterly deep clean + annual overhaul).
+          The base schedule runs every cycle. Nested tiers fire based on &quot;Run every N WOs&quot;.
+        </p>
+
+        {nestedEnabled && (
+          <div className="space-y-3">
+            {nestedTiers.map((tier, i) => (
+              <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <input
+                    value={tier.label}
+                    placeholder="Tier name (e.g. Quarterly Deep Clean)"
+                    onChange={e => updateNestedTier(i, 'label', e.target.value)}
+                    className="text-sm font-medium bg-transparent border-none p-0 focus:ring-0 focus:outline-none w-full"
+                  />
+                  <button type="button" onClick={() => removeNestedTier(i)} className="text-gray-400 hover:text-red-600 ml-2 shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs text-gray-500">Every</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={tier.interval}
+                    onChange={e => updateNestedTier(i, 'interval', parseInt(e.target.value) || 1)}
+                    className="w-16 text-sm rounded border-gray-300"
+                  />
+                  <select
+                    value={tier.frequency}
+                    onChange={e => updateNestedTier(i, 'frequency', e.target.value)}
+                    className="text-sm rounded border-gray-300"
+                  >
+                    {freqOptions.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-gray-500 ml-2">Run every</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={tier.runEvery}
+                    onChange={e => updateNestedTier(i, 'runEvery', parseInt(e.target.value) || 1)}
+                    className="w-16 text-sm rounded border-gray-300"
+                  />
+                  <span className="text-xs text-gray-500">WOs</span>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addNestedTier}
+              className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1 font-medium"
+            >
+              <Plus className="w-4 h-4" /> Add tier
+            </button>
           </div>
         )}
       </div>

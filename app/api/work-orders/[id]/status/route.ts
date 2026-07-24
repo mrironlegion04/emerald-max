@@ -309,6 +309,16 @@ export async function PATCH(
         console.error('Failed to update asset metrics:', err)
       }
     }
+
+    // ===== FLOATING INTERVAL RESCHEDULE =====
+    if (status === 'COMPLETED') {
+      try {
+        const { handleWOCompletion } = await import('@/lib/pm-generation')
+        await handleWOCompletion(id)
+      } catch (err) {
+        console.error('Failed to handle floating interval reschedule:', err)
+      }
+    }
     
     // ===== UPDATE ASSET STATUS =====
     if (wo.assetId) {

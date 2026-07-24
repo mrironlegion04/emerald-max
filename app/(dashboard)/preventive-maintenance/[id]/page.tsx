@@ -136,6 +136,15 @@ export default async function PMDetailPage({
                   { label: 'Scope', value: schedule.locationScope === 'ALL_ASSETS' ? 'All Assets Checklist' : 'General Maintenance' },
                 ] : []),
                 { label: 'Frequency',  value: `Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` },
+                { label: 'Behavior',   value: (
+                  <Badge label={schedule.scheduleBehavior === 'FLOATING' ? 'Floating' : 'Fixed'} variant={schedule.scheduleBehavior === 'FLOATING' ? 'blue' : 'gray'} />
+                )},
+                ...(schedule.scheduleBehavior === 'FLOATING' && schedule.lastCompletedAt ? [
+                  { label: 'Last completed', value: fmt(schedule.lastCompletedAt) },
+                ] : []),
+                ...(schedule.schedulingHorizon > 1 ? [
+                  { label: 'Horizon', value: `${schedule.schedulingHorizon} WOs ahead` },
+                ] : []),
                 { label: 'Created by', value: schedule.createdBy?.name ?? '—' },
                 { label: 'Created',    value: fmt(schedule.createdAt) },
               ].map(row => (
@@ -166,6 +175,24 @@ export default async function PMDetailPage({
                     {cp.procedure.description && (
                       <p className="text-[10px] text-gray-500 mt-0.5">{cp.procedure.description}</p>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nested PM Tiers */}
+          {schedule.nestedConfig && Array.isArray(schedule.nestedConfig) && (schedule.nestedConfig as any[]).length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-900 text-sm mb-3">Nested Maintenance Tiers</h2>
+              <div className="space-y-2">
+                {(schedule.nestedConfig as any[]).map((tier: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <Badge label={tier.enabled ? 'Active' : 'Disabled'} variant={tier.enabled ? 'green' : 'gray'} />
+                    <span className="font-medium text-gray-800">{tier.label || `Tier ${i + 2}`}</span>
+                    <span className="text-gray-500 text-xs">
+                      Every {tier.interval > 1 ? `${tier.interval} ` : ''}{freqLabels[tier.frequency]?.toLowerCase()} · Run every {tier.runEvery} WO{tier.runEvery > 1 ? 's' : ''}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -226,6 +253,7 @@ export default async function PMDetailPage({
                       <p className="text-xs text-gray-400">
                         {wo.woNumber}{wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
                         {wo.dueDate ? ` · Due ${fmt(wo.dueDate)}` : ''}
+                        {wo.nestedLabel ? ` · ${wo.nestedLabel}` : ''}
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">

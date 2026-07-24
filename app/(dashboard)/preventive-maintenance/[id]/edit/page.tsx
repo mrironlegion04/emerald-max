@@ -54,6 +54,9 @@ export default async function EditPMPage({
     locationScope:       schedule.locationScope ?? 'ALL_ASSETS',
     isActive:            schedule.isActive,
     procedures:          schedule.procedures,
+    scheduleBehavior:    schedule.scheduleBehavior,
+    schedulingHorizon:   String(schedule.schedulingHorizon),
+    nestedConfig:        schedule.nestedConfig as any[] | null,
   }
 
   return (

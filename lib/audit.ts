@@ -1,7 +1,7 @@
 import { prisma } from './db'
 
 interface AuditOptions {
-  action:     'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE' | 'LOGIN'
+  action:     'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE' | 'LOGIN' | 'GENERATE' | 'CRON_GENERATE'
   entity:     string
   entityId:   string
   entityName: string

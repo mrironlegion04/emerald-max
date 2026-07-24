@@ -228,7 +228,13 @@ export default async function PMPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-sm">
-                        Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}
+                        <span>Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}</span>
+                        {s.scheduleBehavior === 'FLOATING' && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">Floating</span>
+                        )}
+                        {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {s.procedures && s.procedures.length > 0 ? (
@@ -326,6 +332,14 @@ export default async function PMPage({
                       <span className="text-slate-700 font-bold flex items-center gap-1.5">
                         🔄 Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}
                       </span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {s.scheduleBehavior === 'FLOATING' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">Floating</span>
+                        )}
+                        {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Checklist linked count */}

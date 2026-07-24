@@ -93,6 +93,7 @@ enum RequestStatus {
 enum PMTriggerType {
   TIME
   METER
+  TIME_OR_METER
 }
 
 enum ScheduleBehavior {
@@ -294,6 +295,7 @@ model User {
   createdAssets         Asset[]                 @relation("AssetCreatedBy")
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
+  assignedPMSchedules   MaintenanceSchedule[]   @relation("PMAssignedTo")
   statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
   repairSessionsStarted   RepairSession[] @relation("RepairSessionStartedBy")
   repairSessionsCompleted RepairSession[] @relation("RepairSessionCompletedBy")
@@ -762,6 +764,16 @@ model MaintenanceSchedule {
   // Nested PM — array of { label, frequency, interval, runEvery, enabled }
   nestedConfig      Json?
   nestedCounter     Int  @default(0)  // Increments each time WOs are generated
+  nestedStartIndex  Int  @default(0)  // Starting point in nested cycle (for mid-cycle setup)
+
+  // WO Template — defaults applied to generated work orders
+  woPriority        WorkOrderPriority @default(MEDIUM)
+  woDescription     String?           // Additional description appended to WO description
+  woAssignedToId    String?           // Default assignee for generated WOs
+  woAssignedTo      User?             @relation("PMAssignedTo", fields: [woAssignedToId], references: [id])
+
+  // Start date offset — WO startDate = dueDate - N days
+  startDateOffset   Int  @default(0)
 
   assetId             String?
   asset               Asset?             @relation(fields: [assetId], references: [id])

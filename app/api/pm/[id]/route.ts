@@ -17,7 +17,7 @@ const nestedTierSchema = z.object({
 const updateSchema = z.object({
   title:                z.string().min(1).optional(),
   description:          z.string().nullable().optional(),
-  triggerType:          z.enum(['TIME','METER']).optional(),
+  triggerType:          z.enum(['TIME','METER','TIME_OR_METER']).optional(),
   frequency:            z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']).optional(),
   interval:             z.number().int().min(1).optional(),
   nextDueDate:          z.string().optional(),
@@ -33,6 +33,14 @@ const updateSchema = z.object({
   scheduleBehavior:     z.enum(['FIXED','FLOATING']).optional(),
   schedulingHorizon:    z.number().int().min(1).max(52).optional(),
   nestedConfig:         z.array(nestedTierSchema).nullable().optional(),
+  // WO Template fields
+  woPriority:           z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).optional(),
+  woDescription:        z.string().nullable().optional(),
+  woAssignedToId:       z.string().nullable().optional(),
+  // Start date offset
+  startDateOffset:      z.number().int().min(0).optional(),
+  // Nested start index
+  nestedStartIndex:     z.number().int().min(0).optional(),
 })
 
 export async function GET(
@@ -103,6 +111,11 @@ export async function PUT(
         nestedConfig:        data.nestedConfig !== undefined
           ? (data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig)
           : undefined,
+        woPriority:          data.woPriority,
+        woDescription:       data.woDescription        ?? undefined,
+        woAssignedToId:      data.woAssignedToId       ?? undefined,
+        startDateOffset:     data.startDateOffset,
+        nestedStartIndex:    data.nestedStartIndex,
         procedures: data.procedureIds !== undefined ? {
           deleteMany: {},
           create: data.procedureIds.map((procedureId, index) => ({

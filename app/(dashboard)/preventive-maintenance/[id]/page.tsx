@@ -8,6 +8,8 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import PMGenerateButton from '@/components/PMGenerateButton'
 import PMToggleButton from '@/components/PMToggleButton'
 import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
+import PMCopyButton from '@/components/PMCopyButton'
+import PMPreviewPanel from '@/components/PMPreviewPanel'
 import { fmt, daysUntil } from '@/lib/utils'
 
 const freqLabels: Record<string, string> = {
@@ -34,6 +36,7 @@ export default async function PMDetailPage({
       },
       location: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
+      woAssignedTo: { select: { name: true } },
       procedures: {
         include: {
           procedure: {
@@ -78,9 +81,12 @@ export default async function PMDetailPage({
         subtitle={`${targetName} · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}`}
         action={
           canEdit ? (
-            <Link href={`/preventive-maintenance/${schedule.id}/edit`} className="btn-secondary text-sm">
-              Edit schedule
-            </Link>
+            <div className="flex gap-2">
+              <Link href={`/preventive-maintenance/${schedule.id}/edit`} className="btn-secondary text-sm">
+                Edit schedule
+              </Link>
+              <PMCopyButton scheduleId={schedule.id} />
+            </div>
           ) : undefined
         }
       />
@@ -113,6 +119,11 @@ export default async function PMDetailPage({
             )}
           </div>
 
+          {/* Preview upcoming WOs */}
+          {canEdit && schedule.schedulingHorizon > 1 && (
+            <PMPreviewPanel scheduleId={schedule.id} />
+          )}
+
           {/* Details */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="font-semibold text-gray-900 text-sm mb-4">Schedule details</h2>
@@ -136,6 +147,12 @@ export default async function PMDetailPage({
                   { label: 'Scope', value: schedule.locationScope === 'ALL_ASSETS' ? 'All Assets Checklist' : 'General Maintenance' },
                 ] : []),
                 { label: 'Frequency',  value: `Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` },
+                { label: 'Trigger',    value: (
+                  <Badge
+                    label={schedule.triggerType === 'TIME_OR_METER' ? 'Time or Usage' : schedule.triggerType === 'METER' ? 'Meter' : 'Time'}
+                    variant={schedule.triggerType === 'METER' ? 'yellow' : schedule.triggerType === 'TIME_OR_METER' ? 'orange' : 'gray'}
+                  />
+                )},
                 { label: 'Behavior',   value: (
                   <Badge label={schedule.scheduleBehavior === 'FLOATING' ? 'Floating' : 'Fixed'} variant={schedule.scheduleBehavior === 'FLOATING' ? 'blue' : 'gray'} />
                 )},
@@ -144,6 +161,13 @@ export default async function PMDetailPage({
                 ] : []),
                 ...(schedule.schedulingHorizon > 1 ? [
                   { label: 'Horizon', value: `${schedule.schedulingHorizon} WOs ahead` },
+                ] : []),
+                ...(schedule.startDateOffset > 0 ? [
+                  { label: 'Start offset', value: `${schedule.startDateOffset} day${schedule.startDateOffset !== 1 ? 's' : ''} before due` },
+                ] : []),
+                { label: 'WO Priority', value: schedule.woPriority ?? 'Medium' },
+                ...(schedule.woAssignedTo ? [
+                  { label: 'WO Assignee', value: schedule.woAssignedTo.name },
                 ] : []),
                 { label: 'Created by', value: schedule.createdBy?.name ?? '—' },
                 { label: 'Created',    value: fmt(schedule.createdAt) },

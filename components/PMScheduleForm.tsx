@@ -32,6 +32,12 @@ interface NestedTier {
   enabled: boolean
 }
 
+interface SimpleUser {
+  id: string
+  name: string
+  email: string
+}
+
 interface PMFormData {
   title: string; description: string
   triggerType: string; frequency: string; interval: string
@@ -40,12 +46,19 @@ interface PMFormData {
   procedureIds: string[]
   // MaintainX-style fields
   scheduleBehavior: string; schedulingHorizon: string
+  // WO Template fields
+  woPriority: string; woDescription: string; woAssignedToId: string
+  // Start date offset
+  startDateOffset: string
+  // Nested start index
+  nestedStartIndex: string
 }
 
 interface Props {
   assets:     Asset[]
   locations:  Location[]
   procedures?: Procedure[]
+  users?:     SimpleUser[]
   initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null }
   scheduleId?: string
   preselectedAssetId?: string
@@ -106,7 +119,7 @@ function defaultDueDate() {
   return d.toISOString().split('T')[0]
 }
 
-export default function PMScheduleForm({ assets, locations, procedures = [], initialData, scheduleId, preselectedAssetId }: Props) {
+export default function PMScheduleForm({ assets, locations, procedures = [], users = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
 
@@ -127,6 +140,11 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
     procedureIds:       (initialData as any)?.procedures?.map((p: any) => p.procedure?.id || p.procedureId).filter(Boolean) ?? (initialData as any)?.procedureIds ?? [],
     scheduleBehavior:   (initialData as any)?.scheduleBehavior ?? 'FIXED',
     schedulingHorizon:  (initialData as any)?.schedulingHorizon ?? '1',
+    woPriority:         (initialData as any)?.woPriority        ?? 'MEDIUM',
+    woDescription:      (initialData as any)?.woDescription     ?? '',
+    woAssignedToId:     (initialData as any)?.woAssignedToId    ?? '',
+    startDateOffset:    (initialData as any)?.startDateOffset   ?? '0',
+    nestedStartIndex:   (initialData as any)?.nestedStartIndex  ?? '0',
   })
 
   const [nestedTiers, setNestedTiers] = useState<NestedTier[]>(
@@ -238,9 +256,9 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
         frequency:            form.frequency,
         interval:             parseInt(form.interval),
         nextDueDate:          form.nextDueDate,
-        meterId:              form.triggerType === 'METER' ? (form.meterId || null) : null,
-        meterInterval:        form.triggerType === 'METER' ? parseFloat(form.meterInterval) : null,
-        meterUnit:            form.triggerType === 'METER' ? form.meterUnit : null,
+        meterId:              form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? (form.meterId || null) : null,
+        meterInterval:        form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? parseFloat(form.meterInterval) : null,
+        meterUnit:            form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? form.meterUnit : null,
         assetId:              form.assetId || null,
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
@@ -248,6 +266,11 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
         scheduleBehavior:     form.scheduleBehavior,
         schedulingHorizon:    parseInt(form.schedulingHorizon) || 1,
         nestedConfig:         nestedTiers.length > 0 ? nestedTiers : null,
+        woPriority:           form.woPriority,
+        woDescription:        form.woDescription || null,
+        woAssignedToId:       form.woAssignedToId || null,
+        startDateOffset:      parseInt(form.startDateOffset) || 0,
+        nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -402,9 +425,20 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
           >
             Meter-based
           </button>
+          <button
+            type="button"
+            onClick={() => set('triggerType', 'TIME_OR_METER')}
+            className={`flex-1 px-3 py-2 rounded-lg border-2 font-medium text-sm transition-colors ${
+              form.triggerType === 'TIME_OR_METER'
+                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}
+          >
+            Time or Usage
+          </button>
         </div>
 
-        {form.triggerType === 'TIME' ? (
+        {(form.triggerType === 'TIME' || form.triggerType === 'TIME_OR_METER') && (
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -429,7 +463,9 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
               </p>
             </div>
           </>
-        ) : (
+        )}
+
+        {(form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER') && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {form.assetId ? (
@@ -501,9 +537,9 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
           <input type="date" value={form.nextDueDate} onChange={e => set('nextDueDate', e.target.value)}
             className="input-field" required />
           <p className="text-xs text-gray-400 mt-1">
-            {form.triggerType === 'TIME'
-              ? 'After a work order is generated, this date will advance by the frequency interval.'
-              : 'Start date for tracking meter-based maintenance. Does not auto-advance.'}
+            {form.triggerType === 'METER'
+              ? 'Start date for tracking meter-based maintenance. Does not auto-advance.'
+              : 'After a work order is generated, this date will advance by the frequency interval.'}
           </p>
         </div>
 
@@ -556,6 +592,70 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
             </p>
           </div>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Start date offset (days before due)</label>
+          <input
+            type="number"
+            min="0"
+            max="365"
+            value={form.startDateOffset}
+            onChange={e => set('startDateOffset', e.target.value)}
+            className="input-field"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            WOs will start this many days before the due date (0 = start on due date).
+          </p>
+        </div>
+      </div>
+
+      {/* Work Order Defaults */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <h2 className="font-semibold text-gray-900 text-sm">Work Order Defaults</h2>
+        <p className="text-xs text-gray-500">
+          Default values applied to work orders generated from this schedule.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select
+              value={form.woPriority}
+              onChange={e => set('woPriority', e.target.value)}
+              className="input-field"
+            >
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+            <select
+              value={form.woAssignedToId}
+              onChange={e => set('woAssignedToId', e.target.value)}
+              className="input-field"
+            >
+              <option value="">— Unassigned —</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Additional description</label>
+          <textarea
+            value={form.woDescription}
+            onChange={e => set('woDescription', e.target.value)}
+            rows={3}
+            placeholder="Optional description appended to generated work orders..."
+            className="input-field"
+          />
+        </div>
       </div>
 
       {/* Nested PM */}
@@ -589,6 +689,25 @@ export default function PMScheduleForm({ assets, locations, procedures = [], ini
 
         {nestedEnabled && (
           <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start cycle at</label>
+              <select
+                value={form.nestedStartIndex}
+                onChange={e => set('nestedStartIndex', e.target.value)}
+                className="input-field"
+              >
+                <option value="0">Base (every cycle)</option>
+                {nestedTiers.map((tier, i) => (
+                  <option key={i} value={String(i + 1)}>
+                    Tier {i + 2}: {tier.label || `Unnamed tier ${i + 2}`}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Starting point in the nested cycle (useful when setting up mid-cycle).
+              </p>
+            </div>
+
             {nestedTiers.map((tier, i) => (
               <div key={i} className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-200">
                 <div className="flex items-center justify-between">

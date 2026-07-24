@@ -232,6 +232,12 @@ export default async function PMPage({
                         {s.scheduleBehavior === 'FLOATING' && (
                           <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">Floating</span>
                         )}
+                        {s.triggerType === 'METER' && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-semibold">Meter</span>
+                        )}
+                        {s.triggerType === 'TIME_OR_METER' && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px] font-semibold">Time or Usage</span>
+                        )}
                         {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
                           <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>
                         )}
@@ -335,6 +341,12 @@ export default async function PMPage({
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {s.scheduleBehavior === 'FLOATING' && (
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">Floating</span>
+                        )}
+                        {s.triggerType === 'METER' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-semibold">Meter</span>
+                        )}
+                        {s.triggerType === 'TIME_OR_METER' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px] font-semibold">Time or Usage</span>
                         )}
                         {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>

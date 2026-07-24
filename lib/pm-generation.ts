@@ -255,7 +255,7 @@ async function propagateProcedures(
 
 export async function generateWOsForSchedule(
   scheduleId: string,
-  options?: { userId?: string; maxWOs?: number },
+  options?: { userId?: string; maxWOs?: number; horizon?: number },
 ): Promise<GenerationResult> {
   const result: GenerationResult = {
     workOrderIds: [],
@@ -295,10 +295,6 @@ export async function generateWOsForSchedule(
     return result
   }
 
-  // Build tiers from nested config
-  const tiers = buildTiers(schedule)
-  const maxWOs = options?.maxWOs ?? tiers.length
-
   // Duplicate check for asset-based schedules
   if (schedule.assetId) {
     const existingWO = await prisma.workOrder.findFirst({
@@ -315,7 +311,7 @@ export async function generateWOsForSchedule(
     }
   }
 
-  // Meter threshold check
+  // Meter threshold check (skip for TIME_OR_METER — either trigger can fire)
   if (schedule.triggerType === 'METER') {
     if (!schedule.meterInterval) {
       result.errors.push('Meter interval not set')
@@ -330,84 +326,118 @@ export async function generateWOsForSchedule(
     }
   }
 
+  // Determine how many horizon batches to generate
+  const horizon = options?.horizon ?? schedule.schedulingHorizon ?? 1
+  const baseCounter = (schedule.nestedCounter ?? 0) + (schedule.nestedStartIndex ?? 0)
+
   // Generate WOs in a transaction
   const generated = await prisma.$transaction(async tx => {
     const woIds: string[] = []
     const woNumbers: string[] = []
+    let currentCounter = schedule.nestedCounter ?? 0
 
-    const tiersToGenerate = tiers.slice(0, maxWOs)
-
-    for (let i = 0; i < tiersToGenerate.length; i++) {
-      const tier = tiersToGenerate[i]
-      const woNumber = await generateWONumber(5, tx)
-
-      // Build title
-      let woTitle = schedule.title
-      if (tier.label) woTitle += ` — ${tier.label}`
-      if (schedule.asset) woTitle += ` — ${schedule.asset.name}`
-      else if (schedule.location) woTitle += ` — ${schedule.location.name}`
-
-      // Calculate due date
-      const dueDate =
-        schedule.triggerType === 'TIME'
-          ? new Date(schedule.nextDueDate)
-          : new Date()
-
-      const wo = await tx.workOrder.create({
-        data: {
-          woNumber,
-          title: woTitle,
-          description: schedule.description ?? undefined,
-          type: 'PREVENTIVE',
-          status: 'OPEN',
-          priority: 'MEDIUM',
-          dueDate,
-          assetId: schedule.assetId,
-          locationId: schedule.locationId,
-          locationScope: schedule.locationScope,
-          maintenanceScheduleId: schedule.id,
-          createdById: options?.userId ?? null,
-          nestedLevel: i,
-          nestedLabel: tier.label || null,
-        },
+    for (let batch = 0; batch < horizon; batch++) {
+      // Build tiers for this batch's counter value
+      const tiers = buildTiers({
+        ...schedule,
+        nestedCounter: baseCounter + batch,
       })
 
-      // Create initial status history
-      await tx.workOrderStatusHistory.create({
-        data: {
-          workOrderId: wo.id,
-          status: 'OPEN',
-          changedById: options?.userId ?? null,
-          changedByName: options?.userId ? 'User' : 'System',
-          notes: 'Generated from PM schedule',
-        },
-      })
+      const tiersToGenerate = options?.maxWOs
+        ? tiers.slice(0, options.maxWOs)
+        : tiers
 
-      woIds.push(wo.id)
-      woNumbers.push(woNumber)
+      for (let i = 0; i < tiersToGenerate.length; i++) {
+        const tier = tiersToGenerate[i]
+        const woNumber = await generateWONumber(5, tx)
+
+        // Build title
+        let woTitle = schedule.title
+        if (tier.label) woTitle += ` — ${tier.label}`
+        if (schedule.asset) woTitle += ` — ${schedule.asset.name}`
+        else if (schedule.location) woTitle += ` — ${schedule.location.name}`
+
+        // Calculate due date (advance by batch * interval from base date)
+        let dueDate: Date
+        if (schedule.triggerType === 'METER') {
+          dueDate = new Date()
+        } else {
+          const baseDate = new Date(schedule.nextDueDate)
+          dueDate = batch === 0
+            ? baseDate
+            : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
+        }
+
+        // Calculate start date from offset
+        const startDate = (schedule.startDateOffset ?? 0) > 0
+          ? new Date(dueDate.getTime() - (schedule.startDateOffset ?? 0) * 86400000)
+          : undefined
+
+        // Build description with template
+        let woDescription = schedule.description ?? undefined
+        if (schedule.woDescription) {
+          woDescription = woDescription
+            ? `${woDescription}\n\n${schedule.woDescription}`
+            : schedule.woDescription
+        }
+
+        const wo = await tx.workOrder.create({
+          data: {
+            woNumber,
+            title: woTitle,
+            description: woDescription,
+            type: 'PREVENTIVE',
+            status: 'OPEN',
+            priority: schedule.woPriority ?? 'MEDIUM',
+            dueDate,
+            ...(startDate ? { startDate } : {}),
+            assetId: schedule.assetId,
+            locationId: schedule.locationId,
+            locationScope: schedule.locationScope,
+            maintenanceScheduleId: schedule.id,
+            createdById: options?.userId ?? null,
+            assignedToId: schedule.woAssignedToId ?? null,
+            nestedLevel: i,
+            nestedLabel: tier.label || null,
+          },
+        })
+
+        // Create initial status history
+        await tx.workOrderStatusHistory.create({
+          data: {
+            workOrderId: wo.id,
+            status: 'OPEN',
+            changedById: options?.userId ?? null,
+            changedByName: options?.userId ? 'User' : 'System',
+            notes: 'Generated from PM schedule',
+          },
+        })
+
+        woIds.push(wo.id)
+        woNumbers.push(woNumber)
+      }
+
+      currentCounter++
     }
 
     // Advance nextDueDate (for fixed intervals, advance from current due date)
     let nextDue: Date | null = null
     if (schedule.triggerType === 'TIME' && schedule.scheduleBehavior === 'FIXED') {
-      const baseTier = tiers[0]
       nextDue = advanceDate(
         new Date(schedule.nextDueDate),
-        baseTier.frequency,
-        baseTier.interval,
+        schedule.frequency,
+        schedule.interval * horizon,
       )
     }
     // For FLOATING: nextDue is advanced when the WO is completed (handled in handleWOCompletion)
     // For METER: don't advance the date
-
-    // Increment nested counter
-    const newCounter = (schedule.nestedCounter ?? 0) + 1
+    // For TIME_OR_METER with fixed: advance by horizon batches
 
     await tx.maintenanceSchedule.update({
       where: { id: scheduleId },
       data: {
         ...(nextDue ? { nextDueDate: nextDue } : {}),
-        nestedCounter: newCounter,
+        nestedCounter: currentCounter,
         ...(schedule.triggerType === 'METER' && schedule.asset?.currentMeterValue
           ? { lastTriggeredValue: schedule.asset.currentMeterValue }
           : {}),

@@ -17,7 +17,7 @@ const nestedTierSchema = z.object({
 const pmSchema = z.object({
   title:                z.string().min(1, 'Title is required'),
   description:          z.string().nullable().optional(),
-  triggerType:          z.enum(['TIME','METER']).default('TIME'),
+  triggerType:          z.enum(['TIME','METER','TIME_OR_METER']).default('TIME'),
   frequency:            z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
   interval:             z.number().int().min(1).default(1),
   nextDueDate:          z.string().min(1, 'Next due date is required'),
@@ -33,6 +33,14 @@ const pmSchema = z.object({
   scheduleBehavior:     z.enum(['FIXED','FLOATING']).default('FIXED'),
   schedulingHorizon:    z.number().int().min(1).max(52).default(1),
   nestedConfig:         z.array(nestedTierSchema).nullable().optional(),
+  // WO Template fields
+  woPriority:           z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
+  woDescription:        z.string().nullable().optional(),
+  woAssignedToId:       z.string().nullable().optional(),
+  // Start date offset
+  startDateOffset:      z.number().int().min(0).default(0),
+  // Nested start index
+  nestedStartIndex:     z.number().int().min(0).default(0),
 }).refine(data => data.assetId || data.locationId, {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -88,6 +96,11 @@ export async function POST(request: NextRequest) {
         scheduleBehavior:    data.scheduleBehavior,
         schedulingHorizon:   data.schedulingHorizon,
         nestedConfig:        data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig,
+        woPriority:          data.woPriority,
+        woDescription:       data.woDescription        ?? null,
+        woAssignedToId:      data.woAssignedToId       ?? null,
+        startDateOffset:     data.startDateOffset,
+        nestedStartIndex:    data.nestedStartIndex,
         procedures: {
           create: procedureIds.map((procedureId, index) => ({
             procedureId,

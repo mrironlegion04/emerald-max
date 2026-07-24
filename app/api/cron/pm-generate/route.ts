@@ -27,13 +27,14 @@ export async function POST(request: NextRequest) {
         triggerType: 'TIME',
         nextDueDate: { lte: now },
       },
-      select: { id: true, title: true },
+      select: { id: true, title: true, schedulingHorizon: true },
     })
 
     for (const schedule of dueSchedules) {
       try {
         const result = await generateWOsForSchedule(schedule.id, {
           userId: undefined,
+          horizon: schedule.schedulingHorizon ?? 1,
         })
         if (result.workOrderIds.length > 0) {
           results.created += result.workOrderIds.length
@@ -82,6 +83,57 @@ export async function POST(request: NextRequest) {
       try {
         const result = await generateWOsForSchedule(schedule.id, {
           userId: undefined,
+          horizon: schedule.schedulingHorizon ?? 1,
+        })
+        if (result.workOrderIds.length > 0) {
+          results.created += result.workOrderIds.length
+        } else {
+          results.skipped++
+        }
+      } catch (err) {
+        results.errors.push(`${schedule.title}: ${err}`)
+      }
+    }
+
+    // Also handle TIME_OR_METER schedules — fire if EITHER time OR meter condition is met
+    const timeOrMeterSchedules = await prisma.maintenanceSchedule.findMany({
+      where: {
+        isActive: true,
+        triggerType: 'TIME_OR_METER',
+      },
+      include: {
+        asset: { select: { id: true, currentMeterValue: true } },
+      },
+    })
+
+    for (const schedule of timeOrMeterSchedules) {
+      const timeDue = schedule.nextDueDate <= now
+      const meterCrossed = schedule.meterInterval != null
+        && schedule.asset?.currentMeterValue != null
+        && schedule.asset.currentMeterValue >= schedule.meterInterval
+
+      if (!timeDue && !meterCrossed) continue
+
+      // Check for duplicate: existing OPEN or IN_PROGRESS WO for this asset
+      if (schedule.assetId) {
+        const existingWO = await prisma.workOrder.findFirst({
+          where: {
+            assetId: schedule.assetId,
+            status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
+            type: 'PREVENTIVE',
+          },
+          select: { woNumber: true },
+        })
+        if (existingWO) {
+          results.skipped++
+          continue
+        }
+      }
+
+      try {
+        const result = await generateWOsForSchedule(schedule.id, {
+          userId: undefined,
+          horizon: schedule.schedulingHorizon ?? 1,
         })
         if (result.workOrderIds.length > 0) {
           results.created += result.workOrderIds.length

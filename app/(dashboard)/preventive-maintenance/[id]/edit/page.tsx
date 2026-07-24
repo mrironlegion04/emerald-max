@@ -12,7 +12,7 @@ export default async function EditPMPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/preventive-maintenance/${id}`)
 
-  const [schedule, assets, locations, procedures] = await Promise.all([
+  const [schedule, assets, locations, procedures, users] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
       include: {
@@ -36,6 +36,11 @@ export default async function EditPMPage({
       select:  { id: true, name: true, description: true, steps: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
       orderBy: { name: 'asc' },
     }),
+    prisma.user.findMany({
+      where:   { isActive: true },
+      select:  { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   if (!schedule) notFound()
@@ -48,6 +53,7 @@ export default async function EditPMPage({
     interval:            String(schedule.interval),
     meterInterval:       schedule.meterInterval != null ? String(schedule.meterInterval) : '',
     meterUnit:           schedule.meterUnit     ?? '',
+    meterId:             schedule.meterId       ?? '',
     nextDueDate:         new Date(schedule.nextDueDate).toISOString().split('T')[0],
     assetId:             schedule.assetId       ?? '',
     locationId:          schedule.locationId    ?? '',
@@ -57,6 +63,11 @@ export default async function EditPMPage({
     scheduleBehavior:    schedule.scheduleBehavior,
     schedulingHorizon:   String(schedule.schedulingHorizon),
     nestedConfig:        schedule.nestedConfig as any[] | null,
+    woPriority:          schedule.woPriority,
+    woDescription:       schedule.woDescription ?? '',
+    woAssignedToId:      schedule.woAssignedToId ?? '',
+    startDateOffset:     String(schedule.startDateOffset),
+    nestedStartIndex:    String(schedule.nestedStartIndex),
   }
 
   return (
@@ -67,7 +78,7 @@ export default async function EditPMPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${schedule.title}`} />
-      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} initialData={initialData} scheduleId={id} />
+      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} initialData={initialData} scheduleId={id} />
     </div>
   )
 }

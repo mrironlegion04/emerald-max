@@ -266,6 +266,23 @@ export default async function WorkOrderDetailPage({
             </dl>
           </div>
 
+          {/* Custom Fields */}
+          {wo.customFields && typeof wo.customFields === 'object' && Object.keys(wo.customFields as Record<string, any>).length > 0 && (
+            <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-4 pb-2 border-b border-slate-100">Custom fields</h2>
+              <dl className="space-y-3">
+                {Object.entries(wo.customFields as Record<string, any>).map(([key, val]) => (
+                  <div key={key} className="flex justify-between items-center gap-4">
+                    <dt className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{key}</dt>
+                    <dd className="text-xs text-slate-800 font-bold text-right">
+                      {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val ?? '—')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
           {/* Cost summary */}
           <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
             <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-3 pb-2 border-b border-slate-100">Cost summary</h2>

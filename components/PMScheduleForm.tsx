@@ -38,6 +38,16 @@ interface SimpleUser {
   email: string
 }
 
+interface SimpleTeam {
+  id: string
+  name: string
+}
+
+interface SimpleCategory {
+  id: string
+  name: string
+}
+
 interface PMFormData {
   title: string; description: string
   triggerType: string; frequency: string; interval: string
@@ -48,6 +58,7 @@ interface PMFormData {
   scheduleBehavior: string; schedulingHorizon: string
   // WO Template fields
   woPriority: string; woDescription: string; woAssignedToId: string
+  woTeamId: string; woCategoryId: string
   // Start date offset
   startDateOffset: string
   // Nested start index
@@ -59,6 +70,8 @@ interface Props {
   locations:  Location[]
   procedures?: Procedure[]
   users?:     SimpleUser[]
+  teams?:     SimpleTeam[]
+  categories?: SimpleCategory[]
   initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null }
   scheduleId?: string
   preselectedAssetId?: string
@@ -119,7 +132,7 @@ function defaultDueDate() {
   return d.toISOString().split('T')[0]
 }
 
-export default function PMScheduleForm({ assets, locations, procedures = [], users = [], initialData, scheduleId, preselectedAssetId }: Props) {
+export default function PMScheduleForm({ assets, locations, procedures = [], users = [], teams = [], categories = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
 
@@ -143,6 +156,8 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
     woPriority:         (initialData as any)?.woPriority        ?? 'MEDIUM',
     woDescription:      (initialData as any)?.woDescription     ?? '',
     woAssignedToId:     (initialData as any)?.woAssignedToId    ?? '',
+    woTeamId:           (initialData as any)?.woTeamId          ?? '',
+    woCategoryId:       (initialData as any)?.woCategoryId      ?? '',
     startDateOffset:    (initialData as any)?.startDateOffset   ?? '0',
     nestedStartIndex:   (initialData as any)?.nestedStartIndex  ?? '0',
   })
@@ -269,6 +284,8 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
         woPriority:           form.woPriority,
         woDescription:        form.woDescription || null,
         woAssignedToId:       form.woAssignedToId || null,
+        woTeamId:             form.woTeamId || null,
+        woCategoryId:         form.woCategoryId || null,
         startDateOffset:      parseInt(form.startDateOffset) || 0,
         nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
       }
@@ -644,6 +661,38 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
               ))}
             </select>
           </div>
+
+          {teams.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+              <select
+                value={form.woTeamId}
+                onChange={e => set('woTeamId', e.target.value)}
+                className="input-field"
+              >
+                <option value="">— No team —</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select
+                value={form.woCategoryId}
+                onChange={e => set('woCategoryId', e.target.value)}
+                className="input-field"
+              >
+                <option value="">— No category —</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div>

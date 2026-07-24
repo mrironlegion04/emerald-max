@@ -13,7 +13,7 @@ export default async function NewPMPage({
 
   const { assetId } = await searchParams
 
-  const [assets, locations, procedures, users] = await Promise.all([
+  const [assets, locations, procedures, users, teams, categories] = await Promise.all([
     prisma.asset.findMany({
       where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
       select:  { id: true, name: true, assetCode: true, imageUrl: true, parentId: true, locationId: true, categoryId: true },
@@ -32,6 +32,15 @@ export default async function NewPMPage({
       select:  { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
+    prisma.team.findMany({
+      where:   { isActive: true },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.assetCategory.findMany({
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   return (
@@ -42,7 +51,7 @@ export default async function NewPMPage({
         </Link>
       </div>
       <PageHeader title="New PM schedule" subtitle="Set up a recurring maintenance schedule for an asset or location." />
-      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} preselectedAssetId={assetId} />
+      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} teams={teams} categories={categories} preselectedAssetId={assetId} />
     </div>
   )
 }

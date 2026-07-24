@@ -72,6 +72,7 @@ const updateSchema = z.object({
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),
   notes:               z.string().nullable().optional(),
+  customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
 }).refine(
@@ -265,7 +266,7 @@ export async function PUT(
         Object.entries(data).filter(([key]) =>
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
-           'partsCost','notes','issueId','customIssue','startDate'].includes(key)
+           'partsCost','notes','customFields','issueId','customIssue','startDate'].includes(key)
         )
       ),
       ...(data.teamId ? { domainId: derivedDomainId } : {}),

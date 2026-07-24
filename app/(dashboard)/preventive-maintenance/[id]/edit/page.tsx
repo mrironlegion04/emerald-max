@@ -12,7 +12,7 @@ export default async function EditPMPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/preventive-maintenance/${id}`)
 
-  const [schedule, assets, locations, procedures, users] = await Promise.all([
+  const [schedule, assets, locations, procedures, users, teams, categories] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
       include: {
@@ -41,6 +41,15 @@ export default async function EditPMPage({
       select:  { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
+    prisma.team.findMany({
+      where:   { isActive: true },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.assetCategory.findMany({
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   if (!schedule) notFound()
@@ -66,6 +75,8 @@ export default async function EditPMPage({
     woPriority:          schedule.woPriority,
     woDescription:       schedule.woDescription ?? '',
     woAssignedToId:      schedule.woAssignedToId ?? '',
+    woTeamId:            schedule.woTeamId       ?? '',
+    woCategoryId:        schedule.woCategoryId   ?? '',
     startDateOffset:     String(schedule.startDateOffset),
     nestedStartIndex:    String(schedule.nestedStartIndex),
   }
@@ -78,7 +89,7 @@ export default async function EditPMPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${schedule.title}`} />
-      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} initialData={initialData} scheduleId={id} />
+      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} teams={teams} categories={categories} initialData={initialData} scheduleId={id} />
     </div>
   )
 }

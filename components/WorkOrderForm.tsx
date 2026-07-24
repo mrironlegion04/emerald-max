@@ -6,6 +6,7 @@ import { ClipboardCheck, Star, Eye, Check, Square, AlertCircle, FileText, Calend
 import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
+import CustomFieldsPanel from './CustomFieldsPanel'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; domainId?: string | null }
@@ -37,6 +38,7 @@ interface WOFormData {
   assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
   procedureIds: string[]
+  customFields: Record<string, any> | null
 }
 
 interface Props {
@@ -84,6 +86,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], pr
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
     procedureIds:   initialProcedures,
+    customFields:   (initialData as any)?.customFields ?? null,
   })
 
   const [saving, setSaving] = useState(false)
@@ -139,7 +142,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], pr
       .finally(() => setLoadingIssues(false))
   }, [primaryAssetId, form.locationId, selectedAsset?.categoryId])
 
-  function set(field: keyof WOFormData, value: string | string[]) {
+  function set(field: keyof WOFormData, value: string | string[] | Record<string, any> | null) {
     setForm(prev => {
       const next = { ...prev, [field]: value }
       return next
@@ -269,6 +272,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], pr
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
         procedureIds: form.procedureIds,
+        customFields: form.customFields,
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'
@@ -1086,6 +1090,15 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], pr
           <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
             className="input-field text-xs sm:text-sm resize-none" rows={3} placeholder="Any notes about the work performed..." />
         )}
+      </div>
+
+      {/* Custom Fields */}
+      <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-4 bg-white">
+        <h2 className="font-bold text-slate-805 text-sm tracking-tight pb-3 border-b border-indigo-50/50">Custom fields</h2>
+        <CustomFieldsPanel
+          fields={form.customFields}
+          onChange={fields => set('customFields', fields)}
+        />
       </div>
 
       <div className="flex items-center gap-3 pt-2">

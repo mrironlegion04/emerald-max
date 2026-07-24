@@ -6,11 +6,11 @@ import WorkOrderForm from '@/components/WorkOrderForm'
 export default async function NewWorkOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assetId?: string }>
+  searchParams: Promise<{ assetId?: string; templateId?: string }>
 }) {
-  const { assetId } = await searchParams
+  const { assetId, templateId } = await searchParams
 
-  const [assets, locations, users, teams, procedures] = await Promise.all([
+  const [assets, locations, users, teams, procedures, template] = await Promise.all([
     prisma.asset.findMany({
       where: { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
       select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, domainId: true },
@@ -52,7 +52,28 @@ export default async function NewWorkOrderPage({
       },
       orderBy: { name: 'asc' },
     }),
+    templateId ? prisma.workOrderTemplate.findUnique({
+      where: { id: templateId },
+      include: {
+        assignedTo: { select: { id: true } },
+        team:       { select: { id: true } },
+        category:   { select: { id: true } },
+        procedures: {
+          include: { procedure: { select: { id: true } } },
+        },
+      },
+    }) : Promise.resolve(null),
   ])
+
+  const templateInitialData = template ? {
+    title:       template.name,
+    description: template.woDescription ?? '',
+    type:        template.woType,
+    priority:    template.priority,
+    assignedToId: template.assignedTo?.id ?? '',
+    teamId:      template.team?.id ?? '',
+    procedureIds: template.procedures.map(tp => tp.procedure.id),
+  } : undefined
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -61,8 +82,11 @@ export default async function NewWorkOrderPage({
           ← Back to work orders
         </Link>
       </div>
-      <PageHeader title="New work order" subtitle="Fill in the details to create a new work order." />
-      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} procedures={procedures} preselectedAssetId={assetId} />
+      <PageHeader
+        title={template ? `New work order from "${template.name}"` : 'New work order'}
+        subtitle={template ? 'Template fields pre-filled. Adjust as needed.' : 'Fill in the details to create a new work order.'}
+      />
+      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} procedures={procedures} preselectedAssetId={assetId} initialData={templateInitialData} />
     </div>
   )
 }

@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { fmtDateTime } from '@/lib/utils'
 
 interface Comment {
   id: string; content: string
   authorName: string; authorRole: string; createdAt: string
+}
+
+interface MentionUser {
+  id: string; name: string; role: string
 }
 
 interface Props { woId: string; woStatus: string }
@@ -24,6 +28,14 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
   const [error,    setError]    = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  // Mention state
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionSuggestions, setMentionSuggestions] = useState<MentionUser[]>([])
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionIndex, setMentionIndex] = useState(0)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const mentionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   async function load() {
     try {
       const res  = await fetch(`/api/work-orders/${woId}/comments`)
@@ -39,6 +51,81 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [comments.length])
+
+  // Search for @mentions
+  const searchMentions = useCallback(async (query: string) => {
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+      const data = await res.json()
+      if (res.ok) {
+        setMentionSuggestions(data)
+        setShowMentions(data.length > 0)
+        setMentionIndex(0)
+      }
+    } catch {
+      setMentionSuggestions([])
+      setShowMentions(false)
+    }
+  }, [])
+
+  function handleCommentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value
+    setContent(val)
+
+    // Detect @mention trigger
+    const cursorPos = e.target.selectionStart
+    const textBefore = val.slice(0, cursorPos)
+    const atMatch = textBefore.match(/@(\w*)$/)
+
+    if (atMatch) {
+      const query = atMatch[1]
+      setMentionQuery(query)
+      if (mentionTimeout.current) clearTimeout(mentionTimeout.current)
+      mentionTimeout.current = setTimeout(() => searchMentions(query), 200)
+    } else {
+      setShowMentions(false)
+      setMentionQuery('')
+    }
+  }
+
+  function applyMention(name: string) {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const cursorPos = textarea.selectionStart
+    const textBefore = content.slice(0, cursorPos)
+    const textAfter = content.slice(cursorPos)
+    const atIndex = textBefore.lastIndexOf('@')
+    const cleanName = name.replace(/\s+/g, '')
+
+    const newText = textBefore.slice(0, atIndex) + `@${cleanName} ` + textAfter
+    setContent(newText)
+    setShowMentions(false)
+    setMentionQuery('')
+
+    // Refocus and set cursor
+    setTimeout(() => {
+      textarea.focus()
+      const newPos = atIndex + cleanName.length + 2
+      textarea.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
+
+  function handleMentionKeyDown(e: React.KeyboardEvent) {
+    if (!showMentions) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setMentionIndex(i => Math.min(i + 1, mentionSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setMentionIndex(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' && showMentions) {
+      e.preventDefault()
+      applyMention(mentionSuggestions[mentionIndex].name)
+    } else if (e.key === 'Escape') {
+      setShowMentions(false)
+    }
+  }
 
   async function post(e: React.FormEvent) {
     e.preventDefault()
@@ -59,6 +146,17 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
   }
 
   const isReadOnly = ['CLOSED', 'CANCELLED'].includes(woStatus)
+
+  // Render comment content with @mentions highlighted
+  function renderContent(text: string) {
+    const parts = text.split(/(@\w+)/g)
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        return <span key={i} className="font-bold text-blue-600 bg-blue-50 px-1 rounded">{part}</span>
+      }
+      return part
+    })
+  }
 
   return (
     <div className="premium-card p-0 overflow-hidden border border-slate-200/50 shadow-sm flex flex-col">
@@ -95,7 +193,7 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
               </span>
               <span className="text-[10px] font-medium text-slate-400 ml-auto">{fmtDateTime(c.createdAt)}</span>
             </div>
-            <p className="text-xs text-slate-650 leading-relaxed pl-8 whitespace-pre-wrap">{c.content}</p>
+            <p className="text-xs text-slate-650 leading-relaxed pl-8 whitespace-pre-wrap">{renderContent(c.content)}</p>
           </div>
         ))}
         <div ref={bottomRef} />
@@ -103,15 +201,37 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
 
       {/* Post comment */}
       {!isReadOnly && (
-        <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/55">
+        <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/55 relative">
           <form onSubmit={post} className="space-y-3">
-            <textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              placeholder="Add an update or question about this work order..."
-              className="input-field resize-none text-xs w-full min-h-[50px] bg-white border-slate-200"
-              rows={2}
-            />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleCommentChange}
+                onKeyDown={handleMentionKeyDown}
+                placeholder="Add an update or question... Use @name to mention someone"
+                className="input-field resize-none text-xs w-full min-h-[50px] bg-white border-slate-200"
+                rows={2}
+              />
+              {/* Mention suggestions dropdown */}
+              {showMentions && mentionSuggestions.length > 0 && (
+                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                  {mentionSuggestions.map((u, i) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => applyMention(u.name)}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-blue-50 transition-colors ${
+                        i === mentionIndex ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <span className="font-medium text-gray-900">{u.name}</span>
+                      <span className="text-gray-400 text-[10px]">{u.role}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {error && <p className="text-xs text-red-650 bg-red-50 px-2 py-1 rounded border border-red-100">{error}</p>}
             <div className="flex justify-end">
               <button type="submit" disabled={posting || !content.trim()} className="btn-primary text-xs py-2 px-4 shadow-sm shadow-blue-50">

@@ -397,6 +397,8 @@ export async function generateWOsForSchedule(
             maintenanceScheduleId: schedule.id,
             createdById: options?.userId ?? null,
             assignedToId: schedule.woAssignedToId ?? null,
+            teamId: schedule.woTeamId ?? null,
+            categoryId: schedule.woCategoryId ?? null,
             nestedLevel: i,
             nestedLabel: tier.label || null,
           },

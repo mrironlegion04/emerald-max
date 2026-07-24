@@ -37,6 +37,8 @@ const updateSchema = z.object({
   woPriority:           z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).optional(),
   woDescription:        z.string().nullable().optional(),
   woAssignedToId:       z.string().nullable().optional(),
+  woTeamId:             z.string().nullable().optional(),
+  woCategoryId:         z.string().nullable().optional(),
   // Start date offset
   startDateOffset:      z.number().int().min(0).optional(),
   // Nested start index
@@ -114,6 +116,8 @@ export async function PUT(
         woPriority:          data.woPriority,
         woDescription:       data.woDescription        ?? undefined,
         woAssignedToId:      data.woAssignedToId       ?? undefined,
+        woTeamId:            data.woTeamId              ?? undefined,
+        woCategoryId:        data.woCategoryId          ?? undefined,
         startDateOffset:     data.startDateOffset,
         nestedStartIndex:    data.nestedStartIndex,
         procedures: data.procedureIds !== undefined ? {

@@ -217,6 +217,8 @@ model Team {
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
   procedures Procedure[]
+  pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
+  templates   WorkOrderTemplate[]
 
   @@map("teams")
 }
@@ -308,6 +310,8 @@ model User {
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
 
   teamMemberships       TeamMember[]
+  createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
+  assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
 
   @@map("users")
 }
@@ -370,6 +374,9 @@ model AssetCategory {
   assets   Asset[]
   domains  CategoryDomain[]
   procedures Procedure[] @relation("ProcedureCategories")
+  pmSchedules MaintenanceSchedule[] @relation("PMCategoryAssigned")
+  workOrders WorkOrder[] @relation("WOCategory")
+  templates  WorkOrderTemplate[]
 
   defaultDomainId String?
   defaultDomain   MaintenanceDomain? @relation("CategoryDefaultDomain", fields: [defaultDomainId], references: [id], onDelete: SetNull)
@@ -522,6 +529,7 @@ model WorkOrder {
   laborCost   Float?
   partsCost   Float?
   notes       String?
+  customFields Json?
 
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)
@@ -557,6 +565,9 @@ model WorkOrder {
 
   maintenanceScheduleId String?
   maintenanceSchedule   MaintenanceSchedule? @relation("PMScheduleWorkOrders", fields: [maintenanceScheduleId], references: [id])
+
+  categoryId String?
+  category   AssetCategory? @relation("WOCategory", fields: [categoryId], references: [id], onDelete: SetNull)
 
   // Nested PM tracking
   nestedLevel   Int?     // Index in the nestedConfig array (0 = base)
@@ -771,6 +782,10 @@ model MaintenanceSchedule {
   woDescription     String?           // Additional description appended to WO description
   woAssignedToId    String?           // Default assignee for generated WOs
   woAssignedTo      User?             @relation("PMAssignedTo", fields: [woAssignedToId], references: [id])
+  woTeamId          String?           // Default team for generated WOs
+  woTeam            Team?             @relation("PMTeamAssigned", fields: [woTeamId], references: [id], onDelete: SetNull)
+  woCategoryId      String?           // Default category for generated WOs
+  woCategory        AssetCategory?    @relation("PMCategoryAssigned", fields: [woCategoryId], references: [id], onDelete: SetNull)
 
   // Start date offset — WO startDate = dueDate - N days
   startDateOffset   Int  @default(0)
@@ -1009,6 +1024,7 @@ model Procedure {
   nestedBy    ProcedureStep[] @relation("NestedProcedures")
   // MaintenanceSchedule procedures (many-to-many intermediate)
   pmSchedules MaintenanceScheduleProcedure[] @relation("PMProcedurePMSchedules")
+  woTemplates WorkOrderTemplateProcedure[] @relation("WOTemplateProcedures")
 
   locations   Location[]         @relation("ProcedureLocations")
   categories  AssetCategory[]    @relation("ProcedureCategories")
@@ -1169,6 +1185,43 @@ model WorkOrderStatusHistory {
 
   @@index([workOrderId, createdAt])
   @@map("work_order_status_history")
+}
+
+model WorkOrderTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  woType      WorkOrderType @default(PREVENTIVE)
+  priority    WorkOrderPriority @default(MEDIUM)
+  woDescription String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?    @relation("TemplateAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  categoryId   String?
+  category     AssetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  procedures   WorkOrderTemplateProcedure[]
+
+  @@map("work_order_templates")
+}
+
+model WorkOrderTemplateProcedure {
+  templateId  String
+  template    WorkOrderTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  procedureId String
+  procedure   Procedure         @relation("WOTemplateProcedures", fields: [procedureId], references: [id], onDelete: Cascade)
+  sortOrder   Int               @default(0)
+
+  @@id([templateId, procedureId])
+  @@map("wo_template_procedures")
 }
 
 model RepairSession {

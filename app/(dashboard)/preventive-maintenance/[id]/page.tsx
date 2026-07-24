@@ -37,6 +37,8 @@ export default async function PMDetailPage({
       location: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
       woAssignedTo: { select: { name: true } },
+      woTeam: { select: { name: true } },
+      woCategory: { select: { name: true } },
       procedures: {
         include: {
           procedure: {
@@ -168,6 +170,12 @@ export default async function PMDetailPage({
                 { label: 'WO Priority', value: schedule.woPriority ?? 'Medium' },
                 ...(schedule.woAssignedTo ? [
                   { label: 'WO Assignee', value: schedule.woAssignedTo.name },
+                ] : []),
+                ...(schedule.woTeam ? [
+                  { label: 'WO Team', value: schedule.woTeam.name },
+                ] : []),
+                ...(schedule.woCategory ? [
+                  { label: 'WO Category', value: schedule.woCategory.name },
                 ] : []),
                 { label: 'Created by', value: schedule.createdBy?.name ?? '—' },
                 { label: 'Created',    value: fmt(schedule.createdAt) },

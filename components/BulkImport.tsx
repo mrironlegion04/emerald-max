@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Download, UploadCloud } from 'lucide-react'
 
-type ImportType = 'assets' | 'parts'
+type ImportType = 'assets' | 'parts' | 'work_orders'
 
 interface ImportResult {
   created: number; skipped: number; errors: string[]; total: number
@@ -18,6 +18,10 @@ const TEMPLATES: Record<ImportType, { headers: string[]; example: string[] }> = 
   parts: {
     headers: ['name','part_number','description','unit_cost','unit'],
     example: ['Drive Belt','PRT-BELT-05','V-belt for compressors','24.50','pcs'],
+  },
+  work_orders: {
+    headers: ['title','description','type','priority','status','due_date','assigned_to','asset_code','category'],
+    example: ['Replace compressor belt','Belt showing wear on unit 5','PREVENTIVE','HIGH','OPEN','2025-02-01','tech@cmms.com','AST-005','Mechanical'],
   },
 }
 
@@ -86,17 +90,17 @@ export default function BulkImport({ canImport = true }: { canImport?: boolean }
       {/* Type selector */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-900 text-sm mb-4">What would you like to import?</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {(['assets','parts'] as ImportType[]).map(t => (
+        <div className="grid grid-cols-3 gap-3">
+          {(['assets','parts','work_orders'] as ImportType[]).map(t => (
             <button key={t} type="button" onClick={() => { setType(t); setFile(null); setResult(null); if (fileRef.current) fileRef.current.value = '' }}
               className={`p-4 rounded-xl border-2 text-left transition-colors ${
                 type === t ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
               }`}>
               <p className={`text-sm font-semibold ${type === t ? 'text-blue-700' : 'text-gray-900'}`}>
-                {t === 'assets' ? 'Assets' : 'Parts / Inventory'}
+                {t === 'assets' ? 'Assets' : t === 'parts' ? 'Parts / Inventory' : 'Work Orders'}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {t === 'assets' ? 'Import equipment and machines' : 'Import spare parts and stock'}
+                {t === 'assets' ? 'Import equipment and machines' : t === 'parts' ? 'Import spare parts and stock' : 'Import maintenance work orders'}
               </p>
             </button>
           ))}
@@ -108,7 +112,7 @@ export default function BulkImport({ canImport = true }: { canImport?: boolean }
         <div>
           <p className="text-sm font-medium text-blue-800">Download CSV template</p>
           <p className="text-xs text-blue-600 mt-0.5">
-            Use this template to format your data correctly. One row per {type === 'assets' ? 'asset' : 'part'}.
+            Use this template to format your data correctly. One row per {type === 'assets' ? 'asset' : type === 'parts' ? 'part' : 'work order'}.
           </p>
         </div>
         <button onClick={downloadTemplate} className="btn-secondary text-sm flex-shrink-0 flex items-center gap-1.5">
@@ -125,7 +129,8 @@ export default function BulkImport({ canImport = true }: { canImport?: boolean }
             <span key={h}
               className={`font-mono text-xs px-2 py-1 rounded ${
                 (type === 'assets' && ['name','asset_code'].includes(h)) ||
-                (type === 'parts'  && ['name','part_number'].includes(h))
+                (type === 'parts'  && ['name','part_number'].includes(h)) ||
+                (type === 'work_orders' && ['title'].includes(h))
                   ? 'bg-blue-100 text-blue-700 font-bold'
                   : 'bg-gray-100 text-gray-600'
               }`}>
@@ -165,7 +170,7 @@ export default function BulkImport({ canImport = true }: { canImport?: boolean }
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button type="submit" disabled={!file || loading} className="btn-primary w-full">
-          {loading ? 'Importing...' : `Import ${type}`}
+          {loading ? 'Importing...' : `Import ${type === 'work_orders' ? 'work orders' : type}`}
         </button>
       </form>
 

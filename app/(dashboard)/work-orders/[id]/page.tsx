@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Printer } from 'lucide-react'
+import { Printer, Download } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
@@ -13,6 +13,7 @@ import WOProceduresPanel from '@/components/WOProceduresPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import TimerPanel from '@/components/TimerPanel'
+import SkipPMButton from '@/components/SkipPMButton'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
 const statusLabels = WO_STATUS_LABELS
@@ -72,6 +73,7 @@ export default async function WorkOrderDetailPage({
       attachments:  { include: { uploadedBy: { select: { name: true } } } },
       statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
       repairSessions: { orderBy: { sessionNo: 'asc' } },
+      maintenanceSchedule: { select: { id: true, title: true } },
     },
   })
 
@@ -118,6 +120,10 @@ export default async function WorkOrderDetailPage({
                 <Printer className="w-4 h-4 text-slate-500" />
                 Print
               </Link>
+              <a href={`/api/work-orders/${wo.id}/pdf`} download className="btn-secondary text-xs flex items-center gap-1.5 py-2 px-3.5 border-slate-200 font-bold hover:bg-slate-50 transition shadow-xs">
+                <Download className="w-4 h-4 text-slate-500" />
+                PDF
+              </a>
               {canEdit && wo.status !== 'CLOSED' && (
                 <Link href={`/work-orders/${wo.id}/edit`} className="btn-secondary text-xs py-2 px-3.5 border-slate-200 font-bold hover:bg-slate-50 transition shadow-xs">
                   Edit work order
@@ -144,6 +150,14 @@ export default async function WorkOrderDetailPage({
               userId={user?.userId ?? ''}
               requestedCompletionTime={wo.requestedCompletionTime?.toISOString() ?? null}
               requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
+            />
+            <SkipPMButton
+              woId={wo.id}
+              currentStatus={wo.status}
+              isPmGenerated={!!wo.maintenanceScheduleId}
+              userRole={user?.role ?? 'TECHNICIAN'}
+              userId={user?.userId ?? ''}
+              assignedToId={wo.assignedToId}
             />
           </div>
 

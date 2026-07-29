@@ -312,6 +312,7 @@ model User {
   teamMemberships       TeamMember[]
   createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
   assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
+  createdAutomationRules AutomationRule[]   @relation("AutomationRuleCreator")
 
   @@map("users")
 }
@@ -1241,6 +1242,34 @@ model RepairSession {
   @@unique([workOrderId, sessionNo])
   @@index([workOrderId])
   @@map("repair_sessions")
+}
+
+model AutomationRule {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+  priority    Int     @default(0) // higher = runs first
+
+  // Trigger: what event fires this rule
+  triggerType String // WO_CREATED, WO_COMPLETED, WO_OVERDUE, PM_GENERATED, PART_LOW_STOCK, SCHEDULE_DUE
+
+  // Conditions: JSON array of { field, operator, value }
+  // Operators: equals, not_equals, contains, greater_than, less_than, in
+  conditions  Json    @default("[]")
+
+  // Actions: JSON array of { type, params }
+  // Types: assign_user, set_priority, send_notification, add_tag, update_field, create_wos
+  actions     Json    @default("[]")
+
+  createdBy   User?   @relation("AutomationRuleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("automation_rules")
 }
 
 

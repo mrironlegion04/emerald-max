@@ -156,6 +156,93 @@ export async function POST(request: NextRequest) {
         }
       }
 
+    } else if (type === 'work_orders') {
+      // Required: title
+      // Optional: description, type, priority, status, due_date, assigned_to, asset_code, category
+      for (const [i, row] of rows.entries()) {
+        const rowNum = i + 2
+        if (!row.title) {
+          results.errors.push(`Row ${rowNum}: missing title`)
+          results.skipped++
+          continue
+        }
+
+        // Resolve assigned user by email
+        let assignedToId: string | null = null
+        if (row.assigned_to) {
+          const assignee = await prisma.user.findFirst({
+            where: { email: { equals: row.assigned_to, mode: 'insensitive' }, isActive: true },
+          })
+          if (!assignee) {
+            results.errors.push(`Row ${rowNum}: user "${row.assigned_to}" not found — assigned_to skipped`)
+          } else {
+            assignedToId = assignee.id
+          }
+        }
+
+        // Resolve asset by asset_code
+        let assetId: string | null = null
+        if (row.asset_code) {
+          const asset = await prisma.asset.findUnique({ where: { assetCode: row.asset_code } })
+          if (!asset) {
+            results.errors.push(`Row ${rowNum}: asset_code "${row.asset_code}" not found — asset skipped`)
+          } else {
+            assetId = asset.id
+          }
+        }
+
+        // Resolve category by name
+        let categoryId: string | null = null
+        if (row.category) {
+          let cat = await prisma.assetCategory.findFirst({ where: { name: { equals: row.category, mode: 'insensitive' } } })
+          if (!cat) cat = await prisma.assetCategory.create({ data: { name: row.category } })
+          categoryId = cat.id
+        }
+
+        // Validate type
+        const validTypes = ['BREAKDOWN', 'PREVENTIVE', 'PREDICTIVE']
+        const woType = validTypes.includes(row.type?.toUpperCase()) ? row.type.toUpperCase() : 'BREAKDOWN'
+
+        // Validate priority
+        const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+        const priority = validPriorities.includes(row.priority?.toUpperCase()) ? row.priority.toUpperCase() : 'MEDIUM'
+
+        // Validate status
+        const validStatuses = ['OPEN', 'IN_PROGRESS', 'ON_HOLD']
+        const status = validStatuses.includes(row.status?.toUpperCase()) ? row.status.toUpperCase() : 'OPEN'
+
+        // Generate WO number
+        const woCount = await prisma.workOrder.count()
+        const woNumber = `WO-${String(woCount + 1).padStart(5, '0')}`
+
+        try {
+          const wo = await prisma.workOrder.create({
+            data: {
+              woNumber,
+              title: row.title,
+              description: row.description || null,
+              type: woType as never,
+              priority: priority as never,
+              status: status as never,
+              dueDate: row.due_date ? new Date(row.due_date) : null,
+              assignedToId,
+              assetId,
+              categoryId,
+              createdById: user.userId,
+            },
+          })
+          await writeAudit({
+            action: 'CREATE', entity: 'WorkOrder', entityId: wo.id,
+            entityName: wo.title, userId: user.userId,
+            userName: user.name, userEmail: user.email,
+          })
+          results.created++
+        } catch (e) {
+          results.errors.push(`Row ${rowNum}: ${(e as Error).message}`)
+          results.skipped++
+        }
+      }
+
     } else if (type === 'parts') {
       // Required: name, part_number
       // Optional: description, unit_cost, unit
@@ -198,7 +285,7 @@ export async function POST(request: NextRequest) {
       }
 
     } else {
-      return NextResponse.json({ error: 'Invalid import type. Use "assets" or "parts"' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid import type. Use "assets", "parts", or "work_orders"' }, { status: 400 })
     }
 
     return NextResponse.json({

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { createNotification } from '@/lib/notifications'
 import { sendEmail } from '@/lib/email'
+import { evaluateRules } from '@/lib/automation-engine'
 import { 
   canCompleteWorkOrder, 
   getCompletionType, 
@@ -390,6 +391,28 @@ export async function PATCH(
       } catch (err) {
         console.error('Failed to update asset metrics on reopen:', err)
       }
+    }
+
+    // Run automation rules for WO status changes
+    try {
+      const triggerMap: Record<string, string> = {
+        COMPLETED: 'WO_COMPLETED',
+        CANCELLED: 'WO_CANCELLED',
+      }
+      const triggerType = triggerMap[updated.status]
+      if (triggerType) {
+        const fullWO = await prisma.workOrder.findUnique({
+          where: { id },
+          include: {
+            asset: {
+              include: { location: true, category: true },
+            },
+          },
+        })
+        await evaluateRules(triggerType, { triggerType, workOrder: fullWO })
+      }
+    } catch (err) {
+      console.error('Failed to run automation rules:', err)
     }
     
     return NextResponse.json(updated)

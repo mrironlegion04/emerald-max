@@ -187,6 +187,12 @@ const enterpriseSettingsItems = [
     adminOnly: true,
   },
   {
+    label: 'Automation',
+    href: '/settings/automation',
+    icon: <Cog className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
     label: 'Bulk Import',
     href: '/import',
     icon: <Upload className="w-4 h-4" />,

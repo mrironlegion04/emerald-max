@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/session'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
+import TelegramSettings from '@/components/TelegramSettings'
 import { Mail, Phone, Briefcase, Calendar } from 'lucide-react'
 
 function fmt(date: Date | string) {
@@ -162,6 +163,11 @@ export default async function UserProfilePage() {
         ) : (
           <p className="text-sm text-gray-500 italic">No skills assigned yet. Contact your manager to add skills.</p>
         )}
+      </div>
+
+      {/* Telegram */}
+      <div className="mt-6">
+        <TelegramSettings telegramChatId={dbUser.telegramChatId} />
       </div>
     </div>
   )

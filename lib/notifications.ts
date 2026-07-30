@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { sendWebPushNotification } from '@/lib/push'
 import { notificationEmitter } from '@/lib/events'
+import { sendTelegramNotification } from '@/lib/telegram'
 import { NotificationType } from '@prisma/client'
 
 export interface NotificationPayload {
@@ -36,6 +37,20 @@ export async function createNotification(payload: NotificationPayload) {
       url: payload.href ?? '/',
       icon: '/assets/logo.png'
     }).catch(err => console.error('Push error:', err))
+    
+    // Trigger Telegram notification if user has linked their chat
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { telegramChatId: true },
+    })
+    if (user?.telegramChatId) {
+      await sendTelegramNotification(
+        user.telegramChatId,
+        payload.title,
+        payload.message,
+        payload.href,
+      ).catch(err => console.error('Telegram error:', err))
+    }
     
     // Trigger real-time in-app SSE update
     notificationEmitter.emit(`notification:${payload.userId}`)
@@ -77,6 +92,22 @@ export async function createNotificationForUsers(
           url: payload.href ?? '/',
           icon: '/assets/logo.png'
         })
+      )
+    )
+
+    // Trigger Telegram for users with linked chats
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds }, telegramChatId: { not: null } },
+      select: { telegramChatId: true },
+    })
+    await Promise.allSettled(
+      users.map(u =>
+        sendTelegramNotification(
+          u.telegramChatId!,
+          payload.title,
+          payload.message,
+          payload.href,
+        )
       )
     )
 

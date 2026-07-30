@@ -282,6 +282,9 @@ model User {
   facePhotoUrl        String?
   lastFaceVerifyAt    DateTime?
 
+  // Telegram integration
+  telegramChatId String?
+
   assignedWorkOrders    WorkOrder[]             @relation("AssignedTo")
   createdWorkOrders     WorkOrder[]             @relation("CreatedBy")
   completedWorkOrders   WorkOrder[]             @relation("WOCompletedBy")
@@ -313,6 +316,7 @@ model User {
   createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
   assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
   createdAutomationRules AutomationRule[]   @relation("AutomationRuleCreator")
+  telegramPairings       TelegramPairing[]
 
   @@map("users")
 }
@@ -1270,6 +1274,20 @@ model AutomationRule {
 
   @@index([isActive])
   @@map("automation_rules")
+}
+
+model TelegramPairing {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@map("telegram_pairings")
 }
 
 

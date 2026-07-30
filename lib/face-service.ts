@@ -64,7 +64,7 @@ export async function enrollFace(
 
 /**
  * Verify if an uploaded image matches the user's enrolled face
- * Direct 1:1 verification - CMMS already knows the user
+ * Direct 1:1 verification - Max already knows the user
  */
 export async function verifyFace(
   userId: string,

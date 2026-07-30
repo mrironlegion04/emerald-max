@@ -284,7 +284,9 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         </p>
 
         <div className="space-y-1">
-          {navItems.map(item => {
+          {navItems
+            .filter(item => user.role !== 'REQUESTER' || item.href === '/work-orders' || item.href === '/requests')
+            .map(item => {
             const active = isActive(item.href)
             return (
               <div key={item.href} className="relative">

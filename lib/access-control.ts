@@ -13,9 +13,16 @@ export interface User {
 }
 
 /**
- * Check if user is ADMIN or MANAGER
+ * Check if user is ADMIN only
  */
 export function isAdmin(user: User): boolean {
+  return user.role === 'ADMIN'
+}
+
+/**
+ * Check if user is ADMIN or MANAGER
+ */
+export function isManagerOrAbove(user: User): boolean {
   return user.role === 'ADMIN' || user.role === 'MANAGER'
 }
 
@@ -30,7 +37,7 @@ export async function canCompleteWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string; isOverride?: boolean }> {
-  if (isAdmin(user)) {
+  if (isManagerOrAbove(user)) {
     return { allowed: true, isOverride: true }
   }
 
@@ -80,7 +87,7 @@ export async function canCompleteSubtask(
   user: User,
   subtaskId: string
 ): Promise<{ allowed: boolean; reason?: string; isOverride?: boolean }> {
-  if (isAdmin(user)) {
+  if (isManagerOrAbove(user)) {
     return { allowed: true, isOverride: true }
   }
 
@@ -119,7 +126,7 @@ export async function canViewWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  if (isAdmin(user)) {
+  if (user.role === 'ADMIN') {
     return { allowed: true }
   }
 
@@ -129,6 +136,7 @@ export async function canViewWorkOrder(
       assignedToId: true,
       teamId: true,
       createdById: true,
+      locationId: true,
     },
   })
 
@@ -153,6 +161,29 @@ export async function canViewWorkOrder(
     }
   }
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { assignedLocationId: true },
+  })
+
+  // Location-based access restriction
+  if (dbUser?.assignedLocationId) {
+    if (wo.locationId) {
+      const locationIds = await getLocationSubtreeIds(dbUser.assignedLocationId)
+      if (!locationIds.includes(wo.locationId)) {
+        return { allowed: false, reason: 'You do not have access to this work order' }
+      }
+      return { allowed: true }
+    }
+    // WO has no location → deny if user has location assigned
+    return { allowed: false, reason: 'You do not have access to this work order' }
+  }
+
+  // MANAGER without location assignment can view any WO (backward compatible)
+  if (user.role === 'MANAGER') {
+    return { allowed: true }
+  }
+
   return { allowed: false, reason: 'You do not have access to this work order' }
 }
 
@@ -163,8 +194,13 @@ export async function canEditWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
-  if (isAdmin(user)) {
+  if (user.role === 'ADMIN') {
     return { allowed: true }
+  }
+
+  const canEdit = await hasPermission(user, 'wo:edit')
+  if (!canEdit) {
+    return { allowed: false, reason: 'You do not have permission to edit work orders' }
   }
 
   const result = await canViewWorkOrder(user, workOrderId)
@@ -188,7 +224,7 @@ export function getCompletionType(
  * Check if user can reassign a work order
  */
 export function canReassignWorkOrder(user: User): boolean {
-  return isAdmin(user)
+  return isManagerOrAbove(user)
 }
 
 /**
@@ -241,25 +277,108 @@ export function getCompletionLabel(
 export async function buildWOVisibilityFilter(
   user: User
 ): Promise<Record<string, unknown> | null> {
-  if (isAdmin(user)) return null
+  if (user.role === 'ADMIN') return null
+
+  // REQUESTER sees only WOs they created
+  if (user.role === 'REQUESTER') {
+    return { createdById: user.userId }
+  }
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: { woVisibility: true },
+    select: { woVisibility: true, assignedLocationId: true },
   })
 
-  if (!dbUser || dbUser.woVisibility === 'FULL') return null
+  if (!dbUser) return null
 
-  const teamIds = (await prisma.teamMember.findMany({
-    where: { userId: user.userId },
-    select: { teamId: true },
-  })).map(t => t.teamId)
+  const locationIds = dbUser.assignedLocationId
+    ? await getLocationSubtreeIds(dbUser.assignedLocationId)
+    : null
 
-  return {
-    OR: [
+  // MANAGER without location assignment → unrestricted (backward compatible)
+  if (user.role === 'MANAGER' && !locationIds) return null
+
+  const conditions: Record<string, unknown>[] = []
+
+  if (dbUser.woVisibility !== 'FULL') {
+    const teamIds = (await prisma.teamMember.findMany({
+      where: { userId: user.userId },
+      select: { teamId: true },
+    })).map(t => t.teamId)
+
+    conditions.push(
       { assignedToId: user.userId },
       { createdById: user.userId },
       ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
+    )
+  }
+
+  if (locationIds) {
+    conditions.push({
+      OR: [
+        { locationId: { in: locationIds } },
+        { locationId: null },
+      ],
+    })
+  }
+
+  if (conditions.length === 0) return null
+
+  return conditions.length === 1
+    ? conditions[0]
+    : { OR: conditions }
+}
+
+/**
+ * Get all descendant location IDs (including the given location) for location scoping.
+ */
+async function getLocationSubtreeIds(locationId: string): Promise<string[]> {
+  const allLocations = await prisma.location.findMany({
+    select: { id: true, parentId: true },
+  })
+
+  const childrenMap = new Map<string, string[]>()
+  for (const loc of allLocations) {
+    if (loc.parentId) {
+      const siblings = childrenMap.get(loc.parentId) ?? []
+      siblings.push(loc.id)
+      childrenMap.set(loc.parentId, siblings)
+    }
+  }
+
+  const result: string[] = [locationId]
+  const queue = [locationId]
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const children = childrenMap.get(current) ?? []
+    for (const childId of children) {
+      result.push(childId)
+      queue.push(childId)
+    }
+  }
+
+  return result
+}
+
+/**
+ * Build a Prisma `where` filter for location-scoped entities (assets, parts, PM schedules, etc.).
+ * Returns `null` if no location scoping applies for the given user.
+ */
+export async function buildLocationFilter(user: User): Promise<Record<string, unknown> | null> {
+  if (user.role === 'ADMIN') return null
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.userId },
+    select: { assignedLocationId: true },
+  })
+
+  if (!dbUser?.assignedLocationId) return null
+
+  const locationIds = await getLocationSubtreeIds(dbUser.assignedLocationId)
+  return {
+    OR: [
+      { locationId: { in: locationIds } },
+      { locationId: null },
     ],
   }
 }

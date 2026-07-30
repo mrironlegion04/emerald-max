@@ -16,7 +16,6 @@ const sessionOptions = {
 
 // Routes that only non-REQUESTER roles can access
 const STAFF_ONLY_PATHS = [
-  '/work-orders',
   '/assets',
   '/overview',
   '/more',
@@ -34,6 +33,13 @@ const STAFF_ONLY_PATHS = [
   '/domains',
   '/issues',
   '/skills',
+  '/inventory',
+  '/work-order-templates',
+  '/preventive-maintenance',
+  '/messages',
+  '/asset-explorer',
+  '/sites',
+  '/import',
 ]
 
 // Routes only REQUESTER can access

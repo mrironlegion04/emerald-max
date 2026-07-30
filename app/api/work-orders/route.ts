@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import {
   normalizeWorkOrderAssets,
@@ -81,6 +82,11 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const canCreate = await hasPermission(user, 'wo:create')
+    if (!canCreate) {
+      return NextResponse.json({ error: 'You do not have permission to create work orders' }, { status: 403 })
+    }
 
     const body = await request.json()
     const data = woSchema.parse(body)

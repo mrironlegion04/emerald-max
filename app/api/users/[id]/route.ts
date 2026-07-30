@@ -17,6 +17,7 @@ const updateSchema = z.object({
   department: z.string().nullable().optional(),
   woVisibility: z.enum(['FULL','LIMITED']).optional(),
   customRoleId: z.string().nullable().optional(),
+  assignedLocationId: z.string().nullable().optional(),
 })
 
 export async function GET(
@@ -27,7 +28,7 @@ export async function GET(
     const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true, assignedLocationId: true },
     })
     
     if (!user) {
@@ -72,6 +73,7 @@ export async function PUT(
       department: data.department ?? null,
       woVisibility: data.woVisibility,
       customRoleId: data.customRoleId ?? null,
+      assignedLocationId: data.assignedLocationId ?? null,
     }
     if (data.email)    updateData.email        = data.email.toLowerCase()
     if (data.password) updateData.passwordHash = await hashPassword(data.password)

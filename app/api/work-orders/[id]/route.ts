@@ -14,6 +14,7 @@ import {
   getCompletionType,
   canCompleteWorkOrder,
   isAdmin,
+  isManagerOrAbove,
 } from '@/lib/access-control'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import {
@@ -154,14 +155,14 @@ export async function PUT(
     }
 
     // ── Permission checks ─────────────────────────────────────────────
-    if (data.status && !isAdmin(user)) {
+    if (data.status && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can change work order status' },
         { status: 403 }
       )
     }
 
-    if ((data.assignedToId || data.teamId) && !isAdmin(user)) {
+    if ((data.assignedToId || data.teamId) && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign work order' },
         { status: 403 }
@@ -176,7 +177,7 @@ export async function PUT(
     }
 
     // Block edits on CLOSED work orders
-    if (existingWo.status === 'CLOSED' && !isAdmin(user)) {
+    if (existingWo.status === 'CLOSED' && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Closed work orders cannot be edited' },
         { status: 403 }
@@ -190,7 +191,7 @@ export async function PUT(
     if (data.status === 'COMPLETED' && existingWo.status !== 'COMPLETED') {
       extra.completedAt = new Date()
       extra.completedById = user.userId
-      extra.completionType = getCompletionType(user, isAdmin(user))
+      extra.completionType = getCompletionType(user, isManagerOrAbove(user))
     }
 
     // ── Mutual exclusion: team vs individual ──────────────────────────

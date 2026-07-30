@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
+import { buildLocationFilter } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -50,7 +51,13 @@ const pmSchema = z.object({
 
 export async function GET() {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const locationFilter = await buildLocationFilter(user)
+
     const schedules = await prisma.maintenanceSchedule.findMany({
+      where: locationFilter || undefined,
       include: {
         asset:    { select: { id: true, name: true, assetCode: true } },
         location: { select: { id: true, name: true } },

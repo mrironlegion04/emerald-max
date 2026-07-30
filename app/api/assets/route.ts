@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
+import { buildLocationFilter } from '@/lib/access-control'
 import { z } from 'zod'
 
 const assetSchema = z.object({
@@ -29,11 +30,19 @@ const assetSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = request.nextUrl
     const showDeleted = searchParams.get('showDeleted') === 'true'
 
+    const locationFilter = await buildLocationFilter(user)
+
     const assets = await prisma.asset.findMany({
-      where: showDeleted ? undefined : { isDeleted: false },
+      where: {
+        ...(showDeleted ? {} : { isDeleted: false }),
+        ...(locationFilter || {}),
+      },
       include: {
         category: { select: { id: true, name: true } },
         location: { select: { id: true, name: true } },

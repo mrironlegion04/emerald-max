@@ -10,7 +10,7 @@ export default async function EditWorkOrderPage({
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await getCurrentUser()
-  if (user?.role === 'TECHNICIAN') redirect(`/work-orders/${id}`)
+  if (user?.role === 'TECHNICIAN' || user?.role === 'REQUESTER') redirect(`/work-orders/${id}`)
 
   const [wo, assets, locations, users, teams] = await Promise.all([
     prisma.workOrder.findUnique({

@@ -187,7 +187,17 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 
   REQUESTER: [
+    'wo:create', 'wo:read',
     'request:create', 'request:read',
+    'asset:read',
+    'location:read',
+    'part:read',
+    'meter:read',
+    'pm:read',
+    'issue:read',
+    'category:read', 'type:read',
+    'team:read',
+    'domain:read',
   ],
 }
 

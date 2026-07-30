@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
-import { canCompleteSubtask, getCompletionType, isAdmin } from '@/lib/access-control'
+import { canCompleteSubtask, getCompletionType, isAdmin, isManagerOrAbove } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSubtaskSchema = z.object({
@@ -109,7 +109,7 @@ export async function PUT(
 
     // ===== PERMISSION CHECKS FOR REASSIGNMENT =====
     // Only admins/managers can reassign
-    if ((data.assignedToId || data.assignedTeamId) && !isAdmin(user)) {
+    if ((data.assignedToId || data.assignedTeamId) && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign subtask' },
         { status: 403 }

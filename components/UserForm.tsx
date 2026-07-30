@@ -16,6 +16,7 @@ interface UserFormData {
   department: string
   woVisibility: string
   customRoleId: string
+  assignedLocationId: string
 }
 
 interface UserSkill {
@@ -57,11 +58,18 @@ export default function UserForm({ initialData, userId }: Props) {
   const isEdit = !!userId
 
   const [customRoles, setCustomRoles] = useState<{ id: string; name: string }[]>([])
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     fetch('/api/roles').then(r => r.json()).then(roles => {
       if (Array.isArray(roles)) setCustomRoles(roles)
     }).catch(err => console.error('Error fetching roles', err))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/locations?search=').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setLocations(data)
+    }).catch(err => console.error('Error fetching locations', err))
   }, [])
 
   const [form, setForm] = useState<UserFormData>({
@@ -75,6 +83,7 @@ export default function UserForm({ initialData, userId }: Props) {
     department: (initialData as any)?.department ?? '',
     woVisibility: (initialData as any)?.woVisibility ?? 'FULL',
     customRoleId: (initialData as any)?.customRoleId ?? '',
+    assignedLocationId: (initialData as any)?.assignedLocationId ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -106,6 +115,7 @@ export default function UserForm({ initialData, userId }: Props) {
         department: form.department || null,
         woVisibility: form.woVisibility,
         customRoleId: form.customRoleId || null,
+        assignedLocationId: form.assignedLocationId || null,
       }
       if (form.password) payload.password = form.password
 
@@ -388,6 +398,22 @@ export default function UserForm({ initialData, userId }: Props) {
             </select>
             <p className="text-xs text-gray-500 mt-1">
               Limited visibility restricts the user to only see WOs assigned to them, created by them, or in their team/domain.
+            </p>
+          </div>
+        )}
+        {isEdit && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Location
+            </label>
+            <select value={form.assignedLocationId} onChange={e => set('assignedLocationId', e.target.value)} className="input-field">
+              <option value="">No location restriction</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Restrict this user to see only data (WOs, assets, inventory) within this location and its children.
             </p>
           </div>
         )}

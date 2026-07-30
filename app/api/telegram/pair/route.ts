@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       code: token,
       deepLink,
       expiresAt,
+      botUsername: process.env.TELEGRAM_BOT_USERNAME || 'emerald_maintenance_bot',
       message: 'Send this code to the bot on Telegram.',
     })
   } catch (error) {

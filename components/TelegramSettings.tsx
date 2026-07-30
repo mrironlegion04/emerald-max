@@ -11,6 +11,7 @@ export default function TelegramSettings({ telegramChatId }: Props) {
   const [loading, setLoading] = useState(false)
   const [code, setCode] = useState('')
   const [deepLink, setDeepLink] = useState('')
+  const [botUsername, setBotUsername] = useState('')
   const [sent, setSent] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -35,6 +36,7 @@ export default function TelegramSettings({ telegramChatId }: Props) {
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       setCode(data.code)
       setDeepLink(data.deepLink)
+      setBotUsername(data.botUsername || 'emerald_maintenance_bot')
       setSent(true)
     } catch {
       setError('Network error')
@@ -146,16 +148,27 @@ export default function TelegramSettings({ telegramChatId }: Props) {
 
           <div className="flex flex-col gap-1.5 text-xs text-gray-500">
             <p>
-              <strong>1.</strong> Click to open{' '}
+              <strong>1.</strong> Open the bot chat:
+            </p>
+            <div className="flex gap-2">
               <a
                 href={deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
+                className="text-blue-600 hover:text-blue-800 underline text-xs"
               >
-                @emerald_maintenance_bot
+                📱 Phone / Desktop app
               </a>
-            </p>
+              <span className="text-gray-300">|</span>
+              <a
+                href={`https://web.telegram.org/a/#?tgaddr=tg%3A%2F%2Fresolve%3Fdomain%3D${botUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline text-xs"
+              >
+                🌐 Telegram Web
+              </a>
+            </div>
             <p>
               <strong>2.</strong> Paste the code and send it as a message
             </p>

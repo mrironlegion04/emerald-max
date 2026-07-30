@@ -588,13 +588,14 @@ export default function AssetTreeSelect({
                 </span>
               )}
             </span>
-            <button
-              type="button"
-              onClick={clearValue}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5"
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); clearValue(e) }}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </span>
           </>
         ) : value && selectedAsset && !multiSelect ? (
           <>
@@ -608,13 +609,14 @@ export default function AssetTreeSelect({
               <Package className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
             )}
             <span className="flex-1 text-sm text-gray-900 truncate">{selectedPath}</span>
-            <button
-              type="button"
-              onClick={clearValue}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5"
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); clearValue(e) }}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </span>
           </>
         ) : (
           <>

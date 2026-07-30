@@ -539,12 +539,6 @@ model WorkOrder {
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)
 
-  // Timer fields
-  timerStartedAt      DateTime?
-  timerPausedAt       DateTime?
-  timerElapsedSeconds Int     @default(0)
-  isTimerActive       Boolean @default(false)
-
   isMandatorySignature Boolean @default(false)
 
   createdAt DateTime @default(now())

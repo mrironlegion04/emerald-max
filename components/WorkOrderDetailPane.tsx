@@ -6,7 +6,6 @@ import { ExternalLink, Loader2, AlertCircle } from 'lucide-react'
 import Badge, { workOrderStatusVariant, priorityVariant } from './Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from './WOStatusActions'
-import TimerPanel from './TimerPanel'
 import WOPartsPanel from './WOPartsPanel'
 import WOCommentsPanel from './WOCommentsPanel'
 import WOProceduresPanel from './WOProceduresPanel'
@@ -109,9 +108,6 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
           requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
         />
       </div>
-
-      {/* Timer */}
-      <TimerPanel woId={wo.id} woStatus={wo.status} />
 
       {/* Details */}
       <div className="premium-card p-4 border border-slate-200/50 shadow-sm bg-white">

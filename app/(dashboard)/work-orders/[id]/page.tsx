@@ -12,7 +12,6 @@ import WOCommentsPanel from '@/components/WOCommentsPanel'
 import WOProceduresPanel from '@/components/WOProceduresPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
-import TimerPanel from '@/components/TimerPanel'
 import SkipPMButton from '@/components/SkipPMButton'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
@@ -160,9 +159,6 @@ export default async function WorkOrderDetailPage({
               assignedToId={wo.assignedToId}
             />
           </div>
-
-          {/* Timer panel */}
-          <TimerPanel woId={wo.id} woStatus={wo.status} />
 
           {/* Repair Sessions */}
           {(wo.repairSessions as any[]).length > 0 && (

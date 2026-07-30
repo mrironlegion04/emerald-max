@@ -133,26 +133,34 @@ export default function TelegramSettings({ telegramChatId }: Props) {
             <p className="text-xs text-blue-600 font-medium mb-2">
               Send this code to the bot on Telegram:
             </p>
-            <p className="text-2xl font-bold text-blue-700 tracking-widest font-mono select-all">
+            <p className="text-2xl font-bold text-blue-700 tracking-widest font-mono mb-2 select-all">
               {code}
             </p>
+            <button
+              onClick={() => navigator.clipboard.writeText(code)}
+              className="text-xs text-blue-600 hover:text-blue-800 underline font-medium"
+            >
+              Copy code
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-gray-500">
-              <strong>Step 1:</strong>{' '}
+          <div className="flex flex-col gap-1.5 text-xs text-gray-500">
+            <p>
+              <strong>1.</strong> Click to open{' '}
               <a
                 href={deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 underline"
               >
-                Open @emerald_maintenance_bot
+                @emerald_maintenance_bot
               </a>
-              {' — Telegram will auto-send the code'}
             </p>
-            <p className="text-xs text-gray-500">
-              <strong>Step 2:</strong> Click <strong>&quot;Check connection&quot;</strong> below
+            <p>
+              <strong>2.</strong> Paste the code and send it as a message
+            </p>
+            <p>
+              <strong>3.</strong> Click <strong>&quot;Check connection&quot;</strong> below
             </p>
           </div>
 

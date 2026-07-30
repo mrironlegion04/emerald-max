@@ -91,16 +91,31 @@ export async function pollPairing(
     const msg = update.message
     if (!msg?.text) continue
 
-    let token = ''
-    if (msg.text.startsWith('/start ')) {
-      token = msg.text.slice(7).trim()
-    } else if (/^[a-f0-9]{16,32}$/.test(msg.text.trim())) {
-      token = msg.text.trim()
+    const chatId = String(msg.chat.id)
+    const text = msg.text.trim()
+
+    if (text === '/start' || text === '/help') {
+      await sendTelegramMessage(
+        chatId,
+        `🔗 <b>Link your account</b>\n\n1. Go to Profile → Link Telegram in the CMMS\n2. Copy the pairing code\n3. Send it here as a message`
+      )
+      continue
     }
 
-    if (!token) continue
+    let token = ''
+    if (text.startsWith('/start ')) {
+      token = text.slice(7).trim()
+    } else if (/^[a-f0-9]{16,32}$/.test(text)) {
+      token = text
+    }
 
-    const chatId = String(msg.chat.id)
+    if (!token) {
+      await sendTelegramMessage(
+        chatId,
+        `🤖 <b>Emerald Max Bot</b>\n\nTo link your account, get a pairing code from <b>Profile → Link Telegram</b> in the CMMS, then send it here.`
+      )
+      continue
+    }
 
     const error = await validatePairingToken(token, chatId)
     if (error === null) {

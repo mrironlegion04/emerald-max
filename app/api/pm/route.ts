@@ -28,7 +28,7 @@ const pmSchema = z.object({
   meterInterval:        z.number().nullable().optional(),
   meterUnit:            z.string().nullable().optional(),
   meterId:              z.string().nullable().optional(),
-  procedureIds:         z.array(z.string()).optional().default([]),
+
   // MaintainX-style fields
   scheduleBehavior:     z.enum(['FIXED','FLOATING']).default('FIXED'),
   schedulingHorizon:    z.number().int().min(1).max(52).default(1),
@@ -54,10 +54,7 @@ export async function GET() {
       include: {
         asset:    { select: { id: true, name: true, assetCode: true } },
         location: { select: { id: true, name: true } },
-        procedures: {
-          select: { procedure: { select: { id: true, name: true } }, sortOrder: true },
-          orderBy: { sortOrder: 'asc' },
-        },
+
       },
       orderBy: { nextDueDate: 'asc' },
     })
@@ -76,8 +73,6 @@ export async function POST(request: NextRequest) {
     }
     const body = await request.json()
     const data = pmSchema.parse(body)
-
-    const procedureIds = data.procedureIds ?? []
 
     const schedule = await prisma.maintenanceSchedule.create({
       data: {
@@ -105,12 +100,6 @@ export async function POST(request: NextRequest) {
         woCategoryId:        data.woCategoryId          ?? null,
         startDateOffset:     data.startDateOffset,
         nestedStartIndex:    data.nestedStartIndex,
-        procedures: {
-          create: procedureIds.map((procedureId, index) => ({
-            procedureId,
-            sortOrder: index,
-          })),
-        },
       },
     })
 

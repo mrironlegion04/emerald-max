@@ -68,13 +68,6 @@ export default async function PMPage({
       include: {
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
         location: { select: { id: true, name: true } },
-        procedures: {
-          select: {
-            procedure: {
-              select: { id: true, name: true },
-            },
-          },
-        },
       },
       orderBy: { nextDueDate: 'asc' },
       skip,
@@ -243,13 +236,7 @@ export default async function PMPage({
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {s.procedures && s.procedures.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium" title={s.procedures.map((ct: any) => ct.procedure.name).join(', ')}>
-                            ✅ {s.procedures.length} procedure{s.procedures.length !== 1 ? 's' : ''}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
+                        <span className="text-xs text-gray-400">—</span>
                       </td>
                       <td className="px-4 py-3">
                         <p className={`text-sm font-medium ${overdue ? 'text-red-600' : 'text-gray-900'}`}>
@@ -352,18 +339,6 @@ export default async function PMPage({
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>
                         )}
                       </div>
-                    </div>
-
-                    {/* Checklist linked count */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Procedures</span>
-                      {s.procedures && s.procedures.length > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[11px] font-bold" title={s.procedures.map((ct: any) => ct.procedure.name).join(', ')}>
-                          📋 {s.procedures.length} Procedure{(s.procedures.length !== 1) ? 's' : ''}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 font-medium">—</span>
-                      )}
                     </div>
 
                     {/* Next Due Date */}

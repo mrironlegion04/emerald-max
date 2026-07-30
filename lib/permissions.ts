@@ -6,7 +6,7 @@ import type { Role } from '@prisma/client'
 export const ALL_PERMISSIONS = [
   // Work Orders
   'wo:create', 'wo:read', 'wo:edit', 'wo:delete', 'wo:assign',
-  'wo:change_status', 'wo:complete', 'wo:cancel', 'wo:fill_procedure',
+  'wo:change_status', 'wo:complete', 'wo:cancel',
 
   // Work Requests
   'request:create', 'request:read', 'request:approve', 'request:reject', 'request:convert',
@@ -22,9 +22,6 @@ export const ALL_PERMISSIONS = [
 
   // Meters
   'meter:create', 'meter:read', 'meter:edit', 'meter:delete',
-
-  // Procedures
-  'procedure:create', 'procedure:read', 'procedure:edit', 'procedure:delete',
 
   // PM Schedules
   'pm:create', 'pm:read', 'pm:edit', 'pm:delete',
@@ -78,7 +75,7 @@ export type Permission = (typeof ALL_PERMISSIONS)[number]
 export const PERMISSION_GROUPS: Record<string, { label: string; permissions: Permission[] }> = {
   workorders: {
     label: 'Work Orders',
-    permissions: ['wo:create', 'wo:read', 'wo:edit', 'wo:delete', 'wo:assign', 'wo:change_status', 'wo:complete', 'wo:cancel', 'wo:fill_procedure'],
+    permissions: ['wo:create', 'wo:read', 'wo:edit', 'wo:delete', 'wo:assign', 'wo:change_status', 'wo:complete', 'wo:cancel'],
   },
   requests: {
     label: 'Work Requests',
@@ -99,10 +96,6 @@ export const PERMISSION_GROUPS: Record<string, { label: string; permissions: Per
   meters: {
     label: 'Meters',
     permissions: ['meter:create', 'meter:read', 'meter:edit', 'meter:delete'],
-  },
-  procedures: {
-    label: 'Procedures',
-    permissions: ['procedure:create', 'procedure:read', 'procedure:edit', 'procedure:delete'],
   },
   pm: {
     label: 'Preventive Maintenance',
@@ -161,13 +154,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   MANAGER: [
     'wo:create', 'wo:read', 'wo:edit', 'wo:assign', 'wo:change_status',
-    'wo:complete', 'wo:cancel', 'wo:fill_procedure',
+    'wo:complete', 'wo:cancel',
     'request:create', 'request:read', 'request:approve', 'request:reject', 'request:convert',
     'asset:create', 'asset:read', 'asset:edit', 'asset:change_status',
     'location:create', 'location:read', 'location:edit',
     'part:create', 'part:read', 'part:edit',
     'meter:create', 'meter:read', 'meter:edit',
-    'procedure:create', 'procedure:read', 'procedure:edit',
     'pm:create', 'pm:read', 'pm:edit',
     'issue:create', 'issue:read', 'issue:edit',
     'category:read', 'type:read',
@@ -181,13 +173,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 
   TECHNICIAN: [
-    'wo:read', 'wo:complete', 'wo:fill_procedure',
+    'wo:read', 'wo:complete',
     'request:create', 'request:read',
     'asset:read',
     'location:read',
     'part:read',
     'meter:read',
-    'procedure:read',
     'pm:read',
     'issue:read',
     'category:read', 'type:read',

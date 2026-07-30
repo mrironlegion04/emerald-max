@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardCheck, Star, Plus, X, Layers } from 'lucide-react'
+import { Plus, X, Layers } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 
@@ -17,13 +17,6 @@ interface SimpleMeter {
 
 interface Asset    { id: string; name: string; assetCode: string | null; imageUrl?: string | null; parentId?: string | null; locationId?: string | null; categoryId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
-interface Procedure {
-  id: string; name: string; description?: string | null; steps?: { id: string }[]
-  locations?: { id: string }[]
-  categories?: { id: string }[]
-  assets?: { id: string }[]
-}
-
 interface NestedTier {
   label: string
   frequency: string
@@ -53,7 +46,6 @@ interface PMFormData {
   triggerType: string; frequency: string; interval: string
   meterInterval: string; meterUnit: string; meterId: string
   nextDueDate: string; assetId: string; locationId: string; locationScope: string; isActive: boolean
-  procedureIds: string[]
   // MaintainX-style fields
   scheduleBehavior: string; schedulingHorizon: string
   // WO Template fields
@@ -68,7 +60,6 @@ interface PMFormData {
 interface Props {
   assets:     Asset[]
   locations:  Location[]
-  procedures?: Procedure[]
   users?:     SimpleUser[]
   teams?:     SimpleTeam[]
   categories?: SimpleCategory[]
@@ -132,7 +123,7 @@ function defaultDueDate() {
   return d.toISOString().split('T')[0]
 }
 
-export default function PMScheduleForm({ assets, locations, procedures = [], users = [], teams = [], categories = [], initialData, scheduleId, preselectedAssetId }: Props) {
+export default function PMScheduleForm({ assets, locations, users = [], teams = [], categories = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
 
@@ -150,7 +141,7 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
     locationId:         initialData?.locationId         ?? '',
     locationScope:      initialData?.locationScope      ?? 'ALL_ASSETS',
     isActive:           initialData?.isActive           ?? true,
-    procedureIds:       (initialData as any)?.procedures?.map((p: any) => p.procedure?.id || p.procedureId).filter(Boolean) ?? (initialData as any)?.procedureIds ?? [],
+
     scheduleBehavior:   (initialData as any)?.scheduleBehavior ?? 'FIXED',
     schedulingHorizon:  (initialData as any)?.schedulingHorizon ?? '1',
     woPriority:         (initialData as any)?.woPriority        ?? 'MEDIUM',
@@ -186,34 +177,6 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
   function set(field: keyof PMFormData, value: string | boolean | string[]) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
-
-  // Smart recommendation: determine which procedures match the selected asset/location
-  const recommendedIds = useMemo(() => {
-    const ids = new Set<string>()
-    if (!form.assetId && !form.locationId) return ids
-
-    const selectedAsset = assets.find(a => a.id === form.assetId)
-    const selectedAssetCategoryId = selectedAsset?.categoryId
-
-    for (const p of procedures) {
-      const matchesAsset   = form.assetId && p.assets?.some(a => a.id === form.assetId)
-      const matchesCategory = form.assetId && selectedAssetCategoryId && p.categories?.some(c => c.id === selectedAssetCategoryId)
-      const matchesLocation = form.locationId && p.locations?.some(l => l.id === form.locationId)
-      if (matchesAsset || matchesCategory || matchesLocation) ids.add(p.id)
-    }
-    return ids
-  }, [form.assetId, form.locationId, procedures, assets])
-
-  // Sort: recommended first, then others
-  const sortedProcedures = useMemo(() => {
-    return [...procedures].sort((a, b) => {
-      const aRec = recommendedIds.has(a.id) ? 0 : 1
-      const bRec = recommendedIds.has(b.id) ? 0 : 1
-      return aRec - bRec
-    })
-  }, [procedures, recommendedIds])
-
-  const hasRecommendations = recommendedIds.size > 0 && (!!form.assetId || !!form.locationId)
 
   // Fetch meters for the selected asset
   const [meters, setMeters] = useState<SimpleMeter[]>([])
@@ -277,7 +240,7 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
         assetId:              form.assetId || null,
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
-        procedureIds:         form.procedureIds,
+
         scheduleBehavior:     form.scheduleBehavior,
         schedulingHorizon:    parseInt(form.schedulingHorizon) || 1,
         nestedConfig:         nestedTiers.length > 0 ? nestedTiers : null,
@@ -810,99 +773,6 @@ export default function PMScheduleForm({ assets, locations, procedures = [], use
           </div>
         )}
       </div>
-
-      {/* Procedures */}
-      {procedures.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-emerald-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Procedures</h2>
-          </div>
-          <p className="text-xs text-gray-450 text-slate-400">
-            Select one or more Procedures to be automatically applied when work orders are generated from this schedule.
-          </p>
-
-          {/* Recommended section */}
-          {hasRecommendations && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 uppercase tracking-wider">
-                <Star className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
-                Recommended Procedures
-              </div>
-              {sortedProcedures.filter(p => recommendedIds.has(p.id)).map(proc => (
-                <label key={proc.id} className="flex items-center gap-3 p-3 border border-emerald-200 bg-emerald-50/50 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={form.procedureIds.includes(proc.id)}
-                    onChange={e => {
-                      const newIds = e.target.checked
-                        ? [...form.procedureIds, proc.id]
-                        : form.procedureIds.filter(id => id !== proc.id)
-                      set('procedureIds', newIds)
-                    }}
-                    className="w-4 h-4 text-emerald-605 rounded border-gray-300 pointer-events-none"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-900">{proc.name}</p>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-705 text-[10px] font-bold rounded-full">
-                        <Star className="w-2.5 h-2.5 fill-emerald-505" />
-                        Recommended
-                      </span>
-                    </div>
-                    {proc.description && (
-                      <p className="text-xs text-gray-500">{proc.description}</p>
-                    )}
-                    {proc.steps && proc.steps.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">{proc.steps.length} steps</p>
-                    )}
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-
-          {/* All procedures section */}
-          <div className="space-y-2">
-            {hasRecommendations && (
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider pt-2">
-                All procedures
-              </div>
-            )}
-            {sortedProcedures.filter(p => !recommendedIds.has(p.id)).map(proc => (
-              <label key={proc.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={form.procedureIds.includes(proc.id)}
-                  onChange={e => {
-                    const newIds = e.target.checked
-                      ? [...form.procedureIds, proc.id]
-                      : form.procedureIds.filter(id => id !== proc.id)
-                    set('procedureIds', newIds)
-                  }}
-                  className="w-4 h-4 text-emerald-600 rounded border-gray-300"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-900">{proc.name}</p>
-                  {proc.description && (
-                    <p className="text-xs text-gray-500">{proc.description}</p>
-                  )}
-                  {proc.steps && proc.steps.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">{proc.steps.length} steps</p>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
-
-          {form.procedureIds.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
-              <ClipboardCheck className="w-3.5 h-3.5" />
-              {form.procedureIds.length} Procedure{form.procedureIds.length !== 1 ? 's' : ''} will auto-apply to all generated work orders
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={saving} className="btn-primary">

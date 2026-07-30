@@ -8,7 +8,6 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from './WOStatusActions'
 import WOPartsPanel from './WOPartsPanel'
 import WOCommentsPanel from './WOCommentsPanel'
-import WOProceduresPanel from './WOProceduresPanel'
 import SubtasksPanel from './SubtasksPanel'
 import AttachmentsPanel from './AttachmentsPanel'
 import { fmtCurrency, fmtDateTime } from '@/lib/utils'
@@ -228,28 +227,6 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
         allUsers={[]}
         allTeams={[]}
         canEdit={true}
-      />
-
-      {/* Procedures */}
-      <WOProceduresPanel
-        woId={wo.id}
-        initialProcedures={(wo.procedures ?? []).map((c: any) => ({
-          id: c.id, title: c.title, source: c.source,
-          steps: c.steps.map((s: any) => ({
-            id: s.id, label: s.label, type: s.type,
-            isChecked: s.isChecked, isMandatory: s.isMandatory,
-            stringValue: s.stringValue, options: s.options,
-            checkedAt: s.checkedAt ? new Date(s.checkedAt).toISOString() : null,
-            checkedBy: s.checkedBy, sortOrder: s.sortOrder,
-            assetId: s.assetId, settings: s.settings, logic: s.logic,
-            asset: s.asset ? {
-              id: s.asset.id, name: s.asset.name, parentId: s.asset.parentId,
-              location: s.asset.location ? { id: s.asset.location.id, name: s.asset.location.name, parentId: s.asset.location.parentId } : null,
-            } : null,
-          })),
-        }))}
-        woStatus={wo.status}
-        locations={[]}
       />
 
       {/* Comments */}

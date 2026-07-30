@@ -17,7 +17,6 @@ export default async function WOTemplatesPage() {
       team:       { select: { name: true } },
       category:   { select: { name: true } },
       createdBy:  { select: { name: true } },
-      _count:     { select: { procedures: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -63,7 +62,7 @@ export default async function WOTemplatesPage() {
                     {typeLabels[t.woType] ?? t.woType}
                     {t.assignedTo ? ` · ${t.assignedTo.name}` : ''}
                     {t.team ? ` · Team: ${t.team.name}` : ''}
-                    {t._count.procedures > 0 ? ` · ${t._count.procedures} procedure${t._count.procedures !== 1 ? 's' : ''}` : ''}
+
                     {` · Created ${fmt(t.createdAt)}`}
                   </p>
                 </div>

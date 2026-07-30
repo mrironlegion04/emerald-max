@@ -9,8 +9,6 @@ import { z } from 'zod'
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
-  resolveProceduresForAssets,
-  generatePerAssetProcedures,
 } from '@/lib/work-order-assets'
 
 const woSchema = z.object({
@@ -34,7 +32,7 @@ const woSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
-  procedureIds:        z.array(z.string()).optional().default([]),
+
 }).refine(
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
@@ -161,31 +159,6 @@ export async function POST(request: NextRequest) {
     if (normalized.entries.length > 0) {
       await syncWorkOrderAssets(wo.id, normalized.entries)
     }
-
-    // ── Generate per-asset procedures from auto-resolved templates ───
-    const assetIds = normalized.entries.map(e => e.assetId)
-    if (assetIds.length > 0) {
-      const resolvedProcedures = await resolveProceduresForAssets(assetIds, data.locationId)
-      await generatePerAssetProcedures(wo.id, resolvedProcedures, 'AUTO')
-    }
-
-    // ── Snapshot user-selected procedures (manual additions) ───────────
-    const procedureIds = data.procedureIds ?? []
-    if (procedureIds.length > 0) {
-      // Apply each selected procedure to every asset in scope (or single procedure for location-general with no assets)
-      const selectedMappings: { procedureId: string; assetId: string | null; source: string }[] = []
-      for (const pid of procedureIds) {
-        if (assetIds.length > 0) {
-          for (const aid of assetIds) {
-            selectedMappings.push({ procedureId: pid, assetId: aid, source: 'MANUAL' })
-          }
-        } else {
-          selectedMappings.push({ procedureId: pid, assetId: null, source: 'MANUAL' })
-        }
-      }
-      await generatePerAssetProcedures(wo.id, selectedMappings, 'MANUAL')
-    }
-
     await writeAudit({
       action: 'CREATE', entity: 'Work Order',
       entityId: wo.id, entityName: wo.title,

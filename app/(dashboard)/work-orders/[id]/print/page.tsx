@@ -28,7 +28,7 @@ export default async function WorkOrderPrintPage({
       createdBy: { select: { name: true } },
       partsUsed: { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       attachments: { include: { uploadedBy: { select: { name: true } } } },
-      procedures: { include: { steps: true } },
+
       repairSessions: { orderBy: { sessionNo: 'asc' } },
     },
   })
@@ -173,36 +173,6 @@ export default async function WorkOrderPrintPage({
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Procedures */}
-      {wo.procedures.length > 0 && (
-        <div className="mb-8 pb-8 border-b border-gray-300">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Procedures</h3>
-          <div className="space-y-4">
-            {wo.procedures.map((list: any) => (
-              <div key={list.id}>
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="font-semibold text-gray-900 text-sm">{list.title}</h4>
-                  {list.source && (
-                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-extrabold uppercase uppercase-wide select-none">
-                      {list.source}
-                    </span>
-                  )}
-                </div>
-                <ul className="space-y-1">
-                  {list.steps.map((step: any) => (
-                    <li key={step.id} className="text-sm text-gray-705 flex items-start gap-2">
-                      <span className="font-bold">{step.isChecked ? '✓' : '☐'}</span>
-                      <span>{step.label}</span>
-                      {step.isMandatory && <span className="text-red-650 font-extrabold">*</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

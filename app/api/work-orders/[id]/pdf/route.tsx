@@ -40,7 +40,6 @@ export async function GET(
         domain: { select: { name: true } },
         createdBy: { select: { name: true } },
         partsUsed: { include: { part: { select: { name: true, partNumber: true, unitCost: true } } } },
-        procedures: { include: { steps: true } },
       },
     })
 
@@ -147,23 +146,6 @@ export async function GET(
                   </View>
                 )
               })}
-            </>
-          )}
-
-          {/* Procedures */}
-          {wo.procedures.length > 0 && (
-            <>
-              <View style={styles.sectionTitle}><Text style={styles.label}>Procedures</Text></View>
-              {wo.procedures.map((proc: any) => (
-                <View key={proc.id} style={{ marginBottom: 8 }}>
-                  <Text style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 4 }}>{proc.title}</Text>
-                  {proc.steps.map((step: any) => (
-                    <Text key={step.id} style={{ fontSize: 9, marginBottom: 2, marginLeft: 12 }}>
-                      {step.isChecked ? '✓' : '☐'} {step.label}{step.isMandatory ? ' *' : ''}
-                    </Text>
-                  ))}
-                </View>
-              ))}
             </>
           )}
 

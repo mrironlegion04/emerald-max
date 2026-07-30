@@ -56,10 +56,6 @@ export async function GET(
       include: {
         asset: true,
         location: true,
-        procedures: {
-          select: { procedure: { select: { id: true, name: true } }, sortOrder: true },
-          orderBy: { sortOrder: 'asc' },
-        },
       },
     })
     if (!schedule) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -120,13 +116,6 @@ export async function PUT(
         woCategoryId:        data.woCategoryId          ?? undefined,
         startDateOffset:     data.startDateOffset,
         nestedStartIndex:    data.nestedStartIndex,
-        procedures: data.procedureIds !== undefined ? {
-          deleteMany: {},
-          create: data.procedureIds.map((procedureId, index) => ({
-            procedureId,
-            sortOrder: index,
-          })),
-        } : undefined,
       },
     })
 

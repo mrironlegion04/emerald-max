@@ -77,27 +77,8 @@ export async function PATCH(
       )
     }
 
-    // If submitting for approval (PENDING_APPROVAL), check mandatory steps and subtasks
+    // If submitting for approval (PENDING_APPROVAL), check incomplete subtasks
     if (status === 'PENDING_APPROVAL') {
-      const procedures = await prisma.wOProcedure.findMany({
-        where: { workOrderId: id },
-        include: { steps: true }
-      })
-      let uncheckedMandatory = 0
-      for (const proc of procedures) {
-        for (const step of proc.steps) {
-          if (!step.isMandatory) continue
-          const isIncomplete = step.type === 'CHECKBOX' ? !step.isChecked : !step.stringValue
-          if (isIncomplete) uncheckedMandatory++
-        }
-      }
-      if (uncheckedMandatory > 0) {
-        return NextResponse.json(
-          { error: `Cannot submit: ${uncheckedMandatory} mandatory procedure step(s) incomplete` },
-          { status: 422 }
-        )
-      }
-
       const incompleteSubtasks = await prisma.subtask.findMany({
         where: {
           workOrderId: id,
@@ -112,27 +93,8 @@ export async function PATCH(
       }
     }
 
-    // If final completion (COMPLETED from PENDING_APPROVAL), also check steps
+    // If final completion (COMPLETED from PENDING_APPROVAL), also check incomplete subtasks
     if (status === 'COMPLETED' && wo.status === 'PENDING_APPROVAL') {
-      const procedures = await prisma.wOProcedure.findMany({
-        where: { workOrderId: id },
-        include: { steps: true }
-      })
-      let uncheckedMandatory = 0
-      for (const proc of procedures) {
-        for (const step of proc.steps) {
-          if (!step.isMandatory) continue
-          const isIncomplete = step.type === 'CHECKBOX' ? !step.isChecked : !step.stringValue
-          if (isIncomplete) uncheckedMandatory++
-        }
-      }
-      if (uncheckedMandatory > 0) {
-        return NextResponse.json(
-          { error: `Cannot complete: ${uncheckedMandatory} mandatory procedure step(s) incomplete` },
-          { status: 422 }
-        )
-      }
-
       const incompleteSubtasks = await prisma.subtask.findMany({
         where: {
           workOrderId: id,

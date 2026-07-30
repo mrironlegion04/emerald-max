@@ -137,12 +137,6 @@ enum CompletionType {
   MANAGER_OVERRIDE
 }
 
-enum ProcedureSource {
-  AUTO
-  MANUAL
-  PM
-}
-
 enum RequestPriority {
   LOW
   MEDIUM
@@ -216,7 +210,6 @@ model Team {
   domains    TeamDomain[]
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
-  procedures Procedure[]
   pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
   templates   WorkOrderTemplate[]
 
@@ -362,7 +355,6 @@ model Location {
   assets    Asset[]
   workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
   maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
-  procedures Procedure[] @relation("ProcedureLocations")
 
   @@map("locations")
 }
@@ -378,7 +370,6 @@ model AssetCategory {
   children AssetCategory[] @relation("AssetCategoryHierarchy")
   assets   Asset[]
   domains  CategoryDomain[]
-  procedures Procedure[] @relation("ProcedureCategories")
   pmSchedules MaintenanceSchedule[] @relation("PMCategoryAssigned")
   workOrders WorkOrder[] @relation("WOCategory")
   templates  WorkOrderTemplate[]
@@ -452,8 +443,6 @@ model Asset {
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
   assetParts           AssetPart[]           @relation("AssetToAssetPart")
-  procedureSteps       WOProcedureStep[]
-  procedures           Procedure[]   @relation("ProcedureAssets")
 
   // Soft-delete (archive) support
   isDeleted  Boolean   @default(false)
@@ -578,9 +567,8 @@ model WorkOrder {
   partsUsed     WorkOrderPart[]
   comments      WorkOrderComment[]
   subtasks      Subtask[]
-  procedures    WOProcedure[]
-  requests      MaintenanceRequest[]
-  attachments   Attachment[]        @relation("WOAttachments")
+requests      MaintenanceRequest[]
+  attachments         Attachment[]        @relation("WOAttachments")
   assets        WorkOrderAsset[]
   statusHistory WorkOrderStatusHistory[]
   repairSessions RepairSession[]
@@ -797,7 +785,6 @@ model MaintenanceSchedule {
   workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
-  procedures          MaintenanceScheduleProcedure[] @relation("PMScheduleProcedures")
 
   @@map("maintenance_schedules")
 }
@@ -893,49 +880,6 @@ model MaintenanceRequest {
   @@map("maintenance_requests")
 }
 
-model WOProcedure {
-  id          String    @id @default(cuid())
-  title       String
-  workOrderId String
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  procedureId String?   // Track original Procedure template ID
-  source      ProcedureSource    @default(AUTO)
-  createdAt   DateTime  @default(now())
-
-  steps WOProcedureStep[]
-
-  @@map("wo_procedures")
-}
-
-model WOProcedureStep {
-  id          String      @id @default(cuid())
-  label       String
-  type        String      @default("CHECKBOX")
-  isChecked   Boolean     @default(false)
-  isMandatory Boolean     @default(false)
-  stringValue String?
-  options     String[]
-  checkedAt   DateTime?
-  checkedBy   String?
-  sortOrder   Int         @default(0)
-
-  settings    Json?
-  logic       Json?
-  links       Json?
-
-  assignedUserIds  String[]
-  assignedTeamIds  String[]
-
-  nestedProcedureId String?
-
-  procedureId String
-  procedure   WOProcedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
-  assetId     String?
-  asset       Asset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)
-
-  @@map("wo_procedure_steps")
-}
-
 model Attachment {
   id           String    @id @default(cuid())
   filename     String
@@ -1002,84 +946,6 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
-}
-
-// ── Checklist Templates ───────────────────────────────────────────────────────
-
-// ── Procedures ───────────────────────────────────────────────────────────────
-
-model Procedure {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  teamId      String?
-  team        Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
-
-  steps       ProcedureStep[] @relation("ProcedureSteps")
-  versions    ProcedureVersion[]
-  nestedBy    ProcedureStep[] @relation("NestedProcedures")
-  // MaintenanceSchedule procedures (many-to-many intermediate)
-  pmSchedules MaintenanceScheduleProcedure[] @relation("PMProcedurePMSchedules")
-  woTemplates WorkOrderTemplateProcedure[] @relation("WOTemplateProcedures")
-
-  locations   Location[]         @relation("ProcedureLocations")
-  categories  AssetCategory[]    @relation("ProcedureCategories")
-  assets      Asset[]            @relation("ProcedureAssets")
-
-  @@map("procedures")
-}
-
-model ProcedureVersion {
-  id            String   @id @default(cuid())
-  procedureId   String
-  procedure     Procedure @relation(fields: [procedureId], references: [id], onDelete: Cascade)
-  versionNumber Int
-  snapshot      Json
-  editedById    String?
-  editedByName  String?
-  changeNote    String?
-  createdAt     DateTime @default(now())
-
-  @@index([procedureId])
-  @@map("procedure_versions")
-}
-
-model ProcedureStep {
-  id          String    @id @default(cuid())
-  label       String
-  type        String    @default("CHECKBOX")
-  isMandatory Boolean   @default(false)
-  options     String[]
-  sortOrder   Int       @default(0)
-  
-  settings    Json?
-  logic       Json?
-  links       Json?
-
-  assignedUserIds  String[]
-  assignedTeamIds  String[]
-
-  nestedProcedureId String?
-  nestedProcedure   Procedure? @relation("NestedProcedures", fields: [nestedProcedureId], references: [id], onDelete: SetNull)
-
-  procedureId String
-  procedure   Procedure @relation("ProcedureSteps", fields: [procedureId], references: [id], onDelete: Cascade)
-
-  @@map("procedure_steps")
-}
-
-model MaintenanceScheduleProcedure {
-  scheduleId  String
-  schedule    MaintenanceSchedule @relation("PMScheduleProcedures", fields: [scheduleId], references: [id], onDelete: Cascade)
-  procedureId String
-  procedure   Procedure           @relation("PMProcedurePMSchedules", fields: [procedureId], references: [id], onDelete: Cascade)
-  sortOrder   Int                 @default(0)
-
-  @@id([scheduleId, procedureId])
-  @@map("maintenance_schedule_procedures")
 }
 
 model PushSubscription {
@@ -1207,20 +1073,7 @@ model WorkOrderTemplate {
   categoryId   String?
   category     AssetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  procedures   WorkOrderTemplateProcedure[]
-
   @@map("work_order_templates")
-}
-
-model WorkOrderTemplateProcedure {
-  templateId  String
-  template    WorkOrderTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  procedureId String
-  procedure   Procedure         @relation("WOTemplateProcedures", fields: [procedureId], references: [id], onDelete: Cascade)
-  sortOrder   Int               @default(0)
-
-  @@id([templateId, procedureId])
-  @@map("wo_template_procedures")
 }
 
 model RepairSession {

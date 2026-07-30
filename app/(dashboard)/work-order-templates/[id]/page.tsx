@@ -23,12 +23,6 @@ export default async function TemplateDetailPage({
       team:       { select: { name: true } },
       category:   { select: { name: true } },
       createdBy:  { select: { name: true } },
-      procedures: {
-        include: {
-          procedure: { select: { id: true, name: true, description: true, steps: { select: { id: true, label: true } } } },
-        },
-        orderBy: { sortOrder: 'asc' },
-      },
     },
   })
 
@@ -108,25 +102,6 @@ export default async function TemplateDetailPage({
             </div>
           )}
 
-          {/* Procedures */}
-          {template.procedures.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-3">Attached Procedures</h2>
-              <div className="space-y-2">
-                {template.procedures.map((tp: any) => (
-                  <div key={tp.procedure.id} className="p-3 border border-gray-150 rounded-lg bg-gray-50/50">
-                    <p className="text-xs font-semibold text-gray-800">{tp.procedure.name}</p>
-                    {tp.procedure.description && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{tp.procedure.description}</p>
-                    )}
-                    {tp.procedure.steps && tp.procedure.steps.length > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-1">{tp.procedure.steps.length} steps</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Sidebar */}

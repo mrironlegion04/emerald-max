@@ -9,7 +9,6 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from '@/components/WOStatusActions'
 import WOPartsPanel from '@/components/WOPartsPanel'
 import WOCommentsPanel from '@/components/WOCommentsPanel'
-import WOProceduresPanel from '@/components/WOProceduresPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
@@ -56,19 +55,6 @@ export default async function WorkOrderDetailPage({
       issue:        true,
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, assignedTeam: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
-      procedures: {
-        include: {
-          steps: {
-            include: {
-              asset: {
-                include: {
-                  location: true
-                }
-              }
-            }
-          }
-        }
-      },
       attachments:  { include: { uploadedBy: { select: { name: true } } } },
       statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
       repairSessions: { orderBy: { sessionNo: 'asc' } },
@@ -82,7 +68,6 @@ export default async function WorkOrderDetailPage({
   const allUsers = await prisma.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
   const allDomains = await prisma.maintenanceDomain.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
   const allTeams = await prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
-  const allLocations = await prisma.location.findMany({ select: { id: true, name: true, parentId: true } })
 
   const isOverdue =
     wo.dueDate && new Date(wo.dueDate) < new Date() &&
@@ -421,42 +406,6 @@ export default async function WorkOrderDetailPage({
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
             allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
-          />
-          <WOProceduresPanel
-            woId={wo.id}
-            initialProcedures={wo.procedures.map((c: any) => ({
-              id: c.id,
-              title: c.title,
-              source: c.source,
-              steps: c.steps.map((s: any) => ({
-                id: s.id,
-                label: s.label,
-                type: s.type,
-                isChecked: s.isChecked,
-                isMandatory: s.isMandatory,
-                stringValue: s.stringValue,
-                options: s.options,
-                checkedAt: s.checkedAt ? s.checkedAt.toISOString() : null,
-                checkedBy: s.checkedBy,
-                sortOrder: s.sortOrder,
-                assetId: s.assetId,
-                settings: s.settings,
-                logic: s.logic,
-                asset: s.asset ? {
-                  id: s.asset.id,
-                  name: s.asset.name,
-                  parentId: s.asset.parentId,
-                  location: s.asset.location ? {
-                    id: s.asset.location.id,
-                    name: s.asset.location.name,
-                    parentId: s.asset.location.parentId,
-                  } : null
-                } : null
-              })),
-            }))
-            }
-            woStatus={wo.status}
-            locations={allLocations}
           />
           <WOCommentsPanel woId={wo.id} woStatus={wo.status} />
           <AttachmentsPanel

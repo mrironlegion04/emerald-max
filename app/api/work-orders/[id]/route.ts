@@ -19,8 +19,6 @@ import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/met
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
-  resolveProceduresForAssets,
-  generatePerAssetProcedures,
 } from '@/lib/work-order-assets'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
@@ -102,7 +100,7 @@ export async function GET(
         partsUsed:   { include: { part: true } },
         subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true, assignedDomain: true } },
         domain:      true,
-        procedures:  { include: { steps: { include: { asset: { include: { location: true } } } } } },
+
         attachments: { include: { uploadedBy: { select: { name: true } } } },
         statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' as const } },
       },
@@ -231,35 +229,6 @@ export async function PUT(
     // ── Sync WorkOrderAsset rows ──────────────────────────────────────
     await syncWorkOrderAssets(id, normalized.entries)
 
-    // ── Regenerate procedures if scope changed (only for auto-generated) ──
-    if (assetIdsChanged) {
-      // Find all existing AUTO-generated procedures
-      const autoProcedures = await prisma.wOProcedure.findMany({
-        where: { workOrderId: id, source: 'AUTO' },
-        select: { id: true },
-      })
-
-      const autoProcedureIds = autoProcedures.map(p => p.id)
-
-      if (autoProcedureIds.length > 0) {
-        await prisma.wOProcedureStep.deleteMany({
-          where: { procedureId: { in: autoProcedureIds } },
-        })
-        await prisma.wOProcedure.deleteMany({
-          where: { id: { in: autoProcedureIds } },
-        })
-      }
-
-      // Regenerate auto-procedures for the new asset set
-      if (incomingAssetIds.length > 0) {
-        const resolvedProcedures = await resolveProceduresForAssets(
-          incomingAssetIds,
-          data.locationId !== undefined ? data.locationId : existingWo.locationId,
-        )
-        await generatePerAssetProcedures(id, resolvedProcedures, 'AUTO')
-      }
-    }
-
     // ── Update the WorkOrder record ───────────────────────────────────
     const updateData = {
       ...Object.fromEntries(
@@ -378,11 +347,7 @@ export async function DELETE(
         assetId: true,
         attachments: true,
         assets: { select: { assetId: true } },
-        procedures: {
-          include: {
-            steps: true
-          }
-        }
+
       }
     })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
@@ -400,22 +365,6 @@ export async function DELETE(
         objectKey = decodeURIComponent(urlObj.pathname.replace(/^\//, '').split('/').slice(1).join('/'))
       }
       await cleanupFile(at.url, objectKey)
-    }
-
-    // 2. Procedure step attachments
-    for (const proc of wo.procedures) {
-      for (const step of proc.steps) {
-        if (step.stringValue) {
-          try {
-            const rich = JSON.parse(step.stringValue)
-            if (rich.attachments && Array.isArray(rich.attachments)) {
-              for (const sat of rich.attachments) {
-                await cleanupFile(sat.url, sat.key || null)
-              }
-            }
-          } catch { /* ignore */ }
-        }
-      }
     }
 
     await prisma.workOrderPart.deleteMany({ where: { workOrderId: id } })

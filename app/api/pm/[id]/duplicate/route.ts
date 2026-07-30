@@ -17,11 +17,6 @@ export async function POST(
     const { id } = await params
     const existing = await prisma.maintenanceSchedule.findUnique({
       where: { id },
-      include: {
-        procedures: {
-          select: { procedureId: true, sortOrder: true },
-        },
-      },
     })
 
     if (!existing) {
@@ -74,12 +69,6 @@ export async function POST(
         woDescription:       existing.woDescription,
         woAssignedToId:      existing.woAssignedToId,
         startDateOffset:     existing.startDateOffset,
-        procedures: {
-          create: existing.procedures.map(p => ({
-            procedureId: p.procedureId,
-            sortOrder: p.sortOrder,
-          })),
-        },
       },
     })
 

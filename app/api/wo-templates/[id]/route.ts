@@ -32,10 +32,6 @@ export async function GET(
         team:       { select: { name: true } },
         category:   { select: { name: true } },
         createdBy:  { select: { name: true } },
-        procedures: {
-          include: { procedure: { select: { id: true, name: true, description: true, steps: { select: { id: true } } } } },
-          orderBy: { sortOrder: 'asc' },
-        },
       },
     })
     if (!template) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -75,22 +71,11 @@ export async function PUT(
         assignedToId:  data.assignedToId  ?? undefined,
         teamId:        data.teamId        ?? undefined,
         categoryId:    data.categoryId    ?? undefined,
-        procedures: data.procedureIds !== undefined ? {
-          deleteMany: {},
-          create: data.procedureIds.map((procedureId, index) => ({
-            procedureId,
-            sortOrder: index,
-          })),
-        } : undefined,
       },
       include: {
         assignedTo: { select: { name: true } },
         team:       { select: { name: true } },
         category:   { select: { name: true } },
-        procedures: {
-          include: { procedure: { select: { id: true, name: true } } },
-          orderBy: { sortOrder: 'asc' },
-        },
       },
     })
 

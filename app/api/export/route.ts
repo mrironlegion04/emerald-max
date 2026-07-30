@@ -133,24 +133,19 @@ export async function GET(request: NextRequest) {
         include: {
           asset: { select: { name: true, assetCode: true, location: { select: { name: true } } } },
           location: { select: { name: true } },
-          procedures: {
-            select: {
-              procedure: { select: { name: true } },
-            },
-          },
+
         },
         orderBy: { nextDueDate: 'asc' },
       })
       filename = `pm-schedules-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
         'Title','Description','Trigger','Frequency','Interval','Next Due',
-        'Asset','Asset Code','Location','Procedure','Active','Created At',
+        'Asset','Asset Code','Location','Active','Created At',
       ]
       const rows = schedules.map(s => [
         s.title, s.description ?? '',
         s.triggerType, s.frequency, s.interval, fmt(s.nextDueDate),
         s.asset?.name ?? '', s.asset?.assetCode ?? '', s.asset?.location?.name ?? s.location?.name ?? '',
-        s.procedures.map(p => p.procedure.name).join('; ') || '',
         s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
       ])
       csv = toCSV(headers, rows)

@@ -1,8 +1,4 @@
 import { prisma } from '@/lib/db'
-import {
-  resolveProceduresForAssets,
-  generatePerAssetProcedures
-} from '@/lib/work-order-assets'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -128,129 +124,6 @@ function buildTiers(schedule: {
   return tiers
 }
 
-// ── Procedure Propagation ──────────────────────────────────────────────
-
-async function propagateProcedures(
-  schedule: {
-    id: string
-    assetId: string | null
-    locationId: string | null
-    locationScope: string | null
-    procedures: { procedure: { id: string; name: string } }[]
-  },
-  workOrderId: string,
-) {
-  // Handle ALL_ASSETS location scope
-  if (schedule.locationId && schedule.locationScope === 'ALL_ASSETS') {
-    const allLocations = await prisma.location.findMany({
-      select: { id: true, parentId: true },
-    })
-
-    function getDescendantLocationIds(locId: string): string[] {
-      const ids = [locId]
-      const children = allLocations.filter(l => l.parentId === locId)
-      for (const child of children) {
-        ids.push(...getDescendantLocationIds(child.id))
-      }
-      return ids
-    }
-
-    const allLocationIds = getDescendantLocationIds(schedule.locationId)
-
-    const allAssets = await prisma.asset.findMany({
-      select: { id: true, name: true, parentId: true, locationId: true },
-    })
-
-    const locationSeedAssets = allAssets.filter(
-      a => a.locationId && allLocationIds.includes(a.locationId)
-    )
-    const seedIds = new Set(locationSeedAssets.map(a => a.id))
-    const topLevelParents = locationSeedAssets.filter(
-      a => !a.parentId || !seedIds.has(a.parentId)
-    )
-
-    const tracedAssets: { id: string; name: string }[] = []
-    const visited = new Set<string>()
-
-    function traceDescendants(asset: (typeof allAssets)[0]) {
-      if (visited.has(asset.id)) return
-      visited.add(asset.id)
-      tracedAssets.push({ id: asset.id, name: asset.name })
-      const children = allAssets
-        .filter(a => a.parentId === asset.id)
-        .sort((a, b) => a.name.localeCompare(b.name))
-      for (const child of children) traceDescendants(child)
-    }
-
-    topLevelParents.sort((a, b) => a.name.localeCompare(b.name))
-    for (const parent of topLevelParents) traceDescendants(parent)
-
-    if (tracedAssets.length > 0) {
-      const woProcedure = await prisma.wOProcedure.create({
-        data: {
-          workOrderId,
-          title: 'Location Assets Procedure',
-          source: 'PM',
-        },
-      })
-
-      await prisma.wOProcedureStep.createMany({
-        data: tracedAssets.map((asset, index) => ({
-          procedureId: woProcedure.id,
-          label: `Check ${asset.name}`,
-          assetId: asset.id,
-          isChecked: false,
-          sortOrder: index,
-        })),
-      })
-    }
-  }
-
-  // Propagate PM-attached procedures
-  if (schedule.procedures && schedule.procedures.length > 0) {
-    for (const sp of schedule.procedures) {
-      const steps = await prisma.procedureStep.findMany({
-        where: { procedureId: sp.procedure.id },
-        orderBy: { sortOrder: 'asc' },
-      })
-
-      if (steps.length > 0) {
-        const woProcedure = await prisma.wOProcedure.create({
-          data: {
-            workOrderId,
-            procedureId: sp.procedure.id,
-            title: sp.procedure.name,
-            source: 'PM',
-          },
-        })
-
-        await prisma.wOProcedureStep.createMany({
-          data: steps.map(step => ({
-            procedureId: woProcedure.id,
-            label: step.label,
-            type: step.type,
-            isMandatory: step.isMandatory,
-            sortOrder: step.sortOrder,
-            options: step.options,
-            isChecked: false,
-            settings: step.settings ?? {},
-            logic: step.logic ?? {},
-          })),
-        })
-      }
-    }
-  }
-
-  // Auto-resolve asset/category/location procedures
-  if (schedule.assetId) {
-    const resolved = await resolveProceduresForAssets(
-      [schedule.assetId],
-      schedule.locationId,
-    )
-    await generatePerAssetProcedures(workOrderId, resolved, 'AUTO')
-  }
-}
-
 // ── Core Generation Function ───────────────────────────────────────────
 
 export async function generateWOsForSchedule(
@@ -277,12 +150,7 @@ export async function generateWOsForSchedule(
         },
       },
       location: { select: { id: true, name: true } },
-      procedures: {
-        select: {
-          procedure: { select: { id: true, name: true } },
-        },
-        orderBy: { sortOrder: 'asc' },
-      },
+
     },
   })
 
@@ -448,15 +316,6 @@ export async function generateWOsForSchedule(
 
     return { woIds, woNumbers }
   })
-
-  // Post-transaction: propagate procedures to each WO
-  for (const woId of generated.woIds) {
-    try {
-      await propagateProcedures(schedule, woId)
-    } catch (err) {
-      console.error(`Failed to propagate procedures for WO ${woId}:`, err)
-    }
-  }
 
   result.workOrderIds = generated.woIds
   result.woNumbers = generated.woNumbers

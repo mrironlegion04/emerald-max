@@ -12,16 +12,9 @@ export default async function EditPMPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/preventive-maintenance/${id}`)
 
-  const [schedule, assets, locations, procedures, users, teams, categories] = await Promise.all([
+  const [schedule, assets, locations, users, teams, categories] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
-      include: {
-        procedures: {
-          include: {
-            procedure: true,
-          },
-        },
-      },
     }),
     prisma.asset.findMany({
       where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
@@ -30,10 +23,6 @@ export default async function EditPMPage({
     }),
     prisma.location.findMany({
       select:  { id: true, name: true, address: true, path: true, parentId: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.procedure.findMany({
-      select:  { id: true, name: true, description: true, steps: { select: { id: true } }, locations: { select: { id: true } }, categories: { select: { id: true } }, assets: { select: { id: true } } },
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
@@ -68,7 +57,6 @@ export default async function EditPMPage({
     locationId:          schedule.locationId    ?? '',
     locationScope:       schedule.locationScope ?? 'ALL_ASSETS',
     isActive:            schedule.isActive,
-    procedures:          schedule.procedures,
     scheduleBehavior:    schedule.scheduleBehavior,
     schedulingHorizon:   String(schedule.schedulingHorizon),
     nestedConfig:        schedule.nestedConfig as any[] | null,
@@ -89,7 +77,7 @@ export default async function EditPMPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${schedule.title}`} />
-      <PMScheduleForm assets={assets} locations={locations} procedures={procedures} users={users} teams={teams} categories={categories} initialData={initialData} scheduleId={id} />
+      <PMScheduleForm assets={assets} locations={locations} users={users} teams={teams} categories={categories} initialData={initialData} scheduleId={id} />
     </div>
   )
 }

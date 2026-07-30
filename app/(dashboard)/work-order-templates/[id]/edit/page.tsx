@@ -12,14 +12,9 @@ export default async function EditTemplatePage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/work-order-templates/${id}`)
 
-  const [template, users, teams, categories, procedures] = await Promise.all([
+  const [template, users, teams, categories] = await Promise.all([
     prisma.workOrderTemplate.findUnique({
       where: { id },
-      include: {
-        procedures: {
-          include: { procedure: true },
-        },
-      },
     }),
     prisma.user.findMany({
       where:   { isActive: true },
@@ -33,10 +28,6 @@ export default async function EditTemplatePage({
     }),
     prisma.assetCategory.findMany({
       select:  { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.procedure.findMany({
-      select:  { id: true, name: true, description: true, steps: { select: { id: true } } },
       orderBy: { name: 'asc' },
     }),
   ])
@@ -53,7 +44,6 @@ export default async function EditTemplatePage({
     assignedToId:  template.assignedToId ?? '',
     teamId:        template.teamId ?? '',
     categoryId:    template.categoryId ?? '',
-    procedures:    template.procedures,
   }
 
   return (
@@ -65,7 +55,7 @@ export default async function EditTemplatePage({
       </div>
       <PageHeader title={`Edit: ${template.name}`} />
       <WorkOrderTemplateForm
-        users={users} teams={teams} categories={categories} procedures={procedures}
+        users={users} teams={teams} categories={categories}
         initialData={initialData} templateId={id}
       />
     </div>

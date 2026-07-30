@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList } from 'lucide-react'
+
 
 interface SimpleUser { id: string; name: string; email: string }
 interface SimpleTeam { id: string; name: string }
 interface SimpleCategory { id: string; name: string }
-interface Procedure { id: string; name: string; description?: string | null; steps?: { id: string }[] }
 
 interface TemplateFormData {
   name: string
@@ -19,20 +18,18 @@ interface TemplateFormData {
   assignedToId: string
   teamId: string
   categoryId: string
-  procedureIds: string[]
 }
 
 interface Props {
   users?: SimpleUser[]
   teams?: SimpleTeam[]
   categories?: SimpleCategory[]
-  procedures?: Procedure[]
-  initialData?: Partial<TemplateFormData> & { procedures?: { procedure: { id: string } }[] }
+  initialData?: Partial<TemplateFormData>
   templateId?: string
 }
 
 export default function WorkOrderTemplateForm({
-  users = [], teams = [], categories = [], procedures = [],
+  users = [], teams = [], categories = [],
   initialData, templateId,
 }: Props) {
   const router = useRouter()
@@ -48,7 +45,7 @@ export default function WorkOrderTemplateForm({
     assignedToId:  initialData?.assignedToId  ?? '',
     teamId:        initialData?.teamId        ?? '',
     categoryId:    initialData?.categoryId    ?? '',
-    procedureIds:  initialData?.procedures?.map(p => p.procedure?.id).filter(Boolean) ?? (initialData as any)?.procedureIds ?? [],
+
   })
 
   const [saving, setSaving] = useState(false)
@@ -72,7 +69,7 @@ export default function WorkOrderTemplateForm({
         assignedToId:  form.assignedToId || null,
         teamId:        form.teamId || null,
         categoryId:    form.categoryId || null,
-        procedureIds:  form.procedureIds,
+
       }
       const url    = isEdit ? `/api/wo-templates/${templateId}` : '/api/wo-templates'
       const method = isEdit ? 'PUT' : 'POST'
@@ -181,42 +178,6 @@ export default function WorkOrderTemplateForm({
             placeholder="Notes about when/how to use this template..." />
         </div>
       </div>
-
-      {/* Procedures */}
-      {procedures.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="w-4 h-4 text-emerald-600" />
-            <h2 className="font-semibold text-gray-900 text-sm">Procedures</h2>
-          </div>
-          <p className="text-xs text-gray-400">
-            Select procedures to auto-apply when this template is used.
-          </p>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {procedures.map(proc => (
-              <label key={proc.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={form.procedureIds.includes(proc.id)}
-                  onChange={e => {
-                    const newIds = e.target.checked
-                      ? [...form.procedureIds, proc.id]
-                      : form.procedureIds.filter(id => id !== proc.id)
-                    set('procedureIds', newIds)
-                  }}
-                  className="w-4 h-4 text-emerald-600 rounded border-gray-300"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{proc.name}</p>
-                  {proc.description && <p className="text-xs text-gray-500">{proc.description}</p>}
-                  {proc.steps && <p className="text-xs text-gray-400">{proc.steps.length} steps</p>}
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center gap-3">
         <button type="submit" disabled={saving} className="btn-primary">
           {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create template'}

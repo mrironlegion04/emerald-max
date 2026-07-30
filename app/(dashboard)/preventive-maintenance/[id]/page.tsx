@@ -39,14 +39,6 @@ export default async function PMDetailPage({
       woAssignedTo: { select: { name: true } },
       woTeam: { select: { name: true } },
       woCategory: { select: { name: true } },
-      procedures: {
-        include: {
-          procedure: {
-            select: { id: true, name: true, description: true },
-          },
-        },
-        orderBy: { sortOrder: 'asc' },
-      },
     },
   })
 
@@ -193,23 +185,6 @@ export default async function PMDetailPage({
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 text-sm mb-2">Description</h2>
               <p className="text-sm text-gray-600 leading-relaxed">{schedule.description}</p>
-            </div>
-          )}
-
-          {/* Procedures */}
-          {schedule.procedures && schedule.procedures.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-3">Attached Procedures</h2>
-              <div className="space-y-2">
-                {schedule.procedures.map((cp: any) => (
-                  <div key={cp.procedure.id} className="p-3 border border-gray-150 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                    <p className="text-xs font-semibold text-gray-800">{cp.procedure.name}</p>
-                    {cp.procedure.description && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{cp.procedure.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 

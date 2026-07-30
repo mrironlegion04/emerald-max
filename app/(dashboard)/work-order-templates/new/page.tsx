@@ -9,7 +9,7 @@ export default async function NewTemplatePage() {
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect('/work-order-templates')
 
-  const [users, teams, categories, procedures] = await Promise.all([
+  const [users, teams, categories] = await Promise.all([
     prisma.user.findMany({
       where:   { isActive: true },
       select:  { id: true, name: true, email: true },
@@ -24,10 +24,6 @@ export default async function NewTemplatePage() {
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.procedure.findMany({
-      select:  { id: true, name: true, description: true, steps: { select: { id: true } } },
-      orderBy: { name: 'asc' },
-    }),
   ])
 
   return (
@@ -38,7 +34,7 @@ export default async function NewTemplatePage() {
         </Link>
       </div>
       <PageHeader title="New work order template" subtitle="Create a reusable template for work orders." />
-      <WorkOrderTemplateForm users={users} teams={teams} categories={categories} procedures={procedures} />
+      <WorkOrderTemplateForm users={users} teams={teams} categories={categories} />
     </div>
   )
 }

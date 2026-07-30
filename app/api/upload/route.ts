@@ -26,7 +26,7 @@ function generateObjectName(originalName: string): string {
   const ext = originalName.split('.').pop() ?? 'bin'
   const timestamp = Date.now()
   const random = Math.random().toString(36).slice(2, 9)
-  return `procedure-attachments/${timestamp}-${random}.${ext}`
+  return `uploads/${timestamp}-${random}.${ext}`
 }
 
 export async function POST(req: NextRequest) {
@@ -66,9 +66,9 @@ export async function POST(req: NextRequest) {
         })
         url = await getPresignedUrl(objectName, 604800) // valid for 7 days
         key = objectName
-        console.log(`Procedure attachment uploaded to MinIO: ${objectName}`)
+        console.log(`File uploaded to MinIO: ${objectName}`)
       } catch (uploadError) {
-        console.error('MinIO procedure upload failed, falling back to local storage:', uploadError)
+        console.error('MinIO upload failed, falling back to local storage:', uploadError)
         await mkdir(UPLOAD_DIR, { recursive: true })
         const ext = file.name.split('.').pop() ?? 'bin'
         const filename = `proc-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       key
     }, { status: 201 })
   } catch (error) {
-    console.error('Procedure file upload failed:', error)
+    console.error('File upload failed:', error)
     return NextResponse.json({ error: 'File upload failure' }, { status: 500 })
   }
 }

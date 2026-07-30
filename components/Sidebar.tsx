@@ -143,11 +143,6 @@ const reportGroupItems = [
 // Library group items (collapsible)
 const libraryGroupItems = [
   {
-    label: 'Procedure Library',
-    href: '/procedures',
-    icon: <ClipboardCheck className="w-4 h-4" />,
-  },
-  {
     label: 'Locations',
     href: '/settings/locations',
     icon: <MapPin className="w-4 h-4" />,
@@ -216,7 +211,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
     const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
     const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
     const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
-    const isLibraryActive = pathname.startsWith('/procedures') || pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues')
+    const isLibraryActive = pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues')
     return {
       assets: isAssetsActive,
       reports: isReportsActive,

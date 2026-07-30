@@ -15,7 +15,7 @@ const templateSchema = z.object({
   assignedToId:  z.string().nullable().optional(),
   teamId:        z.string().nullable().optional(),
   categoryId:    z.string().nullable().optional(),
-  procedureIds:  z.array(z.string()).optional().default([]),
+
 })
 
 export async function GET() {
@@ -26,7 +26,7 @@ export async function GET() {
         team:       { select: { name: true } },
         category:   { select: { name: true } },
         createdBy:  { select: { name: true } },
-        _count:     { select: { procedures: true } },
+
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -58,21 +58,11 @@ export async function POST(request: NextRequest) {
         teamId:        data.teamId        ?? null,
         categoryId:    data.categoryId    ?? null,
         createdById:   user.userId,
-        procedures: {
-          create: data.procedureIds.map((procedureId, index) => ({
-            procedureId,
-            sortOrder: index,
-          })),
-        },
       },
       include: {
         assignedTo: { select: { name: true } },
         team:       { select: { name: true } },
         category:   { select: { name: true } },
-        procedures: {
-          include: { procedure: { select: { id: true, name: true } } },
-          orderBy: { sortOrder: 'asc' },
-        },
       },
     })
 

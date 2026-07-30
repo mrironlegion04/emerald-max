@@ -134,6 +134,9 @@ export default async function WorkOrderDetailPage({
               userId={user?.userId ?? ''}
               requestedCompletionTime={wo.requestedCompletionTime?.toISOString() ?? null}
               requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
+              initialStartAt={wo.startedAt?.toISOString() ?? null}
+              initialLaborHours={wo.laborHours}
+              initialLaborCost={wo.laborCost}
             />
             <SkipPMButton
               woId={wo.id}

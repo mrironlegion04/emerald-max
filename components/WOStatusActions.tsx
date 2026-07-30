@@ -12,6 +12,9 @@ interface Props {
   userId: string
   requestedCompletionTime: string | null
   requestedCompletionNotes: string | null
+  initialStartAt?: string | null
+  initialLaborHours?: number | null
+  initialLaborCost?: number | null
 }
 
 // Valid transitions from each status
@@ -52,7 +55,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, requestedCompletionTime, requestedCompletionNotes }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -79,6 +82,9 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   // Manager approval state
   const [showAdjustTime, setShowAdjustTime] = useState(false)
   const [adjustedTime, setAdjustedTime] = useState(() => toLocalDatetimeString(new Date()))
+  const [adjustedStartAt, setAdjustedStartAt] = useState(() => initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
+  const [adjustedLaborHours, setAdjustedLaborHours] = useState(() => initialLaborHours != null ? String(initialLaborHours) : '')
+  const [adjustedLaborCost, setAdjustedLaborCost] = useState(() => initialLaborCost != null ? String(initialLaborCost) : '')
 
   const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER'
   const allAvailable = transitions[currentStatus] ?? []
@@ -240,6 +246,9 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         body: JSON.stringify({
           status: 'COMPLETED',
           completedAt: new Date(adjustedTime).toISOString(),
+          startedAt: adjustedStartAt ? new Date(adjustedStartAt).toISOString() : undefined,
+          laborHours: adjustedLaborHours ? parseFloat(adjustedLaborHours) : undefined,
+          laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
         }),
       })
       const data = await res.json()
@@ -403,7 +412,13 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                   className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md disabled:opacity-50">
                   {loading ? 'Approving...' : 'Approve with requested time'}
                 </button>
-                <button onClick={() => { setShowAdjustTime(true); setAdjustedTime(toLocalDatetimeString(new Date())) }}
+                <button onClick={() => {
+                    setShowAdjustTime(true)
+                    setAdjustedTime(toLocalDatetimeString(new Date()))
+                    setAdjustedStartAt(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
+                    setAdjustedLaborHours(initialLaborHours != null ? String(initialLaborHours) : '')
+                    setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
+                  }}
                   className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md">
                   <Pencil className="w-3 h-3 inline mr-1.5" />
                   Adjust time & approve
@@ -415,11 +430,29 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               </>
             ) : (
               <div className="space-y-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Adjusted completion time</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completion time</label>
                 <input type="datetime-local" value={adjustedTime}
                   onChange={e => setAdjustedTime(e.target.value)}
-                  className="input-field text-xs bg-white border-slate-200" />
-                <div className="flex gap-2">
+                  className="input-field text-xs bg-white border-slate-200 w-full" />
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Start time</label>
+                <input type="datetime-local" value={adjustedStartAt}
+                  onChange={e => setAdjustedStartAt(e.target.value)}
+                  className="input-field text-xs bg-white border-slate-200 w-full" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Labor hours</label>
+                    <input type="number" min="0" step="0.5" value={adjustedLaborHours}
+                      onChange={e => setAdjustedLaborHours(e.target.value)}
+                      placeholder="0.0" className="input-field text-xs bg-white border-slate-200 w-full" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Labor cost ($)</label>
+                    <input type="number" min="0" step="0.01" value={adjustedLaborCost}
+                      onChange={e => setAdjustedLaborCost(e.target.value)}
+                      placeholder="0.00" className="input-field text-xs bg-white border-slate-200 w-full" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
                   <button onClick={handleApproveAdjusted} disabled={loading}
                     className="btn-primary text-xs font-bold py-2 px-4 shadow-sm flex-1">
                     {loading ? 'Approving...' : 'Approve'}

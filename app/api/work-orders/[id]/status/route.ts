@@ -167,6 +167,7 @@ export async function PATCH(
       const completionAccess = await canCompleteWorkOrder(user, id)
       updateData.completionType = getCompletionType(user, completionAccess.isOverride || false)
       
+      if (startedAt) updateData.startedAt = new Date(startedAt)
       if (notes) updateData.notes = notes
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost

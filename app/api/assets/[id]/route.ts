@@ -44,6 +44,7 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
         },
         maintenanceSchedules: true,
+        domain: true,
       },
     })
     if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })

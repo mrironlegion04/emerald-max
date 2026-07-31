@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildLocationFilter, getLocationSubtreeIds } from '@/lib/access-control'
+import { buildLocationFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList, Clock, AlertTriangle, Calendar } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -37,13 +37,14 @@ export default async function PMPage({
   const user = await getCurrentUser()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const params  = await searchParams
+  const activeScope = user ? await resolveActiveScope(user, params.location) : { scopeIds: null }
+  const pickerScopeIds = user ? await getWriteScopeIds(user) : null
   const locationFilter = user ? await buildLocationFilter(user) : null
 
   // Build Prisma where clause
   const where: Record<string, unknown> = {}
-  if (params.location) {
-    const subtree = await getLocationSubtreeIds(params.location)
-    where.AND = [{ locationId: { in: subtree } }]
+  if (activeScope.scopeIds) {
+    where.AND = [{ locationId: { in: activeScope.scopeIds } }]
   } else if (locationFilter) {
     where.AND = [locationFilter]
   }
@@ -84,7 +85,7 @@ export default async function PMPage({
     }),
     prisma.maintenanceSchedule.count({ where }),
     prisma.asset.findMany({
-      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
+      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(pickerScopeIds ? { locationId: { in: pickerScopeIds } } : {}) },
       select:  { id: true, name: true, assetCode: true },
       orderBy: { name: 'asc' },
     }),

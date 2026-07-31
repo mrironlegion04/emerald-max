@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildLocationFilter, getLocationSubtreeIds } from '@/lib/access-control'
+import { buildLocationFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
 import Link from 'next/link'
 import { Building2, Package  } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -43,7 +43,7 @@ interface SearchParams {
 
 const ITEMS_PER_PAGE = 25
 
-async function getAssets(filters: SearchParams, locationFilter: Record<string, unknown> | null) {
+async function getAssets(filters: SearchParams, locationFilter: Record<string, unknown> | null, scopeIds: string[] | null, pickerScopeIds: string[] | null) {
   const where: Record<string, unknown> = {}
 
   if (filters.search) {
@@ -58,9 +58,8 @@ async function getAssets(filters: SearchParams, locationFilter: Record<string, u
   if (filters.categoryId) where.categoryId = filters.categoryId
   if (filters.locationId) where.locationId = filters.locationId
 
-  if (filters.location) {
-    const subtree = await getLocationSubtreeIds(filters.location)
-    where.AND = [{ locationId: { in: subtree } }]
+  if (scopeIds) {
+    where.AND = [{ locationId: { in: scopeIds } }]
   } else if (locationFilter) {
     where.AND = [locationFilter]
   }
@@ -93,7 +92,10 @@ async function getAssets(filters: SearchParams, locationFilter: Record<string, u
     }),
     prisma.asset.count({ where }),
     prisma.assetCategory.findMany({ orderBy: { name: 'asc' } }),
-    prisma.location.findMany({ orderBy: { name: 'asc' } }),
+    prisma.location.findMany({
+      where: pickerScopeIds ? { id: { in: pickerScopeIds } } : {},
+      orderBy: { name: 'asc' },
+    }),
   ])
 
   return { assets, categories, locations, totalCount, page }
@@ -113,8 +115,10 @@ export default async function AssetsPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
+  const activeScope = user ? await resolveActiveScope(user, params.location) : { scopeIds: null }
+  const pickerScopeIds = user ? await getWriteScopeIds(user) : null
   const locationFilter = user ? await buildLocationFilter(user) : null
-  const { assets, categories, locations, totalCount, page } = await getAssets(params, locationFilter)
+  const { assets, categories, locations, totalCount, page } = await getAssets(params, locationFilter, activeScope.scopeIds, pickerScopeIds)
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const viewMode = (params.view || 'hierarchy') as 'hierarchy' | 'all'
   

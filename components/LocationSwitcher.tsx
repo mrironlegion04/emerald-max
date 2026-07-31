@@ -9,20 +9,31 @@ interface Plant {
   name: string
 }
 
-export default function LocationSwitcher({ plants }: { plants: Plant[] }) {
+const COOKIE_NAME = 'activeLocation'
+
+export default function LocationSwitcher({
+  plants,
+  activeLocationId,
+}: {
+  plants: Plant[]
+  activeLocationId?: string | null
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const current = searchParams.get('location') ?? 'all'
+  const current = searchParams.get('location') ?? activeLocationId ?? 'all'
 
   const onChange = useCallback((value: string) => {
+    if (value === 'all') {
+      document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`
+    } else {
+      document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; path=/; max-age=604800; SameSite=Lax`
+    }
     const params = new URLSearchParams(searchParams.toString())
     if (value === 'all') params.delete('location')
     else params.set('location', value)
     router.push(`${pathname}?${params.toString()}`)
   }, [pathname, router, searchParams])
-
-  if (plants.length < 2) return null
 
   return (
     <div className="flex items-center gap-1.5">

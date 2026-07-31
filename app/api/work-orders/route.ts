@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import {
@@ -106,6 +106,19 @@ export async function POST(request: NextRequest) {
         select: { locationId: true },
       })
       locationId = primaryAsset?.locationId ?? null
+    }
+
+    // ── Plant scope enforcement ───────────────────────────────────────
+    const inScope =
+      (await canWriteToLocations(user, [locationId])) &&
+      (await canWriteToAssets(user, normalized.entries.map(e => e.assetId))) &&
+      (await canAssignUsers(user, [data.assignedToId])) &&
+      (await canAssignTeams(user, [data.teamId]))
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, asset, or assignee' },
+        { status: 403 }
+      )
     }
 
     const woNumber = await generateWONumber(locationId)

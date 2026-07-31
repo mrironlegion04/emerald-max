@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
-import { buildLocationFilter } from '@/lib/access-control'
+import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -80,6 +80,27 @@ export async function POST(request: NextRequest) {
     }
     const body = await request.json()
     const data = pmSchema.parse(body)
+
+    // ── Plant scope enforcement ───────────────────────────────────────
+    let assetLocationId: string | null | undefined
+    if (data.assetId) {
+      const asset = await prisma.asset.findUnique({
+        where: { id: data.assetId },
+        select: { locationId: true },
+      })
+      assetLocationId = asset?.locationId ?? null
+    }
+
+    const inScope =
+      (await canWriteToLocations(user, [data.locationId, assetLocationId])) &&
+      (await canAssignUsers(user, [data.woAssignedToId])) &&
+      (await canAssignTeams(user, [data.woTeamId]))
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, asset, or assignee' },
+        { status: 403 }
+      )
+    }
 
     const schedule = await prisma.maintenanceSchedule.create({
       data: {

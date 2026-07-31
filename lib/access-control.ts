@@ -6,6 +6,7 @@
 import { prisma } from './db'
 import type { Role } from '@prisma/client'
 import { hasPermission, type Permission } from './permissions'
+import { cookies } from 'next/headers'
 
 export interface User {
   userId: string
@@ -382,18 +383,176 @@ export async function buildLocationFilter(user: User): Promise<Record<string, un
 }
 
 /**
+ * Get the location IDs the user may select as an "active plant":
+ * their UserLocation assignments (plants), or every root location for ADMIN.
+ */
+export async function getAllowedPlantIds(user: User): Promise<string[]> {
+  if (user.role === 'ADMIN') {
+    const roots = await prisma.location.findMany({
+      where: { parentId: null },
+      select: { id: true },
+    })
+    return roots.map(l => l.id)
+  }
+
+  const assignments = await prisma.userLocation.findMany({
+    where: { userId: user.userId },
+    select: { locationId: true },
+  })
+  return assignments.map(a => a.locationId)
+}
+
+/**
+ * Read the persisted "active plant" from the cookie (set by the location switcher).
+ */
+export async function getActiveLocationCookie(): Promise<string | null> {
+  return (await cookies()).get('activeLocation')?.value ?? null
+}
+
+/**
+ * Resolve the active plant scope for a user.
+ *
+ * The "active plant" (from the ?location= URL param or the `activeLocation`
+ * cookie) is a UI focus that scopes lists and form pickers to a single plant
+ * subtree. It is validated against the user's allowed plants so it can never
+ * widen access beyond their assignments.
+ *
+ * Returns `{ activeLocationId, scopeIds }` — both null when there is no
+ * (valid) active plant, meaning "All plants" / full union scope.
+ */
+export async function resolveActiveScope(
+  user: User,
+  requested?: string | null,
+): Promise<{ activeLocationId: string | null; scopeIds: string[] | null }> {
+  const allowed = await getAllowedPlantIds(user)
+  const candidate = requested ?? (await getActiveLocationCookie())
+
+  if (!candidate || !allowed.includes(candidate)) {
+    return { activeLocationId: null, scopeIds: null }
+  }
+
+  return {
+    activeLocationId: candidate,
+    scopeIds: await getLocationSubtreeIds(candidate),
+  }
+}
+
+/**
  * Compute filter scopes for form pickers (assets, users) so plant-scoped users
  * only see/assign assets and technicians belonging to their plants.
+ * Pass `locationIds` (e.g. an active-plant scope) to restrict to a single plant;
+ * otherwise the full union of the user's plants is used.
  */
-export async function getPickerScope(userId: string): Promise<{
+export async function getPickerScope(
+  userId: string,
+  locationIds?: string[] | null,
+): Promise<{
   assetFilter: Record<string, unknown> | null
   userFilter: Record<string, unknown> | null
 }> {
-  const locationIds = await getUserLocationIds(userId)
-  if (!locationIds) return { assetFilter: null, userFilter: null }
+  const ids = locationIds ?? (await getUserLocationIds(userId))
+  if (!ids) return { assetFilter: null, userFilter: null }
 
   return {
-    assetFilter: { locationId: { in: locationIds } },
-    userFilter:  { userLocations: { some: { locationId: { in: locationIds } } } },
+    assetFilter: { locationId: { in: ids } },
+    userFilter:  { userLocations: { some: { locationId: { in: ids } } } },
   }
+}
+
+/**
+ * Effective write scope for create/update operations: the active plant subtree
+ * when a plant is active, otherwise the union of the user's assigned plant
+ * subtrees. Returns `null` for unrestricted users (ADMIN with no active plant,
+ * or users without plant assignments) — meaning no location restriction.
+ */
+export async function getWriteScopeIds(user: User): Promise<string[] | null> {
+  const active = await resolveActiveScope(user)
+  if (active.scopeIds) return active.scopeIds
+  return getUserLocationIds(user.userId)
+}
+
+/**
+ * Check that every provided location ID falls inside the user's write scope.
+ * Null/undefined location IDs are only allowed for unrestricted users.
+ */
+export async function canWriteToLocations(
+  user: User,
+  locationIds: (string | null | undefined)[],
+): Promise<boolean> {
+  const scope = await getWriteScopeIds(user)
+  if (!scope) return true
+  return locationIds.every(id => !!id && scope.includes(id))
+}
+
+/**
+ * Check that every provided asset belongs to the user's write scope.
+ */
+export async function canWriteToAssets(
+  user: User,
+  assetIds: string[],
+): Promise<boolean> {
+  const scope = await getWriteScopeIds(user)
+  if (!scope) return true
+
+  const ids = [...new Set(assetIds.filter(Boolean))] as string[]
+  if (ids.length === 0) return true
+
+  const assets = await prisma.asset.findMany({
+    where: { id: { in: ids } },
+    select: { locationId: true },
+  })
+  if (assets.length !== ids.length) return false
+
+  return assets.every(a => !!a.locationId && scope.includes(a.locationId))
+}
+
+/**
+ * Check that every provided user (assignee/owner) belongs to the write scope,
+ * i.e. has a plant assignment inside the scope.
+ */
+export async function canAssignUsers(
+  user: User,
+  userIds: (string | null | undefined)[],
+): Promise<boolean> {
+  const scope = await getWriteScopeIds(user)
+  if (!scope) return true
+
+  const ids = [...new Set(userIds.filter((id): id is string => !!id))]
+  if (ids.length === 0) return true
+
+  const count = await prisma.userLocation.count({
+    where: { userId: { in: ids }, locationId: { in: scope } },
+  })
+  return count === ids.length
+}
+
+/**
+ * Check that every provided team belongs to the write scope, i.e. has at least
+ * one member with a plant assignment inside the scope (empty teams allowed).
+ */
+export async function canAssignTeams(
+  user: User,
+  teamIds: (string | null | undefined)[],
+): Promise<boolean> {
+  const scope = await getWriteScopeIds(user)
+  if (!scope) return true
+
+  const ids = [...new Set(teamIds.filter((id): id is string => !!id))]
+  if (ids.length === 0) return true
+
+  const scopedUserIds = (await prisma.user.findMany({
+    where: { userLocations: { some: { locationId: { in: scope } } } },
+    select: { id: true },
+  })).map(u => u.id)
+
+  for (const teamId of ids) {
+    const members = await prisma.teamMember.findMany({
+      where: { teamId },
+      select: { userId: true },
+    })
+    if (members.length > 0 && !members.some(m => scopedUserIds.includes(m.userId))) {
+      return false
+    }
+  }
+  return true
 }

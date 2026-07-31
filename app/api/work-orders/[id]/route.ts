@@ -15,6 +15,10 @@ import {
   canCompleteWorkOrder,
   isAdmin,
   isManagerOrAbove,
+  canAssignTeams,
+  canAssignUsers,
+  canWriteToAssets,
+  canWriteToLocations,
 } from '@/lib/access-control'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import {
@@ -239,6 +243,22 @@ export async function PUT(
     const assetIdsChanged =
       existingAssetIds.length !== incomingAssetIds.length ||
       !existingAssetIds.every((id, i) => id === incomingAssetIds[i])
+
+    // ── Plant scope enforcement (only for fields actually changed) ────
+    const changedLocationIds: (string | null | undefined)[] = []
+    if (data.locationId !== undefined) changedLocationIds.push(derivedLocationId)
+
+    const inScope =
+      (await canWriteToLocations(user, changedLocationIds)) &&
+      (assetIdsChanged ? await canWriteToAssets(user, incomingAssetIds) : true) &&
+      (data.assignedToId !== undefined ? await canAssignUsers(user, [data.assignedToId]) : true) &&
+      (data.teamId !== undefined ? await canAssignTeams(user, [data.teamId]) : true)
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, asset, or assignee' },
+        { status: 403 }
+      )
+    }
 
     // ── Sync WorkOrderAsset rows ──────────────────────────────────────
     await syncWorkOrderAssets(id, normalized.entries)

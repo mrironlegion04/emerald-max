@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
+import { canAssignUsers, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -108,6 +109,30 @@ export async function PUT(
           )
         }
       }
+    }
+
+    // ── Plant scope enforcement (only for fields actually changed) ────
+    const changedLocationIds: (string | null | undefined)[] = []
+    if (data.locationId !== undefined) changedLocationIds.push(data.locationId)
+    if (data.parentId !== undefined && data.parentId) {
+      const parentAsset = await prisma.asset.findUnique({
+        where: { id: data.parentId },
+        select: { locationId: true },
+      })
+      if (!parentAsset) {
+        return NextResponse.json({ error: 'Parent asset not found' }, { status: 404 })
+      }
+      changedLocationIds.push(parentAsset.locationId)
+    }
+
+    const inScope =
+      (await canWriteToLocations(user, changedLocationIds)) &&
+      (data.ownerId !== undefined ? await canAssignUsers(user, [data.ownerId]) : true)
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, parent asset, or owner' },
+        { status: 403 }
+      )
     }
 
     const asset = await prisma.asset.update({

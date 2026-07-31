@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { getWriteScopeIds } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -14,19 +15,32 @@ export default async function EditAssetPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/assets/${id}`)
 
+  const scopeIds = user ? await getWriteScopeIds(user) : null
+
+  const scopeUserIds = scopeIds
+    ? (await prisma.user.findMany({
+        where: { userLocations: { some: { locationId: { in: scopeIds } } } },
+        select: { id: true },
+      })).map(u => u.id)
+    : null
+
   const [asset, categories, assetTypes, locations, assets, users, domains] = await Promise.all([
     prisma.asset.findUnique({ where: { id } }),
     prisma.assetCategory.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }] }),
     prisma.assetType.findMany({ orderBy: { name: 'asc' } }),
-    prisma.location.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }], select: { id: true, name: true, parentId: true, path: true } }),
+    prisma.location.findMany({
+      where: scopeIds ? { id: { in: scopeIds } } : {},
+      orderBy: [{ parentId: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, parentId: true, path: true },
+    }),
     prisma.asset.findMany({
-      where: { isDeleted: false },
+      where: { isDeleted: false, ...(scopeIds ? { locationId: { in: scopeIds } } : {}) },
       select: { id: true, name: true, assetCode: true, parentId: true },
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
       select: { id: true, name: true },
-      where: { isActive: true },
+      where: { isActive: true, ...(scopeUserIds ? { id: { in: scopeUserIds } } : {}) },
       orderBy: { name: 'asc' },
     }),
     prisma.maintenanceDomain.findMany({

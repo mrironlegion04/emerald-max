@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
+import { canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -87,6 +88,27 @@ export async function PUT(
     const finalLocationScope = finalLocationId && !finalAssetId
       ? (data.locationScope !== undefined ? data.locationScope : (existing.locationScope ?? 'ALL_ASSETS'))
       : null
+
+    // ── Plant scope enforcement (only for fields actually changed) ────
+    const changedLocationIds: (string | null | undefined)[] = []
+    if (data.locationId !== undefined) changedLocationIds.push(finalLocationId)
+    if (data.assetId !== undefined) {
+      const asset = finalAssetId
+        ? await prisma.asset.findUnique({ where: { id: finalAssetId }, select: { locationId: true } })
+        : null
+      changedLocationIds.push(asset?.locationId ?? null)
+    }
+
+    const inScope =
+      (await canWriteToLocations(user, changedLocationIds)) &&
+      (data.woAssignedToId !== undefined ? await canAssignUsers(user, [data.woAssignedToId]) : true) &&
+      (data.woTeamId !== undefined ? await canAssignTeams(user, [data.woTeamId]) : true)
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, asset, or assignee' },
+        { status: 403 }
+      )
+    }
 
     const schedule = await prisma.maintenanceSchedule.update({
       where: { id },

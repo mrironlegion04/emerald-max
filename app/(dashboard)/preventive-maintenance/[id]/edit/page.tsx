@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { getPickerScope } from '@/lib/access-control'
+import { getPickerScope, getWriteScopeIds } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -13,30 +13,39 @@ export default async function EditPMPage({
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN') redirect(`/preventive-maintenance/${id}`)
 
+  const scopeIds = user ? await getWriteScopeIds(user) : null
   const { assetFilter, userFilter } = user
-    ? await getPickerScope(user.userId)
+    ? await getPickerScope(user.userId, scopeIds)
     : { assetFilter: null, userFilter: null }
+
+  const scopeUserIds = scopeIds
+    ? (await prisma.user.findMany({
+        where: { userLocations: { some: { locationId: { in: scopeIds } } } },
+        select: { id: true },
+      })).map(u => u.id)
+    : null
 
   const [schedule, assets, locations, users, teams, categories] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
     }),
     prisma.asset.findMany({
-      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ? assetFilter : {}) },
+      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ?? {}) },
       select:  { id: true, name: true, assetCode: true, imageUrl: true, parentId: true, locationId: true, categoryId: true },
       orderBy: { name: 'asc' },
     }),
     prisma.location.findMany({
+      where:   scopeIds ? { id: { in: scopeIds } } : {},
       select:  { id: true, name: true, address: true, path: true, parentId: true },
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
-      where:   { isActive: true, ...(userFilter ? userFilter : {}) },
+      where:   { isActive: true, ...(userFilter ?? {}) },
       select:  { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),
     prisma.team.findMany({
-      where:   { isActive: true },
+      where:   { isActive: true, ...(scopeUserIds ? { members: { some: { userId: { in: scopeUserIds } } } } : {}) },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),

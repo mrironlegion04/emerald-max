@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
-import { buildLocationFilter } from '@/lib/access-control'
+import { buildLocationFilter, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 
 const assetSchema = z.object({
@@ -97,6 +97,26 @@ export async function POST(request: NextRequest) {
 
       // Will check for circular references after creating the asset ID
       // For now, just ensure the parent exists
+    }
+
+    // ── Plant scope enforcement ───────────────────────────────────────
+    let parentLocationId: string | null | undefined
+    if (data.parentId) {
+      const parentAsset = await prisma.asset.findUnique({
+        where: { id: data.parentId },
+        select: { locationId: true },
+      })
+      parentLocationId = parentAsset?.locationId ?? null
+    }
+
+    const inScope =
+      (await canWriteToLocations(user, [data.locationId, parentLocationId])) &&
+      (await canAssignUsers(user, [data.ownerId]))
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected location, parent asset, or owner' },
+        { status: 403 }
+      )
     }
 
     const asset = await prisma.asset.create({

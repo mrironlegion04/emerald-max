@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter, getLocationSubtreeIds } from '@/lib/access-control'
+import { buildWOVisibilityFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -33,7 +33,12 @@ const typeLabels: Record<string, string> = {
   BREAKDOWN: 'Breakdown', PREVENTIVE: 'Preventive', PREDICTIVE: 'Predictive',
 }
 
-async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<string, unknown> | null) {
+async function getWorkOrders(
+  filters: SearchParams,
+  visibilityFilter: Record<string, unknown> | null,
+  locationScopeIds: string[] | null,
+  pickerScopeIds: string[] | null,
+) {
   const where: Record<string, unknown> = {}
 
   if (visibilityFilter) {
@@ -64,9 +69,8 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
   if (filters.assignedToId) where.assignedToId = filters.assignedToId
   if (filters.domainId)     where.domainId     = filters.domainId
 
-  if (filters.location) {
-    const subtree = await getLocationSubtreeIds(filters.location)
-    const locFilter = { locationId: { in: subtree } }
+  if (locationScopeIds) {
+    const locFilter = { locationId: { in: locationScopeIds } }
     if (Array.isArray(where.AND)) {
       where.AND = [...where.AND, locFilter]
     } else if (where.AND) {
@@ -131,7 +135,7 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
     }),
     prisma.workOrder.count({ where }),
     prisma.user.findMany({
-      where:   { isActive: true },
+      where:   { isActive: true, ...(pickerScopeIds ? { userLocations: { some: { locationId: { in: pickerScopeIds } } } } : {}) },
       select:  { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),
@@ -141,7 +145,7 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
       orderBy: { name: 'asc' },
     }),
     prisma.asset.findMany({
-      where: { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
+      where: { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(pickerScopeIds ? { locationId: { in: pickerScopeIds } } : {}) },
       select: { id: true, name: true, assetCode: true, imageUrl: true, parentId: true, locationId: true },
       orderBy: { name: 'asc' },
     }),
@@ -150,7 +154,7 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
   return { workOrders, technicians, domains, assets, totalCount, page }
 }
 
-async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null) {
+async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null, locationScopeIds: string[] | null) {
   const woSelect = {
     id: true, woNumber: true, title: true, type: true, status: true,
     priority: true, dueDate: true, createdAt: true,
@@ -161,7 +165,10 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
   }
 
   const woOrder = [{ priority: 'desc' as const }, { dueDate: 'asc' as const }]
-  const visAnd = visibilityFilter ? [visibilityFilter] : []
+  const visAnd = [
+    ...(visibilityFilter ? [visibilityFilter] : []),
+    ...(locationScopeIds ? [{ locationId: { in: locationScopeIds } }] : []),
+  ]
 
   const [myWOs, mySubtasks, rawTeamWOs, rawTeamSubtasks, createdWOs, allOpen, done] = await Promise.all([
     prisma.workOrder.findMany({
@@ -244,8 +251,10 @@ export default async function WorkOrdersPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
+  const activeScope = user ? await resolveActiveScope(user, params.location) : { scopeIds: null }
+  const pickerScopeIds = user ? await getWriteScopeIds(user) : null
   const visibilityFilter = user ? await buildWOVisibilityFilter(user) : null
-  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter)
+  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter, activeScope.scopeIds, pickerScopeIds)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const panelData = user ? await (async () => {
@@ -254,7 +263,7 @@ export default async function WorkOrdersPage({
       select: { teamId: true },
     })
     const teamIds = memberships.map(m => m.teamId)
-    return getPanelViewData(user.userId, teamIds, visibilityFilter)
+    return getPanelViewData(user.userId, teamIds, visibilityFilter, activeScope.scopeIds)
   })() : null
 
   const overdueCount = workOrders.filter(

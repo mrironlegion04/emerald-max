@@ -29,6 +29,7 @@ interface Props {
   initialData?: Partial<WOFormData>
   woId?: string
   preselectedAssetId?: string
+  preselectedLocationId?: string
 }
 
 const typeOptions     = ['BREAKDOWN','PREVENTIVE','PREDICTIVE']
@@ -38,7 +39,7 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
 
-export default function WorkOrderForm({ assets, locations, users, teams = [], initialData, woId, preselectedAssetId }: Props) {
+export default function WorkOrderForm({ assets, locations, users, teams = [], initialData, woId, preselectedAssetId, preselectedLocationId }: Props) {
   const router = useRouter()
   const isEdit = !!woId
 
@@ -53,7 +54,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     dueDate:        initialData?.dueDate        ?? '',
     dueTime:        initialData?.dueTime        ?? '',
     assetId:        initialData?.assetId        ?? preselectedAssetId ?? '',
-    locationId:     initialData?.locationId     ?? '',
+    locationId:     initialData?.locationId     ?? preselectedLocationId ?? '',
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
     selectedAssetIds: [],
     assignedToId:   initialData?.assignedToId   ?? '',
@@ -72,7 +73,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   const [isTitleDirty, setIsTitleDirty] = useState(isEdit ? true : false)
 
   const [targetType, setTargetType] = useState<'ASSET' | 'LOCATION'>(
-    (initialData?.locationId && !initialData?.assetId && !preselectedAssetId) ? 'LOCATION' : 'ASSET'
+    (preselectedLocationId || (initialData?.locationId && !initialData?.assetId && !preselectedAssetId)) ? 'LOCATION' : 'ASSET'
   )
 
   const [assetMode, setAssetMode] = useState<'single' | 'multi'>(

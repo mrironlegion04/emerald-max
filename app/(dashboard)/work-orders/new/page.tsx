@@ -8,11 +8,11 @@ import WorkOrderForm from '@/components/WorkOrderForm'
 export default async function NewWorkOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assetId?: string; templateId?: string }>
+  searchParams: Promise<{ assetId?: string; templateId?: string; locationId?: string; location?: string }>
 }) {
-  const { assetId, templateId } = await searchParams
+  const { assetId, templateId, locationId, location } = await searchParams
   const user = await getCurrentUser()
-  const scopeIds = user ? await getWriteScopeIds(user) : null
+  const scopeIds = user ? await getWriteScopeIds(user, location) : null
   const { assetFilter, userFilter } = user
     ? await getPickerScope(user.userId, scopeIds)
     : { assetFilter: null, userFilter: null }
@@ -75,7 +75,7 @@ export default async function NewWorkOrderPage({
         title={template ? `New work order from "${template.name}"` : 'New work order'}
         subtitle={template ? 'Template fields pre-filled. Adjust as needed.' : 'Fill in the details to create a new work order.'}
       />
-      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} preselectedAssetId={assetId} initialData={templateInitialData} />
+      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} preselectedAssetId={assetId} preselectedLocationId={locationId} initialData={templateInitialData} />
     </div>
   )
 }

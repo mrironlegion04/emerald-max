@@ -37,6 +37,7 @@ import {
   computeGraphStats,
 } from '@/lib/assetGraph';
 import { WO_STATUS_PILL } from '@/lib/work-order-status';
+import Link from 'next/link';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -244,16 +245,17 @@ const NODE_TYPES = {
 
 // ── Details Panel ─────────────────────────────────────────────────────────────
 
-function DetailsPanel({ node, onClose }: { node: AnyFlowNode | null; onClose: () => void }) {
+function DetailsPanel({ node, onClose, location }: { node: AnyFlowNode | null; onClose: () => void; location?: string }) {
   if (!node) return null;
   const d = node.data as AnyNodeData;
+  const rawId = node.id.replace(/^(asset|loc)-/, '');
 
   return (
     <div className="absolute bottom-0 md:top-0 right-0 h-[60vh] md:h-full w-full md:w-96 bg-white border-t md:border-t-0 md:border-l border-slate-200 shadow-2xl overflow-y-auto z-25 flex flex-col rounded-t-2xl md:rounded-t-none transition-all duration-350">
       {d.kind === 'location' ? (
-        <LocationDetail data={d} onClose={onClose} />
+        <LocationDetail data={d} onClose={onClose} id={rawId} location={location} />
       ) : (
-        <AssetDetail data={d} onClose={onClose} />
+        <AssetDetail data={d} onClose={onClose} id={rawId} location={location} />
       )}
     </div>
   );
@@ -261,7 +263,7 @@ function DetailsPanel({ node, onClose }: { node: AnyFlowNode | null; onClose: ()
 
 // ── Location Detail ───────────────────────────────────────────────────────────
 
-function LocationDetail({ data, onClose }: { data: LocationNodeData; onClose: () => void }) {
+function LocationDetail({ data, onClose, id, location }: { data: LocationNodeData; onClose: () => void; id: string; location?: string }) {
   return (
     <>
       {/* Header */}
@@ -295,6 +297,14 @@ function LocationDetail({ data, onClose }: { data: LocationNodeData; onClose: ()
 
       {/* Body */}
       <div className="flex-1 px-6 py-5 space-y-5">
+        {/* Create work order */}
+        <Link
+          href={`/work-orders/new?locationId=${encodeURIComponent(id)}${location ? `&location=${encodeURIComponent(location)}` : ''}`}
+          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all"
+        >
+          <span>＋</span> Create Work Order
+        </Link>
+
         {/* Path */}
         {data.path && (
           <div>
@@ -377,7 +387,7 @@ function LocationDetail({ data, onClose }: { data: LocationNodeData; onClose: ()
 
 // ── Asset Detail ──────────────────────────────────────────────────────────────
 
-function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => void }) {
+function AssetDetail({ data, onClose, id, location }: { data: AssetNodeData; onClose: () => void; id: string; location?: string }) {
   const accentColor = STATUS_COLORS[data.status] ?? '#9ca3af';
   const warrantyDate = data.warrantyExpiry ? new Date(data.warrantyExpiry) : null;
   const warrantyExpired = warrantyDate ? warrantyDate < new Date() : false;
@@ -408,6 +418,14 @@ function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => vo
 
       {/* Body */}
       <div className="flex-1 px-6 py-5 space-y-6">
+
+        {/* Create work order */}
+        <Link
+          href={`/work-orders/new?assetId=${encodeURIComponent(id)}${location ? `&location=${encodeURIComponent(location)}` : ''}`}
+          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-bold shadow-md transition-all"
+        >
+          <span>＋</span> Create Work Order
+        </Link>
 
         {/* Location breadcrumb */}
         {data.locationPath && (
@@ -510,7 +528,7 @@ function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => vo
           ) : (
             <div className="space-y-2 max-h-56 overflow-y-auto">
               {data.workOrders.map((wo) => (
-                <div key={wo.id} className="p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                <Link key={wo.id} href={`/work-orders/${wo.id}`} className="block p-3 border border-slate-100 rounded-xl hover:bg-slate-50 hover:border-slate-200 transition-colors">
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className="text-xs font-mono font-bold text-slate-800">{wo.woNumber}</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${WO_STATUS_PILL[wo.status] ?? 'bg-slate-100 text-slate-600'}`}>
@@ -521,7 +539,7 @@ function AssetDetail({ data, onClose }: { data: AssetNodeData; onClose: () => vo
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${PRIORITY_PILL[wo.priority] ?? 'bg-slate-100 text-slate-500'}`}>
                     {wo.priority}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -774,7 +792,7 @@ function AssetGraphInner({ location }: { location?: string }) {
 
       <SearchBar value={search} onChange={setSearch} />
       {stats && <StatsBar stats={stats} />}
-      <DetailsPanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+      <DetailsPanel node={selectedNode} onClose={() => setSelectedNode(null)} location={location} />
     </div>
   );
 }

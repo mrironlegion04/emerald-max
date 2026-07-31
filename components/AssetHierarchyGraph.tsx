@@ -658,7 +658,7 @@ function Legend({ onToggle }: LegendProps) {
 
 // ── Inner graph ───────────────────────────────────────────────────────────────
 
-function AssetGraphInner() {
+function AssetGraphInner({ location }: { location?: string }) {
   const [allNodes, setAllNodes] = useState<AnyFlowNode[]>([]);
   const [allEdges, setAllEdges] = useState<Edge[]>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<AnyNodeData>([]);
@@ -673,7 +673,7 @@ function AssetGraphInner() {
   const fitViewRef = useRef(fitView);
   useEffect(() => { fitViewRef.current = fitView; }, [fitView]);
 
-  // Fetch once on mount
+  // Fetch on mount and whenever the active plant (location) changes
   useEffect(() => {
     let cancelled = false;
 
@@ -692,7 +692,8 @@ function AssetGraphInner() {
 
     (async () => {
       try {
-        const res = await fetch('/api/assets/hierarchy');
+        const query = location ? `?location=${encodeURIComponent(location)}` : '';
+        const res = await fetch(`/api/assets/hierarchy${query}`);
         const data: GraphData = res.ok ? await res.json() : MOCK_DATA;
         await load(!data.nodes?.length ? MOCK_DATA : data);
       } catch {
@@ -701,7 +702,7 @@ function AssetGraphInner() {
     })();
 
     return () => { cancelled = true; };
-  }, []);
+  }, [location]);
 
   // Search filter
   useEffect(() => {
@@ -780,10 +781,10 @@ function AssetGraphInner() {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export default function AssetHierarchyGraph() {
+export default function AssetHierarchyGraph({ location }: { location?: string }) {
   return (
     <ReactFlowProvider>
-      <AssetGraphInner />
+      <AssetGraphInner location={location} />
     </ReactFlowProvider>
   );
 }

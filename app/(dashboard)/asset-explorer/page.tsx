@@ -1,9 +1,15 @@
 import AssetHierarchyGraph from '@/components/AssetHierarchyGraph';
 
-export default function AssetsPage() {
+export default async function AssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string }>;
+}) {
+  const { location } = await searchParams;
+
   return (
     <div className="w-full h-screen">
-      <AssetHierarchyGraph />
+      <AssetHierarchyGraph location={location} />
     </div>
   );
 }

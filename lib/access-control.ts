@@ -465,8 +465,11 @@ export async function getPickerScope(
  * subtrees. Returns `null` for unrestricted users (ADMIN with no active plant,
  * or users without plant assignments) — meaning no location restriction.
  */
-export async function getWriteScopeIds(user: User): Promise<string[] | null> {
-  const active = await resolveActiveScope(user)
+export async function getWriteScopeIds(
+  user: User,
+  requested?: string | null,
+): Promise<string[] | null> {
+  const active = await resolveActiveScope(user, requested)
   if (active.scopeIds) return active.scopeIds
   return getUserLocationIds(user.userId)
 }

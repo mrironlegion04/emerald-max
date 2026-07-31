@@ -1,14 +1,28 @@
 // app/api/assets/hierarchy/route.ts
 import { prisma } from '@/lib/db';
+import { getCurrentUser } from '@/lib/session';
+import { getWriteScopeIds } from '@/lib/access-control';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get('search');
+    const scopeIds = await getWriteScopeIds(user, searchParams.get('location'));
 
-    // ── 1. Fetch all locations ───────────────────────────────────────────────
+    // ── 1. Fetch locations (scoped to the user's plants) ─────────────────────
     const locations = await prisma.location.findMany({
+      where: {
+        ...(scopeIds ? { id: { in: scopeIds } } : {}),
+        ...(search
+          ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }, { address: { contains: search, mode: 'insensitive' as const } }] }
+          : {}),
+      },
       include: {
         parent: { select: { id: true, name: true } },
         children: { select: { id: true, name: true } },
@@ -22,16 +36,14 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      ...(search
-        ? { where: { OR: [{ name: { contains: search, mode: 'insensitive' as const } }, { address: { contains: search, mode: 'insensitive' as const } }] } }
-        : {}),
       orderBy: [{ parentId: 'asc' }, { name: 'asc' }],
     });
 
-    // ── 2. Fetch all assets (excluding deleted) ──────────────────────────────
+    // ── 2. Fetch assets (excluding deleted), scoped to the user's plants ─────
     const assets = await prisma.asset.findMany({
       where: {
         isDeleted: false,
+        ...(scopeIds ? { locationId: { in: scopeIds } } : {}),
         ...(search
           ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }, { assetCode: { contains: search, mode: 'insensitive' as const } }] }
           : {}),

@@ -19,6 +19,8 @@ interface Props {
   totalPages: number
   currentPage: string
   baseUrl: string
+  userRole?: string
+  userId?: string
   children?: ReactNode
 }
 
@@ -29,7 +31,7 @@ const views: { id: WOView; label: string; icon: typeof LayoutList }[] = [
 ]
 
 export default function WorkOrderViewShell({
-  panelData, tableData, technicians, typeLabels, statusLabels, totalPages, currentPage, baseUrl, children,
+  panelData, tableData, technicians, typeLabels, statusLabels, totalPages, currentPage, baseUrl, userRole, userId, children,
 }: Props) {
   const [view, setView] = useState<WOView>(() => {
     if (typeof window === 'undefined') return 'panel'
@@ -77,7 +79,7 @@ export default function WorkOrderViewShell({
 
       {/* View Content */}
       {view === 'panel' && panelData && (
-        <WorkOrderPanelView grouped={panelData} />
+        <WorkOrderPanelView grouped={panelData} userRole={userRole} userId={userId} />
       )}
 
       {view === 'panel' && !panelData && (

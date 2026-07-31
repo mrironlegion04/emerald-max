@@ -16,6 +16,8 @@ interface Props {
   woId?: string
   subtaskId?: string
   onLoadingChange?: (loading: boolean) => void
+  userRole?: string
+  userId?: string
 }
 
 const statusLabels = WO_STATUS_LABELS
@@ -26,10 +28,11 @@ const priorityLabels: Record<string, string> = {
   LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical',
 }
 
-export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
+export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 'TECHNICIAN', userId = '' }: Props) {
   const [wo, setWo] = useState<any>(null)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!woId) return
@@ -44,7 +47,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
       .catch(() => { if (!cancelled) { setError('Failed to load work order'); setLoaded(true); onLoadingChange?.(false) } })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [woId])
+  }, [woId, reloadKey])
 
   if (!woId) return null
 
@@ -101,10 +104,14 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange }: Props) {
         <WOStatusActions
           woId={wo.id}
           currentStatus={wo.status}
-          userRole="TECHNICIAN"
-          userId=""
+          userRole={userRole}
+          userId={userId}
           requestedCompletionTime={wo.requestedCompletionTime ?? null}
           requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
+          initialStartAt={wo.startedAt ?? null}
+          initialLaborHours={wo.laborHours ?? null}
+          initialLaborCost={wo.laborCost ?? null}
+          onStatusChanged={() => setReloadKey(k => k + 1)}
         />
       </div>
 

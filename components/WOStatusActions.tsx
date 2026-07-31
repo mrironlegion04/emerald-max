@@ -15,6 +15,7 @@ interface Props {
   initialStartAt?: string | null
   initialLaborHours?: number | null
   initialLaborCost?: number | null
+  onStatusChanged?: () => void
 }
 
 // Valid transitions from each status
@@ -55,7 +56,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -137,6 +138,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setNotes('')
       setLaborHours('')
       setLaborCost('')
@@ -162,6 +164,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setShowStartWork(false)
     } catch {
       setError('Network error')
@@ -200,6 +203,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setShowComplete(false)
       setFaceVerificationSucceeded(false)
       setNotes('')
@@ -228,6 +232,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
     } catch {
       setError('Network error')
     } finally {
@@ -254,6 +259,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setShowAdjustTime(false)
     } catch {
       setError('Network error')
@@ -278,6 +284,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setNotes('')
     } catch {
       setError('Network error')
@@ -303,6 +310,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed'); return }
       router.refresh()
+      onStatusChanged?.()
       setShowUnlock(false)
       setUnlockReason('')
     } catch {

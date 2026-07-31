@@ -168,7 +168,7 @@ function SubtaskCardMini({ st, isSelected, onClick }: { st: any; isSelected: boo
   )
 }
 
-export default function WorkOrderPanelView({ grouped }: { grouped: GroupedWOs }) {
+export default function WorkOrderPanelView({ grouped, userRole = 'TECHNICIAN', userId = '' }: { grouped: GroupedWOs; userRole?: string; userId?: string }) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<'wo' | 'subtask'>('wo')
@@ -416,6 +416,8 @@ export default function WorkOrderPanelView({ grouped }: { grouped: GroupedWOs })
                 woId={selectedType === 'wo' ? selectedId : undefined}
                 subtaskId={selectedType === 'subtask' ? selectedId : undefined}
                 onLoadingChange={setDetailLoading}
+                userRole={userRole}
+                userId={userId}
               />
             </motion.div>
           ) : (

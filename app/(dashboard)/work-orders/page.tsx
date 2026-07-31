@@ -310,6 +310,8 @@ export default async function WorkOrdersPage({
           totalPages={totalPages}
           currentPage={String(page)}
           baseUrl={baseUrl}
+          userRole={user?.role}
+          userId={user?.userId}
         >
           <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
         </WorkOrderViewShell>

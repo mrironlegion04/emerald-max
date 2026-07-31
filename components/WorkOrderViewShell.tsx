@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { LayoutList, Table, Calendar } from 'lucide-react'
 import WorkOrdersTable from './WorkOrdersTable'
@@ -19,6 +19,7 @@ interface Props {
   totalPages: number
   currentPage: string
   baseUrl: string
+  children?: ReactNode
 }
 
 const views: { id: WOView; label: string; icon: typeof LayoutList }[] = [
@@ -28,7 +29,7 @@ const views: { id: WOView; label: string; icon: typeof LayoutList }[] = [
 ]
 
 export default function WorkOrderViewShell({
-  panelData, tableData, technicians, typeLabels, statusLabels, totalPages, currentPage, baseUrl,
+  panelData, tableData, technicians, typeLabels, statusLabels, totalPages, currentPage, baseUrl, children,
 }: Props) {
   const [view, setView] = useState<WOView>(() => {
     if (typeof window === 'undefined') return 'panel'
@@ -70,6 +71,9 @@ export default function WorkOrderViewShell({
           })}
         </div>
       </div>
+
+      {/* Filters */}
+      {children}
 
       {/* View Content */}
       {view === 'panel' && panelData && (

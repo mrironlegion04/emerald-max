@@ -285,9 +285,7 @@ export default async function WorkOrdersPage({
         }
       />
 
-      <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
-
-      {workOrders.length === 0 && !panelData ? (
+      {!panelData ? (
         <EmptyState
           title="No work orders found"
           description={
@@ -312,7 +310,9 @@ export default async function WorkOrdersPage({
           totalPages={totalPages}
           currentPage={String(page)}
           baseUrl={baseUrl}
-        />
+        >
+          <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
+        </WorkOrderViewShell>
       )}
     </div>
   )

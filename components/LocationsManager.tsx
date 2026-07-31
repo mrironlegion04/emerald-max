@@ -9,6 +9,7 @@ import {
 interface Location {
   id: string
   name: string
+  code?: string | null
   address?: string | null
   parentId: string | null
   path?: string | null
@@ -60,6 +61,7 @@ export default function LocationsManager({ initialLocations }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
+  const [formCode, setFormCode] = useState('')
   const [formAddress, setFormAddress] = useState('')
   const [formParentId, setFormParentId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -78,6 +80,7 @@ export default function LocationsManager({ initialLocations }: Props) {
       const path = loc.path ?? buildPath(locations, loc.id)
       return (
         loc.name.toLowerCase().includes(trimmedSearch) ||
+        (loc.code ?? '').toLowerCase().includes(trimmedSearch) ||
         path.toLowerCase().includes(trimmedSearch)
       )
     })
@@ -110,6 +113,7 @@ export default function LocationsManager({ initialLocations }: Props) {
   function openAdd(parentId = '') {
     setEditingId(null)
     setFormName('')
+    setFormCode('')
     setFormAddress('')
     setFormParentId(parentId)
     setError('')
@@ -119,6 +123,7 @@ export default function LocationsManager({ initialLocations }: Props) {
   function openEdit(loc: Location) {
     setEditingId(loc.id)
     setFormName(loc.name)
+    setFormCode(loc.code ?? '')
     setFormAddress(loc.address ?? '')
     setFormParentId(loc.parentId ?? '')
     setError('')
@@ -129,6 +134,7 @@ export default function LocationsManager({ initialLocations }: Props) {
     setShowForm(false)
     setEditingId(null)
     setFormName('')
+    setFormCode('')
     setFormAddress('')
     setFormParentId('')
     setError('')
@@ -162,6 +168,7 @@ export default function LocationsManager({ initialLocations }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name:     formName.trim(),
+            code:     formCode.trim() || null,
             address:  formAddress.trim() || null,
             parentId: formParentId || null,
           }),
@@ -173,7 +180,7 @@ export default function LocationsManager({ initialLocations }: Props) {
         setLocations(prev =>
           prev.map(l =>
             l.id === editingId
-              ? { ...l, name: data.name, address: data.address, parentId: data.parentId, path: data.path }
+              ? { ...l, name: data.name, code: data.code, address: data.address, parentId: data.parentId, path: data.path }
               : l
           )
         )
@@ -298,6 +305,23 @@ export default function LocationsManager({ initialLocations }: Props) {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Plant Code <span className="text-slate-400 font-normal">(short prefix, e.g. A)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formCode}
+                      onChange={e => setFormCode(e.target.value.toUpperCase())}
+                      className="input-field uppercase"
+                      placeholder="e.g., A"
+                      maxLength={6}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Used in work order numbers, e.g. <span className="font-mono text-slate-500">A-WO-0001</span>. Leave blank to use GLB.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       Nests Within Location <span className="text-slate-400 font-normal">(optional parent)</span>
                     </label>
                     <select
@@ -404,6 +428,11 @@ export default function LocationsManager({ initialLocations }: Props) {
 
                       <div className="min-w-0 flex-1">
                         <span className="text-sm font-bold text-slate-800 leading-snug tracking-tight">{loc.name}</span>
+                        {loc.code && (
+                          <span className="ml-2 inline-flex items-center bg-slate-900 text-white font-mono font-bold px-1.5 py-0.5 rounded text-[10px] align-middle">
+                            {loc.code}
+                          </span>
+                        )}
                         {/* Show full path when searching, address otherwise */}
                         {trimmedSearch && loc.depth > 0 ? (
                           <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">{pathStr}</p>

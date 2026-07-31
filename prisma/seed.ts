@@ -61,14 +61,14 @@ async function main() {
   // ── Locations ───────────────────────────────────────────────────────────────
   const loc1 = await prisma.location.upsert({
     where: { id: 'loc-building-a' },
-    update: {},
-    create: { id: 'loc-building-a', name: 'Building A', address: '123 Factory Road' },
+    update: { code: 'A' },
+    create: { id: 'loc-building-a', name: 'Building A', code: 'A', address: '123 Factory Road' },
   })
 
   const loc2 = await prisma.location.upsert({
     where: { id: 'loc-building-b' },
-    update: {},
-    create: { id: 'loc-building-b', name: 'Building B', address: '123 Factory Road' },
+    update: { code: 'B' },
+    create: { id: 'loc-building-b', name: 'Building B', code: 'B', address: '123 Factory Road' },
   })
 
   const loc3 = await prisma.location.upsert({

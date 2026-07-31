@@ -11,6 +11,7 @@ import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
 } from '@/lib/work-order-assets'
+import { generateWONumber } from '@/lib/wo-number'
 
 const woSchema = z.object({
   title:               z.string().min(1, 'Title is required'),
@@ -38,19 +39,6 @@ const woSchema = z.object({
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
 )
-
-async function generateWONumber(): Promise<string> {
-  const last = await prisma.workOrder.findFirst({
-    orderBy: { woNumber: 'desc' },
-    select:  { woNumber: true },
-  })
-  let next = 1
-  if (last?.woNumber) {
-    const num = parseInt(last.woNumber.replace('WO-', ''), 10)
-    if (!isNaN(num)) next = num + 1
-  }
-  return `WO-${String(next).padStart(4, '0')}`
-}
 
 export async function GET() {
   try {
@@ -96,8 +84,6 @@ export async function POST(request: NextRequest) {
       if (data.customIssue.length === 0) data.customIssue = null
     }
 
-    const woNumber = await generateWONumber()
-
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } })
     if (!dbUser) {
       return NextResponse.json({ error: 'User session invalid. Please log in again.' }, { status: 401 })
@@ -121,6 +107,8 @@ export async function POST(request: NextRequest) {
       })
       locationId = primaryAsset?.locationId ?? null
     }
+
+    const woNumber = await generateWONumber(locationId)
 
     // ── Auto-derive domainId from team ───────────────────────────────
     let derivedDomainId: string | null = null

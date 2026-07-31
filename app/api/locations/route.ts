@@ -8,6 +8,7 @@ import { z } from 'zod'
 
 const locationSchema = z.object({
   name:     z.string().min(1, 'Name is required'),
+  code:     z.string().optional().nullable(),
   address:  z.string().optional().nullable(),
   parentId: z.string().optional().nullable(),
 })
@@ -17,6 +18,7 @@ const locationSchema = z.object({
 type FlatLocation = {
   id: string
   name: string
+  code: string | null
   address: string | null
   parentId: string | null
   path: string | null
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
     const location = await prisma.location.create({
       data: {
         name:     data.name,
+        code:     data.code ? data.code.trim().toUpperCase() : null,
         address:  data.address  ?? null,
         parentId: data.parentId ?? null,
         path,

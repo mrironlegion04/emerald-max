@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { createNotification } from '@/lib/notifications'
 import { writeAudit } from '@/lib/audit'
+import { generateWONumber } from '@/lib/wo-number'
 
 export interface MeterReadingInput {
   value: number
@@ -167,21 +168,17 @@ async function triggerPMSchedules(
 
     if (existingWO) continue
 
-    // Generate WO number
-    const lastWO = await tx.workOrder.findFirst({
-      orderBy: { woNumber: 'desc' },
-      select: { woNumber: true },
+    // Generate WO number (scoped to the asset's plant)
+    const asset = await tx.asset.findUnique({
+      where: { id: assetId },
+      select: { locationId: true },
     })
-    let nextNum = 1
-    if (lastWO?.woNumber) {
-      const num = parseInt(lastWO.woNumber.replace('WO-', ''), 10)
-      if (!isNaN(num)) nextNum = num + 1
-    }
+    const woNumber = await generateWONumber(asset?.locationId, tx)
 
     // Create work order
     await tx.workOrder.create({
       data: {
-        woNumber: `WO-${String(nextNum).padStart(4, '0')}`,
+        woNumber,
         title: `${schedule.title} (Meter: ${currentValue} ${unit})`,
         description: schedule.description,
         type: 'PREVENTIVE',

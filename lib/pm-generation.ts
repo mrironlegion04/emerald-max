@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { generateWONumber } from '@/lib/wo-number'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -61,30 +62,6 @@ export function advanceDate(current: Date, frequency: string, interval: number):
       next.setMonth(next.getMonth() + interval)
   }
   return next
-}
-
-// ── WO Number Generation (with retry for uniqueness) ───────────────────
-
-async function generateWONumber(retries = 5, client?: { workOrder: typeof prisma.workOrder }): Promise<string> {
-  const c = client ?? prisma
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const last = await c.workOrder.findFirst({
-      orderBy: { woNumber: 'desc' },
-      select: { woNumber: true },
-    })
-    let next = 1
-    if (last?.woNumber) {
-      const num = parseInt(last.woNumber.replace('WO-', ''), 10)
-      if (!isNaN(num)) next = num + 1
-    }
-    const candidate = `WO-${String(next).padStart(4, '0')}`
-    const exists = await c.workOrder.findUnique({
-      where: { woNumber: candidate },
-      select: { id: true },
-    })
-    if (!exists) return candidate
-  }
-  throw new Error('Failed to generate unique WO number after retries')
 }
 
 // ── Tier Builder ───────────────────────────────────────────────────────
@@ -217,7 +194,10 @@ export async function generateWOsForSchedule(
 
       for (let i = 0; i < tiersToGenerate.length; i++) {
         const tier = tiersToGenerate[i]
-        const woNumber = await generateWONumber(5, tx)
+        const woNumber = await generateWONumber(
+          schedule.locationId ?? schedule.asset?.locationId,
+          tx,
+        )
 
         // Build title
         let woTitle = schedule.title

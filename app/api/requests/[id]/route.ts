@@ -4,13 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { sendRequestApproved, sendRequestRejected, sendRequestConverted } from '@/lib/email'
-
-async function generateWONumber() {
-  const last = await prisma.workOrder.findFirst({ orderBy: { woNumber: 'desc' }, select: { woNumber: true } })
-  let next = 1
-  if (last?.woNumber) { const n = parseInt(last.woNumber.replace('WO-',''),10); if (!isNaN(n)) next = n+1 }
-  return `WO-${String(next).padStart(4,'0')}`
-}
+import { generateWONumber } from '@/lib/wo-number'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -86,7 +80,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === 'convert') {
-    const woNumber = await generateWONumber()
+    const woNumber = await generateWONumber(null)
     const [wo, updated] = await prisma.$transaction([
       prisma.workOrder.create({
         data: {

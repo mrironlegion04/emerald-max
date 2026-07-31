@@ -344,6 +344,7 @@ model UserSkill {
 model Location {
   id        String   @id @default(cuid())
   name      String
+  code      String?  // short plant prefix used in WO numbers, e.g. "A", "B"
   address   String?
   parentId  String?
   path      String?  // cached breadcrumb: "Plant A › Building 2 › Line 3"
@@ -800,6 +801,7 @@ model MaintenanceSchedule {
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
 
+  @@index([locationId])
   @@map("maintenance_schedules")
 }
 

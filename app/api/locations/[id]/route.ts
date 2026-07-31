@@ -8,6 +8,7 @@ import { z } from 'zod'
 
 const updateSchema = z.object({
   name:     z.string().min(1, 'Name is required').optional(),
+  code:     z.string().optional().nullable(),
   address:  z.string().optional().nullable(),
   parentId: z.string().optional().nullable(),
 })
@@ -33,7 +34,7 @@ export async function PUT(
     // Get current record to compute new path and track changes
     const current = await prisma.location.findUnique({
       where: { id },
-      select: { name: true, parentId: true, address: true },
+      select: { name: true, code: true, parentId: true, address: true },
     })
     if (!current) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
@@ -47,6 +48,7 @@ export async function PUT(
       where: { id },
       data: {
         name:     newName,
+        code:     data.code !== undefined ? (data.code ? data.code.trim().toUpperCase() : null) : undefined,
         address:  data.address !== undefined ? (data.address ?? null) : undefined,
         parentId: newParentId,
         path,

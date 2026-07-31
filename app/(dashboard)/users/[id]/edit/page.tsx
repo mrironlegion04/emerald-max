@@ -14,6 +14,9 @@ export default async function EditUserPage({
   const target = await prisma.user.findUnique({
     where: { id },
     include: {
+      userLocations: {
+        select: { locationId: true },
+      },
       skills: {
         include: {
           skill: true,
@@ -47,7 +50,7 @@ export default async function EditUserPage({
           department: target.department ?? '',
           woVisibility: target.woVisibility,
           customRoleId: target.customRoleId ?? '',
-          assignedLocationId: target.assignedLocationId ?? '',
+          assignedLocationIds: target.userLocations.map(ul => ul.locationId),
           userSkills: target.skills,
           hasFaceVerification: target.hasFaceVerification,
           lastFaceVerifyAt: target.lastFaceVerifyAt,

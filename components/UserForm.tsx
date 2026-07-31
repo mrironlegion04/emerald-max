@@ -16,7 +16,7 @@ interface UserFormData {
   department: string
   woVisibility: string
   customRoleId: string
-  assignedLocationId: string
+  assignedLocationIds: string[]
 }
 
 interface UserSkill {
@@ -83,7 +83,7 @@ export default function UserForm({ initialData, userId }: Props) {
     department: (initialData as any)?.department ?? '',
     woVisibility: (initialData as any)?.woVisibility ?? 'FULL',
     customRoleId: (initialData as any)?.customRoleId ?? '',
-    assignedLocationId: (initialData as any)?.assignedLocationId ?? '',
+    assignedLocationIds: (initialData as any)?.assignedLocationIds ?? [],
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -98,6 +98,15 @@ export default function UserForm({ initialData, userId }: Props) {
 
   function set(field: keyof UserFormData, value: string | boolean) {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  function toggleLocation(locationId: string) {
+    setForm(prev => ({
+      ...prev,
+      assignedLocationIds: prev.assignedLocationIds.includes(locationId)
+        ? prev.assignedLocationIds.filter(id => id !== locationId)
+        : [...prev.assignedLocationIds, locationId],
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -115,7 +124,7 @@ export default function UserForm({ initialData, userId }: Props) {
         department: form.department || null,
         woVisibility: form.woVisibility,
         customRoleId: form.customRoleId || null,
-        assignedLocationId: form.assignedLocationId || null,
+        assignedLocationIds: form.assignedLocationIds,
       }
       if (form.password) payload.password = form.password
 
@@ -401,22 +410,34 @@ export default function UserForm({ initialData, userId }: Props) {
             </p>
           </div>
         )}
-        {isEdit && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Assigned Location
-            </label>
-            <select value={form.assignedLocationId} onChange={e => set('assignedLocationId', e.target.value)} className="input-field">
-              <option value="">No location restriction</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Restrict this user to see only data (WOs, assets, inventory) within this location and its children.
-            </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Assigned Plants / Locations
+          </label>
+          <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+            {locations.length === 0 ? (
+              <p className="text-xs text-gray-400">No locations found</p>
+            ) : (
+              locations.map(loc => {
+                const checked = form.assignedLocationIds.includes(loc.id)
+                return (
+                  <label key={loc.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleLocation(loc.id)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                    />
+                    <span className="text-sm text-gray-700">{loc.name}</span>
+                  </label>
+                )
+              })
+            )}
           </div>
-        )}
+          <p className="text-xs text-gray-500 mt-1">
+            Restrict this user to see data (WOs, assets, inventory) within these locations and their children. Leave empty for unrestricted access.
+          </p>
+        </div>
         {isEdit && (
           <div className="flex items-center gap-3">
             <input

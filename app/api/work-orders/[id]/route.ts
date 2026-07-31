@@ -220,6 +220,19 @@ export async function PUT(
       data.locationScope !== undefined ? data.locationScope : existingWo.locationScope,
     )
 
+    // ── Derive WO location from primary asset when not explicitly set ─
+    let derivedLocationId: string | null | undefined
+    if (data.locationId !== undefined) {
+      derivedLocationId = data.locationId
+    } else if (normalized.entries.length > 0) {
+      const primaryAssetId = normalized.assetId ?? normalized.entries[0].assetId
+      const primaryAsset = await prisma.asset.findUnique({
+        where: { id: primaryAssetId },
+        select: { locationId: true },
+      })
+      derivedLocationId = primaryAsset?.locationId ?? existingWo.locationId
+    }
+
     const existingAssetIds = existingWo.assets.map(a => a.assetId)
     const incomingAssetIds = normalized.entries.map(e => e.assetId)
 
@@ -240,6 +253,7 @@ export async function PUT(
         )
       ),
       ...(data.teamId ? { domainId: derivedDomainId } : {}),
+      ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
       ...extra,
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
       startDate: data.startDate ? new Date(data.startDate) : undefined,

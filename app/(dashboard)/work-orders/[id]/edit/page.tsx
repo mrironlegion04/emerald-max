@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { getPickerScope } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -11,6 +12,10 @@ export default async function EditWorkOrderPage({
   const { id } = await params
   const user = await getCurrentUser()
   if (user?.role === 'TECHNICIAN' || user?.role === 'REQUESTER') redirect(`/work-orders/${id}`)
+
+  const { assetFilter, userFilter } = user
+    ? await getPickerScope(user.userId)
+    : { assetFilter: null, userFilter: null }
 
   const [wo, assets, locations, users, teams] = await Promise.all([
     prisma.workOrder.findUnique({
@@ -27,7 +32,7 @@ export default async function EditWorkOrderPage({
       },
     }),
     prisma.asset.findMany({
-      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
+      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ? assetFilter : {}) },
       select:  { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, domainId: true },
       orderBy: { name: 'asc' },
     }),
@@ -36,7 +41,7 @@ export default async function EditWorkOrderPage({
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
-      where:   { isActive: true },
+      where:   { isActive: true, ...(userFilter ? userFilter : {}) },
       select:  { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),

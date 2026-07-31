@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db'
+import { getCurrentUser } from '@/lib/session'
+import { getPickerScope } from '@/lib/access-control'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import WorkOrderForm from '@/components/WorkOrderForm'
@@ -9,10 +11,14 @@ export default async function NewWorkOrderPage({
   searchParams: Promise<{ assetId?: string; templateId?: string }>
 }) {
   const { assetId, templateId } = await searchParams
+  const user = await getCurrentUser()
+  const { assetFilter, userFilter } = user
+    ? await getPickerScope(user.userId)
+    : { assetFilter: null, userFilter: null }
 
   const [assets, locations, users, teams, template] = await Promise.all([
     prisma.asset.findMany({
-      where: { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
+      where: { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ? assetFilter : {}) },
       select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, domainId: true },
       orderBy: { name: 'asc' },
     }),
@@ -21,7 +27,7 @@ export default async function NewWorkOrderPage({
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(userFilter ? userFilter : {}) },
       select: { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),

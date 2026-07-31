@@ -79,6 +79,19 @@ async function main() {
 
   console.log('✅ Locations created')
 
+  // ── User ↔ plant assignments ────────────────────────────────────────────────
+  await prisma.userLocation.createMany({
+    data: [
+      { userId: manager.id, locationId: loc1.id },
+      { userId: manager.id, locationId: loc2.id },
+      { userId: tech1.id, locationId: loc1.id },
+      { userId: tech2.id, locationId: loc2.id },
+    ],
+    skipDuplicates: true,
+  })
+
+  console.log('✅ User-plant assignments created')
+
   // ── Asset categories ────────────────────────────────────────────────────────
   const catElectrical = await prisma.assetCategory.upsert({
     where: { id: 'cat-electrical' },
@@ -247,6 +260,7 @@ async function main() {
       priority: 'MEDIUM',
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       assetId: asset1.id,
+      locationId: loc1.id,
       assignedToId: tech1.id,
       createdById: admin.id,
     },
@@ -265,6 +279,7 @@ async function main() {
       dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       startedAt: new Date(),
       assetId: asset3.id,
+      locationId: loc1.id,
       assignedToId: tech2.id,
       createdById: manager.id,
     },
@@ -282,6 +297,7 @@ async function main() {
       priority: 'LOW',
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       assetId: asset2.id,
+      locationId: loc1.id,
       assignedToId: tech1.id,
       createdById: admin.id,
     },
@@ -299,6 +315,7 @@ async function main() {
       priority: 'CRITICAL',
       dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // already overdue
       assetId: asset4.id,
+      locationId: loc2.id,
       assignedToId: tech2.id,
       createdById: manager.id,
     },
@@ -321,6 +338,7 @@ async function main() {
       laborCost: 200,
       partsCost: 0,
       assetId: asset1.id,
+      locationId: loc1.id,
       assignedToId: tech1.id,
       createdById: admin.id,
     },

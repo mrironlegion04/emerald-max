@@ -111,6 +111,17 @@ export async function POST(request: NextRequest) {
       data.locationScope,
     )
 
+    // ── Derive WO location from primary asset when not explicitly set ─
+    let locationId: string | null = data.locationId ?? null
+    if (!locationId && normalized.entries.length > 0) {
+      const primaryAssetId = normalized.assetId ?? normalized.entries[0].assetId
+      const primaryAsset = await prisma.asset.findUnique({
+        where: { id: primaryAssetId },
+        select: { locationId: true },
+      })
+      locationId = primaryAsset?.locationId ?? null
+    }
+
     // ── Auto-derive domainId from team ───────────────────────────────
     let derivedDomainId: string | null = null
     if (data.teamId) {
@@ -132,7 +143,7 @@ export async function POST(request: NextRequest) {
         dueDate:        data.dueDate      ? new Date(data.dueDate) : null,
         startDate:      data.startDate    ? new Date(data.startDate) : null,
         assetId:        normalized.assetId,
-        locationId:     data.locationId   ?? null,
+        locationId:     locationId,
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,
         teamId:         data.teamId       ?? null,

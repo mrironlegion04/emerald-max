@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildWOVisibilityFilter, getLocationSubtreeIds } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -22,6 +22,7 @@ interface SearchParams {
   createdFrom?: string
   createdTo?:   string
   overdue?:     string
+  location?:    string
   page?:        string
 }
 
@@ -62,6 +63,18 @@ async function getWorkOrders(filters: SearchParams, visibilityFilter: Record<str
 
   if (filters.assignedToId) where.assignedToId = filters.assignedToId
   if (filters.domainId)     where.domainId     = filters.domainId
+
+  if (filters.location) {
+    const subtree = await getLocationSubtreeIds(filters.location)
+    const locFilter = { locationId: { in: subtree } }
+    if (Array.isArray(where.AND)) {
+      where.AND = [...where.AND, locFilter]
+    } else if (where.AND) {
+      where.AND = [where.AND, locFilter]
+    } else {
+      where.AND = [locFilter]
+    }
+  }
 
   if (filters.overdue === 'true') {
     where.dueDate = { lt: new Date() }

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter, getLocationSubtreeIds } from '@/lib/access-control'
 import Link from 'next/link'
 import { Building2, Package  } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -34,6 +35,7 @@ interface SearchParams {
   status?: string
   categoryId?: string
   locationId?: string
+  location?: string
   view?: string
   page?: string
   showDeleted?: string
@@ -41,7 +43,7 @@ interface SearchParams {
 
 const ITEMS_PER_PAGE = 25
 
-async function getAssets(filters: SearchParams) {
+async function getAssets(filters: SearchParams, locationFilter: Record<string, unknown> | null) {
   const where: Record<string, unknown> = {}
 
   if (filters.search) {
@@ -55,6 +57,13 @@ async function getAssets(filters: SearchParams) {
   if (filters.status) where.status = filters.status
   if (filters.categoryId) where.categoryId = filters.categoryId
   if (filters.locationId) where.locationId = filters.locationId
+
+  if (filters.location) {
+    const subtree = await getLocationSubtreeIds(filters.location)
+    where.AND = [{ locationId: { in: subtree } }]
+  } else if (locationFilter) {
+    where.AND = [locationFilter]
+  }
 
   // Soft-delete: hide deleted assets by default
   if (filters.showDeleted !== 'true') {
@@ -104,7 +113,8 @@ export default async function AssetsPage({
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
-  const { assets, categories, locations, totalCount, page } = await getAssets(params)
+  const locationFilter = user ? await buildLocationFilter(user) : null
+  const { assets, categories, locations, totalCount, page } = await getAssets(params, locationFilter)
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const viewMode = (params.view || 'hierarchy') as 'hierarchy' | 'all'
   

@@ -17,7 +17,7 @@ const createSchema = z.object({
   department: z.string().nullable().optional(),
   woVisibility: z.enum(['FULL','LIMITED']).default('FULL'),
   customRoleId: z.string().nullable().optional(),
-  assignedLocationId: z.string().nullable().optional(),
+  assignedLocationIds: z.array(z.string()).default([]),
 })
 
 export async function GET() {
@@ -39,7 +39,9 @@ export async function GET() {
         bio: true,
         department: true,
         lastActiveAt: true,
-        assignedLocationId: true,
+        userLocations: {
+          select: { locationId: true },
+        },
         _count: {
           select: {
             assignedWorkOrders: true,
@@ -83,9 +85,11 @@ export async function POST(request: NextRequest) {
         department: data.department || null,
         woVisibility: data.woVisibility,
         customRoleId: data.customRoleId || null,
-        assignedLocationId: data.assignedLocationId || null,
+        userLocations: {
+          create: data.assignedLocationIds.map(locationId => ({ locationId })),
+        },
       },
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, assignedLocationId: true },
+      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, userLocations: { select: { locationId: true } } },
     })
 
     await writeAudit({

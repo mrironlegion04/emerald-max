@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { getPickerScope } from '@/lib/access-control'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -12,10 +13,13 @@ export default async function NewPMPage({
   if (user?.role === 'TECHNICIAN') redirect('/preventive-maintenance')
 
   const { assetId } = await searchParams
+  const { assetFilter, userFilter } = user
+    ? await getPickerScope(user.userId)
+    : { assetFilter: null, userFilter: null }
 
   const [assets, locations, users, teams, categories] = await Promise.all([
     prisma.asset.findMany({
-      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' } },
+      where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ? assetFilter : {}) },
       select:  { id: true, name: true, assetCode: true, imageUrl: true, parentId: true, locationId: true, categoryId: true },
       orderBy: { name: 'asc' },
     }),
@@ -24,7 +28,7 @@ export default async function NewPMPage({
       orderBy: { name: 'asc' },
     }),
     prisma.user.findMany({
-      where:   { isActive: true },
+      where:   { isActive: true, ...(userFilter ? userFilter : {}) },
       select:  { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     }),

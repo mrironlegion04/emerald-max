@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter, getLocationSubtreeIds } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList, Clock, AlertTriangle, Calendar } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -17,6 +18,7 @@ interface SearchParams {
   assetId?:     string
   dueDateFrom?: string
   dueDateTo?:   string
+  location?:    string
   page?:        string
 }
 
@@ -35,9 +37,16 @@ export default async function PMPage({
   const user = await getCurrentUser()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const params  = await searchParams
+  const locationFilter = user ? await buildLocationFilter(user) : null
 
   // Build Prisma where clause
   const where: Record<string, unknown> = {}
+  if (params.location) {
+    const subtree = await getLocationSubtreeIds(params.location)
+    where.AND = [{ locationId: { in: subtree } }]
+  } else if (locationFilter) {
+    where.AND = [locationFilter]
+  }
   if (params.frequency)                where.frequency = params.frequency
   if (params.isActive !== undefined && params.isActive !== '')
     where.isActive = params.isActive === 'true'

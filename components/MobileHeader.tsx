@@ -15,9 +15,10 @@ interface User {
 
 interface MobileHeaderProps {
   user: User
+  children?: React.ReactNode
 }
 
-export default function MobileHeader({ user }: MobileHeaderProps) {
+export default function MobileHeader({ user, children }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -40,7 +41,10 @@ export default function MobileHeader({ user }: MobileHeaderProps) {
           </div>
         </div>
 
-        <NotificationBell />
+        <div className="flex items-center gap-2">
+          {children}
+          <NotificationBell />
+        </div>
       </header>
 
       {/* Modern Drawer implementation with AnimatePresence */}

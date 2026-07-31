@@ -257,7 +257,6 @@ model User {
   phone        String?
   bio          String?
   department   String?
-  assignedLocationId String?
 
   // Visibility & permissions
   woVisibility WOVisibility @default(FULL)
@@ -306,6 +305,7 @@ model User {
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
 
   teamMemberships       TeamMember[]
+  userLocations         UserLocation[]
   createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
   assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
   createdAutomationRules AutomationRule[]   @relation("AutomationRuleCreator")
@@ -355,8 +355,22 @@ model Location {
   assets    Asset[]
   workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
   maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
+  userLocations UserLocation[]
 
   @@map("locations")
+}
+
+model UserLocation {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@id([userId, locationId])
+  @@map("user_locations")
 }
 
 model AssetCategory {

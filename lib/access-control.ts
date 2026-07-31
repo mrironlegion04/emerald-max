@@ -161,21 +161,14 @@ export async function canViewWorkOrder(
     }
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.userId },
-    select: { assignedLocationId: true },
-  })
+  const locationIds = await getUserLocationIds(user.userId)
 
   // Location-based access restriction
-  if (dbUser?.assignedLocationId) {
-    if (wo.locationId) {
-      const locationIds = await getLocationSubtreeIds(dbUser.assignedLocationId)
-      if (!locationIds.includes(wo.locationId)) {
-        return { allowed: false, reason: 'You do not have access to this work order' }
-      }
+  if (locationIds) {
+    if (wo.locationId && locationIds.includes(wo.locationId)) {
       return { allowed: true }
     }
-    // WO has no location → deny if user has location assigned
+    // WO outside user's plants or with no location → deny
     return { allowed: false, reason: 'You do not have access to this work order' }
   }
 
@@ -286,14 +279,12 @@ export async function buildWOVisibilityFilter(
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.userId },
-    select: { woVisibility: true, assignedLocationId: true },
+    select: { woVisibility: true },
   })
 
   if (!dbUser) return null
 
-  const locationIds = dbUser.assignedLocationId
-    ? await getLocationSubtreeIds(dbUser.assignedLocationId)
-    : null
+  const locationIds = await getUserLocationIds(user.userId)
 
   // MANAGER without location assignment → unrestricted (backward compatible)
   if (user.role === 'MANAGER' && !locationIds) return null
@@ -314,12 +305,7 @@ export async function buildWOVisibilityFilter(
   }
 
   if (locationIds) {
-    conditions.push({
-      OR: [
-        { locationId: { in: locationIds } },
-        { locationId: null },
-      ],
-    })
+    conditions.push({ locationId: { in: locationIds } })
   }
 
   if (conditions.length === 0) return null
@@ -332,7 +318,7 @@ export async function buildWOVisibilityFilter(
 /**
  * Get all descendant location IDs (including the given location) for location scoping.
  */
-async function getLocationSubtreeIds(locationId: string): Promise<string[]> {
+export async function getLocationSubtreeIds(locationId: string): Promise<string[]> {
   const allLocations = await prisma.location.findMany({
     select: { id: true, parentId: true },
   })
@@ -361,24 +347,53 @@ async function getLocationSubtreeIds(locationId: string): Promise<string[]> {
 }
 
 /**
+ * Get the union of all location-subtree IDs the user is assigned to (their plants and descendants).
+ * Returns `null` when the user has no plant assignments (unrestricted scope).
+ */
+export async function getUserLocationIds(userId: string): Promise<string[] | null> {
+  const assignments = await prisma.userLocation.findMany({
+    where: { userId },
+    select: { locationId: true },
+  })
+
+  if (assignments.length === 0) return null
+
+  const all = new Set<string>()
+  for (const assignment of assignments) {
+    const subtree = await getLocationSubtreeIds(assignment.locationId)
+    for (const id of subtree) all.add(id)
+  }
+
+  return Array.from(all)
+}
+
+/**
  * Build a Prisma `where` filter for location-scoped entities (assets, parts, PM schedules, etc.).
  * Returns `null` if no location scoping applies for the given user.
  */
 export async function buildLocationFilter(user: User): Promise<Record<string, unknown> | null> {
   if (user.role === 'ADMIN') return null
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.userId },
-    select: { assignedLocationId: true },
-  })
+  const locationIds = await getUserLocationIds(user.userId)
 
-  if (!dbUser?.assignedLocationId) return null
+  if (!locationIds) return null
 
-  const locationIds = await getLocationSubtreeIds(dbUser.assignedLocationId)
+  return { locationId: { in: locationIds } }
+}
+
+/**
+ * Compute filter scopes for form pickers (assets, users) so plant-scoped users
+ * only see/assign assets and technicians belonging to their plants.
+ */
+export async function getPickerScope(userId: string): Promise<{
+  assetFilter: Record<string, unknown> | null
+  userFilter: Record<string, unknown> | null
+}> {
+  const locationIds = await getUserLocationIds(userId)
+  if (!locationIds) return { assetFilter: null, userFilter: null }
+
   return {
-    OR: [
-      { locationId: { in: locationIds } },
-      { locationId: null },
-    ],
+    assetFilter: { locationId: { in: locationIds } },
+    userFilter:  { userLocations: { some: { locationId: { in: locationIds } } } },
   }
 }

@@ -15,6 +15,11 @@ const nestedTierSchema = z.object({
   enabled:   z.boolean(),
 })
 
+const pmTaskSchema = z.object({
+  title:        z.string().min(1, 'Task title is required'),
+  assignedToId: z.string().nullable().optional(),
+})
+
 const pmSchema = z.object({
   title:                z.string().min(1, 'Title is required'),
   description:          z.string().nullable().optional(),
@@ -44,6 +49,8 @@ const pmSchema = z.object({
   startDateOffset:      z.number().int().min(0).default(0),
   // Nested start index
   nestedStartIndex:     z.number().int().min(0).default(0),
+  // Task template — copied to every generated work order as subtasks
+  tasks:                z.array(pmTaskSchema).optional().default([]),
 }).refine(data => data.assetId || data.locationId, {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -94,7 +101,8 @@ export async function POST(request: NextRequest) {
     const inScope =
       (await canWriteToLocations(user, [data.locationId, assetLocationId])) &&
       (await canAssignUsers(user, [data.woAssignedToId])) &&
-      (await canAssignTeams(user, [data.woTeamId]))
+      (await canAssignTeams(user, [data.woTeamId])) &&
+      (await canAssignUsers(user, data.tasks.map(t => t.assignedToId)))
     if (!inScope) {
       return NextResponse.json(
         { error: 'You do not have access to the selected location, asset, or assignee' },
@@ -128,6 +136,16 @@ export async function POST(request: NextRequest) {
         woCategoryId:        data.woCategoryId          ?? null,
         startDateOffset:     data.startDateOffset,
         nestedStartIndex:    data.nestedStartIndex,
+        tasks: {
+          create: data.tasks.map((t, i) => ({
+            title:        t.title,
+            order:        i,
+            assignedToId: t.assignedToId ?? null,
+          })),
+        },
+      },
+      include: {
+        tasks: { orderBy: { order: 'asc' as const } },
       },
     })
 

@@ -476,7 +476,7 @@ export async function getWriteScopeIds(
 
 /**
  * Check that every provided location ID falls inside the user's write scope.
- * Null/undefined location IDs are only allowed for unrestricted users.
+ * Null/undefined entries (no location constraint) are ignored.
  */
 export async function canWriteToLocations(
   user: User,
@@ -484,7 +484,7 @@ export async function canWriteToLocations(
 ): Promise<boolean> {
   const scope = await getWriteScopeIds(user)
   if (!scope) return true
-  return locationIds.every(id => !!id && scope.includes(id))
+  return locationIds.every(id => !id || scope.includes(id))
 }
 
 /**

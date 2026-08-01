@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { order: 'asc' as const, createdAt: 'desc' as const },
     })
 
     return NextResponse.json(subtasks)

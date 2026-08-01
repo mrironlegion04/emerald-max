@@ -127,7 +127,7 @@ export async function generateWOsForSchedule(
         },
       },
       location: { select: { id: true, name: true } },
-
+      tasks: { orderBy: { order: 'asc' as const } },
     },
   })
 
@@ -262,6 +262,19 @@ export async function generateWOsForSchedule(
             notes: 'Generated from PM schedule',
           },
         })
+
+        // Copy the schedule's task template into subtasks on the generated WO
+        if (schedule.tasks.length > 0) {
+          await tx.subtask.createMany({
+            data: schedule.tasks.map(t => ({
+              title:        t.title,
+              order:        t.order,
+              assignedToId: t.assignedToId ?? null,
+              workOrderId:  wo.id,
+              createdById:  options?.userId ?? null,
+            })),
+          })
+        }
 
         woIds.push(wo.id)
         woNumbers.push(woNumber)

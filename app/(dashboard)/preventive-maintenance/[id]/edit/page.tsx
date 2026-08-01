@@ -28,6 +28,12 @@ export default async function EditPMPage({
   const [schedule, assets, locations, users, teams, categories] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
+      include: {
+        tasks: {
+          orderBy: { order: 'asc' },
+          select: { title: true, order: true, assignedToId: true },
+        },
+      },
     }),
     prisma.asset.findMany({
       where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ?? {}) },
@@ -86,6 +92,10 @@ export default async function EditPMPage({
     woCategoryId:        schedule.woCategoryId   ?? '',
     startDateOffset:     String(schedule.startDateOffset),
     nestedStartIndex:    String(schedule.nestedStartIndex),
+    tasks:               (schedule.tasks ?? []).map(t => ({
+      title:        t.title,
+      assignedToId: t.assignedToId ?? '',
+    })),
   }
 
   return (

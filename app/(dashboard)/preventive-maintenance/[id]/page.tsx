@@ -40,6 +40,10 @@ export default async function PMDetailPage({
       woAssignedTo: { select: { name: true } },
       woTeam: { select: { name: true } },
       woCategory: { select: { name: true } },
+      tasks: {
+        orderBy: { order: 'asc' },
+        include: { assignedTo: { select: { name: true } } },
+      },
     },
   })
 
@@ -176,6 +180,7 @@ export default async function PMDetailPage({
                 ...(schedule.woCategory ? [
                   { label: 'WO Category', value: schedule.woCategory.name },
                 ] : []),
+                { label: 'Task template', value: `${schedule.tasks.length} task${schedule.tasks.length !== 1 ? 's' : ''}` },
                 { label: 'Created by', value: schedule.createdBy?.name ?? '—' },
                 { label: 'Created',    value: fmt(schedule.createdAt) },
               ].map(row => (
@@ -210,6 +215,32 @@ export default async function PMDetailPage({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Task Template */}
+          {schedule.tasks.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-900 text-sm mb-1">
+                Task Template
+                <span className="ml-2 text-gray-400 font-normal">({schedule.tasks.length})</span>
+              </h2>
+              <p className="text-xs text-gray-400 mb-3">
+                Copied onto generated work orders as subtasks.
+              </p>
+              <ol className="space-y-2">
+                {schedule.tasks.map((task: any, i: number) => (
+                  <li key={i} className="flex items-center gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 text-gray-800">{task.title}</span>
+                    {task.assignedTo && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">→ {task.assignedTo.name}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 

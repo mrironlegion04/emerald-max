@@ -15,6 +15,11 @@ const nestedTierSchema = z.object({
   enabled:   z.boolean(),
 })
 
+const pmTaskSchema = z.object({
+  title:        z.string().min(1, 'Task title is required'),
+  assignedToId: z.string().nullable().optional(),
+})
+
 const updateSchema = z.object({
   title:                z.string().min(1).optional(),
   description:          z.string().nullable().optional(),
@@ -44,6 +49,8 @@ const updateSchema = z.object({
   startDateOffset:      z.number().int().min(0).optional(),
   // Nested start index
   nestedStartIndex:     z.number().int().min(0).optional(),
+  // Task template — replace-all semantics when provided
+  tasks:                z.array(pmTaskSchema).optional(),
 })
 
 export async function GET(
@@ -60,6 +67,10 @@ export async function GET(
       include: {
         asset: true,
         location: true,
+        tasks: {
+          orderBy: { order: 'asc' as const },
+          include: { assignedTo: { select: { id: true, name: true } } },
+        },
       },
     })
     if (!schedule) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -116,7 +127,8 @@ export async function PUT(
     const inScope =
       (await canWriteToLocations(user, changedLocationIds)) &&
       (data.woAssignedToId !== undefined ? await canAssignUsers(user, [data.woAssignedToId]) : true) &&
-      (data.woTeamId !== undefined ? await canAssignTeams(user, [data.woTeamId]) : true)
+      (data.woTeamId !== undefined ? await canAssignTeams(user, [data.woTeamId]) : true) &&
+      (data.tasks !== undefined ? await canAssignUsers(user, data.tasks.map(t => t.assignedToId)) : true)
     if (!inScope) {
       return NextResponse.json(
         { error: 'You do not have access to the selected location, asset, or assignee' },
@@ -124,35 +136,48 @@ export async function PUT(
       )
     }
 
-    const schedule = await prisma.maintenanceSchedule.update({
-      where: { id },
-      data: {
-        title:               data.title,
-        description:         data.description         ?? undefined,
-        triggerType:         data.triggerType,
-        frequency:           data.frequency,
-        interval:            data.interval,
-        nextDueDate:         data.nextDueDate ? new Date(data.nextDueDate) : undefined,
-        assetId:             finalAssetId,
-        locationId:          finalLocationId,
-        locationScope:       finalLocationScope,
-        isActive:            data.isActive,
-        meterId:             data.meterId              ?? null,
-        meterInterval:       data.meterInterval        ?? null,
-        meterUnit:           data.meterUnit            ?? null,
-        scheduleBehavior:    data.scheduleBehavior,
-        schedulingHorizon:   data.schedulingHorizon,
-        nestedConfig:        data.nestedConfig !== undefined
-          ? (data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig)
-          : undefined,
-        woPriority:          data.woPriority,
-        woDescription:       data.woDescription        ?? undefined,
-        woAssignedToId:      data.woAssignedToId       ?? undefined,
-        woTeamId:            data.woTeamId              ?? undefined,
-        woCategoryId:        data.woCategoryId          ?? undefined,
-        startDateOffset:     data.startDateOffset,
-        nestedStartIndex:    data.nestedStartIndex,
-      },
+    const schedule = await prisma.$transaction(async tx => {
+      if (data.tasks !== undefined) {
+        await tx.pmScheduleTask.deleteMany({ where: { scheduleId: id } })
+        await tx.pmScheduleTask.createMany({
+          data: data.tasks.map((t, i) => ({
+            title:        t.title,
+            order:        i,
+            assignedToId: t.assignedToId ?? null,
+            scheduleId:   id,
+          })),
+        })
+      }
+      return tx.maintenanceSchedule.update({
+        where: { id },
+        data: {
+          title:               data.title,
+          description:         data.description         ?? undefined,
+          triggerType:         data.triggerType,
+          frequency:           data.frequency,
+          interval:            data.interval,
+          nextDueDate:         data.nextDueDate ? new Date(data.nextDueDate) : undefined,
+          assetId:             finalAssetId,
+          locationId:          finalLocationId,
+          locationScope:       finalLocationScope,
+          isActive:            data.isActive,
+          meterId:             data.meterId              ?? null,
+          meterInterval:       data.meterInterval        ?? null,
+          meterUnit:           data.meterUnit            ?? null,
+          scheduleBehavior:    data.scheduleBehavior,
+          schedulingHorizon:   data.schedulingHorizon,
+          nestedConfig:        data.nestedConfig !== undefined
+            ? (data.nestedConfig === null ? Prisma.JsonNull as any : data.nestedConfig)
+            : undefined,
+          woPriority:          data.woPriority,
+          woDescription:       data.woDescription        ?? undefined,
+          woAssignedToId:      data.woAssignedToId       ?? undefined,
+          woTeamId:            data.woTeamId              ?? undefined,
+          woCategoryId:        data.woCategoryId          ?? undefined,
+          startDateOffset:     data.startDateOffset,
+          nestedStartIndex:    data.nestedStartIndex,
+        },
+      })
     })
 
     const changes: Record<string, { before: any; after: any }> = {}

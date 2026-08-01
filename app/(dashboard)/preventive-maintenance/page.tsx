@@ -78,6 +78,7 @@ export default async function PMPage({
       include: {
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
         location: { select: { id: true, name: true } },
+        _count: { select: { tasks: true } },
       },
       orderBy: { nextDueDate: 'asc' },
       skip,
@@ -246,7 +247,11 @@ export default async function PMPage({
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-gray-400">—</span>
+                        {s._count?.tasks > 0 ? (
+                          <span className="text-xs text-gray-600 font-medium">{s._count.tasks} task{s._count.tasks !== 1 ? 's' : ''}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className={`text-sm font-medium ${overdue ? 'text-red-600' : 'text-gray-900'}`}>

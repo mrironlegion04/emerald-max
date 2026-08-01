@@ -294,6 +294,7 @@ model User {
   createdParts          Part[]                  @relation("PartCreatedBy")
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
   assignedPMSchedules   MaintenanceSchedule[]   @relation("PMAssignedTo")
+  assignedPMTasks       PmScheduleTask[]        @relation("PMTaskAssignedTo")
   statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
   repairSessionsStarted   RepairSession[] @relation("RepairSessionStartedBy")
   repairSessionsCompleted RepairSession[] @relation("RepairSessionCompletedBy")
@@ -802,11 +803,28 @@ model MaintenanceSchedule {
   location            Location?          @relation("PMSchedulesAtLocation", fields: [locationId], references: [id])
   locationScope       LocationScope?
   workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
+  tasks               PmScheduleTask[]   @relation("PMScheduleTasks")
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
 
   @@index([locationId])
   @@map("maintenance_schedules")
+}
+
+model PmScheduleTask {
+  id            String                @id @default(cuid())
+  title         String
+  order         Int                   @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  scheduleId    String
+  schedule      MaintenanceSchedule   @relation("PMScheduleTasks", fields: [scheduleId], references: [id], onDelete: Cascade)
+  assignedToId  String?
+  assignedTo    User?                 @relation("PMTaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([scheduleId])
+  @@map("pm_schedule_tasks")
 }
 
 model AuditLog {
@@ -848,6 +866,7 @@ model Subtask {
   status        SubtaskStatus   @default(PENDING)
   priority      WorkOrderPriority @default(MEDIUM)
   dueDate       DateTime?
+  order         Int             @default(0)
   completedAt   DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

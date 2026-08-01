@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers } from 'lucide-react'
+import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 
@@ -23,6 +23,11 @@ interface NestedTier {
   interval: number
   runEvery: number
   enabled: boolean
+}
+
+interface PMTask {
+  title: string
+  assignedToId: string
 }
 
 interface SimpleUser {
@@ -63,7 +68,7 @@ interface Props {
   users?:     SimpleUser[]
   teams?:     SimpleTeam[]
   categories?: SimpleCategory[]
-  initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null }
+  initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null; tasks?: PMTask[] | null }
   scheduleId?: string
   preselectedAssetId?: string
 }
@@ -158,6 +163,10 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   )
   const nestedEnabled = nestedTiers.length > 0
 
+  const [tasks, setTasks] = useState<PMTask[]>(
+    (initialData as any)?.tasks ?? []
+  )
+
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
@@ -222,6 +231,31 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     setNestedTiers(prev => prev.filter((_, i) => i !== index))
   }
 
+  // Task template management
+  function addTask() {
+    setTasks(prev => [...prev, { title: '', assignedToId: '' }])
+  }
+
+  function updateTask(index: number, field: keyof PMTask, value: string) {
+    setTasks(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)))
+  }
+
+  function removeTask(index: number) {
+    setTasks(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function moveTask(index: number, dir: -1 | 1) {
+    setTasks(prev => {
+      const next = [...prev]
+      const target = index + dir
+      if (target < 0 || target >= next.length) return prev
+      const tmp = next[index]
+      next[index] = next[target]
+      next[target] = tmp
+      return next
+    })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setSaving(true)
@@ -251,6 +285,9 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         woCategoryId:         form.woCategoryId || null,
         startDateOffset:      parseInt(form.startDateOffset) || 0,
         nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
+        tasks:                tasks
+          .filter(t => t.title.trim())
+          .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null })),
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -668,6 +705,83 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             className="input-field"
           />
         </div>
+      </div>
+
+      {/* Task Template */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <ListChecks className="w-4 h-4 text-emerald-600" />
+          <h2 className="font-semibold text-gray-900 text-sm">Task Template</h2>
+        </div>
+        <p className="text-xs text-gray-500">
+          These tasks are copied onto every work order generated from this schedule as subtasks.
+        </p>
+
+        {tasks.length > 0 && (
+          <div className="space-y-2">
+            {tasks.map((task, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
+                  {idx + 1}
+                </span>
+                <input
+                  type="text"
+                  value={task.title}
+                  onChange={e => updateTask(idx, 'title', e.target.value)}
+                  placeholder="Task title (e.g. Check belt tension)"
+                  className="input-field flex-1"
+                />
+                <select
+                  value={task.assignedToId}
+                  onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
+                  className="input-field w-40"
+                >
+                  <option value="">— Unassigned —</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveTask(idx, -1)}
+                    disabled={idx === 0}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move up"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveTask(idx, 1)}
+                    disabled={idx === tasks.length - 1}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move down"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeTask(idx)}
+                    className="p-1.5 rounded-md text-red-500 hover:bg-red-50"
+                    title="Remove task"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={addTask}
+          className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"
+        >
+          <Plus className="w-4 h-4" />
+          Add task
+        </button>
       </div>
 
       {/* Nested PM */}

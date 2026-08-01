@@ -18,6 +18,9 @@ export async function POST(
     const { id } = await params
     const existing = await prisma.maintenanceSchedule.findUnique({
       where: { id },
+      include: {
+        tasks: { orderBy: { order: 'asc' as const } },
+      },
     })
 
     if (!existing) {
@@ -74,7 +77,16 @@ export async function POST(
         woPriority:          existing.woPriority,
         woDescription:       existing.woDescription,
         woAssignedToId:      existing.woAssignedToId,
+        woTeamId:            existing.woTeamId,
+        woCategoryId:        existing.woCategoryId,
         startDateOffset:     existing.startDateOffset,
+        tasks: {
+          create: existing.tasks.map(t => ({
+            title:        t.title,
+            order:        t.order,
+            assignedToId: t.assignedToId,
+          })),
+        },
       },
     })
 

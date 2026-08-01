@@ -13,6 +13,7 @@ interface Subtask {
   dueDate: string | null
   completedAt: string | null
   createdAt: string
+  completionType: 'ASSIGNED' | 'ADMIN_OVERRIDE' | 'MANAGER_OVERRIDE' | null
   assignedTo: { id: string; name: string; email: string } | null
   assignedTeam: { id: string; name: string } | null
   assignedDomain: { id: string; name: string } | null
@@ -516,6 +517,12 @@ export default function SubtasksPanel({
                           {subtask.completedBy && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100/85 rounded-full text-[10px] font-bold">
                               ✓ {subtask.completedBy.name}
+                            </span>
+                          )}
+
+                          {subtask.status === 'COMPLETED' && subtask.completionType && subtask.completionType !== 'ASSIGNED' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/70 rounded-full text-[10px] font-bold">
+                              🛡️ {subtask.completionType === 'ADMIN_OVERRIDE' ? 'Admin override' : 'Manager override'}
                             </span>
                           )}
                         </div>

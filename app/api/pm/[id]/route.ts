@@ -18,6 +18,7 @@ const nestedTierSchema = z.object({
 const pmTaskSchema = z.object({
   title:        z.string().min(1, 'Task title is required'),
   assignedToId: z.string().nullable().optional(),
+  required:     z.boolean().default(true),
 })
 
 const updateSchema = z.object({
@@ -144,6 +145,7 @@ export async function PUT(
             title:        t.title,
             order:        i,
             assignedToId: t.assignedToId ?? null,
+            required:     t.required,
             scheduleId:   id,
           })),
         })

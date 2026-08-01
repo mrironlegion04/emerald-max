@@ -85,6 +85,7 @@ export async function POST(
             title:        t.title,
             order:        t.order,
             assignedToId: t.assignedToId,
+            required:     t.required,
           })),
         },
       },

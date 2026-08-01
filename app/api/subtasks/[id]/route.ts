@@ -13,6 +13,7 @@ const updateSubtaskSchema = z.object({
   dueDate: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
   assignedTeamId: z.string().nullable().optional(),
+  required: z.boolean().optional(),
 })
 
 export async function GET(
@@ -164,6 +165,7 @@ export async function PUT(
     if (data.assignedTeamId !== undefined) {
       updateData.assignedTeamId = data.assignedTeamId
     }
+    if (data.required !== undefined) updateData.required = data.required
     if (assignedDomainId !== undefined) {
       updateData.assignedDomainId = assignedDomainId
     }

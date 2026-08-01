@@ -14,6 +14,7 @@ const subtaskSchema = z.object({
   workOrderId: z.string().min(1, 'Work Order ID is required'),
   assignedToId: z.string().nullable().optional(),
   assignedTeamId: z.string().nullable().optional(),
+  required: z.boolean().default(true),
 })
 
 export async function GET(request: NextRequest) {
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
         assignedToId: data.assignedToId ?? null,
         assignedTeamId: data.assignedTeamId ?? null,
         assignedDomainId,
+        required: data.required,
         createdById: user.userId,
       },
       include: {

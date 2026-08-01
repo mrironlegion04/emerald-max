@@ -28,6 +28,7 @@ interface NestedTier {
 interface PMTask {
   title: string
   assignedToId: string
+  required: boolean
 }
 
 interface SimpleUser {
@@ -233,10 +234,10 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   // Task template management
   function addTask() {
-    setTasks(prev => [...prev, { title: '', assignedToId: '' }])
+    setTasks(prev => [...prev, { title: '', assignedToId: '', required: true }])
   }
 
-  function updateTask(index: number, field: keyof PMTask, value: string) {
+  function updateTask(index: number, field: keyof PMTask, value: string | boolean) {
     setTasks(prev => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)))
   }
 
@@ -287,7 +288,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
         tasks:                tasks
           .filter(t => t.title.trim())
-          .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null })),
+          .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null, required: t.required })),
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -741,6 +742,21 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
+                <label
+                  className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
+                  title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
+                >
+                  <input
+                    type="checkbox"
+                    checked={task.required}
+                    onChange={e => updateTask(idx, 'required', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {task.required ? 'Required' : 'Optional'}
+                  </span>
+                </label>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     type="button"

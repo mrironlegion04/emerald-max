@@ -31,7 +31,7 @@ export default async function EditPMPage({
       include: {
         tasks: {
           orderBy: { order: 'asc' },
-          select: { title: true, order: true, assignedToId: true },
+          select: { title: true, order: true, assignedToId: true, required: true },
         },
       },
     }),
@@ -95,6 +95,7 @@ export default async function EditPMPage({
     tasks:               (schedule.tasks ?? []).map(t => ({
       title:        t.title,
       assignedToId: t.assignedToId ?? '',
+      required:     t.required ?? true,
     })),
   }
 

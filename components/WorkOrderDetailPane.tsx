@@ -233,6 +233,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           dueDate: s.dueDate ? new Date(s.dueDate).toISOString() : null,
           completedAt: s.completedAt ? new Date(s.completedAt).toISOString() : null,
           completionType: s.completionType ?? null,
+          required: s.required ?? true,
           createdAt: new Date(s.createdAt).toISOString(),
           workOrderId: s.workOrderId,
           assignedTo: s.assignedTo, assignedDomain: s.assignedDomain,

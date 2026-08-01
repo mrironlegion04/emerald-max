@@ -77,33 +77,32 @@ export async function PATCH(
       )
     }
 
-    // If submitting for approval (PENDING_APPROVAL), check incomplete subtasks
-    if (status === 'PENDING_APPROVAL') {
-      const incompleteSubtasks = await prisma.subtask.findMany({
-        where: {
-          workOrderId: id,
-          status: { not: 'COMPLETED' }
-        }
+    // Required subtasks must be complete before submission/final completion.
+    // Optional subtasks do not block completion.
+    const hasIncompleteRequired = async () => {
+      const count = await prisma.subtask.count({
+        where: { workOrderId: id, status: { not: 'COMPLETED' }, required: true },
       })
-      if (incompleteSubtasks.length > 0) {
+      return count
+    }
+
+    // If submitting for approval (PENDING_APPROVAL), check incomplete required subtasks
+    if (status === 'PENDING_APPROVAL') {
+      const incomplete = await hasIncompleteRequired()
+      if (incomplete > 0) {
         return NextResponse.json(
-          { error: `Cannot submit: ${incompleteSubtasks.length} subtask(s) still incomplete` },
+          { error: `Cannot submit: ${incomplete} required subtask(s) still incomplete` },
           { status: 422 }
         )
       }
     }
 
-    // If final completion (COMPLETED from PENDING_APPROVAL), also check incomplete subtasks
-    if (status === 'COMPLETED' && wo.status === 'PENDING_APPROVAL') {
-      const incompleteSubtasks = await prisma.subtask.findMany({
-        where: {
-          workOrderId: id,
-          status: { not: 'COMPLETED' }
-        }
-      })
-      if (incompleteSubtasks.length > 0) {
+    // If completing (direct or via approval), check incomplete required subtasks
+    if (status === 'COMPLETED') {
+      const incomplete = await hasIncompleteRequired()
+      if (incomplete > 0) {
         return NextResponse.json(
-          { error: `Cannot complete: ${incompleteSubtasks.length} subtask(s) still incomplete` },
+          { error: `Cannot complete: ${incomplete} required subtask(s) still incomplete` },
           { status: 422 }
         )
       }

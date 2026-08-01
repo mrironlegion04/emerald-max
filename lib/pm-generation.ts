@@ -269,6 +269,7 @@ export async function generateWOsForSchedule(
             data: schedule.tasks.map(t => ({
               title:        t.title,
               order:        t.order,
+              required:     t.required,
               assignedToId: t.assignedToId ?? null,
               workOrderId:  wo.id,
               createdById:  options?.userId ?? null,

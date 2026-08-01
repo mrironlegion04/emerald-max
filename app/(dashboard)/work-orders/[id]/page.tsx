@@ -426,6 +426,7 @@ export default async function WorkOrderDetailPage({
               dueDate: s.dueDate ? s.dueDate.toISOString() : null,
               completedAt: s.completedAt ? s.completedAt.toISOString() : null,
               completionType: s.completionType ?? null,
+              required: s.required ?? true,
               createdAt: s.createdAt.toISOString(),
               workOrderId: s.workOrderId,
               assignedTo: s.assignedTo,

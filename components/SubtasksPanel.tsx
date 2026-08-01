@@ -13,6 +13,7 @@ interface Subtask {
   dueDate: string | null
   completedAt: string | null
   createdAt: string
+  required: boolean
   completionType: 'ASSIGNED' | 'ADMIN_OVERRIDE' | 'MANAGER_OVERRIDE' | null
   assignedTo: { id: string; name: string; email: string } | null
   assignedTeam: { id: string; name: string } | null
@@ -92,6 +93,7 @@ export default function SubtasksPanel({
     dueDate: '',
     assignedToId: '',
     assignedTeamId: '',
+    required: true,
   })
 
   // Load subtasks from API if not provided
@@ -136,6 +138,7 @@ export default function SubtasksPanel({
         workOrderId: woId,
         assignedToId: formData.assignedTeamId ? null : (formData.assignedToId || null),
         assignedTeamId: formData.assignedTeamId || null,
+        required: formData.required,
       }
 
       if (editingId) {
@@ -220,6 +223,7 @@ export default function SubtasksPanel({
       dueDate: subtask.dueDate ? new Date(subtask.dueDate).toISOString().split('T')[0] : '',
       assignedToId: subtask.assignedTo?.id || '',
       assignedTeamId: subtask.assignedTeam?.id || '',
+      required: subtask.required,
     })
     setEditingId(subtask.id)
     setShowForm(true)
@@ -233,6 +237,7 @@ export default function SubtasksPanel({
       dueDate: '',
       assignedToId: '',
       assignedTeamId: '',
+      required: true,
     })
     setEditingId(null)
     setShowForm(false)
@@ -357,6 +362,21 @@ export default function SubtasksPanel({
                 </select>
               </div>
             </div>
+
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={formData.required}
+                onChange={e => setFormData({ ...formData, required: e.target.checked })}
+                className="sr-only peer"
+              />
+              <span className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+              <span className="text-xs font-bold text-slate-700">
+                Required — {formData.required
+                  ? 'must be completed before the work order can be closed'
+                  : 'optional; does not block work order completion'}
+              </span>
+            </label>
 
             <div className="flex gap-2.5 pt-1">
               <button
@@ -501,6 +521,19 @@ export default function SubtasksPanel({
                               📅 Due {fmt(subtask.dueDate)}
                             </span>
                           )}
+
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              subtask.required
+                                ? 'bg-slate-50 text-slate-600 border-slate-200'
+                                : 'bg-gray-100 text-gray-400 border-gray-200'
+                            }`}
+                            title={subtask.required
+                              ? 'Required — must be completed before the work order can be closed'
+                              : 'Optional — does not block work order completion'}
+                          >
+                            {subtask.required ? '◆ Required' : '◇ Optional'}
+                          </span>
 
                           {subtask.assignedTeam && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">

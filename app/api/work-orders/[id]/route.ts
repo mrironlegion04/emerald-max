@@ -180,6 +180,15 @@ export async function PUT(
       if (!completionAccess.allowed) {
         return NextResponse.json({ error: completionAccess.reason }, { status: 403 })
       }
+      const incompleteRequired = await prisma.subtask.count({
+        where: { workOrderId: id, status: { not: 'COMPLETED' }, required: true },
+      })
+      if (incompleteRequired > 0) {
+        return NextResponse.json(
+          { error: `Cannot complete: ${incompleteRequired} required subtask(s) still incomplete` },
+          { status: 422 }
+        )
+      }
     }
 
     // Block edits on CLOSED work orders

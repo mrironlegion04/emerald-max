@@ -261,7 +261,7 @@ export default function UserDisplay({ user, userId }: UserDisplayProps) {
 
       {/* Back Link */}
       <div className="pt-4 border-t border-gray-200">
-        <Link href="/users" className="text-sm text-gray-600 hover:text-gray-900 font-medium">
+        <Link href="/teams?tab=users" className="text-sm text-gray-600 hover:text-gray-900 font-medium">
           ← Back to users
         </Link>
       </div>

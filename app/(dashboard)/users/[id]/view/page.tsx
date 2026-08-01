@@ -26,7 +26,7 @@ export default async function ViewUserPage({
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-4">
-        <a href="/users" className="text-sm text-gray-400 hover:text-gray-600">
+        <a href="/teams?tab=users" className="text-sm text-gray-400 hover:text-gray-600">
           ← Back to users
         </a>
       </div>

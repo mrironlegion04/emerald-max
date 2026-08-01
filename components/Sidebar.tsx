@@ -83,7 +83,7 @@ const navItems = [
 const managerItems = [
   {
     label: 'Users',
-    href: '/users',
+    href: '/teams?tab=users',
     icon: <Users className="w-4.5 h-4.5" />,
   },
   {

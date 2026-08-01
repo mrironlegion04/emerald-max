@@ -29,7 +29,7 @@ export default async function EditUserPage({
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-4 flex items-center justify-between">
-        <a href="/users" className="text-sm text-gray-400 hover:text-gray-600">
+        <a href="/teams?tab=users" className="text-sm text-gray-400 hover:text-gray-600">
           ← Back to users
         </a>
         <a href={`/users/${id}/view`} className="text-sm text-blue-600 hover:text-blue-800 font-medium">

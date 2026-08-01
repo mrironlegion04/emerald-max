@@ -10,7 +10,7 @@ export default async function NewUserPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-1">
-        <Link href="/users" className="text-sm text-gray-400 hover:text-gray-600">← Back to users</Link>
+        <Link href="/teams?tab=users" className="text-sm text-gray-400 hover:text-gray-600">← Back to users</Link>
       </div>
       <PageHeader title="Add new user" subtitle="Create a login account for a team member." />
       <UserForm />

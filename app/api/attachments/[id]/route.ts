@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { deleteFile } from '@/lib/minio'
+import { canEditWorkOrder, canWriteToAssets } from '@/lib/access-control'
 
 /**
  * Check if MinIO is configured
@@ -40,6 +41,18 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params
     const attachment = await prisma.attachment.findUnique({ where: { id } })
     if (!attachment) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Plant isolation: the attachment's entity must be within the user's scope
+    if (attachment.workOrderId) {
+      const access = await canEditWorkOrder(user, attachment.workOrderId)
+      if (!access.allowed) {
+        return NextResponse.json({ error: access.reason ?? 'Forbidden' }, { status: 403 })
+      }
+    } else if (attachment.assetId) {
+      if (!(await canWriteToAssets(user, [attachment.assetId]))) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     const useMinIO = isMinioConfigured()
 

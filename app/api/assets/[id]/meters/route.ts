@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
+import { buildLocationFilter, canWriteToAssets } from '@/lib/access-control'
 import { z } from 'zod'
 
 const createMeterSchema = z.object({
@@ -28,6 +29,11 @@ export async function GET(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!asset.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(asset.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const meters = await prisma.meter.findMany({
       where: { assetId: id, deletedAt: null },
@@ -62,6 +68,9 @@ export async function POST(
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     if (asset.isDeleted) {
       return NextResponse.json({ error: 'Cannot add meters to a deleted asset' }, { status: 400 })
+    }
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const result = await prisma.$transaction(async (tx: any) => {

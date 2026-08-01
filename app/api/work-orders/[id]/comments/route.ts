@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { createNotificationForUsers } from '@/lib/notifications'
+import { canViewWorkOrder } from '@/lib/access-control'
 import { z } from 'zod'
 
 const commentSchema = z.object({
@@ -17,6 +18,11 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
+    const viewAccess = await canViewWorkOrder(user, id)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const comments = await prisma.workOrderComment.findMany({
       where:   { workOrderId: id },
       orderBy: { createdAt: 'asc' },
@@ -40,9 +46,14 @@ export async function POST(
     const body = await request.json()
     const { content } = commentSchema.parse(body)
 
-    // Verify WO exists
+    // Verify WO exists and is viewable
     const wo = await prisma.workOrder.findUnique({ where: { id } })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
+
+    const viewAccess = await canViewWorkOrder(user, id)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     if (['CLOSED', 'CANCELLED'].includes(wo.status)) {
       return NextResponse.json({ error: 'Cannot comment on a closed or cancelled work order' }, { status: 403 })
@@ -71,7 +82,7 @@ export async function POST(
           id: { not: user.userId },
           name: { contains: mentionedNames.join(' OR '), mode: 'insensitive' },
         },
-        select: { id: true, name: true },
+        select: { id: true, name: true, role: true },
       })
 
       // More precise matching: check each name individually
@@ -84,15 +95,26 @@ export async function POST(
       }
 
       if (matchedUserIds.length > 0) {
-        await createNotificationForUsers(
-          matchedUserIds,
-          {
-            type: 'CHAT',
-            title: `${user.name} mentioned you in ${wo.woNumber}`,
-            message: content.slice(0, 100),
-            href: `/work-orders/${id}`,
-          },
-        )
+        // Only notify users who can actually view this work order
+        const viewableIds: string[] = []
+        for (const uid of matchedUserIds) {
+          const mentioned = mentionedUsers.find(u => u.id === uid)
+          if (!mentioned) continue
+          const access = await canViewWorkOrder({ userId: uid, role: mentioned.role }, id)
+          if (access.allowed) viewableIds.push(uid)
+        }
+
+        if (viewableIds.length > 0) {
+          await createNotificationForUsers(
+            viewableIds,
+            {
+              type: 'CHAT',
+              title: `${user.name} mentioned you in ${wo.woNumber}`,
+              message: content.slice(0, 100),
+              href: `/work-orders/${id}`,
+            },
+          )
+        }
       }
     }
 

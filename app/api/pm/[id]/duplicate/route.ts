@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
+import { buildLocationFilter } from '@/lib/access-control'
 
 export async function POST(
   _req: NextRequest,
@@ -21,6 +22,11 @@ export async function POST(
 
     if (!existing) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Calculate new due date = today + interval

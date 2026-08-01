@@ -13,7 +13,7 @@ import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
 import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
-import { canEditWorkOrder } from '@/lib/access-control'
+import { canEditWorkOrder, canViewWorkOrder, getUserLocationIds } from '@/lib/access-control'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
 const statusLabels = WO_STATUS_LABELS
@@ -42,7 +42,6 @@ export default async function WorkOrderDetailPage({
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await getCurrentUser()
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const wo = await prisma.workOrder.findUnique({
     where: { id },
@@ -66,12 +65,34 @@ export default async function WorkOrderDetailPage({
 
   if (!wo) notFound()
 
+  // Plant isolation: page-level view guard (cross-plant WOs render as 404)
+  if (user && !(await canViewWorkOrder(user, wo.id)).allowed) notFound()
+
   const crewCanEdit = user ? (await canEditWorkOrder(user, wo.id)).allowed : false
+  const canEdit = crewCanEdit
 
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
-  const allUsers = await prisma.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
+  const allowedIds = user ? await getUserLocationIds(user.userId) : null
+  const allUsers = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      ...(allowedIds
+        ? { OR: [{ userLocations: { some: { locationId: { in: allowedIds } } } }, { role: 'ADMIN' }] }
+        : {}),
+    },
+    orderBy: { name: 'asc' },
+  })
   const allDomains = await prisma.maintenanceDomain.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
-  const allTeams = await prisma.team.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
+  const allTeams = await prisma.team.findMany({
+    where: {
+      isActive: true,
+      ...(allowedIds
+        ? { members: { some: { user: { userLocations: { some: { locationId: { in: allowedIds } } } } } } }
+        : {}),
+    },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  })
 
   const isOverdue =
     wo.dueDate && new Date(wo.dueDate) < new Date() &&

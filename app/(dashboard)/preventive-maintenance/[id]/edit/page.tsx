@@ -57,6 +57,11 @@ export default async function EditPMPage({
 
   if (!schedule) notFound()
 
+  // Plant isolation: only users who can write to THIS schedule's location may reach the edit form
+  if (user && scopeIds && (!schedule.locationId || !scopeIds.includes(schedule.locationId))) {
+    redirect(`/preventive-maintenance/${id}`)
+  }
+
   const initialData = {
     title:               schedule.title,
     description:         schedule.description  ?? '',

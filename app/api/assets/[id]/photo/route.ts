@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import { canWriteToAssets } from '@/lib/access-control'
 import {
   uploadFile,
   getPresignedUrl,
@@ -47,6 +48,9 @@ export async function POST(
     // Verify asset exists
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const formData = await req.formData()
     const file = formData.get('photo') as File | null
@@ -174,6 +178,9 @@ export async function DELETE(
     // Verify asset exists
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Update asset to remove photo
     const updatedAsset = await prisma.asset.update({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { getUserLocationIds } from '@/lib/access-control'
 
 // Minimal QR code generator — encodes URL into a QR matrix using pure TypeScript
 // Uses the qrcode library (npm install qrcode @types/qrcode)
@@ -15,8 +16,13 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id }   = await params
-    const asset    = await prisma.asset.findUnique({ where: { id }, select: { name: true, assetCode: true } })
+    const asset    = await prisma.asset.findUnique({ where: { id }, select: { name: true, assetCode: true, locationId: true } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+
+    const locationIds = await getUserLocationIds(user.userId)
+    if (locationIds && (!asset.locationId || !locationIds.includes(asset.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const format = new URL(request.url).searchParams.get('format') ?? 'svg'
     const raw    = new URL(request.url).searchParams.get('raw') === 'true'

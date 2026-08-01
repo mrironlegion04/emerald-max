@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const woFilter = await buildWOVisibilityFilter(user)
+    const pmFilter = await buildLocationFilter(user)
+    const woWhere = (extra: Record<string, unknown> = {}) => ({ ...(woFilter ?? {}), ...extra })
 
     const { searchParams } = new URL(request.url)
     const months = parseInt(searchParams.get('months') ?? '6')
@@ -25,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // All WOs in range
     const wos = await prisma.workOrder.findMany({
-      where: { createdAt: { gte: rangeStart } },
+      where: woWhere({ createdAt: { gte: rangeStart } }),
       select: {
         id: true, status: true, type: true, priority: true,
         createdAt: true, completedAt: true, dueDate: true,
@@ -61,9 +66,9 @@ export async function GET(request: NextRequest) {
 
     // ── WO by status (current snapshot) ──────────────────────────────────────
     const [statusCounts, typeCounts, priorityCounts] = await Promise.all([
-      prisma.workOrder.groupBy({ by: ['status'],   _count: true }),
-      prisma.workOrder.groupBy({ by: ['type'],     _count: true }),
-      prisma.workOrder.groupBy({ by: ['priority'], _count: true }),
+      prisma.workOrder.groupBy({ by: ['status'],   _count: true, where: woFilter ?? undefined }),
+      prisma.workOrder.groupBy({ by: ['type'],     _count: true, where: woFilter ?? undefined }),
+      prisma.workOrder.groupBy({ by: ['priority'], _count: true, where: woFilter ?? undefined }),
     ])
 
     // ── Completion rate by month ──────────────────────────────────────────────
@@ -94,9 +99,10 @@ export async function GET(request: NextRequest) {
       .slice(0, 8)
 
     // ── PM compliance ─────────────────────────────────────────────────────────
+    const pmWhere = (extra: Record<string, unknown> = {}) => ({ ...(pmFilter ?? {}), ...extra })
     const [totalPM, overduePM] = await Promise.all([
-      prisma.maintenanceSchedule.count({ where: { isActive: true } }),
-      prisma.maintenanceSchedule.count({ where: { isActive: true, nextDueDate: { lt: now } } }),
+      prisma.maintenanceSchedule.count({ where: pmWhere({ isActive: true }) }),
+      prisma.maintenanceSchedule.count({ where: pmWhere({ isActive: true, nextDueDate: { lt: now } }) }),
     ])
     const pmCompliance = totalPM > 0
       ? Math.round(((totalPM - overduePM) / totalPM) * 100)
@@ -104,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     // ── Overdue WOs ───────────────────────────────────────────────────────────
     const overdueWOs = await prisma.workOrder.findMany({
-      where: { status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: now } },
+      where: woWhere({ status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: now } }),
       include: {
         asset:      { select: { name: true } },
         assignedTo: { select: { name: true } },

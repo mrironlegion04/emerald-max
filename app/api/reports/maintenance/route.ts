@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { buildWOVisibilityFilter, getAllowedPlantIds, getUserLocationIds } from '@/lib/access-control'
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,9 +25,14 @@ export async function GET(req: NextRequest) {
       from.setMonth(from.getMonth() - 3)
     }
 
+    const woFilter = await buildWOVisibilityFilter(user)
+    const allowedLocationIds = await getUserLocationIds(user.userId)
+    const allowedPlantSet = new Set(await getAllowedPlantIds(user))
+
     // Get all work orders in the date range
     const allWorkOrders = await prisma.workOrder.findMany({
       where: {
+        ...(woFilter ?? {}),
         createdAt: { gte: from, lte: to },
       },
       include: {
@@ -55,7 +61,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter only top-level parent locations
-    const parentLocations = locations.filter(loc => !loc.parentId)
+    const allParentLocations = locations.filter(loc => !loc.parentId)
+    const parentLocations = allowedLocationIds
+      ? allParentLocations.filter(loc => allowedPlantSet.has(loc.id))
+      : allParentLocations
 
     // Calculate aggregates across ALL work orders to be 100% accurate
     const summary = {

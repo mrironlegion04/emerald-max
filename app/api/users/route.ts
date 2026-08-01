@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hashPassword } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
+import { getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -26,7 +27,12 @@ export async function GET() {
     if (!user || !(await hasPermission(user, 'user:read'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
+    // Plant-scoped users only see the directory entries for their plants (plus platform admins)
+    const allowedIds = await getUserLocationIds(user.userId)
     const users = await prisma.user.findMany({
+      where: allowedIds
+        ? { OR: [{ userLocations: { some: { locationId: { in: allowedIds } } } }, { role: 'ADMIN' }] }
+        : undefined,
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,

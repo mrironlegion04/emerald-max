@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 
 function escapeCSV(val: unknown): string {
@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
       csv = toCSV(headers, rows)
 
     } else if (type === 'pm-schedules') {
-      const where: Record<string, unknown> = {}
+      const locationFilter = await buildLocationFilter(user)
+      const where: Record<string, unknown> = { ...(locationFilter ?? {}) }
       const assetId  = sp.get('assetId')
       const isActive = sp.get('isActive')
       const freq     = sp.get('frequency')
@@ -151,7 +152,9 @@ export async function GET(request: NextRequest) {
       csv = toCSV(headers, rows)
 
     } else if (type === 'assets') {
+      const locationFilter = await buildLocationFilter(user)
       const assets = await prisma.asset.findMany({
+        where: { ...(locationFilter ?? {}) },
         include: {
           category: { select: { name: true } },
           location: { select: { name: true } },

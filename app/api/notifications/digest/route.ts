@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendOverdueDigest } from '@/lib/email'
+import { getUserLocationIds } from '@/lib/access-control'
 
 // This route is meant to be called by a cron job or manually.
 // Protect with a secret token so it can't be called by anyone.
@@ -26,23 +27,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No overdue work orders — digest not sent' })
     }
 
-    // Find all admins and managers to notify
+    // Find all admins and managers to notify.
+    // Plant-scoped managers only receive overdue work orders from their own plants.
     const managers = await prisma.user.findMany({
       where: { isActive: true, role: { in: ['ADMIN','MANAGER'] } },
-      select: { name: true, email: true },
+      select: { id: true, name: true, email: true },
     })
-
-    const items = overdueWOs.map(w => ({
-      woNumber:   w.woNumber,
-      title:      w.title,
-      daysOverdue: w.dueDate
-        ? Math.ceil((now.getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
-        : 0,
-      assignedTo: w.assignedTo?.name ?? null,
-    }))
 
     let sent = 0
     for (const mgr of managers) {
+      const scope = await getUserLocationIds(mgr.id)
+      const scopedWOs = scope
+        ? overdueWOs.filter(w => w.locationId && scope.includes(w.locationId))
+        : overdueWOs
+
+      if (scopedWOs.length === 0) continue
+
+      const items = scopedWOs.map(w => ({
+        woNumber:   w.woNumber,
+        title:      w.title,
+        daysOverdue: w.dueDate
+          ? Math.ceil((now.getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 0,
+        assignedTo: w.assignedTo?.name ?? null,
+      }))
+
       try {
         await sendOverdueDigest({ toEmail: mgr.email, toName: mgr.name, overdueItems: items })
         sent++

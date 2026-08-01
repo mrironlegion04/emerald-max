@@ -1,11 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildWOVisibilityFilter, canViewWorkOrder, getUserLocationIds } from '@/lib/access-control'
 import { Prisma } from '@prisma/client'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { deleteFile } from '@/lib/minio'
+
+// Plant isolation: verify the user may access the entity a channel is attached to
+async function canAccessChatChannel(channelId: string, userId: string, role: string): Promise<string | null> {
+  if (channelId.startsWith('WO_')) {
+    const woId = channelId.substring(3)
+    const access = await canViewWorkOrder({ userId, role: role as any }, woId)
+    return access.allowed ? null : 'You do not have access to this work order channel'
+  }
+  if (channelId.startsWith('TEAM_')) {
+    const teamId = channelId.substring(5)
+    const isMember = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId } },
+    })
+    if (isMember) return null
+    const allowedIds = await getUserLocationIds(userId)
+    if (!allowedIds) {
+      return role === 'ADMIN' || role === 'MANAGER' ? null : 'You are not a member of this team channel'
+    }
+    const inScope = await prisma.teamMember.count({
+      where: { teamId, user: { userLocations: { some: { locationId: { in: allowedIds } } } } },
+    })
+    return inScope > 0 ? null : 'You are not a member of this team channel'
+  }
+  if (channelId.startsWith('DIRECT_')) {
+    const parts = channelId.replace('DIRECT_', '').split('_')
+    return parts.includes(userId) ? null : 'You are not a participant of this direct channel'
+  }
+  return null
+}
 
 // Helper to check if channel exists and dynamically create it if it doesn't
 async function ensureChannelExists(channelId: string, currentUserId: string): Promise<boolean> {
@@ -160,9 +189,21 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
     const teamIds = userTeams.map(m => m.teamId)
 
     // Technicians see their teams; managers/admins see all teams
-    const teamsToSync = role === 'ADMIN' || role === 'MANAGER'
+    // Plant-scoped managers see only teams with at least one member at their plants
+    const allowedIds = await getUserLocationIds(userId)
+    const teamsToSync = role === 'ADMIN'
       ? await prisma.team.findMany({ where: { isDeleted: false }, select: { id: true, name: true } })
-      : await prisma.team.findMany({ where: { id: { in: teamIds }, isDeleted: false }, select: { id: true, name: true } })
+      : role === 'MANAGER'
+        ? allowedIds
+          ? await prisma.team.findMany({
+              where: {
+                isDeleted: false,
+                members: { some: { user: { userLocations: { some: { locationId: { in: allowedIds } } } } } },
+              },
+              select: { id: true, name: true },
+            })
+          : await prisma.team.findMany({ where: { isDeleted: false }, select: { id: true, name: true } })
+        : await prisma.team.findMany({ where: { id: { in: teamIds }, isDeleted: false }, select: { id: true, name: true } })
 
     for (const team of teamsToSync) {
       const teamChannelId = `TEAM_${team.id}`
@@ -235,9 +276,16 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
       })
     }
 
-    // 4. Sync Other Users as standard DIRECT DMs
+    // 4. Sync Other Users as standard DIRECT DMs (scoped to the user's plants)
+    const allowedIdsForDm = await getUserLocationIds(userId)
     const otherUsers = await prisma.user.findMany({
-      where: { isActive: true, id: { not: userId } },
+      where: {
+        isActive: true,
+        id: { not: userId },
+        ...(allowedIdsForDm
+          ? { OR: [{ userLocations: { some: { locationId: { in: allowedIdsForDm } } } }, { role: 'ADMIN' }] }
+          : {}),
+      },
       select: { id: true, name: true, role: true, email: true },
       take: 50,
     })
@@ -269,6 +317,53 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
         update: {},
         create: { channelId: dmChannelId, userId: other.id },
       })
+    }
+
+    // 5. Revoke stale memberships (plant isolation cleanup for pre-hardening data)
+    if (allowedIds) {
+      const myMemberships = await prisma.chatChannelMember.findMany({
+        where: { userId },
+        select: { channelId: true },
+      })
+      const revoke: string[] = []
+
+      for (const m of myMemberships) {
+        const cid = m.channelId
+        if (cid.startsWith('DIRECT_')) {
+          const ids = cid.replace('DIRECT_', '').split('_').filter(Boolean)
+          const partnerId = ids.find(id => id !== userId)
+          if (!partnerId) { revoke.push(cid); continue }
+          const partner = await prisma.user.findUnique({
+            where: { id: partnerId },
+            select: { role: true, userLocations: { select: { locationId: true } } },
+          })
+          if (!partner) { revoke.push(cid); continue }
+          if (partner.role === 'ADMIN') continue
+          const partnerInScope = partner.userLocations.some(loc => allowedIds.includes(loc.locationId))
+          if (!partnerInScope) revoke.push(cid)
+        } else if (cid.startsWith('WO_')) {
+          const woId = cid.substring(3)
+          const access = await canViewWorkOrder({ userId, role: role as any }, woId)
+          if (!access.allowed) revoke.push(cid)
+        } else if (cid.startsWith('TEAM_')) {
+          const teamId = cid.substring(5)
+          const isMember = await prisma.teamMember.findUnique({
+            where: { teamId_userId: { teamId, userId } },
+          })
+          if (isMember) continue
+          if (role === 'ADMIN' || role === 'MANAGER') continue
+          const inScope = await prisma.teamMember.count({
+            where: { teamId, user: { userLocations: { some: { locationId: { in: allowedIds } } } } },
+          })
+          if (inScope === 0) revoke.push(cid)
+        }
+      }
+
+      if (revoke.length > 0) {
+        await prisma.chatChannelMember.deleteMany({
+          where: { channelId: { in: revoke }, userId },
+        })
+      }
     }
   } catch (err) {
     console.error('ensureStaticAndDirectChannels discrepancy:', err)
@@ -390,6 +485,12 @@ export async function GET(req: NextRequest) {
     const channelId = searchParams.get('channel') || 'GENERAL'
     const parentId = searchParams.get('parentId') || undefined // For threaded replies
     const limit = parseInt(searchParams.get('limit') || '50', 10)
+
+    // Plant isolation: verify the user may access the channel's underlying entity
+    const accessError = await canAccessChatChannel(channelId, user.userId, user.role)
+    if (accessError) {
+      return NextResponse.json({ error: accessError }, { status: 403 })
+    }
 
     // Update read receipt state to "now" since they are viewing this room (only if fetching room feed, not thread feed)
     if (!parentId) {
@@ -514,6 +615,12 @@ export async function POST(req: NextRequest) {
     // 2. Normal Message transmission
     if ((!content || !content.trim()) && !mediaUrl) {
       return NextResponse.json({ error: 'Content or media is required' }, { status: 400 })
+    }
+
+    // Plant isolation: verify the user may send to the channel's underlying entity
+    const sendAccessError = await canAccessChatChannel(channelId, user.userId, user.role)
+    if (sendAccessError) {
+      return NextResponse.json({ error: sendAccessError }, { status: 403 })
     }
 
     // Ensure target chat room persists in DB

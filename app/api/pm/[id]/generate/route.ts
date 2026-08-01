@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { generateWOsForSchedule } from '@/lib/pm-generation'
 import { writeAudit } from '@/lib/audit'
+import { prisma } from '@/lib/db'
+import { buildLocationFilter } from '@/lib/access-control'
 
 export async function POST(
   _req: NextRequest,
@@ -15,6 +17,19 @@ export async function POST(
     }
 
     const { id } = await params
+
+    const schedule = await prisma.maintenanceSchedule.findUnique({
+      where: { id },
+      select: { locationId: true },
+    })
+    if (!schedule) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!schedule.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(schedule.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const result = await generateWOsForSchedule(id, { userId: user.userId })
 
     if (result.errors.length > 0 && result.workOrderIds.length === 0) {

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const visibilityFilter = await buildWOVisibilityFilter(user)
+  const pmFilter = await buildLocationFilter(user)
 
   const { searchParams } = new URL(req.url)
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.maintenanceSchedule.findMany({
-      where: { isActive: true, nextDueDate: { gte: start, lte: end } },
+      where: { ...(pmFilter ?? {}), isActive: true, nextDueDate: { gte: start, lte: end } },
       select: {
         id: true,
         title: true,

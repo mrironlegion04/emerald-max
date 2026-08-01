@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUser } from '@/lib/session'
 import { verifyFace, checkFaceServiceHealth, fileToBuffer } from '@/lib/face-service'
 
 export async function POST(request: NextRequest) {
   try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     // Check if face service is available
     const isHealthy = await checkFaceServiceHealth()
     if (!isHealthy) {

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
+import { buildLocationFilter, canWriteToAssets } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateMeterSchema = z.object({
@@ -29,6 +30,11 @@ export async function GET(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!asset.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(asset.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const meter = await prisma.meter.findFirst({
       where: { id: meterId, assetId: id, deletedAt: null },
@@ -62,6 +68,9 @@ export async function PUT(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const existing = await prisma.meter.findFirst({
       where: { id: meterId, assetId: id, deletedAt: null },
@@ -150,6 +159,9 @@ export async function DELETE(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const meter = await prisma.meter.findFirst({
       where: { id: meterId, assetId: id, deletedAt: null },

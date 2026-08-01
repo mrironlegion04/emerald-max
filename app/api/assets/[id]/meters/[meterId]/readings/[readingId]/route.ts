@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
+import { canWriteToAssets } from '@/lib/access-control'
 import { z } from 'zod'
 
 const statusUpdateSchema = z.object({
@@ -23,6 +24,10 @@ export async function PATCH(
     const { id, meterId, readingId } = await params
     const body = await request.json()
     const data = statusUpdateSchema.parse(body)
+
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const reading = await prisma.meterReading.findFirst({
       where: { id: readingId, meterId, assetId: id },

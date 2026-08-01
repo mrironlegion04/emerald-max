@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { canWriteToAssets } from '@/lib/access-control'
 
 export async function DELETE(
   request: NextRequest,
@@ -14,6 +15,9 @@ export async function DELETE(
     }
 
     const { id, partId } = await params
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     await prisma.assetPart.delete({
       where: {

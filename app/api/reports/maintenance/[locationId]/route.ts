@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { hasPermission } from '@/lib/permissions'
+import { buildWOVisibilityFilter, getUserLocationIds } from '@/lib/access-control'
 
 export async function GET(
   req: NextRequest,
@@ -39,6 +40,12 @@ export async function GET(
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
 
+    // Plant-scoped users may only view reports for locations within their scope
+    const allowedLocationIds = await getUserLocationIds(user.userId)
+    if (allowedLocationIds && !allowedLocationIds.includes(locationId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Fetch all locations to get parent relations
     const allLocations = await prisma.location.findMany({
       select: { id: true, parentId: true }
@@ -56,9 +63,12 @@ export async function GET(
 
     const descendantIds = getDescendantIds(locationId, allLocations)
 
+    const woFilter = await buildWOVisibilityFilter(user)
+
     // Get all work orders for this location and all sublocations (through assets)
     const workOrders = await prisma.workOrder.findMany({
       where: {
+        ...(woFilter ?? {}),
         asset: { locationId: { in: descendantIds } },
         createdAt: { gte: from, lte: to },
       },

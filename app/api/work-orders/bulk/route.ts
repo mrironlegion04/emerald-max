@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
 import { z } from 'zod'
 
 const bulkSchema = z.object({
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { ids, action, technicianId, status } = bulkSchema.parse(body)
 
+    // Only operate on work orders the user can view/edit (plant isolation)
+    const visibilityFilter = await buildWOVisibilityFilter(user)
+    const scopedWhere = { id: { in: ids }, ...(visibilityFilter ?? {}) }
+
     if (action === 'assign') {
       if (!technicianId) {
         return NextResponse.json({ error: 'Technician ID required' }, { status: 400 })
@@ -34,13 +39,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Technician not found' }, { status: 404 })
       }
 
-      // Bulk assign
-      await prisma.workOrder.updateMany({
-        where: { id: { in: ids } },
+      // Bulk assign (scoped to the user's visible work orders)
+      const result = await prisma.workOrder.updateMany({
+        where: scopedWhere,
         data: { assignedToId: technicianId },
       })
 
-      return NextResponse.json({ success: true, updated: ids.length })
+      return NextResponse.json({ success: true, updated: result.count })
     }
 
     if (action === 'status') {
@@ -49,18 +54,18 @@ export async function POST(request: NextRequest) {
       }
 
       // Only allow certain transitions
-      await prisma.workOrder.updateMany({
-        where: { id: { in: ids } },
+      const result = await prisma.workOrder.updateMany({
+        where: scopedWhere,
         data: { status },
       })
 
-      return NextResponse.json({ success: true, updated: ids.length })
+      return NextResponse.json({ success: true, updated: result.count })
     }
 
     if (action === 'export') {
-      // Get WO data for export
+      // Get WO data for export (scoped to the user's visible work orders)
       const workOrders = await prisma.workOrder.findMany({
-        where: { id: { in: ids } },
+        where: scopedWhere,
         include: {
           asset: { select: { name: true } },
           assignedTo: { select: { name: true } },

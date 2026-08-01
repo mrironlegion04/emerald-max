@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter, canWriteToAssets } from '@/lib/access-control'
 
 /**
  * Backward-compatibility shim for the old single-meter-per-asset API.
@@ -35,6 +36,11 @@ export async function GET(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!asset.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(asset.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const meter = await getPrimaryMeter(id)
     if (!meter) {
@@ -80,6 +86,9 @@ export async function POST(
 
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const meter = await getPrimaryMeter(id)
     if (!meter) {

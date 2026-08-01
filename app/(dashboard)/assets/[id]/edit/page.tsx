@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { getWriteScopeIds } from '@/lib/access-control'
+import { getWriteScopeIds, canWriteToAssets } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -51,6 +51,9 @@ export default async function EditAssetPage({
   ])
 
   if (!asset) notFound()
+
+  // Plant isolation: only users who can write to THIS asset may reach the edit form
+  if (user && !(await canWriteToAssets(user, [asset.id]))) redirect(`/assets/${id}`)
 
   const initialData = {
     name:         asset.name,

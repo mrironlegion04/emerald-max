@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import PrintButton from '@/components/PrintButton'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
+import { canViewWorkOrder } from '@/lib/access-control'
 
 const typeLabels: Record<string, string> = {
   BREAKDOWN: 'Breakdown', PREVENTIVE: 'Preventive', PREDICTIVE: 'Predictive',
@@ -34,6 +35,9 @@ export default async function WorkOrderPrintPage({
   })
 
   if (!wo) notFound()
+
+  // Plant isolation: cross-plant WOs render as 404 on the print view too
+  if (user && !(await canViewWorkOrder(user, wo.id)).allowed) notFound()
 
   const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
   const isOverdue =

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { getPickerScope, getWriteScopeIds } from '@/lib/access-control'
+import { getPickerScope, getWriteScopeIds, canEditWorkOrder } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -63,6 +63,9 @@ export default async function EditWorkOrderPage({
 
   if (!wo) notFound()
   if (wo.status === 'CLOSED') redirect(`/work-orders/${id}`)
+
+  // Plant isolation: only editors of THIS work order may reach the edit form
+  if (user && !(await canEditWorkOrder(user, wo.id)).allowed) redirect(`/work-orders/${id}`)
 
   const selectedAssetIds = wo.assets.map((a: any) => a.assetId)
 

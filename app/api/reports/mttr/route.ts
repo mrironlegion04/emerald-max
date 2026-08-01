@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildWOVisibilityFilter } from '@/lib/access-control'
 
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const woFilter = await buildWOVisibilityFilter(user)
+
   // Get all completed breakdown WOs with timing data, grouped by asset
   const wos = await prisma.workOrder.findMany({
     where: {
+      ...(woFilter ?? {}),
       status: 'COMPLETED',
       type: 'BREAKDOWN',
       assetId: { not: null },

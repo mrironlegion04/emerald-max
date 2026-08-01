@@ -559,3 +559,19 @@ export async function canAssignTeams(
   }
   return true
 }
+
+/**
+ * Check that an asset is within the user's full view scope (union of all their
+ * plant assignments — not the narrowed "active plant" focus).
+ */
+export async function canViewAsset(user: User, assetId: string): Promise<boolean> {
+  const locationIds = await getUserLocationIds(user.userId)
+  if (!locationIds) return true
+
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: { locationId: true },
+  })
+  if (!asset) return false
+  return !!asset.locationId && locationIds.includes(asset.locationId)
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { getUserLocationIds } from '@/lib/access-control'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,10 +15,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
+    // Plant-scoped users only get mention suggestions from their plants (plus platform admins)
+    const allowedIds = await getUserLocationIds(user.userId)
+
     const users = await prisma.user.findMany({
       where: {
         isActive: true,
         name: { contains: q, mode: 'insensitive' },
+        ...(allowedIds
+          ? { OR: [{ userLocations: { some: { locationId: { in: allowedIds } } } }, { role: 'ADMIN' }] }
+          : {}),
       },
       select: { id: true, name: true, email: true, role: true },
       orderBy: { name: 'asc' },

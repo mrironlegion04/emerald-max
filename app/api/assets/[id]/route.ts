@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
-import { canAssignUsers, canWriteToLocations } from '@/lib/access-control'
+import { canAssignUsers, canViewAsset, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -33,6 +33,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const asset = await prisma.asset.findUnique({
       where: { id },
@@ -49,6 +52,9 @@ export async function GET(
       },
     })
     if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!(await canViewAsset(user, id))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     return NextResponse.json(asset)
   } catch (error) {
     console.error(error)
@@ -74,6 +80,9 @@ export async function PUT(
     if (!existingAsset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     if (existingAsset.isDeleted) {
       return NextResponse.json({ error: 'Cannot edit a deleted asset. Restore it first.' }, { status: 400 })
+    }
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check asset code uniqueness if changed
@@ -193,6 +202,9 @@ export async function DELETE(
     // Fetch asset for audit
     const asset = await prisma.asset.findUnique({ where: { id } })
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     if (asset.isDeleted) {
       return NextResponse.json({ error: 'Asset is already archived' }, { status: 400 })
@@ -258,6 +270,9 @@ export async function PATCH(
     if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     if (!asset.isDeleted) {
       return NextResponse.json({ error: 'Asset is not deleted' }, { status: 400 })
+    }
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const restored = await prisma.asset.update({

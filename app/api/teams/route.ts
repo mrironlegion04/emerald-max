@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -17,7 +18,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const showDeleted = searchParams.get('showDeleted') === 'true'
 
-  const where = showDeleted ? {} : { isDeleted: false }
+  const where: Record<string, unknown> = showDeleted ? {} : { isDeleted: false }
+
+  // Plant-scoped users only see teams that have at least one member at their plants
+  const allowedIds = await getUserLocationIds(user.userId)
+  if (allowedIds && !showDeleted) {
+    where.members = {
+      some: { user: { userLocations: { some: { locationId: { in: allowedIds } } } } },
+    }
+  }
 
   const teams = await prisma.team.findMany({
     where,

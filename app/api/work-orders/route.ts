@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
-import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
+import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations, getUserLocationIds } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import {
@@ -206,6 +206,9 @@ export async function POST(request: NextRequest) {
         include: { user: true },
       })
       for (const member of teamMembers) {
+        // Plant isolation: only notify team members whose scope covers this work order
+        const memberScope = await getUserLocationIds(member.user.id)
+        if (memberScope && (!wo.locationId || !memberScope.includes(wo.locationId))) continue
         await createNotification({
           userId: member.user.id,
           title: `WO ${wo.woNumber} Assigned to Your Team`,

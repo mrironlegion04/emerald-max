@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter } from '@/lib/access-control'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const locationFilter = await buildLocationFilter(user)
 
     const { searchParams } = request.nextUrl
     const assetId = searchParams.get('assetId')
@@ -20,6 +23,7 @@ export async function GET(request: NextRequest) {
     if (assetId) where.assetId = assetId
     if (meterType) where.meterType = meterType
     if (unit) where.unit = unit
+    if (locationFilter) where.asset = locationFilter
 
     const [meters, totalCount] = await Promise.all([
       prisma.meter.findMany({

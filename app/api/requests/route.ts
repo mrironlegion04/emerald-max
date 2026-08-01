@@ -13,6 +13,9 @@ const schema = z.object({
 })
 
 export async function GET() {
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const requests = await prisma.maintenanceRequest.findMany({
     orderBy: { createdAt: 'desc' },
     include: { workOrder: { select: { id: true, woNumber: true } } },
@@ -23,15 +26,16 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const data = schema.parse(await req.json())
-    const user = await getCurrentUser().catch(() => null)
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const request = await prisma.maintenanceRequest.create({
       data: {
         title: data.title, description: data.description,
-        location: data.location || null, requesterName: user?.name ?? data.requesterName ?? 'Anonymous',
-        requesterEmail: user?.email ?? (data.requesterEmail || null), requesterPhone: data.requesterPhone || null,
+        location: data.location || null, requesterName: user.name,
+        requesterEmail: user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority,
-        requesterId: user?.userId ?? null,
+        requesterId: user.userId,
       },
     })
 
@@ -40,9 +44,9 @@ export async function POST(req: NextRequest) {
       entity: 'Request',
       entityId: request.id,
       entityName: request.title,
-      userId: user?.userId,
-      userName: user?.name ?? request.requesterName,
-      userEmail: user?.email ?? request.requesterEmail ?? undefined,
+      userId: user.userId,
+      userName: user.name,
+      userEmail: user.email,
     })
 
     return NextResponse.json(request, { status: 201 })

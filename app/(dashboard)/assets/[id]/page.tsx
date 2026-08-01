@@ -17,6 +17,7 @@ import AssetTabs from '@/components/AssetTabs'
 import MeterListPanel from '@/components/MeterListPanel'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
 import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
+import { canViewAsset, canWriteToAssets } from '@/lib/access-control'
 
 function formatDate(date: Date | string | null) {
   if (!date) return '—'
@@ -48,7 +49,6 @@ export default async function AssetDetailPage({
 }) {
   const { id } = await params
   const user = await getCurrentUser()
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const asset = await prisma.asset.findUnique({
     where: { id },
@@ -89,6 +89,11 @@ export default async function AssetDetailPage({
   })
 
   if (!asset) notFound()
+
+  // Plant isolation: page-level view guard (cross-plant assets render as 404)
+  if (user && !(await canViewAsset(user, asset.id))) notFound()
+
+  const canEdit = user ? await canWriteToAssets(user, [asset.id]) : false
 
   // Parts usage history: find WOs linked to this asset, then their parts
   const assetWOIds = await prisma.workOrderAsset.findMany({

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { generateWONumber } from '@/lib/wo-number'
+import { canAssignUsers, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
 
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split('\n').map(l => l.replace(/\r/g, ''))
@@ -88,6 +89,13 @@ export async function POST(request: NextRequest) {
           locationId = loc.id
         }
 
+        // Plant scope enforcement: the asset's location must be within the user's scope
+        if (!(await canWriteToLocations(user, [locationId]))) {
+          results.errors.push(`Row ${rowNum}: asset location is outside your plant scope — skipped`)
+          results.skipped++
+          continue
+        }
+
         const validStatuses = ['ACTIVE','INACTIVE','UNDER_MAINTENANCE','DECOMMISSIONED']
         const status = validStatuses.includes(row.status?.toUpperCase()) ? row.status.toUpperCase() : 'ACTIVE'
 
@@ -143,6 +151,10 @@ export async function POST(request: NextRequest) {
           }
 
           if (parentId) {
+            if (!(await canWriteToAssets(user, [parentId]))) {
+              results.errors.push(`Row ${rowNum} Hierarchy Link Error: parent asset is outside your plant scope`)
+              continue
+            }
             try {
               await prisma.asset.update({
                 where: { id: childId },
@@ -203,6 +215,18 @@ export async function POST(request: NextRequest) {
         // Validate type
         const validTypes = ['BREAKDOWN', 'PREVENTIVE', 'PREDICTIVE']
         const woType = validTypes.includes(row.type?.toUpperCase()) ? row.type.toUpperCase() : 'BREAKDOWN'
+
+        // Plant scope enforcement: assigned user and asset must be within the user's scope
+        if (assignedToId && !(await canAssignUsers(user, [assignedToId]))) {
+          results.errors.push(`Row ${rowNum}: assigned user is outside your plant scope — skipped`)
+          results.skipped++
+          continue
+        }
+        if (assetId && !(await canWriteToAssets(user, [assetId]))) {
+          results.errors.push(`Row ${rowNum}: asset is outside your plant scope — skipped`)
+          results.skipped++
+          continue
+        }
 
         // Validate priority
         const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']

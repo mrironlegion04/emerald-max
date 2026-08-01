@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { canWriteToAssets } from '@/lib/access-control'
 
 export async function POST(
   request: NextRequest,
@@ -14,6 +15,10 @@ export async function POST(
     }
 
     const { id } = await params
+    if (!(await canWriteToAssets(user, [id]))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { partId, expectedQuantity = 1 } = await request.json()
 
     if (!partId) {

@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { canWriteToAssets } from '@/lib/access-control'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'bom:edit'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     const { id } = await params
+    if (!(await canWriteToAssets(user, [id]))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { templateId } = await request.json()
     if (!templateId) return NextResponse.json({ error: 'Template ID required' }, { status: 400 })
     

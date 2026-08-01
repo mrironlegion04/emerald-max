@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const woFilter = await buildWOVisibilityFilter(user)
+  const pmFilter = await buildLocationFilter(user)
+  const assetFilter = await buildLocationFilter(user)
+  const woWhere = (extra: Record<string, unknown> = {}) => ({ ...(woFilter ?? {}), ...extra })
 
   const { searchParams } = new URL(req.url)
   const preset = searchParams.get('preset') ?? 'this_month'
@@ -46,17 +52,17 @@ export async function GET(req: NextRequest) {
   const [
     createdWOs, completedWOs, closedWOs, openWOs, inProgressWOs, onHoldWOs, cancelledWOs,
   ] = await Promise.all([
-    prisma.workOrder.count({ where: { createdAt: { gte: start, lte: end } } }),
-    prisma.workOrder.count({ where: { completedAt: { gte: start, lte: end } } }),
-    prisma.workOrder.count({ where: { status: 'CLOSED' } }),
-    prisma.workOrder.count({ where: { status: 'OPEN' } }),
-    prisma.workOrder.count({ where: { status: 'IN_PROGRESS' } }),
-    prisma.workOrder.count({ where: { status: 'ON_HOLD' } }),
-    prisma.workOrder.count({ where: { status: 'CANCELLED' } }),
+    prisma.workOrder.count({ where: woWhere({ createdAt: { gte: start, lte: end } }) }),
+    prisma.workOrder.count({ where: woWhere({ completedAt: { gte: start, lte: end } }) }),
+    prisma.workOrder.count({ where: woWhere({ status: 'CLOSED' }) }),
+    prisma.workOrder.count({ where: woWhere({ status: 'OPEN' }) }),
+    prisma.workOrder.count({ where: woWhere({ status: 'IN_PROGRESS' }) }),
+    prisma.workOrder.count({ where: woWhere({ status: 'ON_HOLD' }) }),
+    prisma.workOrder.count({ where: woWhere({ status: 'CANCELLED' }) }),
   ])
 
   const overdueWOs = await prisma.workOrder.count({
-    where: { status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED'] }, dueDate: { lt: now } },
+    where: woWhere({ status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED'] }, dueDate: { lt: now } }),
   })
 
   const totalActive = openWOs + inProgressWOs + onHoldWOs + completedWOs + closedWOs + cancelledWOs
@@ -66,12 +72,12 @@ export async function GET(req: NextRequest) {
   const [wosByType, wosByPriority] = await Promise.all([
     prisma.workOrder.groupBy({
       by: ['type'],
-      where: { createdAt: { gte: start, lte: end } },
+      where: woWhere({ createdAt: { gte: start, lte: end } }),
       _count: true,
     }),
     prisma.workOrder.groupBy({
       by: ['priority'],
-      where: { createdAt: { gte: start, lte: end } },
+      where: woWhere({ createdAt: { gte: start, lte: end } }),
       _count: true,
     }),
   ])
@@ -80,28 +86,29 @@ export async function GET(req: NextRequest) {
   const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
   const useMonthGrouping = days > 62
 
-  const [createdRows, completedRows] = await Promise.all([
-    prisma.$queryRawUnsafe<{ period: string; cnt: bigint }[]>(
-      useMonthGrouping
-        ? `SELECT TO_CHAR("createdAt", 'YYYY-MM') as period, COUNT(*)::int as cnt FROM "work_orders" WHERE "createdAt" >= $1 AND "createdAt" <= $2 GROUP BY TO_CHAR("createdAt", 'YYYY-MM') ORDER BY period`
-        : `SELECT TO_CHAR("createdAt", 'YYYY-MM-DD') as period, COUNT(*)::int as cnt FROM "work_orders" WHERE "createdAt" >= $1 AND "createdAt" <= $2 GROUP BY TO_CHAR("createdAt", 'YYYY-MM-DD') ORDER BY period`,
-      start, end
-    ),
-    prisma.$queryRawUnsafe<{ period: string; cnt: bigint }[]>(
-      useMonthGrouping
-        ? `SELECT TO_CHAR("completedAt", 'YYYY-MM') as period, COUNT(*)::int as cnt FROM "work_orders" WHERE "completedAt" >= $1 AND "completedAt" <= $2 AND "status" IN ('COMPLETED','CLOSED') GROUP BY TO_CHAR("completedAt", 'YYYY-MM') ORDER BY period`
-        : `SELECT TO_CHAR("completedAt", 'YYYY-MM-DD') as period, COUNT(*)::int as cnt FROM "work_orders" WHERE "completedAt" >= $1 AND "completedAt" <= $2 AND "status" IN ('COMPLETED','CLOSED') GROUP BY TO_CHAR("completedAt", 'YYYY-MM-DD') ORDER BY period`,
-      start, end
-    ),
-  ])
+  const chartWOs = await prisma.workOrder.findMany({
+    where: woWhere({
+      OR: [
+        { createdAt: { gte: start, lte: end } },
+        { completedAt: { gte: start, lte: end }, status: { in: ['COMPLETED', 'CLOSED'] } },
+      ],
+    }),
+    select: { createdAt: true, completedAt: true, status: true },
+  })
+
+  const periodKey = (d: Date) =>
+    useMonthGrouping ? d.toISOString().slice(0, 7) : d.toISOString().slice(0, 10)
 
   const chartMap: Record<string, { created: number; completed: number }> = {}
-  for (const row of createdRows) {
-    chartMap[row.period] = { created: Number(row.cnt), completed: chartMap[row.period]?.completed ?? 0 }
-  }
-  for (const row of completedRows) {
-    if (!chartMap[row.period]) chartMap[row.period] = { created: 0, completed: 0 }
-    chartMap[row.period].completed = Number(row.cnt)
+  for (const wo of chartWOs) {
+    if (wo.createdAt >= start && wo.createdAt <= end) {
+      const k = periodKey(wo.createdAt)
+      chartMap[k] = { created: (chartMap[k]?.created ?? 0) + 1, completed: chartMap[k]?.completed ?? 0 }
+    }
+    if (wo.completedAt && wo.completedAt >= start && wo.completedAt <= end && ['COMPLETED', 'CLOSED'].includes(wo.status)) {
+      const k = periodKey(wo.completedAt)
+      chartMap[k] = { created: chartMap[k]?.created ?? 0, completed: (chartMap[k]?.completed ?? 0) + 1 }
+    }
   }
   const createdVsCompleted = Object.entries(chartMap)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -109,10 +116,10 @@ export async function GET(req: NextRequest) {
 
   // Asset health — fleet-weighted metrics computed from source data
   const [totalAssets, assetsByStatus, fleetAssets] = await Promise.all([
-    prisma.asset.count({ where: { isDeleted: false } }),
-    prisma.asset.groupBy({ by: ['status'], where: { isDeleted: false }, _count: true }),
+    prisma.asset.count({ where: { ...(assetFilter ?? {}), isDeleted: false } }),
+    prisma.asset.groupBy({ by: ['status'], where: { ...(assetFilter ?? {}), isDeleted: false }, _count: true }),
     prisma.asset.findMany({
-      where: { isDeleted: false },
+      where: { ...(assetFilter ?? {}), isDeleted: false },
       select: { totalFailures: true, totalRepairTime: true, totalDowntimeMinutes: true },
     }),
   ])
@@ -123,17 +130,17 @@ export async function GET(req: NextRequest) {
 
   // PM + costs + top assignees
   const [overduePM, dueSoonPM, costSums, topAssigneeRows] = await Promise.all([
-    prisma.maintenanceSchedule.count({ where: { isActive: true, nextDueDate: { lt: now } } }),
+    prisma.maintenanceSchedule.count({ where: { ...(pmFilter ?? {}), isActive: true, nextDueDate: { lt: now } } }),
     prisma.maintenanceSchedule.count({
-      where: { isActive: true, nextDueDate: { gte: now, lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } },
+      where: { ...(pmFilter ?? {}), isActive: true, nextDueDate: { gte: now, lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } },
     }),
     prisma.workOrder.aggregate({
-      where: { status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { gte: start, lte: end } },
+      where: woWhere({ status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { gte: start, lte: end } }),
       _sum: { laborCost: true, partsCost: true },
     }),
     prisma.workOrder.groupBy({
       by: ['assignedToId'],
-      where: { status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { gte: start, lte: end }, assignedToId: { not: null } },
+      where: woWhere({ status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { gte: start, lte: end }, assignedToId: { not: null } }),
       _count: true,
       orderBy: { _count: { assignedToId: 'desc' } },
       take: 5,

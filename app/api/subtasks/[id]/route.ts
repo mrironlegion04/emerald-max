@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
-import { canCompleteSubtask, getCompletionType, isAdmin, isManagerOrAbove } from '@/lib/access-control'
+import { canCompleteSubtask, canEditWorkOrder, canViewWorkOrder, getCompletionType, isAdmin, isManagerOrAbove, canAssignUsers, canAssignTeams } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSubtaskSchema = z.object({
@@ -20,6 +20,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
 
     const subtask = await prisma.subtask.findUnique({
@@ -36,6 +39,11 @@ export async function GET(
 
     if (!subtask) {
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
+    }
+
+    const viewAccess = await canViewWorkOrder(user, subtask.workOrderId)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     return NextResponse.json(subtask)
@@ -66,6 +74,11 @@ export async function PUT(
     })
     if (!existingSubtask) {
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
+    }
+
+    const viewAccess = await canViewWorkOrder(user, existingSubtask.workOrderId)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // ===== ACCESS CONTROL FOR COMPLETION =====
@@ -112,6 +125,17 @@ export async function PUT(
     if ((data.assignedToId || data.assignedTeamId) && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign subtask' },
+        { status: 403 }
+      )
+    }
+
+    // Reassignees must be within the user's write scope
+    const inScope =
+      (data.assignedToId !== undefined ? await canAssignUsers(user, [data.assignedToId]) : true) &&
+      (data.assignedTeamId !== undefined ? await canAssignTeams(user, [data.assignedTeamId]) : true)
+    if (!inScope) {
+      return NextResponse.json(
+        { error: 'You do not have access to the selected assignee' },
         { status: 403 }
       )
     }
@@ -204,6 +228,11 @@ export async function DELETE(
     })
     if (!subtask) {
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
+    }
+
+    const editAccess = await canEditWorkOrder(user, subtask.workOrderId)
+    if (!editAccess.allowed) {
+      return NextResponse.json({ error: editAccess.reason ?? 'Forbidden' }, { status: 403 })
     }
 
     // Delete the subtask

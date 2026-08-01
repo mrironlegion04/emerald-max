@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildLocationFilter, buildWOVisibilityFilter, getUserLocationIds } from '@/lib/access-control'
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -14,6 +14,7 @@ export async function GET() {
   const teamIds = memberships.map(m => m.teamId)
   const visibilityFilter = await buildWOVisibilityFilter(user)
   const visAnd = visibilityFilter ? [visibilityFilter] : []
+  const locationFilter = await buildLocationFilter(user)
 
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -22,6 +23,32 @@ export async function GET() {
   const myOrTeam = teamIds.length
     ? [{ assignedToId: user.userId }, { teamId: { in: teamIds } }]
     : [{ assignedToId: user.userId }]
+
+  // Recent activity must not leak entity names from other plants
+  let recentActivityWhere: any = { createdAt: { gte: sevenDaysAgo } }
+  if (user.role !== 'ADMIN') {
+    const visibleWOIds = await prisma.workOrder.findMany({
+      where: { AND: visAnd },
+      select: { id: true },
+    }).then(rows => rows.map(r => r.id))
+    const visibleAssetIds = locationFilter
+      ? await prisma.asset.findMany({ where: { ...locationFilter }, select: { id: true } }).then(rows => rows.map(r => r.id))
+      : null
+    const visiblePmIds = locationFilter
+      ? await prisma.maintenanceSchedule.findMany({ where: { ...locationFilter }, select: { id: true } }).then(rows => rows.map(r => r.id))
+      : null
+    const visibleLocationIds = await getUserLocationIds(user.userId)
+
+    const activityOrs: any[] = [
+      { userId: user.userId },
+      { entity: 'Work Order',  entityId: { in: visibleWOIds } },
+      { entity: 'WorkOrder',   entityId: { in: visibleWOIds } },
+    ]
+    if (visibleAssetIds) activityOrs.push({ entity: 'Asset', entityId: { in: visibleAssetIds } })
+    if (visiblePmIds)    activityOrs.push({ entity: 'MaintenanceSchedule', entityId: { in: visiblePmIds } })
+    if (visibleLocationIds) activityOrs.push({ entity: 'Location', entityId: { in: visibleLocationIds } })
+    recentActivityWhere = { createdAt: { gte: sevenDaysAgo }, OR: activityOrs }
+  }
 
   const [
     highPriorityWOs,
@@ -129,7 +156,7 @@ export async function GET() {
     }),
     // Recent activity (audit log)
     prisma.auditLog.findMany({
-      where: { createdAt: { gte: sevenDaysAgo } },
+      where: recentActivityWhere,
       select: {
         id: true, action: true, entity: true, entityName: true, createdAt: true, userName: true,
       },

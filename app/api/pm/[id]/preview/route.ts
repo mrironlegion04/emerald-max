@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { advanceDate } from '@/lib/pm-generation'
+import { buildLocationFilter } from '@/lib/access-control'
 
 interface PreviewWO {
   dueDate: string
@@ -39,6 +40,11 @@ export async function GET(
 
     if (!schedule) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!schedule.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(schedule.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const horizon = schedule.schedulingHorizon ?? 1

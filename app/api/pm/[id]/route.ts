@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
-import { canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
+import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -51,6 +51,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { id } = await params
     const schedule = await prisma.maintenanceSchedule.findUnique({
       where: { id },
@@ -60,6 +63,12 @@ export async function GET(
       },
     })
     if (!schedule) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!schedule.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(schedule.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     return NextResponse.json(schedule)
   } catch (error) {
     console.error(error)
@@ -82,6 +91,11 @@ export async function PUT(
 
     const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const finalAssetId = data.assetId !== undefined ? data.assetId : existing.assetId
     const finalLocationId = data.locationId !== undefined ? data.locationId : existing.locationId
@@ -190,6 +204,11 @@ export async function DELETE(
     const { id } = await params
     const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     await prisma.maintenanceSchedule.delete({ where: { id } })
 

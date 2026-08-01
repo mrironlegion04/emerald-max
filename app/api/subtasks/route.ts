@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { canViewWorkOrder, canAssignUsers, canAssignTeams } from '@/lib/access-control'
 import { z } from 'zod'
 
 const subtaskSchema = z.object({
@@ -17,13 +18,21 @@ const subtaskSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const workOrderId = searchParams.get('workOrderId')
 
-    const where = workOrderId ? { workOrderId } : {}
+    if (!workOrderId) {
+      return NextResponse.json({ error: 'workOrderId is required' }, { status: 400 })
+    }
+
+    const { allowed } = await canViewWorkOrder(user, workOrderId)
+    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const subtasks = await prisma.subtask.findMany({
-      where,
+      where: { workOrderId },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
         assignedDomain: { select: { id: true, name: true } },
@@ -50,12 +59,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = subtaskSchema.parse(body)
 
-    // Verify work order exists
+    // Verify work order exists and is viewable
     const workOrder = await prisma.workOrder.findUnique({
       where: { id: data.workOrderId },
     })
     if (!workOrder) {
       return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
+    }
+
+    const viewAccess = await canViewWorkOrder(user, data.workOrderId)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // Verify assigned user/team are within the user's write scope
+    const inScope =
+      (data.assignedToId !== undefined ? await canAssignUsers(user, [data.assignedToId]) : true) &&
+      (data.assignedTeamId !== undefined ? await canAssignTeams(user, [data.assignedTeamId]) : true)
+    if (!inScope) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Verify assigned user exists if provided

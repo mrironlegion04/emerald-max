@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationPath } from '@/lib/location-path'
+import { getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
 const locationSchema = z.object({
@@ -40,13 +41,22 @@ function nestLocations(flat: FlatLocation[], parentId: string | null = null, dep
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const scopeIds = await getUserLocationIds(user.userId)
+    const scopeFilter = scopeIds ? { id: { in: scopeIds } } : {}
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')?.trim()
 
     // ── Search mode: return flat results with breadcrumb path ──
     if (search) {
       const results = await prisma.location.findMany({
-        where: { name: { contains: search, mode: 'insensitive' } },
+        where: {
+          ...scopeFilter,
+          name: { contains: search, mode: 'insensitive' },
+        },
         orderBy: { name: 'asc' },
         include: { _count: { select: { assets: true, children: true } } },
         take: 50,
@@ -78,6 +88,7 @@ export async function GET(request: NextRequest) {
 
     // ── Default mode: return nested tree ──
     const flat = await prisma.location.findMany({
+      where: scopeFilter,
       orderBy: [{ parentId: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { assets: true, children: true } } },
     })

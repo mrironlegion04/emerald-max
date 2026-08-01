@@ -212,6 +212,7 @@ model Team {
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
   pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
   templates   WorkOrderTemplate[]
+  woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
 
   @@map("teams")
 }
@@ -310,6 +311,8 @@ model User {
   assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
   createdAutomationRules AutomationRule[]   @relation("AutomationRuleCreator")
   telegramPairings       TelegramPairing[]
+  woPerformers           WorkOrderPerformer[] @relation("WOPerformerUser")
+  woPerformersAddedBy    WorkOrderPerformer[] @relation("WOPerformerAddedBy")
 
   @@map("users")
 }
@@ -587,6 +590,7 @@ requests      MaintenanceRequest[]
   assets        WorkOrderAsset[]
   statusHistory WorkOrderStatusHistory[]
   repairSessions RepairSession[]
+  performers    WorkOrderPerformer[]
 
   @@index([issueId, createdAt])
   @@index([status])
@@ -1066,6 +1070,31 @@ model WorkOrderStatusHistory {
 
   @@index([workOrderId, createdAt])
   @@map("work_order_status_history")
+}
+
+model WorkOrderPerformer {
+  id           String   @id @default(cuid())
+  workOrderId  String
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  userId       String?
+  user         User?    @relation("WOPerformerUser", fields: [userId], references: [id], onDelete: SetNull)
+  performerName String
+
+  teamId       String?
+  team         Team?    @relation("WOPerformerTeam", fields: [teamId], references: [id], onDelete: SetNull)
+  teamName     String?
+  role         String?
+
+  addedById    String?
+  addedBy      User?    @relation("WOPerformerAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  addedByName  String
+
+  createdAt    DateTime @default(now())
+
+  @@unique([workOrderId, userId])
+  @@index([workOrderId])
+  @@map("work_order_performers")
 }
 
 model WorkOrderTemplate {

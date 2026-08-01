@@ -12,6 +12,8 @@ import WOCommentsPanel from '@/components/WOCommentsPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
+import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
+import { canEditWorkOrder } from '@/lib/access-control'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
 const statusLabels = WO_STATUS_LABELS
@@ -63,6 +65,8 @@ export default async function WorkOrderDetailPage({
   })
 
   if (!wo) notFound()
+
+  const crewCanEdit = user ? (await canEditWorkOrder(user, wo.id)).allowed : false
 
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
   const allUsers = await prisma.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
@@ -263,6 +267,9 @@ export default async function WorkOrderDetailPage({
               ))}
             </dl>
           </div>
+
+          {/* Worked by — recorded crew (survives team membership changes) */}
+          <WorkOrderCrewPanel woId={wo.id} canEdit={crewCanEdit} />
 
           {/* Custom Fields */}
           {wo.customFields && typeof wo.customFields === 'object' && Object.keys(wo.customFields as Record<string, any>).length > 0 && (

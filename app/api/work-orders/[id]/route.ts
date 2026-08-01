@@ -105,9 +105,11 @@ export async function GET(
         partsUsed:   { include: { part: true } },
         subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true, assignedDomain: true } },
         domain:      true,
+        team:        { select: { id: true, name: true, members: { include: { user: { select: { id: true, name: true, isActive: true } } } } } },
 
         attachments: { include: { uploadedBy: { select: { name: true } } } },
         statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' as const } },
+        performers: { include: { user: { select: { id: true, name: true, isActive: true } } }, orderBy: { createdAt: 'asc' as const } },
       },
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })

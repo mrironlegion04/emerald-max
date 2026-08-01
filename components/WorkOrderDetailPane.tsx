@@ -10,6 +10,7 @@ import WOPartsPanel from './WOPartsPanel'
 import WOCommentsPanel from './WOCommentsPanel'
 import SubtasksPanel from './SubtasksPanel'
 import AttachmentsPanel from './AttachmentsPanel'
+import WorkOrderCrewPanel from './WorkOrderCrewPanel'
 import { fmtCurrency, fmtDateTime } from '@/lib/utils'
 
 interface Props {
@@ -154,6 +155,13 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           ))}
         </dl>
       </div>
+
+      {/* Worked by — recorded crew (survives team membership changes) */}
+      <WorkOrderCrewPanel
+        woId={wo.id}
+        canEdit={userRole === 'ADMIN' || userRole === 'MANAGER' || userRole === 'TECHNICIAN'}
+        onChanged={() => setReloadKey(k => k + 1)}
+      />
 
       {/* Cost */}
       {(wo.laborHours || wo.partsCost) && (

@@ -363,6 +363,18 @@ export default async function PMPage({
                         📅 {fmt(s.nextDueDate)}
                       </span>
                     </div>
+
+                    {/* Task template */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checklist</span>
+                      <span className="text-slate-700 font-bold">
+                        {s._count?.tasks > 0 ? (
+                          <span className="flex items-center gap-1">✅ {s._count.tasks} task{s._count.tasks !== 1 ? 's' : ''}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Touch optimized quick actions */}

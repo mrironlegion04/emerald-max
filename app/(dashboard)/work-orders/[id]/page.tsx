@@ -437,6 +437,8 @@ export default async function WorkOrderDetailPage({
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
             allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name }))}
             canEdit={canEdit || user?.role === 'TECHNICIAN'}
+            currentUserId={user?.userId}
+            isManagerOrAbove={user?.role === 'ADMIN' || user?.role === 'MANAGER'}
           />
           <WOCommentsPanel woId={wo.id} woStatus={wo.status} />
           <AttachmentsPanel

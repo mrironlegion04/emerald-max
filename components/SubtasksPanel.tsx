@@ -67,6 +67,8 @@ export default function SubtasksPanel({
   allUsers = [],
   allTeams = [],
   canEdit = false,
+  currentUserId = '',
+  isManagerOrAbove = false,
 }: {
   woId: string
   initialSubtasks?: Subtask[]
@@ -74,11 +76,14 @@ export default function SubtasksPanel({
   allUsers?: User[]
   allTeams?: Team[]
   canEdit?: boolean
+  currentUserId?: string
+  isManagerOrAbove?: boolean
 }) {
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialSubtasks)
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -178,6 +183,7 @@ export default function SubtasksPanel({
   }
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    setError(null)
     try {
       const res = await fetch(`/api/subtasks/${id}`, {
         method: 'PUT',
@@ -187,10 +193,22 @@ export default function SubtasksPanel({
       if (res.ok) {
         const updated = await res.json()
         setSubtasks(subtasks.map(s => (s.id === id ? updated : s)))
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || 'Failed to update subtask status')
       }
-    } catch (error) {
-      console.error('Failed to update subtask status:', error)
+    } catch (err) {
+      console.error('Failed to update subtask status:', err)
+      setError('Failed to update subtask status')
     }
+  }
+
+  const canComplete = (subtask: Subtask) => {
+    if (!canEdit) return false
+    if (isManagerOrAbove) return true
+    if (!subtask.assignedTo && !subtask.assignedTeam) return true
+    if (subtask.assignedTo) return subtask.assignedTo.id === currentUserId
+    return true
   }
 
   const handleEdit = (subtask: Subtask) => {
@@ -359,6 +377,13 @@ export default function SubtasksPanel({
         </div>
       )}
 
+      {error && (
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-medium text-rose-700">{error}</p>
+        </div>
+      )}
+
       {/* Subtasks List */}
       {loading && totalCount === 0 ? (
         <div className="text-center py-10">
@@ -396,7 +421,15 @@ export default function SubtasksPanel({
                         handleStatusChange(subtask.id, 'COMPLETED')
                       }
                     }}
-                    className="flex-shrink-0 mt-0.5 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                    disabled={!canComplete(subtask)}
+                    title={
+                      !canComplete(subtask) && subtask.assignedTo
+                        ? `Assigned to ${subtask.assignedTo.name}`
+                        : undefined
+                    }
+                    className={`flex-shrink-0 mt-0.5 transition-transform ${
+                      canComplete(subtask) ? 'hover:scale-110 active:scale-95 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                    }`}
                   >
                     {subtask.status === 'COMPLETED' ? (
                       <CheckCircle className="w-5 h-5 text-emerald-600" />

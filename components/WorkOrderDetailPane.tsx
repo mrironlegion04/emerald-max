@@ -242,6 +242,8 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
         allUsers={[]}
         allTeams={[]}
         canEdit={true}
+        currentUserId={userId}
+        isManagerOrAbove={userRole === 'ADMIN' || userRole === 'MANAGER'}
       />
 
       {/* Comments */}

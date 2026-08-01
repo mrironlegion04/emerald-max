@@ -33,7 +33,7 @@ const sections = [
 ]
 
 const adminItems = [
-  { label: 'Users & Teams', href: '/teams?tab=users', icon: Users, color: 'text-blue-600 bg-blue-50' },
+  { label: 'Teams / Users', href: '/teams', icon: Users, color: 'text-blue-600 bg-blue-50' },
   { label: 'Custom Roles', href: '/settings/roles', icon: Shield, color: 'text-purple-600 bg-purple-50' },
   { label: 'Audit Log', href: '/audit-log', icon: Shield, color: 'text-slate-600 bg-slate-100' },
   { label: 'Import Data', href: '/import', icon: Upload, color: 'text-amber-600 bg-amber-50' },

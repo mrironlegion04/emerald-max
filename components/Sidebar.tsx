@@ -82,12 +82,7 @@ const navItems = [
 // Visible to ADMIN and MANAGER
 const managerItems = [
   {
-    label: 'Users',
-    href: '/teams?tab=users',
-    icon: <Users className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'Teams',
+    label: 'Teams / Users',
     href: '/teams',
     icon: <Users className="w-4.5 h-4.5" />,
   },

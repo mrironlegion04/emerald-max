@@ -7,7 +7,7 @@ import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import CustomFieldsPanel from './CustomFieldsPanel'
-import { WO_STATUS_LABELS } from '@/lib/work-order-status'
+import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; domainId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
@@ -24,12 +24,20 @@ interface WOFormData {
   customFields: Record<string, any> | null
 }
 
+interface Meta {
+  woNumber?: string
+  status?: string
+  createdAt?: string | Date
+  updatedAt?: string | Date
+}
+
 interface Props {
   assets: Asset[]; locations: Location[]; users: User[]; teams: { id: string; name: string }[]
   initialData?: Partial<WOFormData>
   woId?: string
   preselectedAssetId?: string
   preselectedLocationId?: string
+  meta?: Meta
 }
 
 const typeOptions     = ['BREAKDOWN','PREVENTIVE','PREDICTIVE']
@@ -39,11 +47,11 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
 
-export default function WorkOrderForm({ assets, locations, users, teams = [], initialData, woId, preselectedAssetId, preselectedLocationId }: Props) {
+export default function WorkOrderForm({ assets, locations, users, teams = [], initialData, woId, preselectedAssetId, preselectedLocationId, meta }: Props) {
   const router = useRouter()
   const isEdit = !!woId
 
-  const [form, setForm] = useState<WOFormData>({
+  const buildInitialForm = () => ({
     title:          initialData?.title          ?? '',
     description:    initialData?.description    ?? '',
     type:           initialData?.type           ?? 'BREAKDOWN',
@@ -56,7 +64,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     assetId:        initialData?.assetId        ?? preselectedAssetId ?? '',
     locationId:     initialData?.locationId     ?? preselectedLocationId ?? '',
     locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
-    selectedAssetIds: [],
+    selectedAssetIds: initialData?.selectedAssetIds ?? [],
     assignedToId:   initialData?.assignedToId   ?? '',
     teamId:         initialData?.teamId         ?? '',
     laborHours:     initialData?.laborHours     ?? '',
@@ -68,17 +76,59 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     customFields:   (initialData as any)?.customFields ?? null,
   })
 
+  const [initialForm] = useState<WOFormData>(buildInitialForm)
+  const [form, setForm] = useState<WOFormData>(initialForm)
+
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm)
+
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
   const [isTitleDirty, setIsTitleDirty] = useState(isEdit ? true : false)
 
   const [targetType, setTargetType] = useState<'ASSET' | 'LOCATION'>(
-    (preselectedLocationId || (initialData?.locationId && !initialData?.assetId && !preselectedAssetId)) ? 'LOCATION' : 'ASSET'
+    preselectedLocationId
+      ? 'LOCATION'
+      : initialData?.locationScope
+        ? 'LOCATION'
+        : 'ASSET'
   )
 
   const [assetMode, setAssetMode] = useState<'single' | 'multi'>(
     (initialData?.selectedAssetIds && initialData.selectedAssetIds.length > 1) ? 'multi' : 'single'
   )
+
+  // ── Unsaved-changes guard ──────────────────────────────────────────
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
+      if (!anchor) return
+      const href = anchor.getAttribute('href')
+      if (href && href.startsWith('/') && !href.startsWith('/api/')) {
+        if (!window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+          e.preventDefault()
+        }
+      }
+    }
+    document.addEventListener('click', handler, true)
+    return () => document.removeEventListener('click', handler, true)
+  }, [isDirty])
+
+  function handleCancel() {
+    if (isDirty && !window.confirm('You have unsaved changes. Are you sure you want to leave?')) return
+    if (isEdit && woId) router.push(`/work-orders/${woId}`)
+    else router.back()
+  }
 
   const handleToggleTarget = (type: 'ASSET' | 'LOCATION') => {
     setTargetType(type)
@@ -99,6 +149,21 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   ])]
   const primaryAssetId = form.assetId || form.selectedAssetIds[0] || ''
   const selectedAsset = assets.find(a => a.id === primaryAssetId)
+
+  const assetsInLocation = useMemo(() => {
+    if (!form.locationId) return []
+    const inLoc = new Set(assets.filter(a => a.locationId === form.locationId).map(a => a.id))
+    const result: Asset[] = []
+    const seen = new Set<string>()
+    const walk = (a: Asset) => {
+      if (seen.has(a.id)) return
+      seen.add(a.id)
+      result.push(a)
+      assets.filter(c => c.parentId === a.id).forEach(walk)
+    }
+    assets.forEach(a => { if (inLoc.has(a.id)) walk(a) })
+    return result
+  }, [assets, form.locationId])
 
   useEffect(() => {
     const categoryId = selectedAsset?.categoryId
@@ -166,6 +231,13 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       if (!form.title.trim()) { setError('Title is required'); setSaving(false); return }
       if (form.teamId && form.assignedToId) { setError('Assign to either a team or an individual, not both'); setSaving(false); return }
 
+      const detailUrl = isEdit && woId ? `/work-orders/${woId}` : '/work-orders'
+      if (!isDirty) {
+        router.push(detailUrl)
+        router.refresh()
+        return
+      }
+
       const mergedAssetIds = [
         ...(form.assetId ? [form.assetId] : []),
         ...form.selectedAssetIds,
@@ -214,10 +286,27 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     </div>
   )
 
+  const fmtDate = (d?: string | Date) =>
+    d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null
+
   return (
     <form onSubmit={handleSubmit} className="space-y-7 max-w-3xl">
       {error && (
         <div className="bg-rose-50 border border-rose-105 text-rose-700 px-4 py-3 rounded-xl text-xs font-bold shadow-xs">{error}</div>
+      )}
+
+      {isEdit && meta && (
+        <div className="flex items-center gap-2.5 flex-wrap text-xs text-slate-500 bg-slate-50 border border-slate-200/50 rounded-xl px-4 py-2.5">
+          <span className="font-bold text-slate-700">Editing</span>
+          {meta.woNumber && <span className="font-mono font-semibold text-slate-600">{meta.woNumber}</span>}
+          {meta.status && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${WO_STATUS_PILL[meta.status] || 'bg-slate-100 text-slate-600'}`}>
+              {statusLabels[meta.status] || meta.status}
+            </span>
+          )}
+          {fmtDate(meta.createdAt) && <span className="hidden sm:inline">Created {fmtDate(meta.createdAt)}</span>}
+          {fmtDate(meta.updatedAt) && <span className="hidden sm:inline">Updated {fmtDate(meta.updatedAt)}</span>}
+        </div>
       )}
 
       {/* Core info */}
@@ -344,8 +433,8 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             {assetMode === 'single' ? (
               <AssetTreeSelect
                 assets={assets}
-                value={form.assetId}
-                onChange={id => set('assetId', id)}
+                value={form.assetId || form.selectedAssetIds[0] || ''}
+                onChange={id => { set('assetId', id); set('selectedAssetIds', []) }}
               />
             ) : (
               <AssetTreeSelect
@@ -378,7 +467,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
                   </label>
                   <p className="text-[11px] text-slate-450 mb-2 font-medium">Leave empty to apply to all location assets with scope selection below</p>
                   <AssetTreeSelect
-                    assets={assets.filter(a => a.locationId === form.locationId || assets.filter(x => x.locationId === form.locationId).some(parent => a.parentId === parent.id))}
+                    assets={assetsInLocation}
                     value={form.selectedAssetIds}
                     onChange={ids => set('selectedAssetIds', ids)}
                     multiSelect={true}
@@ -565,7 +654,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         <button type="submit" disabled={saving} className="btn-primary text-xs font-bold py-2.5 px-5 shadow-sm shadow-blue-50">
           {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create work order'}
         </button>
-        <button type="button" onClick={() => router.back()} className="btn-secondary text-xs font-bold py-2.5 px-5 border-slate-205/65 transition hover:bg-slate-50">Cancel</button>
+        <button type="button" onClick={handleCancel} className="btn-secondary text-xs font-bold py-2.5 px-5 border-slate-205/65 transition hover:bg-slate-50">Cancel</button>
       </div>
     </form>
   )

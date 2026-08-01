@@ -91,6 +91,7 @@ export default async function EditWorkOrderPage({
     notes:           wo.notes         ?? '',
     issueId:         wo.issueId       ?? '',
     customIssue:     wo.customIssue   ?? '',
+    customFields:    (wo.customFields as Record<string, any> | null) ?? null,
   }
 
   return (
@@ -101,7 +102,20 @@ export default async function EditWorkOrderPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${wo.title}`} subtitle={wo.woNumber} />
-      <WorkOrderForm assets={assets} locations={locations} users={users} teams={teams} initialData={initialData} woId={id} />
+      <WorkOrderForm
+        assets={assets}
+        locations={locations}
+        users={users}
+        teams={teams}
+        initialData={initialData}
+        woId={id}
+        meta={{
+          woNumber: wo.woNumber,
+          status: wo.status,
+          createdAt: wo.createdAt,
+          updatedAt: wo.updatedAt,
+        }}
+      />
 
       {(wo.repairSessions as any[]).length > 0 && (
         <div className="mt-6 premium-card p-5 border border-slate-200/50 shadow-sm bg-white">

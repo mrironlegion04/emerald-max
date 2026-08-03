@@ -146,6 +146,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   // ── Smart recommendations from the primary asset ──
   const [recommendation, setRecommendation] = useState<{
     team: { id: string; name: string } | null
+    teams: { id: string; name: string }[]
     owner: { id: string; name: string } | null
     criticality: string | null
   } | null>(null)
@@ -196,10 +197,16 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     let active = true
     fetch(`/api/recommendations?assetId=${encodeURIComponent(primaryAssetId)}`)
       .then(r => (r.ok ? r.json() : null))
-      .then((rec) => { if (active) setRecommendation(rec) })
+      .then((rec: { team: { id: string; name: string } | null; teams: { id: string; name: string }[]; owner: { id: string; name: string } | null; criticality: string | null } | null) => { if (active) setRecommendation(rec) })
       .catch(() => {})
     return () => { active = false }
   }, [primaryAssetId])
+
+  const recommendedTeams = recommendation?.teams?.length
+    ? recommendation.teams
+    : (recommendation?.team ? [recommendation.team] : [])
+  const recommendedTeamIds = new Set(recommendedTeams.map(t => t.id))
+  const otherTeams = teams.filter(t => !recommendedTeamIds.has(t.id))
 
   function set(field: keyof WOFormData, value: string | string[] | Record<string, any> | null) {
     setForm(prev => {
@@ -568,7 +575,16 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             {inputRow('Team', false,
               <select value={form.teamId} onChange={e => { set('teamId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
                 <option value="">— No team —</option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {recommendedTeams.length > 0 && (
+                  <optgroup label="⭐ Recommended">
+                    {recommendedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </optgroup>
+                )}
+                {otherTeams.length > 0 && (
+                  <optgroup label="All teams">
+                    {otherTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </optgroup>
+                )}
               </select>
             )}
             {inputRow('Individual', false,
@@ -662,19 +678,10 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       ) : null}
 
       {/* Smart suggestions from the primary asset */}
-      {recommendation && (recommendation.team || recommendation.owner || (recommendation.criticality && !form.issueId)) ? (
+      {recommendation && (recommendation.owner || (recommendation.criticality && !form.issueId)) ? (
         <div className="premium-card p-5 border border-slate-200/50 shadow-sm space-y-3 bg-white">
           <h2 className="font-bold text-slate-805 text-sm tracking-tight">Suggestions</h2>
           <div className="flex flex-wrap gap-2">
-            {recommendation.team && recommendation.team.id !== form.teamId && (
-              <button
-                type="button"
-                onClick={() => { set('teamId', recommendation.team!.id); set('assignedToId', '') }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100/70 transition"
-              >
-                💡 Team: {recommendation.team.name} — <span className="underline underline-offset-2">Use</span>
-              </button>
-            )}
             {recommendation.owner && recommendation.owner.id !== form.assignedToId && (
               <button
                 type="button"

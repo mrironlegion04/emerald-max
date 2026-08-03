@@ -48,6 +48,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
   const [recommendation, setRecommendation] = useState<{
     team: { id: string; name: string } | null
+    teams: { id: string; name: string }[]
   } | null>(null)
   const lastAutoPriority = useRef<string | null>(null)
 
@@ -78,7 +79,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
     let active = true
     fetch(`/api/recommendations?assetId=${encodeURIComponent(form.assetId)}`)
       .then(r => (r.ok ? r.json() : null))
-      .then((rec: { team: { id: string; name: string } | null } | null) => {
+      .then((rec: { team: { id: string; name: string } | null; teams: { id: string; name: string }[] } | null) => {
         if (active) setRecommendation(rec)
       })
       .catch(() => {})
@@ -247,21 +248,33 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
                 <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
                 <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field">
                   <option value="">Select a team (optional)</option>
-                  {teams.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
+                  {(() => {
+                    const recommended = recommendation?.teams?.length
+                      ? recommendation.teams
+                      : (recommendation?.team ? [recommendation.team] : [])
+                    const recommendedIds = new Set(recommended.map(t => t.id))
+                    const otherTeams = teams.filter(t => !recommendedIds.has(t.id))
+                    return (
+                      <>
+                        {recommended.length > 0 && (
+                          <optgroup label="⭐ Recommended">
+                            {recommended.map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {otherTeams.length > 0 && (
+                          <optgroup label="All teams">
+                            {otherTeams.map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    )
+                  })()}
                 </select>
-                {recommendation?.team && recommendation.team.id !== form.teamId && (
-                  <button
-                    type="button"
-                    onClick={() => set('teamId', recommendation.team!.id)}
-                    className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
-                  >
-                    💡 Recommended: {recommendation.team.name}
-                    <span className="text-emerald-600 font-bold">— Use</span>
-                  </button>
-                )}
-                <p className="text-[11px] text-gray-400 mt-1">Recommended based on the asset&apos;s domain — helps route the request to the right crew.</p>
+                <p className="text-[11px] text-gray-400 mt-1">Recommended teams appear at the top based on the asset&apos;s domain.</p>
               </div>
             )}
             <div>

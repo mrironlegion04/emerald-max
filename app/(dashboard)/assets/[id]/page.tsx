@@ -267,12 +267,14 @@ export default async function AssetDetailPage({
 
             {/* Maintenance Metrics */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-4">Maintenance Metrics</h2>
+              <h2 className="font-semibold text-gray-900 text-sm mb-1">Maintenance Metrics</h2>
+              <p className="text-[11px] text-gray-400 mb-3">Failure metrics track breakdown work orders only; repair activity includes all completed work.</p>
               <div className="space-y-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider pt-1">Failure metrics (breakdowns)</p>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">MTTR (Repair Time)</span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {metrics.mttr > 0 ? formatMinutes(metrics.mttr) : '—'}
+                    {metrics.totalFailures > 0 && metrics.totalRepairTime === 0 ? 'Not recorded' : metrics.mttr > 0 ? formatMinutes(metrics.mttr) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
@@ -292,11 +294,11 @@ export default async function AssetDetailPage({
                   <span className="text-sm font-semibold text-gray-900">{metrics.totalFailures}</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-xs text-gray-600">Total Repair Time</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {metrics.totalRepairTime > 0 ? formatMinutes(metrics.totalRepairTime) : '—'}
-                  </span>
+                  <span className="text-xs text-gray-600">Last Failure</span>
+                  <span className="text-xs text-gray-600">{formatDate(metrics.lastFailureDate)}</span>
                 </div>
+
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider pt-2 border-t border-gray-100">Repair activity (all completed work)</p>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">Total Downtime</span>
                   <span className="text-sm font-semibold text-gray-900">
@@ -304,8 +306,10 @@ export default async function AssetDetailPage({
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-xs text-gray-600">Last Failure</span>
-                  <span className="text-xs text-gray-600">{formatDate(metrics.lastFailureDate)}</span>
+                  <span className="text-xs text-gray-600">Total Repair Time</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {metrics.totalRepairTime > 0 ? formatMinutes(metrics.totalRepairTime) : '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xs text-gray-600">Last Repair</span>

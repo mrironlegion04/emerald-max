@@ -331,6 +331,7 @@ async function main() {
       type: 'PREDICTIVE',
       status: 'COMPLETED',
       priority: 'MEDIUM',
+      createdAt: new Date(Date.now() - 33 * 24 * 60 * 60 * 1000),
       dueDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       startedAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000),
       completedAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),

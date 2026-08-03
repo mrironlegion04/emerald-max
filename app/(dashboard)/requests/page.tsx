@@ -1,24 +1,38 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Package, MapPin, CalendarClock } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
-import Badge from '@/components/Badge'
+import Badge, { priorityVariant } from '@/components/Badge'
 import RequestActions from '@/components/RequestActions'
 import RequestFilters from '@/components/RequestFilters'
+import { REQUEST_STATUS_LABELS, requestStatusVariant, REQUEST_TYPE_LABELS, requestTypeVariant } from '@/lib/request-status'
 
 function fmt(d: Date|string) { return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(d)) }
-
-const statusVariant = (s: string): 'yellow'|'green'|'red'|'blue' => ({ PENDING:'yellow', APPROVED:'green', REJECTED:'red', CONVERTED:'blue' }[s] as never ?? 'gray')
 
 interface SearchParams {
   search?:   string
   status?:   string
   priority?: string
+  requestType?: string
+  tab?:      string
   page?:     string
 }
 
 const ITEMS_PER_PAGE = 25
+
+const VALID_STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'CONVERTED', 'CANCELLED']
+const VALID_PRIORITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+const VALID_TYPE = ['REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 'OTHER']
+
+const TABS = [
+  { value: '', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'CONVERTED', label: 'Converted' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+]
 
 export default async function RequestsPage({
   searchParams,
@@ -31,8 +45,11 @@ export default async function RequestsPage({
 
   // Build Prisma where clause
   const where: any = {}
-  if (params.status)   where.status = params.status as any
-  if (params.priority) where.priority = params.priority
+  const tab = params.tab ?? ''
+  if (tab && VALID_STATUS.includes(tab)) where.status = tab
+  if (params.status && VALID_STATUS.includes(params.status)) where.status = params.status
+  if (params.priority && VALID_PRIORITY.includes(params.priority)) where.priority = params.priority
+  if (params.requestType && VALID_TYPE.includes(params.requestType)) where.requestType = params.requestType
 
   if (params.search) {
     where.OR = [
@@ -41,6 +58,7 @@ export default async function RequestsPage({
       { requesterName:  { contains: params.search, mode: 'insensitive' } },
       { requesterEmail: { contains: params.search, mode: 'insensitive' } },
       { location:       { contains: params.search, mode: 'insensitive' } },
+      { requestNumber:  { contains: params.search, mode: 'insensitive' } },
     ]
   }
 
@@ -51,7 +69,10 @@ export default async function RequestsPage({
     prisma.maintenanceRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { workOrder: { select: { id: true, woNumber: true } } },
+      include: {
+        workOrder: { select: { id: true, woNumber: true, status: true } },
+        asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
+      },
       skip,
       take: ITEMS_PER_PAGE,
     }),
@@ -65,6 +86,7 @@ export default async function RequestsPage({
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
   const queryString = new URLSearchParams(params as Record<string, string>)
   queryString.delete('page')
+  queryString.delete('tab')
   const baseUrl = `/requests?${queryString.toString()}`
 
   return (
@@ -80,7 +102,28 @@ export default async function RequestsPage({
         }
       />
 
-      {allRequestsForStats.length > 0 && <RequestFilters />}
+      {allRequestsForStats.length > 0 && (
+        <>
+          {/* Status tabs */}
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {TABS.map(t => (
+              <Link
+                key={t.value}
+                href={t.value ? `/requests?tab=${t.value}` : '/requests'}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  tab === t.value
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </div>
+
+          <RequestFilters />
+        </>
+      )}
 
       {allRequestsForStats.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-3xs">
@@ -105,15 +148,23 @@ export default async function RequestsPage({
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
                   <div className="flex-1 min-w-0 space-y-2.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge label={req.status} variant={statusVariant(req.status)} />
-                      <Badge label={req.priority} variant={req.priority === 'CRITICAL' ? 'red' : req.priority === 'HIGH' ? 'orange' as never : req.priority === 'MEDIUM' ? 'blue' : 'gray'} />
+                      {req.requestNumber && (
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{req.requestNumber}</span>
+                      )}
+                      <Badge label={REQUEST_STATUS_LABELS[req.status] ?? req.status} variant={requestStatusVariant(req.status)} />
+                      <Badge label={req.priority} variant={priorityVariant(req.priority)} />
+                      {req.requestType && (
+                        <Badge label={REQUEST_TYPE_LABELS[req.requestType] ?? req.requestType} variant={requestTypeVariant(req.requestType)} />
+                      )}
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight ml-auto md:ml-0">
                         {fmt(req.createdAt)}
                       </span>
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-slate-900 text-lg leading-snug group-hover:text-blue-700 transition-colors">{req.title}</h3>
+                      <Link href={`/requests/${req.id}`} className="inline-block">
+                        <h3 className="font-bold text-slate-900 text-lg leading-snug group-hover:text-blue-700 transition-colors">{req.title}</h3>
+                      </Link>
                       <p className="text-sm text-slate-500 mt-1.5 leading-relaxed line-clamp-3">{req.description}</p>
                     </div>
 
@@ -128,10 +179,25 @@ export default async function RequestsPage({
                           <span className="text-slate-700 font-bold truncate">{req.requesterEmail}</span>
                         </div>
                       )}
-                      {req.location && (
+                      {req.asset && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-slate-400 font-medium">Location:</span>
-                          <span className="text-slate-700 font-bold truncate">{req.location}</span>
+                          <Package className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="text-slate-700 font-bold truncate">
+                            {req.asset.name}
+                            {req.asset.assetCode && <span className="text-slate-400 font-bold ml-1">({req.asset.assetCode})</span>}
+                          </span>
+                        </div>
+                      )}
+                      {(req.location || req.asset?.location?.name) && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="text-slate-700 font-bold truncate">{req.location || req.asset?.location?.name}</span>
+                        </div>
+                      )}
+                      {req.desiredDate && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <CalendarClock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="text-slate-700 font-bold truncate">Desired {fmt(req.desiredDate)}</span>
                         </div>
                       )}
                     </div>
@@ -144,7 +210,7 @@ export default async function RequestsPage({
                         </p>
                       </div>
                     )}
-                    
+
                     {req.rejectionReason && (
                       <div className="bg-rose-50/50 border border-rose-100 rounded-lg px-3 py-2 flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />

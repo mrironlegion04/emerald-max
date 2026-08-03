@@ -10,6 +10,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
+  // REQUESTERs get a requests-only experience, not the full dashboard
+  if (user.role === 'REQUESTER') {
+    redirect('/my-requests')
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Sidebar - fixed and visible on large screens */}

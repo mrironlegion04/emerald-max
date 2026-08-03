@@ -88,6 +88,15 @@ enum RequestStatus {
   APPROVED
   REJECTED
   CONVERTED
+  CANCELLED
+}
+
+enum RequestType {
+  REPAIR
+  MAINTENANCE
+  INSPECTION
+  INSTALLATION
+  OTHER
 }
 
 enum PMTriggerType {
@@ -153,6 +162,7 @@ enum NotificationType {
   PM_GENERATED
   STOCK_LOW
   CHAT
+  REQUEST
 }
 
 enum Criticality {
@@ -462,6 +472,7 @@ model Asset {
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
   assetParts           AssetPart[]           @relation("AssetToAssetPart")
+  requests             MaintenanceRequest[]  @relation("RequestAsset")
 
   // Soft-delete (archive) support
   isDeleted  Boolean   @default(false)
@@ -899,6 +910,7 @@ model Subtask {
 
 model MaintenanceRequest {
   id              String        @id @default(cuid())
+  requestNumber   String?       @unique
   title           String
   description     String
   location        String?
@@ -906,6 +918,8 @@ model MaintenanceRequest {
   requesterEmail  String?
   requesterPhone  String?
   priority        RequestPriority @default(MEDIUM)
+  requestType     RequestType?
+  desiredDate     DateTime?
   status          RequestStatus @default(PENDING)
   rejectionReason String?
   createdAt       DateTime      @default(now())
@@ -918,6 +932,14 @@ model MaintenanceRequest {
   workOrderId  String?
   workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
 
+  assetId String?
+  asset   Asset?  @relation("RequestAsset", fields: [assetId], references: [id], onDelete: SetNull)
+
+  attachments Attachment[] @relation("RequestAttachments")
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([createdAt])
   @@map("maintenance_requests")
 }
 
@@ -942,9 +964,13 @@ model Attachment {
   partId String?
   part   Part?   @relation("PartAttachments", fields: [partId], references: [id], onDelete: Cascade)
 
+  requestId String?
+  request   MaintenanceRequest? @relation("RequestAttachments", fields: [requestId], references: [id], onDelete: Cascade)
+
   @@index([workOrderId])
   @@index([assetId])
   @@index([partId])
+  @@index([requestId])
   @@map("attachments")
 }
 

@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { createNotificationForUsers } from '@/lib/notifications'
+import { generateRequestNumber } from '@/lib/request-number'
 import { z } from 'zod'
+
+const attachmentSchema = z.object({
+  url: z.string().min(1),
+  originalName: z.string().min(1),
+  mimeType: z.string().optional(),
+  size: z.number().optional(),
+})
 
 const schema = z.object({
   title: z.string().min(1), description: z.string().min(1),
@@ -10,6 +19,10 @@ const schema = z.object({
   requesterEmail: z.string().email().optional().or(z.literal('')),
   requesterPhone: z.string().optional(),
   priority: z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
+  requestType: z.enum(['REPAIR','MAINTENANCE','INSPECTION','INSTALLATION','OTHER']).optional(),
+  assetId: z.string().optional(),
+  desiredDate: z.string().optional(),
+  attachments: z.array(attachmentSchema).optional(),
 })
 
 export async function GET() {
@@ -17,8 +30,19 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const requests = await prisma.maintenanceRequest.findMany({
+    where: user.role === 'REQUESTER' ? {
+      OR: [
+        { requesterId: user.userId },
+        { requesterName: user.name },
+      ],
+    } : undefined,
     orderBy: { createdAt: 'desc' },
-    include: { workOrder: { select: { id: true, woNumber: true } } },
+    include: {
+      asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
+      workOrder: { select: { id: true, woNumber: true, status: true } },
+      attachments: true,
+      reviewedBy: { select: { id: true, name: true } },
+    },
   })
   return NextResponse.json(requests)
 }
@@ -29,13 +53,32 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    if (data.assetId) {
+      const asset = await prisma.asset.findUnique({ where: { id: data.assetId }, select: { id: true } })
+      if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    }
+
+    const requestNumber = await generateRequestNumber()
+    const desiredDate = data.desiredDate ? new Date(data.desiredDate) : null
+
     const request = await prisma.maintenanceRequest.create({
       data: {
-        title: data.title, description: data.description,
-        location: data.location || null, requesterName: user.name,
-        requesterEmail: user.email, requesterPhone: data.requesterPhone || null,
-        priority: data.priority,
+        requestNumber, title: data.title, description: data.description,
+        location: data.location || null, requesterName: data.requesterName || user.name,
+        requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
+        priority: data.priority, requestType: data.requestType, assetId: data.assetId,
+        desiredDate,
         requesterId: user.userId,
+        attachments: data.attachments && data.attachments.length > 0 ? {
+          create: data.attachments.map(a => ({
+            filename: a.url.split('/').pop() ?? 'attachment',
+            originalName: a.originalName,
+            mimeType: a.mimeType ?? 'application/octet-stream',
+            size: a.size ?? 0,
+            url: a.url,
+            uploadedById: user.userId,
+          })),
+        } : undefined,
       },
     })
 
@@ -48,6 +91,23 @@ export async function POST(req: NextRequest) {
       userName: user.name,
       userEmail: user.email,
     })
+
+    // Notify staff who can review requests
+    const approvers = await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'MANAGER'] }, isActive: true },
+      select: { id: true },
+    })
+    if (approvers.length > 0) {
+      await createNotificationForUsers(
+        approvers.map(a => a.id),
+        {
+          type: 'REQUEST',
+          title: `New request ${requestNumber} from ${request.requesterName}`,
+          message: request.title.slice(0, 100),
+          href: `/requests`,
+        },
+      ).catch(console.error)
+    }
 
     return NextResponse.json(request, { status: 201 })
   } catch (e) {

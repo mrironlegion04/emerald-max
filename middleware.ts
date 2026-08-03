@@ -64,11 +64,11 @@ export async function middleware(request: NextRequest) {
 
   const role = session.role
 
-  // REQUESTER trying to access staff-only routes → redirect to /request
+  // REQUESTER trying to access staff-only routes → redirect to their requests list
   if (role === 'REQUESTER') {
     const isStaffPath = STAFF_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
     if (isStaffPath) {
-      return NextResponse.redirect(new URL('/request', request.url))
+      return NextResponse.redirect(new URL('/my-requests', request.url))
     }
   }
 

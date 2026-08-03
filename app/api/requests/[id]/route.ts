@@ -8,7 +8,7 @@ import { generateWONumber } from '@/lib/wo-number'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
-  if (!user || !(await hasPermission(user, 'request:approve'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
   const { action, reason } = await req.json()
@@ -16,6 +16,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const request = await prisma.maintenanceRequest.findUnique({ where: { id } })
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (request.status !== 'PENDING') return NextResponse.json({ error: 'Request already reviewed' }, { status: 422 })
+
+  const canApprove = await hasPermission(user, 'request:approve')
+  const isOwner = request.requesterId === user.userId
+
+  if (action === 'cancel') {
+    if (!isOwner && !canApprove) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
+    const updated = await prisma.maintenanceRequest.update({
+      where: { id },
+      data: { status: 'CANCELLED', reviewedById: user.userId },
+    })
+
+    await writeAudit({
+      action: 'UPDATE',
+      entity: 'Request',
+      entityId: updated.id,
+      entityName: updated.title,
+      changes: {
+        status: { before: 'PENDING', after: 'CANCELLED' },
+        cancelledBy: { before: null, after: user.name },
+      },
+      userId: user.userId,
+      userName: user.name,
+      userEmail: user.email,
+    })
+    return NextResponse.json(updated)
+  }
+
+  if (!canApprove) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   if (action === 'approve') {
     const updated = await prisma.maintenanceRequest.update({
@@ -86,6 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         data: {
           woNumber, title: request.title, description: request.description,
           type: 'BREAKDOWN', status: 'OPEN', priority: request.priority as never,
+          assetId: request.assetId, locationId: null,
           createdById: user.userId,
         },
       }),
@@ -96,7 +126,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ])
     // Link WO to request
     await prisma.maintenanceRequest.update({ where: { id }, data: { workOrderId: wo.id } })
-    
+
     // Send email to requester
     if (request.requesterEmail) {
       await sendRequestConverted({
@@ -109,7 +139,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         convertedBy: user.name,
       }).catch(console.error)
     }
-    
+
     await writeAudit({
       action: 'UPDATE',
       entity: 'Request',
@@ -123,7 +153,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       userName: user.name,
       userEmail: user.email,
     })
-    
+
     return NextResponse.json({ ...updated, workOrderId: wo.id, woNumber: wo.woNumber })
   }
 

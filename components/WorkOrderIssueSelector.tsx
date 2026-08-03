@@ -14,6 +14,7 @@ interface Props {
   value: string           // issueId OR '__other__'
   onChange: (id: string) => void
   placeholder?: string
+  allowCustom?: boolean   // show "Other (type manually)" option
 }
 
 export default function WorkOrderIssueSelector({
@@ -21,6 +22,7 @@ export default function WorkOrderIssueSelector({
   value,
   onChange,
   placeholder = 'Select Issue',
+  allowCustom = true,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -184,17 +186,19 @@ export default function WorkOrderIssueSelector({
                 )}
 
                 {/* Other option — always shown at the bottom */}
-                <div className="border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => select(OTHER_ISSUE)}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${value === OTHER_ISSUE ? 'bg-amber-50 text-amber-700' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'}`}
-                  >
-                    <PenLine className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="flex-1">Other (type manually)</span>
-                    {value === OTHER_ISSUE && <span className="text-amber-600 text-xs font-semibold">✓</span>}
-                  </button>
-                </div>
+                {allowCustom && (
+                  <div className="border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => select(OTHER_ISSUE)}
+                      className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${value === OTHER_ISSUE ? 'bg-amber-50 text-amber-700' : 'text-gray-500 hover:bg-amber-50 hover:text-amber-700'}`}
+                    >
+                      <PenLine className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="flex-1">Other (type manually)</span>
+                      {value === OTHER_ISSUE && <span className="text-amber-600 text-xs font-semibold">✓</span>}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>

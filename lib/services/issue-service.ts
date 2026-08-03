@@ -176,6 +176,63 @@ export const IssueService = {
   },
 
   /**
+   * All active issues grouped by domain, plus a "Common Issues" (global) group.
+   * Used by the requester request form where there is no asset category scope.
+   */
+  async getAllIssues(options?: GetIssuesOptions): Promise<IssueGroup[]> {
+    const [domains, globalIssues] = await Promise.all([
+      prisma.maintenanceDomain.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        include: {
+          issues: {
+            where: { issue: { isActive: true } },
+            include: { issue: true },
+            orderBy: { issue: { sortOrder: 'asc' } },
+          },
+        },
+      }),
+      prisma.issue.findMany({
+        where: {
+          isActive: true,
+          isGlobal: true,
+          ...(await buildIssueQuery(options)),
+        },
+        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+      }),
+    ])
+
+    const groups: IssueGroup[] = []
+    for (const domain of domains) {
+      if (domain.issues.length === 0) continue
+      groups.push({
+        id: domain.id,
+        name: domain.name,
+        issues: domain.issues.map(l => ({
+          id: l.issue.id,
+          code: l.issue.code,
+          title: l.issue.title,
+          severity: l.issue.severity,
+        })),
+      })
+    }
+    if (globalIssues.length > 0) {
+      groups.push({
+        id: '__global__',
+        name: 'Common Issues',
+        isFallback: true,
+        issues: globalIssues.map(i => ({
+          id: i.id,
+          code: i.code,
+          title: i.title,
+          severity: i.severity,
+        })),
+      })
+    }
+    return groups
+  },
+
+  /**
    * Validate that an issue is available for the given asset.
    * Returns valid=true if the issue is in the resolved set.
    * This is a soft check — it does not block, it just reports.

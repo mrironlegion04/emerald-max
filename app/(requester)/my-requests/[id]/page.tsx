@@ -9,6 +9,7 @@ import {
 import Badge, { priorityVariant } from '@/components/Badge'
 import { REQUEST_STATUS_LABELS, requestStatusVariant, REQUEST_TYPE_LABELS, requestTypeVariant } from '@/lib/request-status'
 import CancelRequestButton from '@/components/CancelRequestButton'
+import IssueBadge from '@/components/IssueBadge'
 
 function fmtDate(d: Date | string | null | undefined) {
   if (!d) return null
@@ -33,8 +34,15 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const request = await prisma.maintenanceRequest.findUnique({
     where: { id },
     include: {
+      issue: { select: { id: true, code: true, title: true, severity: true } },
       asset: { select: { id: true, name: true, assetCode: true, description: true, location: { select: { name: true } } } },
-      workOrder: { select: { id: true, woNumber: true, status: true } },
+      workOrder: {
+        select: {
+          id: true, woNumber: true, status: true,
+          issue: { select: { code: true, title: true, severity: true } },
+          customIssue: true,
+        },
+      },
       attachments: { orderBy: { createdAt: 'desc' } },
       reviewedBy: { select: { id: true, name: true } },
     },
@@ -113,6 +121,18 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
+          {request.issue && (
+            <div className="mt-5 bg-slate-50 rounded-xl border border-slate-200 p-4">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Issue</p>
+              <IssueBadge
+                code={request.issue.code}
+                title={request.issue.title}
+                severity={request.issue.severity}
+                showSeverity
+              />
+            </div>
+          )}
+
           {request.attachments.length > 0 && (
             <div className="mt-5">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Photos & attachments</p>
@@ -143,6 +163,18 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
                 {request.workOrder.woNumber}
                 <span className="ml-2 font-medium text-blue-500">— {WO_STATUS_LABELS[request.workOrder.status] ?? request.workOrder.status}</span>
               </p>
+              {!request.issue && (request.workOrder.issue || request.workOrder.customIssue) && (
+                <p className="mt-2 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Issue</span>
+                  <IssueBadge
+                    code={request.workOrder.issue?.code}
+                    title={request.workOrder.issue?.title}
+                    severity={request.workOrder.issue?.severity}
+                    customIssue={request.workOrder.customIssue}
+                    showSeverity
+                  />
+                </p>
+              )}
             </div>
           )}
 

@@ -665,6 +665,7 @@ model Issue {
 
   domains    IssueDomain[]
   workOrders WorkOrder[]
+  requests   MaintenanceRequest[] @relation("RequestIssue")
 
   @@index([isActive, isGlobal, sortOrder])
   @@map("issues")
@@ -954,9 +955,13 @@ model MaintenanceRequest {
   assetId String?
   asset   Asset?  @relation("RequestAsset", fields: [assetId], references: [id], onDelete: SetNull)
 
+  issueId String?
+  issue   Issue?  @relation("RequestIssue", fields: [issueId], references: [id], onDelete: SetNull)
+
   attachments Attachment[] @relation("RequestAttachments")
 
   @@index([requesterId])
+  @@index([issueId])
   @@index([status])
   @@index([createdAt])
   @@map("maintenance_requests")

@@ -1,8 +1,9 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Settings, CheckCircle, X, ImagePlus } from 'lucide-react'
 import RequestAssetPicker from '@/components/RequestAssetPicker'
+import WorkOrderIssueSelector from '@/components/WorkOrderIssueSelector'
 
 interface CurrentUser {
   name: string
@@ -17,9 +18,16 @@ interface AttachmentUpload {
   size: number
 }
 
+interface DomainGroup {
+  id: string
+  name: string
+  isFallback?: boolean
+  issues: { id: string; code: string; title: string; severity?: string }[]
+}
+
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', issueId: '',
 }
 
 export default function PublicRequestForm({ currentUser }: { currentUser: CurrentUser | null }) {
@@ -34,6 +42,20 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
   const [success, setSuccess] = useState(false)
   const [error, setError]     = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [issueGroups, setIssueGroups] = useState<DomainGroup[]>([])
+  const [issuesLoading, setIssuesLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/issues?scope=request')
+      .then(r => r.json())
+      .then((groups: DomainGroup[]) => { if (active) setIssueGroups(groups) })
+      .catch(() => {})
+      .finally(() => { if (active) setIssuesLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const hasIssues = issueGroups.some(g => g.issues.length > 0)
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
@@ -58,12 +80,18 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError(''); setSaving(true)
+    if (hasIssues && !form.issueId) {
+      setError('Please select an issue for your request')
+      setSaving(false)
+      return
+    }
     try {
       const payload = {
         ...form,
         requestType: form.requestType || undefined,
         assetId: form.assetId || undefined,
         desiredDate: form.desiredDate || undefined,
+        issueId: form.issueId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
       const res  = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -137,6 +165,17 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
                   <option value="CRITICAL">Critical — urgent!</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
+              <WorkOrderIssueSelector
+                groups={issueGroups}
+                value={form.issueId}
+                onChange={id => set('issueId', id)}
+                placeholder={issuesLoading ? 'Loading issues…' : 'Select the issue'}
+                allowCustom={false}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

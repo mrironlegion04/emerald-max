@@ -312,7 +312,7 @@ export async function PUT(
           notes:         `Status changed from ${existingWo.status} to ${wo.status} during work order update`,
         }
       })
-      notificationEmitter.emit(`status:${id}`)
+      notificationEmitter.emit(`activity:${id}`)
     }
 
     // ── Update asset metrics on completion ────────────────────────────

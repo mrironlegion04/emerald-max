@@ -14,6 +14,7 @@ import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
 import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
+import IssueBadge from '@/components/IssueBadge'
 import { canEditWorkOrder, canViewWorkOrder, getUserLocationIds } from '@/lib/access-control'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
@@ -264,20 +265,16 @@ export default async function WorkOrderDetailPage({
                     ✓ {wo.completedBy.name}
                   </span>
                 ) : '—' },
-                ...(wo.issue ? [{
+                ...(wo.issue || wo.customIssue ? [{
                   label: 'Issue',
                   value: (
-                    <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <code className="text-[10px] font-bold font-mono bg-slate-105 border border-slate-200 text-slate-650 px-1.5 py-0.5 rounded">{wo.issue.code}</code>
-                      <span className="text-xs text-violet-750 font-bold">{wo.issue.title}</span>
-                    </span>
-                  ),
-                }] : wo.customIssue ? [{
-                  label: 'Issue',
-                  value: (
-                    <span className="inline-flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs text-amber-705 font-bold">{wo.customIssue}</span>
-                    </span>
+                    <IssueBadge
+                      code={wo.issue?.code}
+                      title={wo.issue?.title}
+                      severity={wo.issue?.severity}
+                      customIssue={wo.customIssue}
+                      showSeverity
+                    />
                   ),
                 }] : []),
               ].map(row => (

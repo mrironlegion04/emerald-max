@@ -46,6 +46,7 @@ export default async function MyRequestsPage({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
+      issue: { select: { id: true, code: true, title: true } },
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       workOrder: { select: { id: true, woNumber: true, status: true } },
     },
@@ -93,6 +94,12 @@ export default async function MyRequestsPage({
                     <Badge label={req.priority} variant={priorityVariant(req.priority)} />
                     {req.requestType && (
                       <Badge label={REQUEST_TYPE_LABELS[req.requestType] ?? req.requestType} variant={requestTypeVariant(req.requestType)} />
+                    )}
+                    {req.issue && (
+                      <span className="inline-flex items-center gap-1">
+                        <code className="text-[10px] font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{req.issue.code}</code>
+                        <span className="text-[11px] font-semibold text-violet-700 truncate max-w-[160px]">{req.issue.title}</span>
+                      </span>
                     )}
                   </div>
 

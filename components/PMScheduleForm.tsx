@@ -393,7 +393,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900">All Assets in this Location</p>
-                      <p className="text-xs text-gray-500">Creates procedure execution instances for each asset recursively</p>
+                      <p className="text-xs text-gray-500">Creates a checklist for each asset recursively</p>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -407,7 +407,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900">General Maintenance</p>
-                      <p className="text-xs text-gray-500">Location-only ticket (no asset-specific procedures)</p>
+                      <p className="text-xs text-gray-500">Location-only ticket (no asset checklist)</p>
                     </div>
                   </label>
                 </div>

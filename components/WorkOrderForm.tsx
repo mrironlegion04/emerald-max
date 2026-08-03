@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
@@ -63,7 +63,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     dueTime:        initialData?.dueTime        ?? '',
     assetId:        initialData?.assetId        ?? preselectedAssetId ?? '',
     locationId:     initialData?.locationId     ?? preselectedLocationId ?? '',
-    locationScope:  initialData?.locationScope  ?? 'ALL_ASSETS',
+    locationScope:  initialData?.locationScope  ?? 'GENERAL',
     selectedAssetIds: initialData?.selectedAssetIds ?? [],
     assignedToId:   initialData?.assignedToId   ?? '',
     teamId:         initialData?.teamId         ?? '',
@@ -129,9 +129,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   const handleToggleTarget = (type: 'ASSET' | 'LOCATION') => {
     setTargetType(type)
     if (type === 'ASSET') {
-      setForm(prev => ({ ...prev, locationId: '', locationScope: 'ALL_ASSETS', selectedAssetIds: [] }))
+      setForm(prev => ({ ...prev, locationId: '', locationScope: 'GENERAL', selectedAssetIds: [] }))
     } else {
-      setForm(prev => ({ ...prev, assetId: '', selectedAssetIds: [], issueId: '', customIssue: '' }))
+      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '' }))
     }
   }
 
@@ -154,21 +154,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   ])]
   const primaryAssetId = form.assetId || form.selectedAssetIds[0] || ''
   const selectedAsset = assets.find(a => a.id === primaryAssetId)
-
-  const assetsInLocation = useMemo(() => {
-    if (!form.locationId) return []
-    const inLoc = new Set(assets.filter(a => a.locationId === form.locationId).map(a => a.id))
-    const result: Asset[] = []
-    const seen = new Set<string>()
-    const walk = (a: Asset) => {
-      if (seen.has(a.id)) return
-      seen.add(a.id)
-      result.push(a)
-      assets.filter(c => c.parentId === a.id).forEach(walk)
-    }
-    assets.forEach(a => { if (inLoc.has(a.id)) walk(a) })
-    return result
-  }, [assets, form.locationId])
 
   useEffect(() => {
     const categoryId = selectedAsset?.categoryId
@@ -461,61 +446,15 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               <LocationSelect
                 locations={locations}
                 value={form.locationId}
-                onChange={id => set('locationId', id)}
+                onChange={id => {
+                  if (id !== form.locationId) {
+                    set('locationId', id)
+                    set('selectedAssetIds', [])
+                  }
+                }}
               />
+              <p className="text-[11px] text-slate-400 mt-1.5 font-medium">A location work order is a single ticket for this location.</p>
             </div>
-
-            {form.locationId && (
-              <>
-                <div>
-                  <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-1.5">
-                    Select specific assets (optional)
-                  </label>
-                  <p className="text-[11px] text-slate-450 mb-2 font-medium">Leave empty to apply to all location assets with scope selection below</p>
-                  <AssetTreeSelect
-                    assets={assetsInLocation}
-                    value={form.selectedAssetIds}
-                    onChange={ids => set('selectedAssetIds', ids)}
-                    multiSelect={true}
-                    placeholder="Select assets..."
-                  />
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">Scope of work</p>
-                  <div className="space-y-2">
-                  <label className="flex items-center gap-3 p-3 border border-slate-205/65 rounded-xl hover:bg-slate-50/50 cursor-pointer shadow-xs transition">
-                    <input
-                      type="radio"
-                      name="locationScope"
-                      value="ALL_ASSETS"
-                      checked={form.locationScope === 'ALL_ASSETS'}
-                      onChange={e => set('locationScope', e.target.value)}
-                      className="w-4 h-4 cursor-pointer accent-blue-600"
-                    />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">All Assets in this Location</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed font-medium">Creates a checklist for each asset recursively</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 border border-slate-205/65 rounded-xl hover:bg-slate-50/50 cursor-pointer shadow-xs transition">
-                    <input
-                      type="radio"
-                      name="locationScope"
-                      value="GENERAL"
-                      checked={form.locationScope === 'GENERAL'}
-                      onChange={e => set('locationScope', e.target.value)}
-                      className="w-4 h-4 cursor-pointer accent-blue-600"
-                    />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">General Maintenance</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed font-medium">Location-only ticket (no asset checklist)</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              </>
-            )}
           </div>
         )}
 

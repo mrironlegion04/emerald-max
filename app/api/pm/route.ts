@@ -29,6 +29,7 @@ const pmSchema = z.object({
   interval:             z.number().int().min(1).default(1),
   nextDueDate:          z.string().min(1, 'Next due date is required'),
   assetId:              z.string().nullable().optional(),
+  assetIds:             z.array(z.string()).optional(),
   locationId:           z.string().nullable().optional(),
   locationScope:        z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   isActive:             z.boolean().default(true),
@@ -52,7 +53,7 @@ const pmSchema = z.object({
   nestedStartIndex:     z.number().int().min(0).default(0),
   // Task template — copied to every generated work order as subtasks
   tasks:                z.array(pmTaskSchema).optional().default([]),
-}).refine(data => data.assetId || data.locationId, {
+}).refine(data => data.assetId || data.locationId || (data.assetIds && data.assetIds.length > 0), {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
 })
@@ -69,7 +70,6 @@ export async function GET() {
       include: {
         asset:    { select: { id: true, name: true, assetCode: true } },
         location: { select: { id: true, name: true } },
-
       },
       orderBy: { nextDueDate: 'asc' },
     })
@@ -89,18 +89,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = pmSchema.parse(body)
 
+    // Derive the full asset list: explicit assetIds wins, falls back to assetId
+    const assetIds = data.assetIds && data.assetIds.length > 0
+      ? data.assetIds
+      : (data.assetId ? [data.assetId] : [])
+    const finalAssetId = assetIds[0] ?? null
+
     // ── Plant scope enforcement ───────────────────────────────────────
-    let assetLocationId: string | null | undefined
-    if (data.assetId) {
-      const asset = await prisma.asset.findUnique({
-        where: { id: data.assetId },
+    let assetLocationIds: (string | null)[] = []
+    if (assetIds.length > 0) {
+      const assets = await prisma.asset.findMany({
+        where: { id: { in: assetIds } },
         select: { locationId: true },
       })
-      assetLocationId = asset?.locationId ?? null
+      assetLocationIds = assets.map(a => a.locationId)
     }
 
     const inScope =
-      (await canWriteToLocations(user, [data.locationId, assetLocationId])) &&
+      (await canWriteToLocations(user, [...(data.locationId ? [data.locationId] : []), ...assetLocationIds])) &&
       (await canAssignUsers(user, [data.woAssignedToId])) &&
       (await canAssignTeams(user, [data.woTeamId])) &&
       (await canAssignUsers(user, data.tasks.map(t => t.assignedToId)))
@@ -119,9 +125,12 @@ export async function POST(request: NextRequest) {
         frequency:           data.frequency,
         interval:            data.interval,
         nextDueDate:         new Date(data.nextDueDate),
-        assetId:             data.assetId              ?? null,
+        assetId:             finalAssetId,
+        assets:              assetIds.length > 0
+          ? { create: assetIds.map(assetId => ({ assetId })) }
+          : undefined,
         locationId:          data.locationId           ?? null,
-        locationScope:       data.locationId && !data.assetId ? (data.locationScope ?? 'ALL_ASSETS') : null,
+        locationScope:       data.locationId && !finalAssetId ? (data.locationScope ?? 'ALL_ASSETS') : null,
         isActive:            data.isActive,
         meterId:             data.meterId              ?? null,
         meterInterval:       data.meterInterval        ?? null,

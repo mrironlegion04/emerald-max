@@ -33,6 +33,7 @@ export default async function EditPMPage({
           orderBy: { order: 'asc' },
           select: { title: true, order: true, assignedToId: true, required: true },
         },
+        assets: { select: { assetId: true } },
       },
     }),
     prisma.asset.findMany({
@@ -79,6 +80,9 @@ export default async function EditPMPage({
     meterId:             schedule.meterId       ?? '',
     nextDueDate:         new Date(schedule.nextDueDate).toISOString().split('T')[0],
     assetId:             schedule.assetId       ?? '',
+    assetIds:            schedule.assets.length > 0
+      ? schedule.assets.map(a => a.assetId)
+      : (schedule.assetId ? [schedule.assetId] : []),
     locationId:          schedule.locationId    ?? '',
     locationScope:       schedule.locationScope ?? 'ALL_ASSETS',
     isActive:            schedule.isActive,

@@ -34,6 +34,7 @@ export async function GET(
       where: { id },
       include: {
         asset: { select: { id: true, name: true } },
+        assets: { include: { asset: { select: { id: true, name: true } } } },
         location: { select: { id: true, name: true } },
       },
     })
@@ -51,52 +52,61 @@ export async function GET(
     const previewWOs: PreviewWO[] = []
     const baseCounter = (schedule.nestedCounter ?? 0) + (schedule.nestedStartIndex ?? 0)
 
-    for (let batch = 0; batch < horizon; batch++) {
-      // Calculate due date for this batch
-      let dueDate: Date
-      if (schedule.triggerType === 'METER') {
-        dueDate = new Date()
-      } else {
-        const baseDate = new Date(schedule.nextDueDate)
-        dueDate = batch === 0
-          ? baseDate
-          : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
-      }
+    // Resolve target assets: junction rows win, fall back to the legacy single assetId
+    const targetAssets = schedule.assets.length > 0
+      ? schedule.assets.map(a => a.asset)
+      : (schedule.asset ? [schedule.asset] : [])
+    const targets: ({ id: string; name: string } | null)[] =
+      targetAssets.length > 0 ? targetAssets : [null]
 
-      // Build tiers for this batch
-      const counter = baseCounter + batch
-      const tiers: { label: string; level: number }[] = [
-        { label: '', level: 0 },
-      ]
+    for (const asset of targets) {
+      for (let batch = 0; batch < horizon; batch++) {
+        // Calculate due date for this batch
+        let dueDate: Date
+        if (schedule.triggerType === 'METER') {
+          dueDate = new Date()
+        } else {
+          const baseDate = new Date(schedule.nextDueDate)
+          dueDate = batch === 0
+            ? baseDate
+            : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
+        }
 
-      if (schedule.nestedConfig && Array.isArray(schedule.nestedConfig)) {
-        const nestedArr = schedule.nestedConfig as unknown as NestedPMConfig[]
-        for (let i = 0; i < nestedArr.length; i++) {
-          const nested = nestedArr[i]
-          if (!nested.enabled) continue
-          const runEvery = nested.runEvery ?? 1
-          if (counter % runEvery === 0) {
-            tiers.push({
-              label: nested.label,
-              level: i + 1,
-            })
+        // Build tiers for this batch
+        const counter = baseCounter + batch
+        const tiers: { label: string; level: number }[] = [
+          { label: '', level: 0 },
+        ]
+
+        if (schedule.nestedConfig && Array.isArray(schedule.nestedConfig)) {
+          const nestedArr = schedule.nestedConfig as unknown as NestedPMConfig[]
+          for (let i = 0; i < nestedArr.length; i++) {
+            const nested = nestedArr[i]
+            if (!nested.enabled) continue
+            const runEvery = nested.runEvery ?? 1
+            if (counter % runEvery === 0) {
+              tiers.push({
+                label: nested.label,
+                level: i + 1,
+              })
+            }
           }
         }
-      }
 
-      // Create preview WOs for each tier
-      for (const tier of tiers) {
-        let title = schedule.title
-        if (tier.label) title += ` — ${tier.label}`
-        if (schedule.asset) title += ` — ${schedule.asset.name}`
-        else if (schedule.location) title += ` — ${schedule.location.name}`
+        // Create preview WOs for each tier
+        for (const tier of tiers) {
+          let title = schedule.title
+          if (tier.label) title += ` — ${tier.label}`
+          if (asset) title += ` — ${asset.name}`
+          else if (schedule.location) title += ` — ${schedule.location.name}`
 
-        previewWOs.push({
-          dueDate: dueDate.toISOString(),
-          title,
-          nestedLabel: tier.label || null,
-          nestedLevel: tier.level,
-        })
+          previewWOs.push({
+            dueDate: dueDate.toISOString(),
+            title,
+            nestedLabel: tier.label || null,
+            nestedLevel: tier.level,
+          })
+        }
       }
     }
 

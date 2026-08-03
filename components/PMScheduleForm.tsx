@@ -51,7 +51,7 @@ interface PMFormData {
   title: string; description: string
   triggerType: string; frequency: string; interval: string
   meterInterval: string; meterUnit: string; meterId: string
-  nextDueDate: string; assetId: string; locationId: string; locationScope: string; isActive: boolean
+  nextDueDate: string; assetId: string; assetIds: string[]; locationId: string; locationScope: string; isActive: boolean
   // MaintainX-style fields
   scheduleBehavior: string; schedulingHorizon: string
   // WO Template fields
@@ -144,6 +144,11 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     meterId:            (initialData as any)?.meterId   ?? '',
     nextDueDate:        initialData?.nextDueDate        ?? defaultDueDate(),
     assetId:            initialData?.assetId            ?? preselectedAssetId ?? '',
+    assetIds:           (initialData as any)?.assetIds?.length
+      ? (initialData as any).assetIds
+      : (initialData?.assetId
+          ? [initialData.assetId]
+          : (preselectedAssetId ? [preselectedAssetId] : [])),
     locationId:         initialData?.locationId         ?? '',
     locationScope:      initialData?.locationScope      ?? 'ALL_ASSETS',
     isActive:           initialData?.isActive           ?? true,
@@ -180,7 +185,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     if (type === 'ASSET') {
       setForm(prev => ({ ...prev, locationId: '', locationScope: 'ALL_ASSETS' }))
     } else {
-      setForm(prev => ({ ...prev, assetId: '' }))
+      setForm(prev => ({ ...prev, assetId: '', assetIds: [] }))
     }
   }
 
@@ -260,7 +265,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setSaving(true)
-    if (!form.assetId && !form.locationId) { setError('Either Asset or Location must be selected'); setSaving(false); return }
+    if (form.assetIds.length === 0 && !form.locationId) { setError('Either Asset or Location must be selected'); setSaving(false); return }
     try {
       const payload = {
         title:                form.title,
@@ -272,7 +277,8 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         meterId:              form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? (form.meterId || null) : null,
         meterInterval:        form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? parseFloat(form.meterInterval) : null,
         meterUnit:            form.triggerType === 'METER' || form.triggerType === 'TIME_OR_METER' ? form.meterUnit : null,
-        assetId:              form.assetId || null,
+        assetId:              form.assetIds[0] ?? null,
+        assetIds:             form.assetIds,
         locationId:           form.locationId || null,
         locationScope:        form.locationId && !form.assetId ? form.locationScope : null,
 
@@ -358,13 +364,21 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
         {targetType === 'ASSET' ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Assets</label>
             <AssetTreeSelect
               assets={assets}
-              value={form.assetId}
-              onChange={id => set('assetId', id)}
-              placeholder="— Select an asset —"
+              value={form.assetIds}
+              onChange={ids => {
+                const arr = Array.isArray(ids) ? ids : (ids ? [ids] : [])
+                set('assetIds', arr)
+                set('assetId', arr[0] ?? '')
+              }}
+              multiSelect
+              placeholder="— Select one or more assets —"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Creates a work order for each selected asset. The first asset is used for meter-based triggers.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

@@ -78,7 +78,7 @@ export default async function PMPage({
       include: {
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
         location: { select: { id: true, name: true } },
-        _count: { select: { tasks: true } },
+        _count: { select: { tasks: true, assets: true } },
       },
       orderBy: { nextDueDate: 'asc' },
       skip,
@@ -216,6 +216,11 @@ export default async function PMPage({
                             <Link href={`/assets/${s.asset.id}`} className="text-blue-600 hover:underline text-xs">
                               {s.asset.name}
                             </Link>
+                            {s._count?.assets > 1 && (
+                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-semibold">
+                                +{s._count.assets - 1} more
+                              </span>
+                            )}
                             <p className="text-xs text-gray-400">{s.asset.location?.name ?? ''}</p>
                           </>
                         ) : s.location ? (
@@ -316,6 +321,11 @@ export default async function PMPage({
                           <Link href={`/assets/${s.asset.id}`} className="text-blue-600 font-extrabold hover:underline truncate block">
                             {s.asset.name}
                           </Link>
+                          {s._count?.assets > 1 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-semibold mt-0.5">
+                              +{s._count.assets - 1} more
+                            </span>
+                          )}
                           {s.asset.location?.name && (
                             <span className="text-[11px] text-slate-500 block truncate font-medium mt-0.5">📍 {s.asset.location.name}</span>
                           )}

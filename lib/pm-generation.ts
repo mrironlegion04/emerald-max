@@ -126,6 +126,19 @@ export async function generateWOsForSchedule(
           locationId: true,
         },
       },
+      assets: {
+        include: {
+          asset: {
+            select: {
+              id: true,
+              name: true,
+              currentMeterValue: true,
+              categoryId: true,
+              locationId: true,
+            },
+          },
+        },
+      },
       location: { select: { id: true, name: true } },
       tasks: { orderBy: { order: 'asc' as const } },
     },
@@ -140,33 +153,50 @@ export async function generateWOsForSchedule(
     return result
   }
 
-  // Duplicate check for asset-based schedules
-  if (schedule.assetId) {
-    const existingWO = await prisma.workOrder.findFirst({
-      where: {
-        assetId: schedule.assetId,
-        status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
-        type: 'PREVENTIVE',
-      },
-      select: { woNumber: true },
-    })
-    if (existingWO) {
-      result.errors.push(`Active WO already exists: ${existingWO.woNumber}`)
+  // Resolve target assets: junction rows win, fall back to the legacy single assetId
+  const targetAssets = schedule.assets.length > 0
+    ? schedule.assets.map(a => a.asset)
+    : (schedule.asset ? [schedule.asset] : [])
+
+  // Per-asset duplicate + meter threshold checks (asset-based schedules only)
+  const skippedAssets = new Set<string>()
+  if (targetAssets.length > 0) {
+    for (const asset of targetAssets) {
+      const existingWO = await prisma.workOrder.findFirst({
+        where: {
+          assetId: asset.id,
+          status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
+          type: 'PREVENTIVE',
+        },
+        select: { woNumber: true },
+      })
+      if (existingWO) {
+        skippedAssets.add(asset.id)
+        result.errors.push(`Active WO already exists for ${asset.name}: ${existingWO.woNumber}`)
+        continue
+      }
+
+      if (schedule.triggerType === 'METER' && schedule.meterInterval) {
+        if (
+          !asset.currentMeterValue ||
+          asset.currentMeterValue < schedule.meterInterval
+        ) {
+          skippedAssets.add(asset.id)
+          result.errors.push(`${asset.name}: meter value below threshold`)
+        }
+      }
+    }
+
+    if (skippedAssets.size === targetAssets.length) {
+      result.errors = result.errors.length > 0 ? [result.errors[0]] : result.errors
       return result
     }
   }
 
-  // Meter threshold check (skip for TIME_OR_METER — either trigger can fire)
-  if (schedule.triggerType === 'METER') {
+  // Meter threshold check for schedules with no asset target
+  if (schedule.triggerType === 'METER' && targetAssets.length === 0) {
     if (!schedule.meterInterval) {
       result.errors.push('Meter interval not set')
-      return result
-    }
-    if (
-      !schedule.asset?.currentMeterValue ||
-      schedule.asset.currentMeterValue < schedule.meterInterval
-    ) {
-      result.errors.push('Meter value below threshold')
       return result
     }
   }
@@ -180,109 +210,114 @@ export async function generateWOsForSchedule(
     const woIds: string[] = []
     const woNumbers: string[] = []
     let currentCounter = schedule.nestedCounter ?? 0
+    const eligibleAssets = targetAssets.filter(a => !skippedAssets.has(a.id))
+    const targets: (typeof eligibleAssets[number] | null)[] =
+      eligibleAssets.length > 0 ? eligibleAssets : [null]
 
-    for (let batch = 0; batch < horizon; batch++) {
-      // Build tiers for this batch's counter value
-      const tiers = buildTiers({
-        ...schedule,
-        nestedCounter: baseCounter + batch,
-      })
-
-      const tiersToGenerate = options?.maxWOs
-        ? tiers.slice(0, options.maxWOs)
-        : tiers
-
-      for (let i = 0; i < tiersToGenerate.length; i++) {
-        const tier = tiersToGenerate[i]
-        const woNumber = await generateWONumber(
-          schedule.locationId ?? schedule.asset?.locationId,
-          tx,
-        )
-
-        // Build title
-        let woTitle = schedule.title
-        if (tier.label) woTitle += ` — ${tier.label}`
-        if (schedule.asset) woTitle += ` — ${schedule.asset.name}`
-        else if (schedule.location) woTitle += ` — ${schedule.location.name}`
-
-        // Calculate due date (advance by batch * interval from base date)
-        let dueDate: Date
-        if (schedule.triggerType === 'METER') {
-          dueDate = new Date()
-        } else {
-          const baseDate = new Date(schedule.nextDueDate)
-          dueDate = batch === 0
-            ? baseDate
-            : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
-        }
-
-        // Calculate start date from offset
-        const startDate = (schedule.startDateOffset ?? 0) > 0
-          ? new Date(dueDate.getTime() - (schedule.startDateOffset ?? 0) * 86400000)
-          : undefined
-
-        // Build description with template
-        let woDescription = schedule.description ?? undefined
-        if (schedule.woDescription) {
-          woDescription = woDescription
-            ? `${woDescription}\n\n${schedule.woDescription}`
-            : schedule.woDescription
-        }
-
-        const wo = await tx.workOrder.create({
-          data: {
-            woNumber,
-            title: woTitle,
-            description: woDescription,
-            type: 'PREVENTIVE',
-            status: 'OPEN',
-            priority: schedule.woPriority ?? 'MEDIUM',
-            dueDate,
-            ...(startDate ? { startDate } : {}),
-            assetId: schedule.assetId,
-            locationId: schedule.locationId,
-            locationScope: schedule.locationScope,
-            maintenanceScheduleId: schedule.id,
-            createdById: options?.userId ?? null,
-            assignedToId: schedule.woAssignedToId ?? null,
-            teamId: schedule.woTeamId ?? null,
-            categoryId: schedule.woCategoryId ?? null,
-            nestedLevel: i,
-            nestedLabel: tier.label || null,
-          },
+    for (const asset of targets) {
+      for (let batch = 0; batch < horizon; batch++) {
+        // Build tiers for this batch's counter value
+        const tiers = buildTiers({
+          ...schedule,
+          nestedCounter: baseCounter + batch,
         })
 
-        // Create initial status history
-        await tx.workOrderStatusHistory.create({
-          data: {
-            workOrderId: wo.id,
-            status: 'OPEN',
-            changedById: options?.userId ?? null,
-            changedByName: options?.userId ? 'User' : 'System',
-            notes: 'Generated from PM schedule',
-          },
-        })
+        const tiersToGenerate = options?.maxWOs
+          ? tiers.slice(0, options.maxWOs)
+          : tiers
 
-        // Copy the schedule's task template into subtasks on the generated WO
-        if (schedule.tasks.length > 0) {
-          await tx.subtask.createMany({
-            data: schedule.tasks.map(t => ({
-              title:        t.title,
-              order:        t.order,
-              required:     t.required,
-              assignedToId: t.assignedToId ?? null,
-              workOrderId:  wo.id,
-              createdById:  options?.userId ?? null,
-            })),
+        for (let i = 0; i < tiersToGenerate.length; i++) {
+          const tier = tiersToGenerate[i]
+          const woNumber = await generateWONumber(
+            schedule.locationId ?? asset?.locationId,
+            tx,
+          )
+
+          // Build title
+          let woTitle = schedule.title
+          if (tier.label) woTitle += ` — ${tier.label}`
+          if (asset) woTitle += ` — ${asset.name}`
+          else if (schedule.location) woTitle += ` — ${schedule.location.name}`
+
+          // Calculate due date (advance by batch * interval from base date)
+          let dueDate: Date
+          if (schedule.triggerType === 'METER') {
+            dueDate = new Date()
+          } else {
+            const baseDate = new Date(schedule.nextDueDate)
+            dueDate = batch === 0
+              ? baseDate
+              : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
+          }
+
+          // Calculate start date from offset
+          const startDate = (schedule.startDateOffset ?? 0) > 0
+            ? new Date(dueDate.getTime() - (schedule.startDateOffset ?? 0) * 86400000)
+            : undefined
+
+          // Build description with template
+          let woDescription = schedule.description ?? undefined
+          if (schedule.woDescription) {
+            woDescription = woDescription
+              ? `${woDescription}\n\n${schedule.woDescription}`
+              : schedule.woDescription
+          }
+
+          const wo = await tx.workOrder.create({
+            data: {
+              woNumber,
+              title: woTitle,
+              description: woDescription,
+              type: 'PREVENTIVE',
+              status: 'OPEN',
+              priority: schedule.woPriority ?? 'MEDIUM',
+              dueDate,
+              ...(startDate ? { startDate } : {}),
+              assetId: asset ? asset.id : null,
+              locationId: schedule.locationId,
+              locationScope: schedule.locationScope,
+              maintenanceScheduleId: schedule.id,
+              createdById: options?.userId ?? null,
+              assignedToId: schedule.woAssignedToId ?? null,
+              teamId: schedule.woTeamId ?? null,
+              categoryId: schedule.woCategoryId ?? null,
+              nestedLevel: i,
+              nestedLabel: tier.label || null,
+            },
           })
+
+          // Create initial status history
+          await tx.workOrderStatusHistory.create({
+            data: {
+              workOrderId: wo.id,
+              status: 'OPEN',
+              changedById: options?.userId ?? null,
+              changedByName: options?.userId ? 'User' : 'System',
+              notes: 'Generated from PM schedule',
+            },
+          })
+
+          // Copy the schedule's task template into subtasks on the generated WO
+          if (schedule.tasks.length > 0) {
+            await tx.subtask.createMany({
+              data: schedule.tasks.map(t => ({
+                title:        t.title,
+                order:        t.order,
+                required:     t.required,
+                assignedToId: t.assignedToId ?? null,
+                workOrderId:  wo.id,
+                createdById:  options?.userId ?? null,
+              })),
+            })
+          }
+
+          woIds.push(wo.id)
+          woNumbers.push(woNumber)
         }
-
-        woIds.push(wo.id)
-        woNumbers.push(woNumber)
       }
-
-      currentCounter++
     }
+
+    currentCounter += horizon
 
     // Advance nextDueDate (for fixed intervals, advance from current due date)
     let nextDue: Date | null = null
@@ -302,8 +337,8 @@ export async function generateWOsForSchedule(
       data: {
         ...(nextDue ? { nextDueDate: nextDue } : {}),
         nestedCounter: currentCounter,
-        ...(schedule.triggerType === 'METER' && schedule.asset?.currentMeterValue
-          ? { lastTriggeredValue: schedule.asset.currentMeterValue }
+        ...(schedule.triggerType === 'METER' && eligibleAssets.length > 0
+          ? { lastTriggeredValue: Math.max(...eligibleAssets.map(a => a.currentMeterValue ?? 0)) }
           : {}),
       },
     })

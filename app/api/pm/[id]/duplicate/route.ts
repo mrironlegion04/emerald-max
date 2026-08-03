@@ -20,6 +20,7 @@ export async function POST(
       where: { id },
       include: {
         tasks: { orderBy: { order: 'asc' as const } },
+        assets: { select: { assetId: true } },
       },
     })
 
@@ -62,6 +63,9 @@ export async function POST(
         interval:            existing.interval,
         nextDueDate:         newDueDate,
         assetId:             existing.assetId,
+        assets:              existing.assets.length > 0
+          ? { create: existing.assets.map(a => ({ assetId: a.assetId })) }
+          : (existing.assetId ? { create: [{ assetId: existing.assetId }] } : undefined),
         locationId:          existing.locationId,
         locationScope:       existing.locationScope,
         meterId:             existing.meterId,

@@ -470,6 +470,7 @@ model Asset {
   workOrders           WorkOrder[]
   workOrderAssets      WorkOrderAsset[]
   maintenanceSchedules MaintenanceSchedule[]
+  pmScheduleLinks      MaintenanceScheduleAsset[]
   meters               Meter[]
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
@@ -813,6 +814,7 @@ model MaintenanceSchedule {
 
   assetId             String?
   asset               Asset?             @relation(fields: [assetId], references: [id])
+  assets              MaintenanceScheduleAsset[]
   locationId          String?
   location            Location?          @relation("PMSchedulesAtLocation", fields: [locationId], references: [id])
   locationScope       LocationScope?
@@ -823,6 +825,16 @@ model MaintenanceSchedule {
 
   @@index([locationId])
   @@map("maintenance_schedules")
+}
+
+model MaintenanceScheduleAsset {
+  scheduleId String
+  schedule   MaintenanceSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  assetId    String
+  asset      Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([scheduleId, assetId])
+  @@map("maintenance_schedule_assets")
 }
 
 model PmScheduleTask {

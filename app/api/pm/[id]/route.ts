@@ -29,6 +29,7 @@ const updateSchema = z.object({
   interval:             z.number().int().min(1).optional(),
   nextDueDate:          z.string().optional(),
   assetId:              z.string().nullable().optional(),
+  assetIds:             z.array(z.string()).optional(),
   locationId:           z.string().nullable().optional(),
   locationScope:        z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   isActive:             z.boolean().optional(),
@@ -67,6 +68,7 @@ export async function GET(
       where: { id },
       include: {
         asset: true,
+        assets: { include: { asset: true } },
         location: true,
         tasks: {
           orderBy: { order: 'asc' as const },
@@ -109,7 +111,21 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const finalAssetId = data.assetId !== undefined ? data.assetId : existing.assetId
+    // Derive the full asset list: explicit assetIds wins, then assetId, else keep existing
+    const existingAssetRows = await prisma.maintenanceScheduleAsset.findMany({
+      where: { scheduleId: id },
+      select: { assetId: true },
+    })
+    const existingAssetIds = existingAssetRows.map(r => r.assetId)
+
+    const finalAssetIds =
+      data.assetIds !== undefined
+        ? data.assetIds
+        : (data.assetId !== undefined
+            ? (data.assetId ? [data.assetId] : [])
+            : existingAssetIds)
+
+    const finalAssetId = finalAssetIds[0] ?? null
     const finalLocationId = data.locationId !== undefined ? data.locationId : existing.locationId
     const finalLocationScope = finalLocationId && !finalAssetId
       ? (data.locationScope !== undefined ? data.locationScope : (existing.locationScope ?? 'ALL_ASSETS'))
@@ -118,11 +134,11 @@ export async function PUT(
     // ── Plant scope enforcement (only for fields actually changed) ────
     const changedLocationIds: (string | null | undefined)[] = []
     if (data.locationId !== undefined) changedLocationIds.push(finalLocationId)
-    if (data.assetId !== undefined) {
-      const asset = finalAssetId
-        ? await prisma.asset.findUnique({ where: { id: finalAssetId }, select: { locationId: true } })
-        : null
-      changedLocationIds.push(asset?.locationId ?? null)
+    if (data.assetIds !== undefined || data.assetId !== undefined) {
+      const assetLocationRows = finalAssetIds.length > 0
+        ? await prisma.asset.findMany({ where: { id: { in: finalAssetIds } }, select: { locationId: true } })
+        : []
+      changedLocationIds.push(...assetLocationRows.map(a => a.locationId))
     }
 
     const inScope =
@@ -149,6 +165,14 @@ export async function PUT(
             scheduleId:   id,
           })),
         })
+      }
+      if (data.assetIds !== undefined || data.assetId !== undefined) {
+        await tx.maintenanceScheduleAsset.deleteMany({ where: { scheduleId: id } })
+        if (finalAssetIds.length > 0) {
+          await tx.maintenanceScheduleAsset.createMany({
+            data: finalAssetIds.map(assetId => ({ scheduleId: id, assetId })),
+          })
+        }
       }
       return tx.maintenanceSchedule.update({
         where: { id },

@@ -312,6 +312,7 @@ model User {
   uploadedAttachments   Attachment[]            @relation("AttachmentUploadedBy")
   recordedReadings      MeterReading[]          @relation("MeterReadingRecordedBy")
   workOrderComments     WorkOrderComment[]      @relation("CommentAuthor")
+  commentReactions      CommentReaction[]       @relation("CommentReactionUser")
 
   sentMessages          ChatMessage[]           @relation("ChatMessageSender")
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
@@ -868,7 +869,25 @@ model WorkOrderComment {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  reactions   CommentReaction[] @relation("CommentReactions")
+  attachments Attachment[]      @relation("CommentAttachments")
+
+  @@index([workOrderId])
   @@map("work_order_comments")
+}
+
+model CommentReaction {
+  id        String           @id @default(cuid())
+  commentId String
+  comment   WorkOrderComment @relation("CommentReactions", fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User?            @relation("CommentReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime         @default(now())
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId])
+  @@map("comment_reactions")
 }
 
 model Subtask {
@@ -967,10 +986,14 @@ model Attachment {
   requestId String?
   request   MaintenanceRequest? @relation("RequestAttachments", fields: [requestId], references: [id], onDelete: Cascade)
 
+  commentId String?
+  comment   WorkOrderComment? @relation("CommentAttachments", fields: [commentId], references: [id], onDelete: Cascade)
+
   @@index([workOrderId])
   @@index([assetId])
   @@index([partId])
   @@index([requestId])
+  @@index([commentId])
   @@map("attachments")
 }
 

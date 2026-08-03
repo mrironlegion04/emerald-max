@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate entity type
-    if (!['workOrder', 'asset', 'part'].includes(entityType)) {
+    if (!['workOrder', 'asset', 'part', 'comment'].includes(entityType)) {
       return NextResponse.json({ error: 'Invalid entityType' }, { status: 400 })
     }
 
@@ -67,6 +67,16 @@ export async function POST(req: NextRequest) {
     } else if (entityType === 'part') {
       const part = await prisma.part.findUnique({ where: { id: entityId } })
       if (!part) return NextResponse.json({ error: 'Part not found' }, { status: 404 })
+    } else if (entityType === 'comment') {
+      const comment = await prisma.workOrderComment.findUnique({
+        where: { id: entityId },
+        select: { workOrderId: true },
+      })
+      if (!comment) return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
+      const access = await canEditWorkOrder(user, comment.workOrderId)
+      if (!access.allowed) {
+        return NextResponse.json({ error: access.reason ?? 'Forbidden' }, { status: 403 })
+      }
     }
 
     // Initialize MinIO if configured
@@ -148,6 +158,7 @@ export async function POST(req: NextRequest) {
       if (entityType === 'workOrder') data.workOrderId = entityId
       if (entityType === 'asset') data.assetId = entityId
       if (entityType === 'part') data.partId = entityId
+      if (entityType === 'comment') data.commentId = entityId
 
       const attachment = await prisma.attachment.create({ data: data as never })
       created.push(attachment)

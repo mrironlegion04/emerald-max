@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { canEditWorkOrder, canViewWorkOrder } from '@/lib/access-control'
+import { notificationEmitter } from '@/lib/events'
 import { z } from 'zod'
 
 const setSchema = z.object({
@@ -182,6 +183,8 @@ export async function POST(
       userName: user.name,
       userEmail: user.email,
     })
+
+    notificationEmitter.emit(`activity:${id}`)
 
     const payload = await buildCrewPayload(id)
     return NextResponse.json(payload)

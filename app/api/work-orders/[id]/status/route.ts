@@ -12,6 +12,7 @@ import {
   canViewWorkOrder 
 } from '@/lib/access-control'
 import { updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
+import { notificationEmitter } from '@/lib/events'
 import { z } from 'zod'
 
 const statusSchema = z.object({
@@ -210,6 +211,9 @@ export async function PATCH(
           : notes || `Status transitioned from ${wo.status} to ${updated.status}`,
       }
     })
+
+    // Notify the activity feed (SSE) that a status change happened
+    notificationEmitter.emit(`activity:${id}`)
 
     await writeAudit({
       action: wo.status === 'CLOSED' && updated.status === 'COMPLETED' ? 'UPDATE' : 'STATUS_CHANGE',

@@ -9,6 +9,7 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from '@/components/WOStatusActions'
 import WOPartsPanel from '@/components/WOPartsPanel'
 import WOCommentsPanel from '@/components/WOCommentsPanel'
+import WOHistoryPanel from '@/components/WOHistoryPanel'
 import SubtasksPanel from '@/components/SubtasksPanel'
 import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
@@ -57,7 +58,6 @@ export default async function WorkOrderDetailPage({
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, assignedTeam: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
       attachments:  { include: { uploadedBy: { select: { name: true } } } },
-      statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' } },
       repairSessions: { orderBy: { sessionNo: 'asc' } },
       maintenanceSchedule: { select: { id: true, title: true } },
     },
@@ -330,50 +330,8 @@ export default async function WorkOrderDetailPage({
             </div>
           </div>
 
-          {/* Status History Audit trail */}
-          <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
-            <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-4 pb-2 border-b border-slate-100">Status History</h2>
-            <div className="flow-root">
-              <ul className="-mb-8">
-                {wo.statusHistory && (wo.statusHistory as any[]).length > 0 ? (
-                  (wo.statusHistory as any[]).map((history: any, historyIdx: number) => (
-                    <li key={history.id}>
-                      <div className="relative pb-8">
-                        {historyIdx !== (wo.statusHistory as any[]).length - 1 ? (
-                          <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-slate-200" aria-hidden="true" />
-                        ) : null}
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center ring-8 ring-white text-slate-500 font-semibold text-xs border border-slate-200">
-                              {historyIdx + 1}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                                Changed to <span className="font-extrabold text-slate-900">{statusLabels[history.status] || history.status}</span> by{' '}
-                                <span className="font-bold text-blue-600">{history.changedByName}</span>
-                              </p>
-                              {history.notes && (
-                                <p className="text-xs text-slate-500 mt-1 italic leading-normal whitespace-pre-wrap">
-                                  &ldquo;{history.notes}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right text-[10px] whitespace-nowrap text-slate-400 font-bold font-mono">
-                              {new Date(history.createdAt).toLocaleDateString()} {new Date(history.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-400 text-center py-2 italic font-medium">No history recorded yet.</p>
-                )}
-              </ul>
-            </div>
-          </div>
+          {/* Activity / History (system audit trail) */}
+          <WOHistoryPanel woId={wo.id} />
         </div>
 
         {/* RIGHT COLUMN */}

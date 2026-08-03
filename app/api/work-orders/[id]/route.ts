@@ -21,6 +21,7 @@ import {
   canWriteToLocations,
 } from '@/lib/access-control'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
+import { notificationEmitter } from '@/lib/events'
 import {
   normalizeWorkOrderAssets,
   syncWorkOrderAssets,
@@ -311,6 +312,7 @@ export async function PUT(
           notes:         `Status changed from ${existingWo.status} to ${wo.status} during work order update`,
         }
       })
+      notificationEmitter.emit(`status:${id}`)
     }
 
     // ── Update asset metrics on completion ────────────────────────────
@@ -365,6 +367,10 @@ export async function PUT(
       userName: user.name,
       userEmail: user.email,
     })
+
+    if (Object.keys(changes).length > 0) {
+      notificationEmitter.emit(`activity:${wo.id}`)
+    }
 
     return NextResponse.json(wo)
   } catch (error) {

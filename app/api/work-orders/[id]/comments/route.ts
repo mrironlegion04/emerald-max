@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { createNotificationForUsers } from '@/lib/notifications'
 import { canViewWorkOrder } from '@/lib/access-control'
+import { notificationEmitter } from '@/lib/events'
 import { z } from 'zod'
 
 const commentSchema = z.object({
@@ -24,10 +25,38 @@ export async function GET(
     }
 
     const comments = await prisma.workOrderComment.findMany({
-      where:   { workOrderId: id },
+      where: { workOrderId: id },
       orderBy: { createdAt: 'asc' },
+      include: {
+        attachments: { include: { uploadedBy: { select: { name: true } } } },
+      },
     })
-    return NextResponse.json(comments)
+
+    const commentIds = comments.map(c => c.id)
+    const reactions = commentIds.length
+      ? await prisma.commentReaction.findMany({ where: { commentId: { in: commentIds } } })
+      : []
+
+    const enriched = comments.map(c => {
+      const counts: Record<string, number> = {}
+      const mine = new Set<string>()
+      for (const r of reactions) {
+        if (r.commentId !== c.id) continue
+        counts[r.emoji] = (counts[r.emoji] ?? 0) + 1
+        if (r.userId === user.userId) mine.add(r.emoji)
+      }
+      return {
+        ...c,
+        isEdited: new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime() > 1000,
+        reactions: Object.entries(counts).map(([emoji, count]) => ({
+          emoji,
+          count,
+          reactedByMe: mine.has(emoji),
+        })),
+      }
+    })
+
+    return NextResponse.json({ comments: enriched, currentUserId: user.userId, currentUserRole: user.role })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 })
@@ -117,6 +146,8 @@ export async function POST(
         }
       }
     }
+
+    notificationEmitter.emit(`comment:${id}`)
 
     return NextResponse.json(comment, { status: 201 })
   } catch (error) {

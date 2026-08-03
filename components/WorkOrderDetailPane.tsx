@@ -8,6 +8,7 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import WOStatusActions from './WOStatusActions'
 import WOPartsPanel from './WOPartsPanel'
 import WOCommentsPanel from './WOCommentsPanel'
+import WOHistoryPanel from './WOHistoryPanel'
 import SubtasksPanel from './SubtasksPanel'
 import AttachmentsPanel from './AttachmentsPanel'
 import WorkOrderCrewPanel from './WorkOrderCrewPanel'
@@ -250,6 +251,9 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
 
       {/* Comments */}
       <WOCommentsPanel woId={wo.id} woStatus={wo.status} />
+
+      {/* Activity / History */}
+      <WOHistoryPanel woId={wo.id} />
 
       {/* Attachments */}
       <AttachmentsPanel

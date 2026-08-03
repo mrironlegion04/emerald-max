@@ -93,10 +93,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         : 'ASSET'
   )
 
-  const [assetMode, setAssetMode] = useState<'single' | 'multi'>(
-    (initialData?.selectedAssetIds && initialData.selectedAssetIds.length > 1) ? 'multi' : 'single'
-  )
-
   // ── Unsaved-changes guard ──────────────────────────────────────────
   useEffect(() => {
     if (!isDirty) return
@@ -448,50 +444,13 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
         {targetType === 'ASSET' ? (
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider">
-                {assetMode === 'single' ? 'Asset' : 'Assets'}
-              </label>
-              <div className="flex bg-slate-105 p-0.5 rounded-lg border border-slate-200/50">
-                <button
-                  type="button"
-                  onClick={() => { setAssetMode('single'); setForm(prev => ({ ...prev, selectedAssetIds: [] })) }}
-                  className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md transition ${
-                    assetMode === 'single'
-                      ? 'bg-white text-slate-850 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Single
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAssetMode('multi'); setForm(prev => ({ ...prev, assetId: '' })) }}
-                  className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md transition ${
-                    assetMode === 'multi'
-                      ? 'bg-white text-slate-850 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Multi
-                </button>
-              </div>
-            </div>
-            {assetMode === 'single' ? (
-              <AssetTreeSelect
-                assets={assets}
-                value={form.assetId || form.selectedAssetIds[0] || ''}
-                onChange={id => { set('assetId', id); set('selectedAssetIds', []) }}
-              />
-            ) : (
-              <AssetTreeSelect
-                assets={assets}
-                value={form.selectedAssetIds}
-                onChange={ids => set('selectedAssetIds', ids)}
-                multiSelect={true}
-                placeholder="Select multiple assets..."
-              />
-            )}
+            <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-3">Asset</label>
+            <AssetTreeSelect
+              assets={assets}
+              value={form.assetId || form.selectedAssetIds[0] || ''}
+              onChange={id => { set('assetId', id); set('selectedAssetIds', []) }}
+              placeholder="Select an asset..."
+            />
           </div>
         ) : (
           <div className="space-y-4">
@@ -560,7 +519,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
           </div>
         )}
 
-        {selectedAsset?.imageUrl && assetMode === 'single' && (
+        {selectedAsset?.imageUrl && (
           <div className="pt-4 border-t border-slate-100">
             <p className="text-xs font-bold text-slate-705 uppercase tracking-wider mb-2">Asset photo</p>
             <div className="relative w-full max-w-xs aspect-video bg-slate-55 border border-slate-200/50 rounded-xl overflow-hidden shadow-inner-light">

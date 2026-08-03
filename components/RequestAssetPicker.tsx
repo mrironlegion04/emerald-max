@@ -5,7 +5,7 @@ import AssetTreeSelect from './AssetTreeSelect'
 
 interface Props {
   value: string
-  onChange: (id: string) => void
+  onChange: (asset: any) => void
 }
 
 export default function RequestAssetPicker({ value, onChange }: Props) {
@@ -38,7 +38,7 @@ export default function RequestAssetPicker({ value, onChange }: Props) {
     <AssetTreeSelect
       assets={assets}
       value={value}
-      onChange={id => onChange(id as string)}
+      onChange={id => onChange(assets.find(a => a.id === id) ?? null)}
       placeholder="Select an asset (optional)"
     />
   )

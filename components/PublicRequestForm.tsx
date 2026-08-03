@@ -51,6 +51,31 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
     teams: { id: string; name: string }[]
   } | null>(null)
   const lastAutoPriority = useRef<string | null>(null)
+  const autoLocRef = useRef<string | null>(null)
+  const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
+  const [customLocation, setCustomLocation] = useState(false)
+
+  useEffect(() => {
+    if (!currentUser) return
+    let active = true
+    fetch('/api/locations')
+      .then(r => (r.ok ? r.json() : []))
+      .then((nested: any[]) => {
+        if (!active) return
+        const flat: { id: string; name: string; parentId: string | null; path: string }[] = []
+        const walk = (nodes: any[], parentId: string | null, prefix: string) => {
+          for (const n of nodes) {
+            const path = prefix ? `${prefix} › ${n.name}` : n.name
+            flat.push({ id: n.id, name: n.name, parentId: parentId ?? null, path })
+            if (Array.isArray(n.children) && n.children.length > 0) walk(n.children, n.id, path)
+          }
+        }
+        walk(Array.isArray(nested) ? nested : [], null, '')
+        setLocations(flat)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [currentUser])
 
   useEffect(() => {
     let active = true
@@ -105,6 +130,43 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
   function handlePriorityChange(v: string) {
     lastAutoPriority.current = null
     set('priority', v)
+  }
+
+  function handleAssetChange(asset: any) {
+    const id = asset?.id ?? ''
+    setForm(p => {
+      const next = { ...p, assetId: id }
+      const assetLoc = asset?.location?.name
+      if (id && assetLoc && (p.location === autoLocRef.current || !p.location)) {
+        const matched = locations.find(l => l.name === assetLoc)
+        next.location = matched?.path ?? assetLoc
+        autoLocRef.current = next.location
+        setCustomLocation(false)
+      } else if (!id && p.location === autoLocRef.current) {
+        next.location = ''
+        autoLocRef.current = null
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (!locations.length || !autoLocRef.current) return
+    const matched = locations.find(l => l.name === autoLocRef.current)
+    if (matched && matched.path !== autoLocRef.current) {
+      setForm(p => (p.location === autoLocRef.current ? { ...p, location: matched.path } : p))
+      autoLocRef.current = matched.path
+    }
+  }, [locations])
+
+  function handleLocationPick(value: string) {
+    if (value === '__other__') {
+      setCustomLocation(true)
+      set('location', '')
+      return
+    }
+    setCustomLocation(false)
+    set('location', value)
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -229,7 +291,43 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
+                {currentUser ? (
+                  customLocation ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={form.location}
+                        onChange={e => { autoLocRef.current = null; set('location', e.target.value) }}
+                        className="input-field flex-1"
+                        placeholder="Type a location..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustomLocation(false)}
+                        className="btn-secondary text-xs px-3 shrink-0"
+                      >
+                        Pick
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={form.location}
+                      onChange={e => handleLocationPick(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">No location</option>
+                      {locations.map(l => (
+                        <option key={l.id} value={l.path}>{l.path}</option>
+                      ))}
+                      <option value="__other__">Other — type a custom location…</option>
+                    </select>
+                  )
+                ) : (
+                  <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
+                )}
+                {currentUser && form.location && !locations.some(l => l.path === form.location) && !customLocation && (
+                  <p className="text-[11px] text-gray-400 mt-1">Selected location is free-text. Pick from the list or choose &ldquo;Other&rdquo;.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desired completion date</label>
@@ -239,8 +337,8 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
             {currentUser && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
-                <RequestAssetPicker value={form.assetId} onChange={id => set('assetId', id)} />
-                <p className="text-[11px] text-gray-400 mt-1">Optional — choose the asset this request is about.</p>
+                <RequestAssetPicker value={form.assetId} onChange={handleAssetChange} />
+                <p className="text-[11px] text-gray-400 mt-1">Optional — pick the asset this request is about. Location auto-fills from it.</p>
               </div>
             )}
             {currentUser && (

@@ -116,6 +116,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           woNumber, title: request.title, description: request.description,
           type: 'BREAKDOWN', status: 'OPEN', priority: request.priority as never,
           assetId: request.assetId, locationId: null, issueId: request.issueId,
+          teamId: request.teamId,
           createdById: user.userId,
         },
       }),

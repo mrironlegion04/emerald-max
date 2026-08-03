@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
@@ -143,6 +143,14 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   const [issueGroups, setIssueGroups] = useState<DomainGroup[]>([])
   const [loadingIssues, setLoadingIssues] = useState(false)
 
+  // ── Smart recommendations from the primary asset ──
+  const [recommendation, setRecommendation] = useState<{
+    team: { id: string; name: string } | null
+    owner: { id: string; name: string } | null
+    criticality: string | null
+  } | null>(null)
+  const lastAutoPriority = useRef<string | null>(null)
+
   const allSelectedAssetIds = [...new Set([
     ...(form.assetId ? [form.assetId] : []),
     ...form.selectedAssetIds,
@@ -183,11 +191,38 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       .finally(() => setLoadingIssues(false))
   }, [primaryAssetId, form.locationId, selectedAsset?.categoryId])
 
+  useEffect(() => {
+    if (!primaryAssetId) { setRecommendation(null); return }
+    let active = true
+    fetch(`/api/recommendations?assetId=${encodeURIComponent(primaryAssetId)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((rec) => { if (active) setRecommendation(rec) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [primaryAssetId])
+
   function set(field: keyof WOFormData, value: string | string[] | Record<string, any> | null) {
     setForm(prev => {
       const next = { ...prev, [field]: value }
       return next
     })
+  }
+
+  function handleIssueChange(id: string) {
+    const issue = issueGroups.flatMap(g => g.issues).find(i => i.id === id)
+    setForm(prev => {
+      const next = { ...prev, issueId: id }
+      if (issue?.severity && (prev.priority === lastAutoPriority.current || !lastAutoPriority.current)) {
+        next.priority = issue.severity
+        lastAutoPriority.current = issue.severity
+      }
+      return next
+    })
+  }
+
+  function handlePriorityChange(value: string) {
+    lastAutoPriority.current = null
+    set('priority', value)
   }
 
   function generateTitle(assetIds: string[], selectedAssetIds: string[], type: string, issueId: string, customIssue: string): string {
@@ -335,9 +370,14 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             </select>
           )}
           {inputRow('Priority', false,
-            <select value={form.priority} onChange={e => set('priority', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-              {priorityOptions.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}
-            </select>
+            <>
+              <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field text-xs sm:text-sm bg-white">
+                {priorityOptions.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}
+              </select>
+              {lastAutoPriority.current && (
+                <p className="text-[11px] text-emerald-700 font-semibold mt-1">Auto-set from issue severity</p>
+              )}
+            </>
           )}
           {isEdit && inputRow('Status', false,
             <select value={form.status} onChange={e => set('status', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
@@ -562,7 +602,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               <WorkOrderIssueSelector
                 groups={issueGroups}
                 value={form.issueId}
-                onChange={id => set('issueId', id)}
+                onChange={handleIssueChange}
               />
               {form.issueId === OTHER_ISSUE && (
                 <div className="mt-4">
@@ -583,7 +623,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               <WorkOrderIssueSelector
                 groups={issueGroups}
                 value={form.issueId}
-                onChange={id => set('issueId', id)}
+                onChange={handleIssueChange}
               />
               {form.issueId === OTHER_ISSUE && (
                 <div className="mt-4">
@@ -621,7 +661,41 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         </div>
       ) : null}
 
-      {/* Labor & costs */}
+      {/* Smart suggestions from the primary asset */}
+      {recommendation && (recommendation.team || recommendation.owner || (recommendation.criticality && !form.issueId)) ? (
+        <div className="premium-card p-5 border border-slate-200/50 shadow-sm space-y-3 bg-white">
+          <h2 className="font-bold text-slate-805 text-sm tracking-tight">Suggestions</h2>
+          <div className="flex flex-wrap gap-2">
+            {recommendation.team && recommendation.team.id !== form.teamId && (
+              <button
+                type="button"
+                onClick={() => { set('teamId', recommendation.team!.id); set('assignedToId', '') }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100/70 transition"
+              >
+                💡 Team: {recommendation.team.name} — <span className="underline underline-offset-2">Use</span>
+              </button>
+            )}
+            {recommendation.owner && recommendation.owner.id !== form.assignedToId && (
+              <button
+                type="button"
+                onClick={() => { set('assignedToId', recommendation.owner!.id); set('teamId', '') }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/70 rounded-lg px-2.5 py-1.5 hover:bg-blue-100/70 transition"
+              >
+                🧑‍🔧 Owner: {recommendation.owner.name} — <span className="underline underline-offset-2">Assign</span>
+              </button>
+            )}
+            {recommendation.criticality && !form.issueId && form.priority !== recommendation.criticality && (
+              <button
+                type="button"
+                onClick={() => { lastAutoPriority.current = null; set('priority', recommendation.criticality) }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200/70 rounded-lg px-2.5 py-1.5 hover:bg-amber-100/70 transition"
+              >
+                ⚠️ Asset is {recommendation.criticality.toLowerCase()} priority — <span className="underline underline-offset-2">Apply</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
       <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-4 bg-white">
         <h2 className="font-bold text-slate-805 text-sm tracking-tight pb-3 border-b border-indigo-50/50">Labor & costs</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

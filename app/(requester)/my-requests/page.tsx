@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock } from 'lucide-react'
+import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users } from 'lucide-react'
 import Badge, { priorityVariant } from '@/components/Badge'
 import { REQUEST_STATUS_LABELS, requestStatusVariant, REQUEST_TYPE_LABELS, requestTypeVariant } from '@/lib/request-status'
 import MyRequestsFilters from '@/components/MyRequestsFilters'
@@ -47,6 +47,7 @@ export default async function MyRequestsPage({
     orderBy: { createdAt: 'desc' },
     include: {
       issue: { select: { id: true, code: true, title: true } },
+      team: { select: { id: true, name: true } },
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       workOrder: { select: { id: true, woNumber: true, status: true } },
     },
@@ -122,6 +123,11 @@ export default async function MyRequestsPage({
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
                         {req.location || req.asset?.location?.name}
+                      </span>
+                    )}
+                    {req.team && (
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" /> {req.team.name}
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1">

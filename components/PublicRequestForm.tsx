@@ -27,7 +27,7 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', issueId: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', issueId: '', teamId: '',
 }
 
 export default function PublicRequestForm({ currentUser }: { currentUser: CurrentUser | null }) {
@@ -45,6 +45,12 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
   const [issueGroups, setIssueGroups] = useState<DomainGroup[]>([])
   const [issuesLoading, setIssuesLoading] = useState(true)
 
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
+  const [recommendation, setRecommendation] = useState<{
+    team: { id: string; name: string } | null
+  } | null>(null)
+  const lastAutoPriority = useRef<string | null>(null)
+
   useEffect(() => {
     let active = true
     fetch('/api/issues?scope=request')
@@ -55,9 +61,50 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    if (!currentUser) return
+    let active = true
+    fetch('/api/teams')
+      .then(r => (r.ok ? r.json() : []))
+      .then((list: any[]) => {
+        if (active) setTeams(Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : [])
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (!currentUser || !form.assetId) { setRecommendation(null); return }
+    let active = true
+    fetch(`/api/recommendations?assetId=${encodeURIComponent(form.assetId)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((rec: { team: { id: string; name: string } | null } | null) => {
+        if (active) setRecommendation(rec)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [currentUser, form.assetId])
+
   const hasIssues = issueGroups.some(g => g.issues.length > 0)
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
+
+  function handleIssueChange(id: string) {
+    const issue = issueGroups.flatMap(g => g.issues).find(i => i.id === id)
+    setForm(p => {
+      const next = { ...p, issueId: id }
+      if (issue?.severity && (p.priority === lastAutoPriority.current || !lastAutoPriority.current)) {
+        next.priority = issue.severity
+        lastAutoPriority.current = issue.severity
+      }
+      return next
+    })
+  }
+
+  function handlePriorityChange(v: string) {
+    lastAutoPriority.current = null
+    set('priority', v)
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -92,6 +139,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
         assetId: form.assetId || undefined,
         desiredDate: form.desiredDate || undefined,
         issueId: form.issueId || undefined,
+        teamId: form.teamId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
       const res  = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -158,7 +206,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select value={form.priority} onChange={e => set('priority', e.target.value)} className="input-field">
+                <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field">
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
                   <option value="HIGH">High</option>
@@ -171,11 +219,11 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
               <WorkOrderIssueSelector
                 groups={issueGroups}
                 value={form.issueId}
-                onChange={id => set('issueId', id)}
+                onChange={handleIssueChange}
                 placeholder={issuesLoading ? 'Loading issues…' : 'Select the issue'}
                 allowCustom={false}
               />
-              <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster.</p>
+              <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster. Priority is suggested from the issue severity.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -192,6 +240,28 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
                 <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
                 <RequestAssetPicker value={form.assetId} onChange={id => set('assetId', id)} />
                 <p className="text-[11px] text-gray-400 mt-1">Optional — choose the asset this request is about.</p>
+              </div>
+            )}
+            {currentUser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field">
+                  <option value="">Select a team (optional)</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                {recommendation?.team && recommendation.team.id !== form.teamId && (
+                  <button
+                    type="button"
+                    onClick={() => set('teamId', recommendation.team!.id)}
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
+                  >
+                    💡 Recommended: {recommendation.team.name}
+                    <span className="text-emerald-600 font-bold">— Use</span>
+                  </button>
+                )}
+                <p className="text-[11px] text-gray-400 mt-1">Recommended based on the asset&apos;s domain — helps route the request to the right crew.</p>
               </div>
             )}
             <div>

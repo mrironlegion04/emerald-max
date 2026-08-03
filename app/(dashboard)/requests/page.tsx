@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import Link from 'next/link'
-import { ExternalLink, Package, MapPin, CalendarClock } from 'lucide-react'
+import { ExternalLink, Package, MapPin, CalendarClock, Users } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { priorityVariant } from '@/components/Badge'
 import RequestActions from '@/components/RequestActions'
@@ -71,6 +71,7 @@ export default async function RequestsPage({
       orderBy: { createdAt: 'desc' },
       include: {
         issue: { select: { id: true, code: true, title: true } },
+        team: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, status: true } },
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       },
@@ -161,6 +162,11 @@ export default async function RequestsPage({
                         <span className="inline-flex items-center gap-1.5">
                           <code className="text-[10px] font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{req.issue.code}</code>
                           <span className="text-xs font-semibold text-violet-700 truncate max-w-[180px]">{req.issue.title}</span>
+                        </span>
+                      )}
+                      {req.team && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                          <Users className="w-3.5 h-3.5 text-slate-400" /> {req.team.name}
                         </span>
                       )}
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight ml-auto md:ml-0">

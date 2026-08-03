@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Package, MapPin, CalendarClock, Phone, Mail, FileText,
-  Clock, CheckCircle2, Circle, AlertTriangle, Ban, ExternalLink,
+  Clock, CheckCircle2, Circle, AlertTriangle, Ban, ExternalLink, Users,
 } from 'lucide-react'
 import Badge, { priorityVariant } from '@/components/Badge'
 import RequestActions from '@/components/RequestActions'
@@ -35,6 +35,7 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
     where: { id },
     include: {
       issue: { select: { id: true, code: true, title: true, severity: true } },
+      team: { select: { id: true, name: true } },
       asset: { select: { id: true, name: true, assetCode: true, description: true, status: true, location: { select: { id: true, name: true } } } },
       workOrder: {
         select: {
@@ -122,6 +123,11 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
             {request.desiredDate && (
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 flex items-center gap-2 text-xs text-slate-600">
                 <CalendarClock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Desired {fmt(request.desiredDate)}
+              </div>
+            )}
+            {request.team && (
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 flex items-center gap-2 text-xs text-slate-600">
+                <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Team: {request.team.name}
               </div>
             )}
             <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 flex items-center gap-2 text-xs text-slate-600">

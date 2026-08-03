@@ -22,6 +22,7 @@ const schema = z.object({
   requestType: z.enum(['REPAIR','MAINTENANCE','INSPECTION','INSTALLATION','OTHER']).optional(),
   assetId: z.string().optional(),
   issueId: z.string().optional(),
+  teamId: z.string().optional(),
   desiredDate: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(),
 })
@@ -41,6 +42,7 @@ export async function GET() {
     include: {
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       issue: { select: { id: true, code: true, title: true, severity: true } },
+      team: { select: { id: true, name: true } },
       workOrder: { select: { id: true, woNumber: true, status: true } },
       attachments: true,
       reviewedBy: { select: { id: true, name: true } },
@@ -65,6 +67,11 @@ export async function POST(req: NextRequest) {
       if (!issue || !issue.isActive) return NextResponse.json({ error: 'Issue not found' }, { status: 404 })
     }
 
+    if (data.teamId) {
+      const team = await prisma.team.findUnique({ where: { id: data.teamId }, select: { id: true, isActive: true, isDeleted: true } })
+      if (!team || !team.isActive || team.isDeleted) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+    }
+
     const requestNumber = await generateRequestNumber()
     const desiredDate = data.desiredDate ? new Date(data.desiredDate) : null
 
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
         location: data.location || null, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
-        issueId: data.issueId, desiredDate,
+        issueId: data.issueId, teamId: data.teamId, desiredDate,
         requesterId: user.userId,
         attachments: data.attachments && data.attachments.length > 0 ? {
           create: data.attachments.map(a => ({

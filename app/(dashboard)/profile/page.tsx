@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import TelegramSettings from '@/components/TelegramSettings'
+import ChangePasswordForm from '@/components/ChangePasswordForm'
 import { Mail, Phone, Briefcase, Calendar } from 'lucide-react'
 
 function fmt(date: Date | string) {
@@ -168,6 +169,11 @@ export default async function UserProfilePage() {
       {/* Telegram */}
       <div className="mt-6">
         <TelegramSettings telegramChatId={dbUser.telegramChatId} />
+      </div>
+
+      {/* Change Password */}
+      <div className="mt-6">
+        <ChangePasswordForm />
       </div>
     </div>
   )

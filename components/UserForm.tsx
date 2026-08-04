@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import UserSkillsManager from './UserSkillsManager'
-import { AlertCircle, Shield, CheckCircle, X } from 'lucide-react'
+import { AlertCircle, Shield, CheckCircle, X, Camera } from 'lucide-react'
 
 interface TeamScopeFlags {
   canCloseWO: boolean
@@ -130,11 +130,23 @@ export default function UserForm({ initialData, userId, teams }: Props) {
   const [managingFace, setManagingFace] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState('')
+  const [cameraActive, setCameraActive] = useState(false)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [faceStatus, setFaceStatus] = useState({
     hasFaceVerification: (initialData as any)?.hasFaceVerification || false,
     lastFaceVerifyAt: (initialData as any)?.lastFaceVerifyAt || null,
     facePhotoUrl: (initialData as any)?.facePhotoUrl || null,
   })
+
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [])
 
   function set(field: keyof UserFormData, value: string | boolean) {
     setForm(prev => ({
@@ -316,6 +328,51 @@ export default function UserForm({ initialData, userId, teams }: Props) {
     } finally {
       setPhotoUploading(false)
     }
+  }
+
+  const startFaceCamera = async () => {
+    setPhotoError('')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      })
+      cameraStreamRef.current = stream
+      setCameraActive(true)
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      }, 0)
+    } catch (err) {
+      setPhotoError('Could not access camera. Please check permissions or upload a photo instead.')
+    }
+  }
+
+  const stopFaceCamera = () => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(track => track.stop())
+      cameraStreamRef.current = null
+    }
+    if (videoRef.current) videoRef.current.srcObject = null
+    setCameraActive(false)
+  }
+
+  const captureFacePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return
+    const context = canvasRef.current.getContext('2d')
+    if (!context) return
+
+    canvasRef.current.width = videoRef.current.videoWidth || 640
+    canvasRef.current.height = videoRef.current.videoHeight || 480
+    context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height)
+
+    canvasRef.current.toBlob(async blob => {
+      if (!blob) return
+      const file = new File([blob], 'face-capture.jpg', { type: 'image/jpeg' })
+      stopFaceCamera()
+      await handlePhotoUpload(file)
+    }, 'image/jpeg', 0.95)
   }
 
   const handleRemovePhoto = async () => {
@@ -680,24 +737,73 @@ export default function UserForm({ initialData, userId, teams }: Props) {
                 )}
 
                 {/* Photo Upload */}
-                <label className="block">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => {
-                      const file = e.target.files?.[0]
-                      if (file) handlePhotoUpload(file)
-                    }}
-                    disabled={photoUploading}
-                    className="hidden"
-                  />
-                  <div className="cursor-pointer bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center transition disabled:opacity-50">
-                    <p className="text-xs font-medium text-blue-700">
-                      {photoUploading ? 'Uploading photo...' : faceStatus.facePhotoUrl ? 'Change photo' : 'Add facial biometric photo'}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-0.5">Click to select image</p>
-                  </div>
-                </label>
+                <div className="space-y-2">
+                  {cameraActive ? (
+                    <div>
+                      <div className="relative">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-56 object-cover rounded-lg bg-black"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none">
+                          <div className="absolute inset-6 border-2 border-dashed border-blue-300" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={captureFacePhoto}
+                          disabled={photoUploading}
+                          className="flex-1 btn-primary text-sm"
+                        >
+                          {photoUploading ? 'Uploading...' : 'Capture Photo'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={stopFaceCamera}
+                          disabled={photoUploading}
+                          className="flex-1 btn-secondary text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => {
+                            const file = e.target.files?.[0]
+                            if (file) handlePhotoUpload(file)
+                          }}
+                          disabled={photoUploading}
+                          className="hidden"
+                        />
+                        <div className="cursor-pointer bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg p-3 text-center transition disabled:opacity-50">
+                          <p className="text-xs font-medium text-blue-700">
+                            {photoUploading ? 'Uploading photo...' : faceStatus.facePhotoUrl ? 'Change photo' : 'Add facial biometric photo'}
+                          </p>
+                          <p className="text-xs text-blue-600 mt-0.5">Click to select image</p>
+                        </div>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={startFaceCamera}
+                        disabled={photoUploading}
+                        className="w-full btn-secondary text-sm flex items-center justify-center gap-2"
+                      >
+                        <Camera className="w-4 h-4" />
+                        Take a photo with camera
+                      </button>
+                    </>
+                  )}
+                </div>
 
                 {/* Photo Upload Error */}
                 {photoError && (

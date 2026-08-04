@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { getPickerScope, getWriteScopeIds, hasScopeActionFlag } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -10,7 +11,7 @@ export default async function NewPMPage({
   searchParams,
 }: { searchParams: Promise<{ assetId?: string }> }) {
   const user = await getCurrentUser()
-  if (!user || !(await hasScopeActionFlag(user, 'canManagePM'))) redirect('/preventive-maintenance')
+  if (!user || !(await hasScopeActionFlag(user, 'canManagePM')) || !(await hasPermission(user, 'pm:create'))) redirect('/preventive-maintenance')
 
   const { assetId } = await searchParams
   const scopeIds = user ? await getWriteScopeIds(user) : null

@@ -18,6 +18,7 @@ import MeterListPanel from '@/components/MeterListPanel'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
 import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
 import { canViewAsset, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 
 function formatDate(date: Date | string | null) {
   if (!date) return '—'
@@ -95,7 +96,9 @@ export default async function AssetDetailPage({
 
   const canEdit = user ? await canWriteToAssets(user, [asset.id]) : false
   const canManageAssets = user ? await hasScopeActionFlag(user, 'canManageAssets') : false
-  const canEditWO = user ? await hasScopeActionFlag(user, 'canEditWO') : false
+  const canCreateAsset = canManageAssets && (user ? await hasPermission(user, 'asset:create') : false)
+  const canEditAsset = canManageAssets && (user ? await hasPermission(user, 'asset:edit') : false)
+  const canEditWO = user ? (await hasScopeActionFlag(user, 'canEditWO')) && (await hasPermission(user, 'wo:create')) : false
 
   // Parts usage history: find WOs linked to this asset, then their parts
   const assetWOIds = await prisma.workOrderAsset.findMany({
@@ -202,15 +205,15 @@ export default async function AssetDetailPage({
           ) : (
             <div className="flex gap-2">
               <QRCodeButton assetId={asset.id} assetCode={asset.assetCode} assetName={asset.name} />
-              {canManageAssets && (
-                <>
-                  <Link href={`/assets/new?parentId=${asset.id}`} className="btn-secondary text-sm">
-                    + Add sub-asset
-                  </Link>
-                  <Link href={`/assets/${asset.id}/edit`} className="btn-secondary text-sm">
-                    Edit asset
-                  </Link>
-                </>
+              {canCreateAsset && (
+                <Link href={`/assets/new?parentId=${asset.id}`} className="btn-secondary text-sm">
+                  + Add sub-asset
+                </Link>
+              )}
+              {canEditAsset && (
+                <Link href={`/assets/${asset.id}/edit`} className="btn-secondary text-sm">
+                  Edit asset
+                </Link>
               )}
               {canEditWO && (
                 <Link href={`/work-orders/new?assetId=${asset.id}`} className="btn-primary text-sm">

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { getWriteScopeIds, hasScopeActionFlag } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -13,7 +14,7 @@ export default async function NewAssetPage({
 }) {
   const { parentId } = await searchParams
   const user = await getCurrentUser()
-  if (!user || !(await hasScopeActionFlag(user, 'canManageAssets'))) redirect('/assets')
+  if (!user || !(await hasScopeActionFlag(user, 'canManageAssets')) || !(await hasPermission(user, 'asset:create'))) redirect('/assets')
 
   const scopeIds = user ? await getWriteScopeIds(user) : null
 

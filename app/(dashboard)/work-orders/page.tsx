@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildWOVisibilityFilter, getWriteScopeIds, resolveActiveScope, hasScopeActionFlag } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -256,7 +257,7 @@ export default async function WorkOrdersPage({
   const visibilityFilter = user ? await buildWOVisibilityFilter(user) : null
   const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter, activeScope.scopeIds, pickerScopeIds)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
-  const canEditWO = user ? await hasScopeActionFlag(user, 'canEditWO') : false
+  const canEditWO = user ? (await hasScopeActionFlag(user, 'canEditWO')) && (await hasPermission(user, 'wo:create')) : false
 
   const panelData = user ? await (async () => {
     const memberships = await prisma.teamMember.findMany({

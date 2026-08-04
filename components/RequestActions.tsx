@@ -2,9 +2,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface Props { requestId: string; title: string }
+interface Props {
+  requestId: string
+  title: string
+  canApprove?: boolean
+  canConvert?: boolean
+}
 
-export default function RequestActions({ requestId, title }: Props) {
+export default function RequestActions({ requestId, title, canApprove = true, canConvert = true }: Props) {
   const router  = useRouter()
   const [mode, setMode]     = useState<'idle'|'reject'|'convert'>('idle')
   const [loading, setLoading] = useState(false)
@@ -55,26 +60,32 @@ export default function RequestActions({ requestId, title }: Props) {
   return (
     <div className="flex flex-row md:flex-col gap-2 w-full md:w-40 flex-wrap">
       {error && <p className="w-full text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">{error}</p>}
-      <button 
-        onClick={() => doAction('approve')} 
-        disabled={loading}
-        className="flex-1 md:w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(16,185,129,0.3)] transition-all active:scale-95"
-      >
-        {loading ? '...' : 'Approve'}
-      </button>
-      <button 
-        onClick={() => doAction('convert')} 
-        disabled={loading}
-        className="flex-1 md:w-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(37,99,235,0.3)] transition-all active:scale-95"
-      >
-        {loading ? '...' : 'Convert'}
-      </button>
-      <button 
-        onClick={() => setMode('reject')} 
-        className="flex-1 md:w-full bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-[11px] font-bold uppercase tracking-wider py-2.5 px-4 rounded-xl shadow-3xs transition-all active:scale-95"
-      >
-        Reject
-      </button>
+      {canApprove && (
+        <button 
+          onClick={() => doAction('approve')} 
+          disabled={loading}
+          className="flex-1 md:w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+        >
+          {loading ? '...' : 'Approve'}
+        </button>
+      )}
+      {canConvert && (
+        <button 
+          onClick={() => doAction('convert')} 
+          disabled={loading}
+          className="flex-1 md:w-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(37,99,235,0.3)] transition-all active:scale-95"
+        >
+          {loading ? '...' : 'Convert'}
+        </button>
+      )}
+      {canApprove && (
+        <button 
+          onClick={() => setMode('reject')} 
+          className="flex-1 md:w-full bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-[11px] font-bold uppercase tracking-wider py-2.5 px-4 rounded-xl shadow-3xs transition-all active:scale-95"
+        >
+          Reject
+        </button>
+      )}
     </div>
   )
 }

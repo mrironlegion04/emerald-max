@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser()
-    if (user?.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'type:create'))) {
       return Response.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

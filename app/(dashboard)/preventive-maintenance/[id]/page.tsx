@@ -11,7 +11,7 @@ import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
 import { fmt, daysUntil } from '@/lib/utils'
-import { getUserLocationIds } from '@/lib/access-control'
+import { getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
 
 const freqLabels: Record<string, string> = {
   DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
@@ -25,6 +25,7 @@ export default async function PMDetailPage({
   const { id } = await params
   const user = await getCurrentUser()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const canManagePM = user ? await hasScopeActionFlag(user, 'canManagePM') : false
 
   const schedule = await prisma.maintenanceSchedule.findUnique({
     where: { id },
@@ -100,7 +101,7 @@ export default async function PMDetailPage({
         title={schedule.title}
         subtitle={`${targetName} · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}`}
         action={
-          canEdit ? (
+          canManagePM ? (
             <div className="flex gap-2">
               <Link href={`/preventive-maintenance/${schedule.id}/edit`} className="btn-secondary text-sm">
                 Edit schedule
@@ -128,7 +129,7 @@ export default async function PMDetailPage({
                 : `In ${days} day${days !== 1 ? 's' : ''}`}
             </p>
 
-            {canEdit && (
+            {canManagePM && (
               <PMGenerateButton
                 scheduleId={schedule.id}
                 assetName={targetName}
@@ -140,7 +141,7 @@ export default async function PMDetailPage({
           </div>
 
           {/* Preview upcoming WOs */}
-          {canEdit && schedule.schedulingHorizon > 1 && (
+          {canManagePM && schedule.schedulingHorizon > 1 && (
             <PMPreviewPanel scheduleId={schedule.id} />
           )}
 
@@ -272,7 +273,7 @@ export default async function PMDetailPage({
           )}
 
           {/* Toggle active */}
-          {canEdit && (
+          {canManagePM && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 text-sm mb-2">Schedule active</h2>
               <p className="text-xs text-gray-500 mb-3">
@@ -308,7 +309,7 @@ export default async function PMDetailPage({
             {workOrders.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-sm text-gray-400">No work orders generated yet</p>
-                {canGenerate && canEdit && (
+                {canGenerate && canManagePM && (
                   <p className="text-xs text-gray-400 mt-1">Click "Generate work order" to create the first one</p>
                 )}
               </div>

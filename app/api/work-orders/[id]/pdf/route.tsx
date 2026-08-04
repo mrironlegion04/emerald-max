@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { canViewWorkOrder } from '@/lib/access-control'
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer'
 
 const styles = StyleSheet.create({
@@ -31,6 +32,12 @@ export async function GET(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
+
+    // PDF rendering exposes the full WO — enforce the same visibility rules as the JSON endpoint
+    const viewAccess = await canViewWorkOrder(user, id)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: viewAccess.reason }, { status: 403 })
+    }
 
     const wo = await prisma.workOrder.findUnique({
       where: { id },

@@ -17,7 +17,7 @@ import AssetTabs from '@/components/AssetTabs'
 import MeterListPanel from '@/components/MeterListPanel'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
 import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
-import { canViewAsset, canWriteToAssets } from '@/lib/access-control'
+import { canViewAsset, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
 
 function formatDate(date: Date | string | null) {
   if (!date) return '—'
@@ -94,6 +94,8 @@ export default async function AssetDetailPage({
   if (user && !(await canViewAsset(user, asset.id))) notFound()
 
   const canEdit = user ? await canWriteToAssets(user, [asset.id]) : false
+  const canManageAssets = user ? await hasScopeActionFlag(user, 'canManageAssets') : false
+  const canEditWO = user ? await hasScopeActionFlag(user, 'canEditWO') : false
 
   // Parts usage history: find WOs linked to this asset, then their parts
   const assetWOIds = await prisma.workOrderAsset.findMany({
@@ -198,27 +200,24 @@ export default async function AssetDetailPage({
               <QRCodeButton assetId={asset.id} assetCode={asset.assetCode} assetName={asset.name} />
             </div>
           ) : (
-            canEdit ? (
-              <div className="flex gap-2">
-                <QRCodeButton assetId={asset.id} assetCode={asset.assetCode} assetName={asset.name} />
-                <Link href={`/assets/new?parentId=${asset.id}`} className="btn-secondary text-sm">
-                  + Add sub-asset
-                </Link>
-                <Link href={`/assets/${asset.id}/edit`} className="btn-secondary text-sm">
-                  Edit asset
-                </Link>
+            <div className="flex gap-2">
+              <QRCodeButton assetId={asset.id} assetCode={asset.assetCode} assetName={asset.name} />
+              {canManageAssets && (
+                <>
+                  <Link href={`/assets/new?parentId=${asset.id}`} className="btn-secondary text-sm">
+                    + Add sub-asset
+                  </Link>
+                  <Link href={`/assets/${asset.id}/edit`} className="btn-secondary text-sm">
+                    Edit asset
+                  </Link>
+                </>
+              )}
+              {canEditWO && (
                 <Link href={`/work-orders/new?assetId=${asset.id}`} className="btn-primary text-sm">
                   + New work order
                 </Link>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <QRCodeButton assetId={asset.id} assetCode={asset.assetCode} assetName={asset.name} />
-                <Link href={`/work-orders/new?assetId=${asset.id}`} className="btn-primary text-sm">
-                  + New work order
-                </Link>
-              </div>
-            )
+              )}
+            </div>
           )
         }
       />

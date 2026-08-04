@@ -264,6 +264,9 @@ export async function PATCH(
     if (!user || !(await hasPermission(user, 'asset:edit'))) {
       return NextResponse.json({ error: 'Only admins can restore assets' }, { status: 403 })
     }
+    if (!(await hasScopeActionFlag(user, 'canManageAssets'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing assets' }, { status: 403 })
+    }
 
     const { id } = await params
     const body = await request.json()

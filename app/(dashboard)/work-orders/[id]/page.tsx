@@ -15,7 +15,7 @@ import AttachmentsPanel from '@/components/AttachmentsPanel'
 import SkipPMButton from '@/components/SkipPMButton'
 import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
 import IssueBadge from '@/components/IssueBadge'
-import { canEditWorkOrder, canViewWorkOrder, getUserLocationIds } from '@/lib/access-control'
+import { canEditWorkOrder, canUploadWOAttachment, canViewWorkOrder, canCompleteWorkOrder, hasScopeActionFlag, getUserLocationIds } from '@/lib/access-control'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 
 const statusLabels = WO_STATUS_LABELS
@@ -71,6 +71,9 @@ export default async function WorkOrderDetailPage({
 
   const crewCanEdit = user ? (await canEditWorkOrder(user, wo.id)).allowed : false
   const canEdit = crewCanEdit
+  const canUploadAttachment = user ? (await canUploadWOAttachment(user, wo.id)).allowed : false
+  const canComplete = user ? (await canCompleteWorkOrder(user, wo.id)).allowed : false
+  const canCloseWO = user ? await hasScopeActionFlag(user, 'canCloseWO') : false
 
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
   const allowedIds = user ? await getUserLocationIds(user.userId) : null
@@ -158,6 +161,7 @@ export default async function WorkOrderDetailPage({
               currentStatus={wo.status}
               userRole={user?.role ?? 'TECHNICIAN'}
               userId={user?.userId ?? ''}
+              canCloseWO={canCloseWO}
               requestedCompletionTime={wo.requestedCompletionTime?.toISOString() ?? null}
               requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
               initialStartAt={wo.startedAt?.toISOString() ?? null}
@@ -366,7 +370,7 @@ export default async function WorkOrderDetailPage({
               partNumber: p.partNumber,
               unitCost: p.unitCost ?? 0,
             }))}
-            canEdit={canEdit || user?.role === 'TECHNICIAN'}
+            canEdit={canEdit}
             woStatus={wo.status}
             suggestedPartIds={wo.asset?.assetParts.map((ap: { partId: string }) => ap.partId) || []}
           />
@@ -393,7 +397,7 @@ export default async function WorkOrderDetailPage({
             woStatus={wo.status}
             allUsers={allUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email }))}
             allTeams={allTeams.map((t: any) => ({ id: t.id, name: t.name }))}
-            canEdit={canEdit || user?.role === 'TECHNICIAN'}
+            canEdit={canEdit || canComplete}
             currentUserId={user?.userId}
             isManagerOrAbove={user?.role === 'ADMIN' || user?.role === 'MANAGER'}
           />
@@ -405,7 +409,7 @@ export default async function WorkOrderDetailPage({
             }))}
             entityType="workOrder"
             entityId={wo.id}
-            canEdit={canEdit}
+            canEdit={canUploadAttachment}
           />
         </div>
       </div>

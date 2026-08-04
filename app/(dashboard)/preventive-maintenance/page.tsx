@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildLocationFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
+import { buildLocationFilter, getWriteScopeIds, resolveActiveScope, hasScopeActionFlag } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList, Clock, AlertTriangle, Calendar } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -36,6 +36,7 @@ export default async function PMPage({
 }) {
   const user = await getCurrentUser()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const canManagePM = user ? await hasScopeActionFlag(user, 'canManagePM') : false
   const params  = await searchParams
   const activeScope = user ? await resolveActiveScope(user, params.location) : { scopeIds: null }
   const pickerScopeIds = user ? await getWriteScopeIds(user) : null
@@ -114,7 +115,7 @@ export default async function PMPage({
         title="Preventive Maintenance"
         subtitle={`${totalCount} total · ${activeCount} active${overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}`}
         action={
-          canEdit ? (
+          canManagePM ? (
             <div className="flex gap-2">
               {generateableIds.length > 0 && <PMGenerateAllButton ids={generateableIds} />}
               <Link href="/preventive-maintenance/new" className="btn-primary text-sm">+ New schedule</Link>
@@ -166,7 +167,7 @@ export default async function PMPage({
               : 'Create a preventive maintenance schedule to start auto-generating work orders.'
           }
           action={
-            canEdit ? (
+            canManagePM ? (
               <Link href="/preventive-maintenance/new" className="btn-primary text-sm">
                 Create first schedule
               </Link>
@@ -268,7 +269,7 @@ export default async function PMPage({
                         <div className="flex items-center gap-2 justify-end">
                           <Link href={`/preventive-maintenance/${s.id}`}
                             className="text-xs text-blue-600 hover:underline font-medium">View</Link>
-                          {canEdit && (
+                          {canManagePM && (
                             <Link href={`/preventive-maintenance/${s.id}/edit`}
                               className="text-xs text-gray-500 hover:underline font-medium">Edit</Link>
                           )}
@@ -395,7 +396,7 @@ export default async function PMPage({
                     >
                       View Schedule
                     </Link>
-                    {canEdit && (
+                    {canManagePM && (
                       <Link
                         href={`/preventive-maintenance/${s.id}/edit`}
                         className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all border border-blue-100"

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
+import { canAccessTeamScope } from '@/lib/access-control'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -11,10 +13,14 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'team:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { teamId, domainIds } = schema.parse(await request.json())
+
+    if (!(await canAccessTeamScope(user, teamId))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
     await prisma.$transaction([
       prisma.teamDomain.deleteMany({ where: { teamId } }),

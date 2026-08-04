@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { getWriteScopeIds, canWriteToAssets } from '@/lib/access-control'
+import { getWriteScopeIds, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
@@ -13,7 +13,7 @@ export default async function EditAssetPage({
 }) {
   const { id } = await params
   const user = await getCurrentUser()
-  if (user?.role === 'TECHNICIAN') redirect(`/assets/${id}`)
+  if (!user || !(await hasScopeActionFlag(user, 'canManageAssets'))) redirect(`/assets/${id}`)
 
   const scopeIds = user ? await getWriteScopeIds(user) : null
 

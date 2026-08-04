@@ -53,6 +53,12 @@ export async function GET(
     if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
+
+    // Only the user themselves or a holder of user:read may view a full profile.
+    if (id !== currentUser.userId && !(await hasPermission(currentUser, 'user:read'))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
       select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true, canCloseWO: true, canAssignWO: true, canEditWO: true, canApproveRequest: true, canConvertRequest: true, canManagePM: true, canManageAssets: true } } },
@@ -79,8 +85,36 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true },
+    })
+    if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+    // Only an ADMIN may modify an ADMIN's record in any way.
+    if (target.role === 'ADMIN' && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Only admins can modify admin users' }, { status: 403 })
+    }
+
     const body   = await request.json()
     const data   = updateSchema.parse(body)
+
+    // Privilege-sensitive fields are ADMIN-only. A user:edit holder (manager /
+    // custom role) may update profile details but never roles, custom roles,
+    // scope assignments, or account state.
+    const isAdmin = user.role === 'ADMIN'
+    if (!isAdmin) {
+      const adminOnlyFields: (keyof typeof data)[] = [
+        'role', 'isActive', 'woVisibility', 'customRoleId',
+        'assignedLocationIds', 'assignedTeamIds', 'teamScope',
+      ]
+      for (const field of adminOnlyFields) {
+        if (data[field] !== undefined) {
+          return NextResponse.json({ error: 'Only admins can change user roles or assignments' }, { status: 403 })
+        }
+      }
+    }
 
     if (data.email) {
       const existing = await prisma.user.findFirst({

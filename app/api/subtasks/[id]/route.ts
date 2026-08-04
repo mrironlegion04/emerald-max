@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
-import { canCompleteSubtask, canEditWorkOrder, canViewWorkOrder, getCompletionType, isAdmin, isManagerOrAbove, canAssignUsers, canAssignTeams } from '@/lib/access-control'
+import { canCompleteSubtask, canEditWorkOrder, canCompleteWorkOrder, canViewWorkOrder, getCompletionType, isAdmin, isManagerOrAbove, canAssignUsers, canAssignTeams } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSubtaskSchema = z.object({
@@ -77,9 +77,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
     }
 
-    const viewAccess = await canViewWorkOrder(user, existingSubtask.workOrderId)
-    if (!viewAccess.allowed) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Users who can edit the WO or who are assigned to it (tech flow) may update subtasks
+    const editAccess = await canEditWorkOrder(user, existingSubtask.workOrderId)
+    const completeAccess = await canCompleteWorkOrder(user, existingSubtask.workOrderId)
+    if (!editAccess.allowed && !completeAccess.allowed) {
+      return NextResponse.json({ error: editAccess.reason ?? 'Forbidden' }, { status: 403 })
     }
 
     // ===== ACCESS CONTROL FOR COMPLETION =====
@@ -232,8 +234,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
     }
 
+    // Users who can edit the WO or who are assigned to it (tech flow) may delete subtasks
     const editAccess = await canEditWorkOrder(user, subtask.workOrderId)
-    if (!editAccess.allowed) {
+    const completeAccess = await canCompleteWorkOrder(user, subtask.workOrderId)
+    if (!editAccess.allowed && !completeAccess.allowed) {
       return NextResponse.json({ error: editAccess.reason ?? 'Forbidden' }, { status: 403 })
     }
 

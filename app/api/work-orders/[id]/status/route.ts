@@ -10,6 +10,7 @@ import {
   getCompletionType, 
   isValidWOStatusTransition,
   canViewWorkOrder,
+  canEditWorkOrder,
   hasScopeActionFlag,
 } from '@/lib/access-control'
 import { updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
@@ -52,6 +53,25 @@ export async function PATCH(
     const viewAccess = await canViewWorkOrder(user, id)
     if (!viewAccess.allowed) {
       return NextResponse.json({ error: viewAccess.reason }, { status: 403 })
+    }
+
+    // Only users who can edit the WO (wo:edit + location/team scope) OR the
+    // assigned technician/team may mutate its status. This blocks mere viewers
+    // (e.g. a requester who created the WO) from cancelling / starting / holding
+    // work orders they don't own.
+    const editAccess = await canEditWorkOrder(user, id)
+    let isAssignedTech = wo.assignedToId === user.userId
+    if (!isAssignedTech && wo.teamId) {
+      const membership = await prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId: wo.teamId, userId: user.userId } },
+      })
+      isAssignedTech = !!membership
+    }
+    if (!editAccess.allowed && !isAssignedTech) {
+      return NextResponse.json(
+        { error: editAccess.reason ?? 'You do not have permission to update this work order' },
+        { status: 403 }
+      )
     }
 
     const isAdminOrManager = user.role === 'ADMIN' || user.role === 'MANAGER'

@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationPath } from '@/lib/location-path'
-import { getUserLocationIds } from '@/lib/access-control'
+import { getUserLocationIds, canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 
 const locationSchema = z.object({
@@ -112,6 +112,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const data = locationSchema.parse(body)
+
+    // Plant-scoped users may only create locations under a parent they own
+    if (!(await canWriteToLocations(user, [data.parentId]))) {
+      return NextResponse.json({ error: 'You do not have access to create a location here' }, { status: 403 })
+    }
 
     // Build path before creating
     const path = await buildLocationPath(data.parentId ?? null, data.name)

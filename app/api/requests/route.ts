@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { createNotificationForUsers } from '@/lib/notifications'
 import { generateRequestNumber } from '@/lib/request-number'
+import { getUserTeamScope, getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
 const attachmentSchema = z.object({
@@ -31,13 +32,47 @@ export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const requests = await prisma.maintenanceRequest.findMany({
-    where: user.role === 'REQUESTER' ? {
+  let where: Record<string, unknown> | undefined
+
+  if (user.role === 'REQUESTER') {
+    where = {
       OR: [
         { requesterId: user.userId },
         { requesterName: user.name },
       ],
-    } : undefined,
+    }
+  } else if (user.role === 'TECHNICIAN') {
+    const myTeamIds = (await prisma.teamMember.findMany({
+      where: { userId: user.userId },
+      select: { teamId: true },
+    })).map(t => t.teamId)
+    where = {
+      OR: [
+        { requesterId: user.userId },
+        ...(myTeamIds.length > 0 ? [{ teamId: { in: myTeamIds } }] : []),
+      ],
+    }
+  } else if (user.role === 'MANAGER') {
+    // Scoped managers only see requests for their assigned teams / plants.
+    // Managers with no scope stay unrestricted (backward compatible).
+    const teamScope = await getUserTeamScope(user.userId)
+    const locationIds = await getUserLocationIds(user.userId)
+    if (teamScope || locationIds) {
+      const conditions: Record<string, unknown>[] = [
+        { requesterId: user.userId },
+      ]
+      if (teamScope) {
+        conditions.push({ teamId: { in: teamScope.map(s => s.teamId) } })
+      }
+      if (locationIds) {
+        conditions.push({ asset: { locationId: { in: locationIds } } })
+      }
+      where = { OR: conditions }
+    }
+  }
+
+  const requests = await prisma.maintenanceRequest.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
     include: {
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },

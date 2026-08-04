@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildLocationFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
+import { buildLocationFilter, getWriteScopeIds, hasScopeActionFlag, resolveActiveScope } from '@/lib/access-control'
 import Link from 'next/link'
 import { Building2, Package  } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -120,6 +120,7 @@ export default async function AssetsPage({
   const locationFilter = user ? await buildLocationFilter(user) : null
   const { assets, categories, locations, totalCount, page } = await getAssets(params, locationFilter, activeScope.scopeIds, pickerScopeIds)
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const canManageAssets = user ? await hasScopeActionFlag(user, 'canManageAssets') : false
   const viewMode = (params.view || 'hierarchy') as 'hierarchy' | 'all'
   
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
@@ -135,7 +136,7 @@ export default async function AssetsPage({
         action={
           <div className="flex gap-2">
             <ExportButton types={['assets']} label="Export" canExport={canEdit} />
-            {canEdit ? (
+            {canManageAssets ? (
               <Link href="/assets/new" className="btn-primary text-sm">
                 + Add asset
               </Link>
@@ -160,7 +161,7 @@ export default async function AssetsPage({
               : 'No assets match your filters.'
           }
           action={
-            canEdit ? (
+            canManageAssets ? (
               <Link href="/assets/new" className="btn-primary text-sm">
                 Add first asset
               </Link>
@@ -259,7 +260,7 @@ export default async function AssetsPage({
                         >
                           View
                         </Link>
-                        {canEdit && (
+                        {canManageAssets && (
                           <Link
                             href={`/assets/${asset.id}/edit`}
                             className="text-xs text-gray-500 hover:underline font-medium"
@@ -373,7 +374,7 @@ export default async function AssetsPage({
                     >
                       View Details
                     </Link>
-                    {canEdit && (
+                    {canManageAssets && (
                       <Link
                         href={`/assets/${asset.id}/edit`}
                         className="flex-1 sm:flex-none inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all border border-blue-100"

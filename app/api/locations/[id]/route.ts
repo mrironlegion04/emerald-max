@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationPath, refreshLocationPaths } from '@/lib/location-path'
+import { canWriteToLocations } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -42,6 +43,12 @@ export async function PUT(
 
     const newName     = data.name     ?? current.name
     const newParentId = data.parentId !== undefined ? (data.parentId ?? null) : current.parentId
+
+    // Plant-scoped users may only move/rename locations inside their write scope
+    if (!(await canWriteToLocations(user, [id, newParentId]))) {
+      return NextResponse.json({ error: 'You do not have access to update this location' }, { status: 403 })
+    }
+
     const path = await buildLocationPath(newParentId, newName)
 
     const location = await prisma.location.update({
@@ -106,6 +113,11 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Plant-scoped users may only delete locations inside their write scope
+    if (!(await canWriteToLocations(user, [id]))) {
+      return NextResponse.json({ error: 'You do not have access to delete this location' }, { status: 403 })
+    }
 
     const current = await prisma.location.findUnique({ where: { id }, select: { name: true } })
     if (!current) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { canAccessTeamScope } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -18,6 +19,12 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { teamId } = await params
+
+  // Scoped users may only manage teams within their assigned team scope
+  if (!(await canAccessTeamScope(user, teamId))) {
+    return NextResponse.json({ error: 'You do not have access to this team' }, { status: 403 })
+  }
+
   const team = await prisma.team.findUnique({
     where: { id: teamId },
     include: {
@@ -31,6 +38,10 @@ export async function GET(
   })
 
   if (!team) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  if (!(await hasPermission(user, 'team:read'))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   return NextResponse.json({
     ...team,
@@ -52,6 +63,11 @@ export async function PUT(
 
   const team = await prisma.team.findUnique({ where: { id: teamId } })
   if (!team) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Scoped users may only manage teams within their assigned team scope
+  if (!(await canAccessTeamScope(user, teamId))) {
+    return NextResponse.json({ error: 'You do not have access to this team' }, { status: 403 })
+  }
 
   // Action: add-member
   if (body.action === 'add-member') {
@@ -189,6 +205,11 @@ export async function DELETE(
   const { searchParams } = new URL(request.url)
   const force = searchParams.get('force') === 'true'
 
+  // Scoped users may only manage teams within their assigned team scope
+  if (!(await canAccessTeamScope(user, teamId))) {
+    return NextResponse.json({ error: 'You do not have access to this team' }, { status: 403 })
+  }
+
   const team = await prisma.team.findUnique({
     where: { id: teamId },
     select: { id: true, isDeleted: true },
@@ -239,6 +260,11 @@ export async function PATCH(
 
   const { teamId } = await params
   const body = await request.json()
+
+  // Scoped users may only manage teams within their assigned team scope
+  if (!(await canAccessTeamScope(user, teamId))) {
+    return NextResponse.json({ error: 'You do not have access to this team' }, { status: 403 })
+  }
 
   if (body.action === 'restore') {
     const team = await prisma.team.findUnique({ where: { id: teamId } })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { canEditWorkOrder } from '@/lib/access-control'
 
 export async function DELETE(
   _req: NextRequest,
@@ -12,6 +13,12 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id: workOrderId, partUsedId } = await params
+
+    // Only users who can edit the WO (wo:edit + location/team scope) may remove parts
+    const editAccess = await canEditWorkOrder(user, workOrderId)
+    if (!editAccess.allowed) {
+      return NextResponse.json({ error: editAccess.reason }, { status: 403 })
+    }
 
     // Get the WO part record
     const woPart = await prisma.workOrderPart.findUnique({

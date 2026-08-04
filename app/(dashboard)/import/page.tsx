@@ -5,7 +5,7 @@ import BulkImport from '@/components/BulkImport'
 
 export default async function ImportPage() {
   const user = await getCurrentUser()
-  if (user?.role === 'TECHNICIAN') redirect('/dashboard')
+  if (user?.role !== 'ADMIN') redirect('/dashboard')
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

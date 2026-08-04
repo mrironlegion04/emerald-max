@@ -186,7 +186,7 @@ const enterpriseSettingsItems = [
     label: 'Bulk Import',
     href: '/import',
     icon: <Upload className="w-4 h-4" />,
-    managerOrAdmin: true,
+    adminOnly: true,
   },
 ]
 
@@ -558,7 +558,6 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                     {enterpriseSettingsItems
                       .filter(item => {
                         if (item.adminOnly && user.role !== 'ADMIN') return false
-                        if (item.managerOrAdmin && user.role !== 'ADMIN' && user.role !== 'MANAGER') return false
                         return true
                       })
                       .map(item => {

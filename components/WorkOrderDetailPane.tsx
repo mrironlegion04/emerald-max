@@ -74,6 +74,10 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
 
   const isOverdue = wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED', 'CANCELLED'].includes(wo.status)
   const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
+  const viewer = wo.viewer ?? {}
+  const canEdit = viewer.canEdit ?? false
+  const canComplete = viewer.canComplete ?? false
+  const canUploadAttachment = viewer.canUploadAttachment ?? false
 
   return (
     <div className="p-5 space-y-5 max-w-3xl">
@@ -108,6 +112,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           currentStatus={wo.status}
           userRole={userRole}
           userId={userId}
+          canCloseWO={viewer.canCloseWO ?? false}
           requestedCompletionTime={wo.requestedCompletionTime ?? null}
           requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
           initialStartAt={wo.startedAt ?? null}
@@ -160,7 +165,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
       {/* Worked by — recorded crew (survives team membership changes) */}
       <WorkOrderCrewPanel
         woId={wo.id}
-        canEdit={userRole === 'ADMIN' || userRole === 'MANAGER' || userRole === 'TECHNICIAN'}
+        canEdit={canEdit}
         onChanged={() => setReloadKey(k => k + 1)}
       />
 
@@ -220,7 +225,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           unitCost: p.unitCost ?? p.part.unitCost ?? 0,
         }))}
         allParts={[]}
-        canEdit={true}
+        canEdit={canEdit}
         woStatus={wo.status}
         suggestedPartIds={wo.asset?.assetParts?.map((ap: any) => ap.partId) || []}
       />
@@ -244,7 +249,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
         woStatus={wo.status}
         allUsers={[]}
         allTeams={[]}
-        canEdit={true}
+        canEdit={canEdit || canComplete}
         currentUserId={userId}
         isManagerOrAbove={userRole === 'ADMIN' || userRole === 'MANAGER'}
       />
@@ -262,7 +267,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
         }))}
         entityType="workOrder"
         entityId={wo.id}
-        canEdit={true}
+        canEdit={canUploadAttachment}
       />
     </div>
   )

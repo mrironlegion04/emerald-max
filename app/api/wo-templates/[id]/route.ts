@@ -108,8 +108,8 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Only admins can delete templates' }, { status: 403 })
+    if (!user || !(await hasPermission(user, 'pm:delete'))) {
+      return NextResponse.json({ error: 'Only users with PM delete rights can delete templates' }, { status: 403 })
     }
     const { id } = await params
     const existing = await prisma.workOrderTemplate.findUnique({ where: { id } })

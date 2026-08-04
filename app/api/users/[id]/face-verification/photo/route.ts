@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { prisma } from '@/lib/db'
 import { uploadFacePhoto, deleteFacePhoto } from '@/lib/minio'
 
@@ -23,8 +24,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession()
-    if (!session?.userId || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+    const session = await getCurrentUser()
+    if (!session || !(await hasPermission(session, 'user:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -117,8 +118,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession()
-    if (!session?.userId || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+    const session = await getCurrentUser()
+    if (!session || !(await hasPermission(session, 'user:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

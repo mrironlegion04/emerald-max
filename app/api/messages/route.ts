@@ -714,6 +714,27 @@ export async function PATCH(req: NextRequest) {
     // 1. Check if modifying a group chat channel definition
     if (body.updateGroup && body.channelId) {
       const { channelId, groupName, groupDesc, memberIds } = body
+
+      // Only user-created "group" channels may be edited here — never
+      // team / work order / direct channels attached to scoped entities.
+      const channel = await prisma.chatChannel.findUnique({
+        where: { id: channelId },
+        select: { type: true },
+      })
+      if (!channel || channel.type !== 'group') {
+        return NextResponse.json({ error: 'Channel not found' }, { status: 404 })
+      }
+
+      // Caller must be a member of the group, or staff (ADMIN/MANAGER).
+      if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+        const membership = await prisma.chatChannelMember.findUnique({
+          where: { channelId_userId: { channelId, userId: user.userId } },
+        })
+        if (!membership) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+      }
+
       const updatedChannel = await prisma.chatChannel.update({
         where: { id: channelId },
         data: {

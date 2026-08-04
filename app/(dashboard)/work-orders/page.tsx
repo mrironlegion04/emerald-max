@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { buildWOVisibilityFilter, getWriteScopeIds, resolveActiveScope } from '@/lib/access-control'
+import { buildWOVisibilityFilter, getWriteScopeIds, resolveActiveScope, hasScopeActionFlag } from '@/lib/access-control'
 import Link from 'next/link'
 import { ClipboardList } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -256,6 +256,7 @@ export default async function WorkOrdersPage({
   const visibilityFilter = user ? await buildWOVisibilityFilter(user) : null
   const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter, activeScope.scopeIds, pickerScopeIds)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const canEditWO = user ? await hasScopeActionFlag(user, 'canEditWO') : false
 
   const panelData = user ? await (async () => {
     const memberships = await prisma.teamMember.findMany({
@@ -281,7 +282,9 @@ export default async function WorkOrdersPage({
         title="Work Orders"
         subtitle={`${totalCount} total · ${workOrders.length} showing${overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}`}
         action={
-          <Link href="/work-orders/new" className="btn-primary text-sm">+ New work order</Link>
+          canEditWO && (
+            <Link href="/work-orders/new" className="btn-primary text-sm">+ New work order</Link>
+          )
         }
       />
 
@@ -294,9 +297,11 @@ export default async function WorkOrdersPage({
               : 'Create your first work order to get started.'
           }
           action={
-            <Link href="/work-orders/new" className="btn-primary text-sm">
-              Create work order
-            </Link>
+            canEditWO && (
+              <Link href="/work-orders/new" className="btn-primary text-sm">
+                Create work order
+              </Link>
+            )
           }
           icon={<ClipboardList className="w-7 h-7" />}
         />

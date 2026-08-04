@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
-import { canViewWorkOrder } from '@/lib/access-control'
+import { canViewWorkOrder, canAccessTeamScope } from '@/lib/access-control'
 import { z } from 'zod'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -13,6 +13,7 @@ import {
   canReassignWorkOrder,
   getCompletionType,
   canCompleteWorkOrder,
+  canUploadWOAttachment,
   isAdmin,
   isManagerOrAbove,
   canAssignTeams,
@@ -122,7 +123,23 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    return NextResponse.json(wo)
+    // Server-computed action flags so the UI only shows buttons the backend allows.
+    const [editAccess, completeAccess, uploadAccess, closeFlag] = await Promise.all([
+      canEditWorkOrder(user, wo.id),
+      canCompleteWorkOrder(user, wo.id),
+      canUploadWOAttachment(user, wo.id),
+      hasScopeActionFlag(user, 'canCloseWO'),
+    ])
+
+    return NextResponse.json({
+      ...wo,
+      viewer: {
+        canEdit: editAccess.allowed,
+        canComplete: completeAccess.allowed,
+        canUploadAttachment: uploadAccess.allowed,
+        canCloseWO: closeFlag,
+      },
+    })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch work order' }, { status: 500 })
@@ -427,12 +444,23 @@ export async function DELETE(
       select: {
         title: true,
         assetId: true,
+        teamId: true,
         attachments: true,
         assets: { select: { assetId: true } },
 
       }
     })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
+
+    // Scope enforcement: only users who can view this WO and (for scoped
+    // users) whose team scope contains the WO's team may delete it.
+    const viewAccess = await canViewWorkOrder(user, id)
+    if (!viewAccess.allowed) {
+      return NextResponse.json({ error: viewAccess.reason }, { status: 403 })
+    }
+    if (!(await canAccessTeamScope(user, wo.teamId))) {
+      return NextResponse.json({ error: 'You do not have access to this work order' }, { status: 403 })
+    }
 
     // ── Cleanup Storage (MinIO / Local) ───────────────────────────────
     // 1. Top-level attachments

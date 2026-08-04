@@ -28,6 +28,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Users may only verify their own enrolled face; admins may verify anyone.
+    // Prevents using this endpoint as a biometric oracle against other users.
+    if (userId !== currentUser.userId && currentUser.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: userId },

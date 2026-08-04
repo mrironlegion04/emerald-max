@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 import { prisma } from '@/lib/db'
 
 // POST: Enable face verification for a user
@@ -8,8 +9,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession()
-    if (!session?.userId || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+    const user = await getCurrentUser()
+    if (!user || !(await hasPermission(user, 'user:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -21,7 +22,7 @@ export async function POST(
     }
 
     // Update user to enable face verification
-    const user = await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         hasFaceVerification: true,
@@ -32,7 +33,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'Face verification enabled',
-      lastFaceVerifyAt: user.lastFaceVerifyAt,
+      lastFaceVerifyAt: updated.lastFaceVerifyAt,
     })
   } catch (error) {
     console.error('Face verification enable error:', error)
@@ -46,8 +47,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession()
-    if (!session?.userId || (session.role !== 'ADMIN' && session.role !== 'MANAGER')) {
+    const user = await getCurrentUser()
+    if (!user || !(await hasPermission(user, 'user:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

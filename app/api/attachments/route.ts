@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
-import { canEditWorkOrder, canWriteToAssets } from '@/lib/access-control'
+import { canEditWorkOrder, canUploadWOAttachment, canWriteToAssets } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import {
   uploadFile,
   getPresignedUrl,
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     // Validate entity exists and is within the user's scope
     if (entityType === 'workOrder') {
-      const access = await canEditWorkOrder(user, entityId)
+      const access = await canUploadWOAttachment(user, entityId)
       if (!access.allowed) {
         return NextResponse.json({ error: access.reason ?? 'Forbidden' }, { status: 403 })
       }
@@ -67,6 +68,9 @@ export async function POST(req: NextRequest) {
     } else if (entityType === 'part') {
       const part = await prisma.part.findUnique({ where: { id: entityId } })
       if (!part) return NextResponse.json({ error: 'Part not found' }, { status: 404 })
+      if (!(await hasPermission(user, 'part:edit'))) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     } else if (entityType === 'comment') {
       const comment = await prisma.workOrderComment.findUnique({
         where: { id: entityId },

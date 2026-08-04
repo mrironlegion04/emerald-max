@@ -8,8 +8,9 @@ import { getUserLocationIds } from '@/lib/access-control'
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token      = process.env.CRON_SECRET ?? ''
-    if (token && authHeader !== `Bearer ${token}`) {
+    const token      = process.env.CRON_SECRET
+    // Fail closed: without a configured secret, this state-changing endpoint stays locked
+    if (!token || authHeader !== `Bearer ${token}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

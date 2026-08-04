@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { createNotification } from '@/lib/notifications'
+import { canAccessTeamScope, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 
 const skipSchema = z.object({
@@ -50,11 +51,18 @@ export async function POST(
       return NextResponse.json({ error: 'Work order cannot be skipped in current status' }, { status: 400 })
     }
 
-    // Check access: admin, manager, or assigned technician
-    const isAdminOrManager = user.role === 'ADMIN' || user.role === 'MANAGER'
-    const isAssignedTech = wo.assignedToId === user.userId
-    if (!isAdminOrManager && !isAssignedTech) {
-      return NextResponse.json({ error: 'Only admins, managers, or assigned technicians can skip' }, { status: 403 })
+    // Check access: admin, scoped manager, or assigned technician
+    if (user.role === 'MANAGER') {
+      const teamScopeOk = await canAccessTeamScope(user, wo.teamId)
+      const closeFlagOk = await hasScopeActionFlag(user, 'canCloseWO')
+      if (!teamScopeOk || !closeFlagOk) {
+        return NextResponse.json({ error: 'You do not have access to skip this work order' }, { status: 403 })
+      }
+    } else if (user.role !== 'ADMIN') {
+      const isAssignedTech = wo.assignedToId === user.userId
+      if (!isAssignedTech) {
+        return NextResponse.json({ error: 'Only admins, managers, or assigned technicians can skip' }, { status: 403 })
+      }
     }
 
     // Use transaction to update both WO and schedule atomically

@@ -7,6 +7,7 @@ import {
   getPresignedUrl,
   ensureBucket,
   deleteFile,
+  getFileMetadata,
 } from '@/lib/minio'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
@@ -116,10 +117,22 @@ export async function DELETE(req: NextRequest) {
     }
 
     const useMinIO = isMinioConfigured()
+    const isStaff = user.role === 'ADMIN' || user.role === 'MANAGER'
 
     // 1. If key is passed and is a MinIO object name
     if (key && !key.startsWith('local-')) {
       if (useMinIO) {
+        // Ownership: only the uploading user (or staff) may delete the object.
+        try {
+          const meta = await getFileMetadata(key)
+          const uploadedBy = meta?.metaData?.['uploaded-by']
+          if (!isStaff && (!uploadedBy || uploadedBy !== user.name)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+          }
+        } catch (err) {
+          console.error(`Failed to stat key ${key}:`, err)
+          return NextResponse.json({ error: 'File not found' }, { status: 404 })
+        }
         try {
           await deleteFile(key)
           console.log(`Successfully deleted file from MinIO with key: ${key}`)
@@ -138,6 +151,11 @@ export async function DELETE(req: NextRequest) {
     if (localUrl && localUrl.startsWith('/uploads/')) {
       try {
         const filename = path.basename(localUrl)
+        // Only server-generated uploads (proc-<timestamp>-<random>) may be deleted;
+        // guards against removing static app assets that live under /uploads/.
+        if (!filename.startsWith('proc-')) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
         const filepath = path.join(UPLOAD_DIR, filename)
         await unlink(filepath)
         console.log(`Successfully deleted local file from uploads: ${filename}`)

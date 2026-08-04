@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasPermission } from '@/lib/permissions'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
-    if (user?.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'type:edit'))) {
       return Response.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -33,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
-    if (user?.role !== 'ADMIN') {
+    if (!user || !(await hasPermission(user, 'type:delete'))) {
       return Response.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

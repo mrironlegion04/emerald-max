@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
-import { canViewWorkOrder, canAssignUsers, canAssignTeams } from '@/lib/access-control'
+import { canViewWorkOrder, canEditWorkOrder, canCompleteWorkOrder, canAssignUsers, canAssignTeams } from '@/lib/access-control'
 import { z } from 'zod'
 
 const subtaskSchema = z.object({
@@ -68,9 +68,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
     }
 
-    const viewAccess = await canViewWorkOrder(user, data.workOrderId)
-    if (!viewAccess.allowed) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Users who can edit the WO or who are assigned to it (tech flow) may add subtasks
+    const editAccess = await canEditWorkOrder(user, data.workOrderId)
+    const completeAccess = await canCompleteWorkOrder(user, data.workOrderId)
+    if (!editAccess.allowed && !completeAccess.allowed) {
+      return NextResponse.json({ error: editAccess.reason ?? 'Forbidden' }, { status: 403 })
     }
 
     // Verify assigned user/team are within the user's write scope

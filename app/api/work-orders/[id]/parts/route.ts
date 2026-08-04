@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
+import { canEditWorkOrder } from '@/lib/access-control'
 import { z } from 'zod'
 
 const addPartSchema = z.object({
@@ -24,6 +25,13 @@ export async function POST(
     // Verify WO exists and is not closed
     const wo = await prisma.workOrder.findUnique({ where: { id: workOrderId } })
     if (!wo) return NextResponse.json({ error: 'Work order not found' }, { status: 404 })
+
+    // Only users who can edit the WO (wo:edit + location/team scope) may add parts
+    const editAccess = await canEditWorkOrder(user, workOrderId)
+    if (!editAccess.allowed) {
+      return NextResponse.json({ error: editAccess.reason }, { status: 403 })
+    }
+
     if (['COMPLETED','CANCELLED'].includes(wo.status)) {
       return NextResponse.json({ error: 'Cannot add parts to a closed work order' }, { status: 422 })
     }

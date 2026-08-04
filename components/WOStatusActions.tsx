@@ -10,6 +10,7 @@ interface Props {
   currentStatus: string
   userRole: string
   userId: string
+  canCloseWO?: boolean
   requestedCompletionTime: string | null
   requestedCompletionNotes: string | null
   initialStartAt?: string | null
@@ -56,7 +57,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -88,6 +89,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [adjustedLaborCost, setAdjustedLaborCost] = useState(() => initialLaborCost != null ? String(initialLaborCost) : '')
 
   const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER'
+  const canClose = userRole === 'ADMIN' || canCloseWO
   const allAvailable = transitions[currentStatus] ?? []
   const available = (currentStatus === 'COMPLETED' || currentStatus === 'CLOSED') && !isAdminOrManager ? [] : allAvailable
 
@@ -370,7 +372,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <CheckCircle className="w-4 h-4 text-amber-500" />
           Awaiting Closure — Manager verification required
         </div>
-        {isAdminOrManager && (
+        {isAdminOrManager && canClose && (
           <div className="flex flex-col gap-2">
             <button onClick={() => doTransition('CLOSED')} disabled={loading}
               className="w-full py-2.5 px-4 rounded-xl text-xs transition-all tracking-wide bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md font-bold disabled:opacity-50">
@@ -385,6 +387,11 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         {!isAdminOrManager && (
           <p className="text-xs text-slate-500 text-center py-2">
             Waiting for manager to close...
+          </p>
+        )}
+        {isAdminOrManager && !canClose && (
+          <p className="text-xs text-slate-500 text-center py-2">
+            Your scope does not allow closing work orders.
           </p>
         )}
       </div>
@@ -416,21 +423,25 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <div className="space-y-2">
             {!showAdjustTime ? (
               <>
-                <button onClick={handleApprove} disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md disabled:opacity-50">
-                  {loading ? 'Approving...' : 'Approve with requested time'}
-                </button>
-                <button onClick={() => {
-                    setShowAdjustTime(true)
-                    setAdjustedTime(toLocalDatetimeString(new Date()))
-                    setAdjustedStartAt(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
-                    setAdjustedLaborHours(initialLaborHours != null ? String(initialLaborHours) : '')
-                    setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md">
-                  <Pencil className="w-3 h-3 inline mr-1.5" />
-                  Adjust time & approve
-                </button>
+                {canClose && (
+                  <button onClick={handleApprove} disabled={loading}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md disabled:opacity-50">
+                    {loading ? 'Approving...' : 'Approve with requested time'}
+                  </button>
+                )}
+                {canClose && (
+                  <button onClick={() => {
+                      setShowAdjustTime(true)
+                      setAdjustedTime(toLocalDatetimeString(new Date()))
+                      setAdjustedStartAt(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
+                      setAdjustedLaborHours(initialLaborHours != null ? String(initialLaborHours) : '')
+                      setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md">
+                    <Pencil className="w-3 h-3 inline mr-1.5" />
+                    Adjust time & approve
+                  </button>
+                )}
                 <button onClick={handleReject} disabled={loading}
                   className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/50 disabled:opacity-50">
                   {loading ? 'Rejecting...' : 'Reject & reopen'}

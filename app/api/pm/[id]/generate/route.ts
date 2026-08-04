@@ -4,7 +4,7 @@ import { hasPermission } from '@/lib/permissions'
 import { generateWOsForSchedule } from '@/lib/pm-generation'
 import { writeAudit } from '@/lib/audit'
 import { prisma } from '@/lib/db'
-import { buildLocationFilter } from '@/lib/access-control'
+import { buildLocationFilter, hasScopeActionFlag } from '@/lib/access-control'
 
 export async function POST(
   _req: NextRequest,
@@ -14,6 +14,9 @@ export async function POST(
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'pm:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManagePM'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing PM schedules' }, { status: 403 })
     }
 
     const { id } = await params

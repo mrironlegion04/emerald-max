@@ -67,6 +67,9 @@ export const ALL_PERMISSIONS = [
 
   // Categories & Domain mapping
   'category_domain:edit',
+
+  // Automation Rules
+  'automation:manage',
 ] as const
 
 export type Permission = (typeof ALL_PERMISSIONS)[number]
@@ -145,6 +148,10 @@ export const PERMISSION_GROUPS: Record<string, { label: string; permissions: Per
     label: 'Import / Export / Audit',
     permissions: ['import:data', 'export:data', 'audit:view', 'category_domain:edit'],
   },
+  automation: {
+    label: 'Automation Rules',
+    permissions: ['automation:manage'],
+  },
 }
 
 // ── Default Permissions Per Role ─────────────────────────────────────────────
@@ -216,6 +223,10 @@ export async function hasPermission(
   user: UserContext,
   permission: Permission
 ): Promise<boolean> {
+  // ADMIN always holds every permission; a custom role must never be able to
+  // strip an admin's rights (it would replace, not augment, the implicit grant).
+  if (user.role === 'ADMIN') return true
+
   // Fetch user's custom role if any
   const dbUser = await prisma.user.findUnique({
     where: { id: user.userId },
@@ -275,6 +286,10 @@ export async function getEffectivePermissions(userId: string): Promise<Permissio
   })
 
   if (!dbUser) return []
+
+  if (dbUser.role === 'ADMIN') {
+    return ALL_PERMISSIONS as unknown as Permission[]
+  }
 
   if (dbUser.customRoleId) {
     const customRole = await prisma.customRole.findUnique({

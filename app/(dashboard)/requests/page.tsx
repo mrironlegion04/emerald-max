@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
+import { hasScopeActionFlag } from '@/lib/access-control'
 import Link from 'next/link'
 import { ExternalLink, Package, MapPin, CalendarClock, Users } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
@@ -41,6 +42,8 @@ export default async function RequestsPage({
 }) {
   const user = await getCurrentUser()
   const canReview = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const canApproveRequest = user ? await hasScopeActionFlag(user, 'canApproveRequest') : false
+  const canConvertRequest = user ? await hasScopeActionFlag(user, 'canConvertRequest') : false
   const params = await searchParams
 
   // Build Prisma where clause
@@ -236,7 +239,7 @@ export default async function RequestsPage({
 
                   {canReview && req.status === 'PENDING' && (
                     <div className="md:pt-1 border-t md:border-t-0 border-slate-100 pt-4 mt-1 md:mt-0">
-                      <RequestActions requestId={req.id} title={req.title} />
+                      <RequestActions requestId={req.id} title={req.title} canApprove={canApproveRequest} canConvert={canConvertRequest} />
                     </div>
                   )}
                 </div>

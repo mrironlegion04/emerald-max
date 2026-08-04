@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit'
 import { createNotificationForUsers } from '@/lib/notifications'
 import { generateRequestNumber } from '@/lib/request-number'
 import { getUserTeamScope, getUserLocationIds } from '@/lib/access-control'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const attachmentSchema = z.object({
@@ -91,6 +92,10 @@ export async function POST(req: NextRequest) {
     const data = schema.parse(await req.json())
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    if (!(await hasPermission(user, 'request:create'))) {
+      return NextResponse.json({ error: 'You do not have permission to create requests' }, { status: 403 })
+    }
 
     if (data.assetId) {
       const asset = await prisma.asset.findUnique({ where: { id: data.assetId }, select: { id: true } })

@@ -36,6 +36,7 @@ export default async function UserProfilePage() {
     ADMIN: 'bg-purple-100 text-purple-800',
     MANAGER: 'bg-blue-100 text-blue-800',
     TECHNICIAN: 'bg-green-100 text-green-800',
+    VIEWER: 'bg-slate-100 text-slate-800',
   }
 
   return (

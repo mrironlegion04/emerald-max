@@ -33,6 +33,7 @@ const roleColors: Record<string, string> = {
   ADMIN: 'bg-red-100 text-red-800',
   MANAGER: 'bg-blue-100 text-blue-800',
   TECHNICIAN: 'bg-green-100 text-green-800',
+  VIEWER: 'bg-slate-100 text-slate-800',
 }
 
 const proficiencyColors: Record<string, string> = {

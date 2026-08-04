@@ -83,7 +83,7 @@ export interface UserProfile {
   userId: string
   id: string
   name: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
   email?: string
 }
 
@@ -1264,6 +1264,7 @@ export default function MessagesPage() {
     ADMIN: 'bg-rose-100 text-rose-700 font-bold border border-rose-200',
     MANAGER: 'bg-blue-100 text-blue-700 font-bold border border-blue-200',
     TECHNICIAN: 'bg-emerald-100 text-emerald-700 font-bold border border-emerald-200',
+    VIEWER: 'bg-slate-100 text-slate-700 font-bold border border-slate-200',
   }
 
   // Helper function to evaluate and render sidebar room items

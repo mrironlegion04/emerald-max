@@ -206,6 +206,24 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'team:read',
     'domain:read',
   ],
+
+  VIEWER: [
+    'wo:read',
+    'request:read',
+    'asset:read',
+    'location:read',
+    'part:read',
+    'meter:read',
+    'pm:read',
+    'issue:read',
+    'category:read', 'type:read',
+    'skill:read',
+    'bom:read',
+    'domain:read',
+    'team:read',
+    'user:read',
+    'report:view',
+  ],
 }
 
 // ── Permission Checker ───────────────────────────────────────────────────────

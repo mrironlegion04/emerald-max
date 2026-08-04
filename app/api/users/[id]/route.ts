@@ -32,7 +32,7 @@ const updateSchema = z.object({
   name:       z.string().min(1).optional(),
   email:      z.string().email().optional(),
   password:   z.string().min(6).optional(),
-  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER']).optional(),
+  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).optional(),
   isActive:   z.boolean().optional(),
   phone:      z.string().nullable().optional(),
   bio:        z.string().nullable().optional(),

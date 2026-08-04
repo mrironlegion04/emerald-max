@@ -38,7 +38,7 @@ interface User {
   userId: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
 }
 
 const navItems = [
@@ -194,6 +194,7 @@ const roleColors: Record<string, string> = {
   ADMIN: 'bg-indigo-50 border-indigo-100 text-indigo-700',
   MANAGER: 'bg-blue-50 border-blue-100 text-blue-700',
   TECHNICIAN: 'bg-emerald-50 border-emerald-100 text-emerald-700',
+  VIEWER: 'bg-slate-50 border-slate-100 text-slate-600',
 }
 
 export default function Sidebar({ user, onClose, isMobile }: { user: User; onClose?: () => void; isMobile?: boolean }) {
@@ -418,14 +419,16 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         </div>
 
         {/* Privileged Controls for Admin / Manager */}
-        {(user.role === 'ADMIN' || user.role === 'MANAGER') && (
+        {(user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'VIEWER') && (
           <>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
               Privileged controls
             </p>
             <div className="space-y-1.5">
               {/* Direct Link: Teams / Users */}
-              {managerItems.map(item => {
+              {managerItems
+                .filter(item => user.role !== 'VIEWER')
+                .map(item => {
                 const active = isActive(item.href)
                 return (
                   <div key={item.href} className="relative">

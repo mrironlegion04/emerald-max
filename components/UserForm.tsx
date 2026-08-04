@@ -70,6 +70,7 @@ const roleOptions = [
   { value: 'MANAGER', label: 'Manager — create/edit, no delete' },
   { value: 'TECHNICIAN', label: 'Technician — view + update WOs' },
   { value: 'REQUESTER', label: 'Requester — submit requests only' },
+  { value: 'VIEWER', label: 'Viewer — read-only access' },
 ]
 
 const defaultTeamScope: TeamScopeFlags = {

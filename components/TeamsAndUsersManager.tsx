@@ -25,7 +25,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
   isActive: boolean
   createdAt: string
   phone?: string | null
@@ -951,6 +951,7 @@ export default function TeamsAndUsersManager() {
                   <option value="ADMIN">ADMIN</option>
                   <option value="MANAGER">MANAGER</option>
                   <option value="TECHNICIAN">TECHNICIAN</option>
+                  <option value="VIEWER">VIEWER</option>
                 </select>
 
                 <select
@@ -987,7 +988,7 @@ export default function TeamsAndUsersManager() {
               ) : (
                 filteredUsers.map(u => {
                   const initials = u.name ? u.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
-                  const roleBadgeColor = u.role === 'ADMIN' ? 'purple' : u.role === 'MANAGER' ? 'blue' : 'green'
+                  const roleBadgeColor = u.role === 'ADMIN' ? 'purple' : u.role === 'MANAGER' ? 'blue' : u.role === 'VIEWER' ? 'gray' : 'green'
                   
                   return (
                     <div key={u.id} className="p-4.5 space-y-3 hover:bg-slate-50/20 active:bg-slate-50/50 transition-colors">
@@ -1065,7 +1066,7 @@ export default function TeamsAndUsersManager() {
                   ) : (
                     filteredUsers.map(u => {
                       const initials = u.name ? u.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
-                      const roleBadgeColor = u.role === 'ADMIN' ? 'purple' : u.role === 'MANAGER' ? 'blue' : 'green'
+                      const roleBadgeColor = u.role === 'ADMIN' ? 'purple' : u.role === 'MANAGER' ? 'blue' : u.role === 'VIEWER' ? 'gray' : 'green'
                       const joinedDate = new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
                       return (

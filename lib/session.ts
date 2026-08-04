@@ -6,7 +6,7 @@ export interface SessionData {
   userId: string
   name: string
   email: string
-  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER'
+  role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
   isLoggedIn: boolean
 }
 

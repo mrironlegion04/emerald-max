@@ -6,6 +6,7 @@ export default async function TeamsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   if (user.role === 'REQUESTER') redirect('/request')
+  if (user.role === 'VIEWER') redirect('/work-orders')
 
   return (
     <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">

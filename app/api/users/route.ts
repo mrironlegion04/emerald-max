@@ -33,7 +33,7 @@ const createSchema = z.object({
   name:       z.string().min(1, 'Name is required'),
   email:      z.string().email('Invalid email'),
   password:   z.string().min(6, 'Password must be at least 6 characters'),
-  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER']).default('TECHNICIAN'),
+  role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).default('TECHNICIAN'),
   isActive:   z.boolean().default(true),
   phone:      z.string().nullable().optional(),
   bio:        z.string().nullable().optional(),

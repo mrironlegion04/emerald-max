@@ -21,6 +21,7 @@ enum Role {
   MANAGER
   TECHNICIAN
   REQUESTER
+  VIEWER
 }
 
 enum WOVisibility {

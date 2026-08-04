@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
-import { buildWOVisibilityFilter } from '@/lib/access-control'
+import { buildWOVisibilityFilter, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 
 const bulkSchema = z.object({
@@ -31,6 +31,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Technician ID required' }, { status: 400 })
       }
 
+      // Managers with team-scope rows need the canAssignWO flag
+      if (!(await hasScopeActionFlag(user, 'canAssignWO'))) {
+        return NextResponse.json({ error: 'Your scope does not allow assigning work orders' }, { status: 403 })
+      }
+
       // Verify technician exists
       const tech = await prisma.user.findUnique({
         where: { id: technicianId },
@@ -51,6 +56,13 @@ export async function POST(request: NextRequest) {
     if (action === 'status') {
       if (!status) {
         return NextResponse.json({ error: 'Status required' }, { status: 400 })
+      }
+
+      // Managers with team-scope rows need the right flag for status changes
+      const needsClose = status === 'COMPLETED' || status === 'CLOSED'
+      const flag = needsClose ? 'canCloseWO' : 'canEditWO'
+      if (!(await hasScopeActionFlag(user, flag))) {
+        return NextResponse.json({ error: 'Your scope does not allow changing this work order status' }, { status: 403 })
       }
 
       // Only allow certain transitions

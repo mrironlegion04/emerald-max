@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
-import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
+import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -99,6 +99,9 @@ export async function PUT(
     if (!user || !(await hasPermission(user, 'pm:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
+    if (!(await hasScopeActionFlag(user, 'canManagePM'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing PM schedules' }, { status: 403 })
+    }
     const { id } = await params
     const body = await request.json()
     const data = updateSchema.parse(body)
@@ -145,6 +148,7 @@ export async function PUT(
       (await canWriteToLocations(user, changedLocationIds)) &&
       (data.woAssignedToId !== undefined ? await canAssignUsers(user, [data.woAssignedToId]) : true) &&
       (data.woTeamId !== undefined ? await canAssignTeams(user, [data.woTeamId]) : true) &&
+      (data.woTeamId !== undefined ? await canWriteToTeams(user, [data.woTeamId]) : true) &&
       (data.tasks !== undefined ? await canAssignUsers(user, data.tasks.map(t => t.assignedToId)) : true)
     if (!inScope) {
       return NextResponse.json(
@@ -251,6 +255,9 @@ export async function DELETE(
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'pm:delete'))) {
       return NextResponse.json({ error: 'Only admins can delete schedules' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManagePM'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing PM schedules' }, { status: 403 })
     }
     const { id } = await params
     const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })

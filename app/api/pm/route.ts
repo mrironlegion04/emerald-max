@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
-import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
+import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
     if (!user || !(await hasPermission(user, 'pm:create'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
+    if (!(await hasScopeActionFlag(user, 'canManagePM'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing PM schedules' }, { status: 403 })
+    }
     const body = await request.json()
     const data = pmSchema.parse(body)
 
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
       (await canWriteToLocations(user, [...(data.locationId ? [data.locationId] : []), ...assetLocationIds])) &&
       (await canAssignUsers(user, [data.woAssignedToId])) &&
       (await canAssignTeams(user, [data.woTeamId])) &&
+      (await canWriteToTeams(user, [data.woTeamId])) &&
       (await canAssignUsers(user, data.tasks.map(t => t.assignedToId)))
     if (!inScope) {
       return NextResponse.json(

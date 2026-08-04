@@ -9,7 +9,8 @@ import {
   canCompleteWorkOrder, 
   getCompletionType, 
   isValidWOStatusTransition,
-  canViewWorkOrder 
+  canViewWorkOrder,
+  hasScopeActionFlag,
 } from '@/lib/access-control'
 import { updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
@@ -54,6 +55,12 @@ export async function PATCH(
     }
 
     const isAdminOrManager = user.role === 'ADMIN' || user.role === 'MANAGER'
+
+    // Managers need the canCloseWO scope flag to close/reopen/complete work orders.
+    // Team/location scope is enforced above via canViewWorkOrder.
+    const managerCloseAllowed =
+      user.role === 'ADMIN' ||
+      (user.role === 'MANAGER' && (await hasScopeActionFlag(user, 'canCloseWO')))
 
     // If completing, verify user has permission to complete
     if (status === 'COMPLETED') {
@@ -114,7 +121,7 @@ export async function PATCH(
 
     // Reopen: COMPLETED → OPEN — clear completion/timestamp fields, preserve history
     if (status === 'OPEN' && wo.status === 'COMPLETED') {
-      if (!isAdminOrManager) {
+      if (!managerCloseAllowed) {
         return NextResponse.json({ error: 'Only admins and managers can reopen work orders' }, { status: 403 })
       }
       updateData.completedAt = null
@@ -183,7 +190,7 @@ export async function PATCH(
 
     // Close: COMPLETED → CLOSED (manager/admin only)
     if (status === 'CLOSED') {
-      if (!isAdminOrManager) {
+      if (!managerCloseAllowed) {
         return NextResponse.json({ error: 'Only admins and managers can close work orders' }, { status: 403 })
       }
       updateData.closedAt = new Date()

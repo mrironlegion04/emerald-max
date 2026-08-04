@@ -13,6 +13,90 @@ export interface User {
   role: Role
 }
 
+export type ScopeActionFlag =
+  | 'canCloseWO'
+  | 'canAssignWO'
+  | 'canEditWO'
+  | 'canApproveRequest'
+  | 'canConvertRequest'
+  | 'canManagePM'
+  | 'canManageAssets'
+
+export interface TeamScopeRow {
+  teamId: string
+  canCloseWO: boolean
+  canAssignWO: boolean
+  canEditWO: boolean
+  canApproveRequest: boolean
+  canConvertRequest: boolean
+  canManagePM: boolean
+  canManageAssets: boolean
+}
+
+/**
+ * Get the user's team-scope rows (per-team action permissions).
+ * Returns `null` when the user has no team-scope rows (unrestricted).
+ */
+export async function getUserTeamScope(userId: string): Promise<TeamScopeRow[] | null> {
+  const rows = await prisma.userTeamScope.findMany({
+    where: { userId },
+    select: {
+      teamId: true,
+      canCloseWO: true,
+      canAssignWO: true,
+      canEditWO: true,
+      canApproveRequest: true,
+      canConvertRequest: true,
+      canManagePM: true,
+      canManageAssets: true,
+    },
+  })
+  return rows.length === 0 ? null : rows
+}
+
+/**
+ * Check whether the user holds a given action flag on at least one scoped team.
+ * ADMIN and users without any team-scope rows are always allowed (backward compatible).
+ */
+export async function hasScopeActionFlag(user: User, flag: ScopeActionFlag): Promise<boolean> {
+  if (user.role === 'ADMIN') return true
+  const scope = await getUserTeamScope(user.userId)
+  if (!scope) return true
+  return scope.some(row => row[flag] === true)
+}
+
+/**
+ * Check whether a single record's teamId falls inside the user's team scope.
+ * Users without team-scope rows are always allowed. Scoped users must have a
+ * teamId that is present in their scope (null/unset teams are out of scope).
+ */
+export async function canAccessTeamScope(
+  user: User,
+  teamId: string | null | undefined,
+): Promise<boolean> {
+  const scope = await getUserTeamScope(user.userId)
+  if (!scope) return true
+  return !!teamId && scope.some(s => s.teamId === teamId)
+}
+
+/**
+ * Check that every provided team ID falls inside the user's team scope for
+ * create/update payloads. Scoped users must include at least one of their
+ * scoped teams on every record they write (null/unset teams are out of scope).
+ */
+export async function canWriteToTeams(
+  user: User,
+  teamIds: (string | null | undefined)[],
+): Promise<boolean> {
+  const scope = await getUserTeamScope(user.userId)
+  if (!scope) return true
+  if (teamIds.some(id => id === null || id === undefined)) return false
+  const ids = [...new Set(teamIds.filter((id): id is string => !!id))]
+  if (ids.length === 0) return false
+  const scopeIds = new Set(scope.map(s => s.teamId))
+  return ids.every(id => scopeIds.has(id))
+}
+
 /**
  * Check if user is ADMIN only
  */
@@ -30,7 +114,9 @@ export function isManagerOrAbove(user: User): boolean {
 /**
  * Check if user can complete a work order
  * Rules:
- * - ADMIN/MANAGER: always allowed (override)
+ * - ADMIN: always allowed (override)
+ * - MANAGER: allowed when they hold the canCloseWO scope flag and the WO's team
+ *   is inside their team scope (team-scoped managers only)
  * - Assigned user: can complete their own WO
  * - Team member: can complete if team is assigned
  */
@@ -38,7 +124,24 @@ export async function canCompleteWorkOrder(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string; isOverride?: boolean }> {
-  if (isManagerOrAbove(user)) {
+  if (user.role === 'ADMIN') {
+    return { allowed: true, isOverride: true }
+  }
+
+  if (user.role === 'MANAGER') {
+    if (!(await hasScopeActionFlag(user, 'canCloseWO'))) {
+      return { allowed: false, reason: 'Your scope does not allow closing work orders' }
+    }
+    const wo = await prisma.workOrder.findUnique({
+      where: { id: workOrderId },
+      select: { teamId: true },
+    })
+    if (!wo) {
+      return { allowed: false, reason: 'Work order not found' }
+    }
+    if (!(await canAccessTeamScope(user, wo.teamId))) {
+      return { allowed: false, reason: 'You do not have access to this work order' }
+    }
     return { allowed: true, isOverride: true }
   }
 
@@ -77,6 +180,9 @@ export async function canUploadWOAttachment(
   user: User,
   workOrderId: string
 ): Promise<{ allowed: boolean; reason?: string }> {
+  if (isManagerOrAbove(user)) {
+    return { allowed: true }
+  }
   const result = await canCompleteWorkOrder(user, workOrderId)
   return { allowed: result.allowed, reason: result.reason }
 }
@@ -163,13 +269,18 @@ export async function canViewWorkOrder(
   }
 
   const locationIds = await getUserLocationIds(user.userId)
+  const teamScope = await getUserTeamScope(user.userId)
 
   // Location-based access restriction
-  if (locationIds) {
-    if (wo.locationId && locationIds.includes(wo.locationId)) {
+  if (locationIds && !(wo.locationId && locationIds.includes(wo.locationId))) {
+    return { allowed: false, reason: 'You do not have access to this work order' }
+  }
+
+  // Team-based access restriction (managers scoped to teams)
+  if (teamScope) {
+    if (wo.teamId && teamScope.some(s => s.teamId === wo.teamId)) {
       return { allowed: true }
     }
-    // WO outside user's plants or with no location → deny
     return { allowed: false, reason: 'You do not have access to this work order' }
   }
 
@@ -286,9 +397,33 @@ export async function buildWOVisibilityFilter(
   if (!dbUser) return null
 
   const locationIds = await getUserLocationIds(user.userId)
+  const teamScope = await getUserTeamScope(user.userId)
 
-  // MANAGER without location assignment → unrestricted (backward compatible)
-  if (user.role === 'MANAGER' && !locationIds) return null
+  // MANAGER without location assignment or team scope → unrestricted (backward compatible)
+  if (user.role === 'MANAGER' && !locationIds && !teamScope) return null
+
+  // Managers scoped to teams: must be within a scoped team AND within the rest
+  // of their scope (assigned/created/team-member visibility AND location scope).
+  if (teamScope) {
+    const and: Record<string, unknown>[] = []
+    if (dbUser.woVisibility !== 'FULL') {
+      const teamIds = (await prisma.teamMember.findMany({
+        where: { userId: user.userId },
+        select: { teamId: true },
+      })).map(t => t.teamId)
+      const inner: Record<string, unknown>[] = [
+        { assignedToId: user.userId },
+        { createdById: user.userId },
+        ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
+      ]
+      and.push({ OR: inner })
+    }
+    if (locationIds) {
+      and.push({ locationId: { in: locationIds } })
+    }
+    and.push({ teamId: { in: teamScope.map(s => s.teamId) } })
+    return and.length === 1 ? and[0] : { AND: and }
+  }
 
   const conditions: Record<string, unknown>[] = []
 

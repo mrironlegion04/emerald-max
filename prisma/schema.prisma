@@ -218,6 +218,7 @@ model Team {
 
   members    TeamMember[]
   domains    TeamDomain[]
+  userScopes UserTeamScope[] @relation("TeamUserScopes")
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
   pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
@@ -253,6 +254,26 @@ model TeamDomain {
 
   @@id([teamId, domainId])
   @@map("team_domains")
+}
+
+model UserTeamScope {
+  userId String
+  user   User @relation("UserTeamScopes", fields: [userId], references: [id], onDelete: Cascade)
+  teamId String
+  team   Team @relation("TeamUserScopes", fields: [teamId], references: [id], onDelete: Cascade)
+
+  canCloseWO        Boolean @default(true)
+  canAssignWO       Boolean @default(true)
+  canEditWO         Boolean @default(true)
+  canApproveRequest Boolean @default(true)
+  canConvertRequest Boolean @default(true)
+  canManagePM       Boolean @default(true)
+  canManageAssets   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, teamId])
+  @@map("user_team_scopes")
 }
 
 model User {
@@ -319,6 +340,7 @@ model User {
   chatChannelMemberships ChatChannelMember[]     @relation("ChannelMemberships")
 
   teamMemberships       TeamMember[]
+  teamScopes            UserTeamScope[] @relation("UserTeamScopes")
   userLocations         UserLocation[]
   createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
   assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")

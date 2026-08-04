@@ -6,6 +6,28 @@ import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
+const teamScopeSchema = z.object({
+  canCloseWO:        z.boolean().default(true),
+  canAssignWO:       z.boolean().default(true),
+  canEditWO:         z.boolean().default(true),
+  canApproveRequest: z.boolean().default(true),
+  canConvertRequest: z.boolean().default(true),
+  canManagePM:       z.boolean().default(true),
+  canManageAssets:   z.boolean().default(true),
+})
+
+type TeamScopeFlags = z.infer<typeof teamScopeSchema>
+
+const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
+  canCloseWO: true,
+  canAssignWO: true,
+  canEditWO: true,
+  canApproveRequest: true,
+  canConvertRequest: true,
+  canManagePM: true,
+  canManageAssets: true,
+}
+
 const updateSchema = z.object({
   name:       z.string().min(1).optional(),
   email:      z.string().email().optional(),
@@ -18,6 +40,8 @@ const updateSchema = z.object({
   woVisibility: z.enum(['FULL','LIMITED']).optional(),
   customRoleId: z.string().nullable().optional(),
   assignedLocationIds: z.array(z.string()).optional(),
+  assignedTeamIds:     z.array(z.string()).optional(),
+  teamScope: teamScopeSchema.optional(),
 })
 
 export async function GET(
@@ -31,7 +55,7 @@ export async function GET(
     const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true, userLocations: { select: { locationId: true } } },
+      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true, canCloseWO: true, canAssignWO: true, canEditWO: true, canApproveRequest: true, canConvertRequest: true, canManagePM: true, canManageAssets: true } } },
     })
     
     if (!user) {
@@ -95,6 +119,26 @@ export async function PUT(
         if (data.assignedLocationIds.length > 0) {
           await tx.userLocation.createMany({
             data: data.assignedLocationIds.map(locationId => ({ userId: id, locationId })),
+          })
+        }
+      }
+
+      if (data.assignedTeamIds !== undefined) {
+        await tx.userTeamScope.deleteMany({ where: { userId: id } })
+        if (data.assignedTeamIds.length > 0) {
+          const teamScopeFlags = data.teamScope ?? DEFAULT_TEAM_SCOPE
+          await tx.userTeamScope.createMany({
+            data: data.assignedTeamIds.map(teamId => ({
+              userId: id,
+              teamId,
+              canCloseWO:        teamScopeFlags.canCloseWO ?? true,
+              canAssignWO:       teamScopeFlags.canAssignWO ?? true,
+              canEditWO:         teamScopeFlags.canEditWO ?? true,
+              canApproveRequest: teamScopeFlags.canApproveRequest ?? true,
+              canConvertRequest: teamScopeFlags.canConvertRequest ?? true,
+              canManagePM:       teamScopeFlags.canManagePM ?? true,
+              canManageAssets:   teamScopeFlags.canManageAssets ?? true,
+            })),
           })
         }
       }

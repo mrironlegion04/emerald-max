@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
-import { buildLocationFilter, canAssignUsers, canWriteToLocations } from '@/lib/access-control'
+import { buildLocationFilter, canAssignUsers, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 
 const assetSchema = z.object({
@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'asset:create'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManageAssets'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing assets' }, { status: 403 })
     }
 
     const body = await request.json()

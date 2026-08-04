@@ -7,6 +7,28 @@ import { hasPermission } from '@/lib/permissions'
 import { getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
+const teamScopeSchema = z.object({
+  canCloseWO:        z.boolean().default(true),
+  canAssignWO:       z.boolean().default(true),
+  canEditWO:         z.boolean().default(true),
+  canApproveRequest: z.boolean().default(true),
+  canConvertRequest: z.boolean().default(true),
+  canManagePM:       z.boolean().default(true),
+  canManageAssets:   z.boolean().default(true),
+})
+
+type TeamScopeFlags = z.infer<typeof teamScopeSchema>
+
+const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
+  canCloseWO: true,
+  canAssignWO: true,
+  canEditWO: true,
+  canApproveRequest: true,
+  canConvertRequest: true,
+  canManagePM: true,
+  canManageAssets: true,
+}
+
 const createSchema = z.object({
   name:       z.string().min(1, 'Name is required'),
   email:      z.string().email('Invalid email'),
@@ -19,6 +41,8 @@ const createSchema = z.object({
   woVisibility: z.enum(['FULL','LIMITED']).default('FULL'),
   customRoleId: z.string().nullable().optional(),
   assignedLocationIds: z.array(z.string()).default([]),
+  assignedTeamIds:     z.array(z.string()).default([]),
+  teamScope: teamScopeSchema.optional(),
 })
 
 export async function GET() {
@@ -47,6 +71,9 @@ export async function GET() {
         lastActiveAt: true,
         userLocations: {
           select: { locationId: true },
+        },
+        teamScopes: {
+          select: { teamId: true },
         },
         _count: {
           select: {
@@ -79,6 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await hashPassword(data.password)
+    const teamScopeFlags = data.teamScope ?? DEFAULT_TEAM_SCOPE
     const newUser = await prisma.user.create({
       data: {
         name: data.name,
@@ -94,8 +122,20 @@ export async function POST(request: NextRequest) {
         userLocations: {
           create: data.assignedLocationIds.map(locationId => ({ locationId })),
         },
+        teamScopes: {
+          create: data.assignedTeamIds.map(teamId => ({
+            teamId,
+            canCloseWO:        teamScopeFlags.canCloseWO ?? true,
+            canAssignWO:       teamScopeFlags.canAssignWO ?? true,
+            canEditWO:         teamScopeFlags.canEditWO ?? true,
+            canApproveRequest: teamScopeFlags.canApproveRequest ?? true,
+            canConvertRequest: teamScopeFlags.canConvertRequest ?? true,
+            canManagePM:       teamScopeFlags.canManagePM ?? true,
+            canManageAssets:   teamScopeFlags.canManageAssets ?? true,
+          })),
+        },
       },
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, userLocations: { select: { locationId: true } } },
+      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true } } },
     })
 
     await writeAudit({

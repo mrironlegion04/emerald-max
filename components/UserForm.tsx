@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation'
 import UserSkillsManager from './UserSkillsManager'
 import { AlertCircle, Shield, CheckCircle, X } from 'lucide-react'
 
+interface TeamScopeFlags {
+  canCloseWO: boolean
+  canAssignWO: boolean
+  canEditWO: boolean
+  canApproveRequest: boolean
+  canConvertRequest: boolean
+  canManagePM: boolean
+  canManageAssets: boolean
+}
+
 interface UserFormData {
   name: string
   email: string
@@ -17,6 +27,14 @@ interface UserFormData {
   woVisibility: string
   customRoleId: string
   assignedLocationIds: string[]
+  assignedTeamIds: string[]
+  teamScope: TeamScopeFlags
+}
+
+interface TeamOption {
+  id: string
+  name: string
+  trade?: string
 }
 
 interface UserSkill {
@@ -44,6 +62,7 @@ interface Props {
     facePhotoUrl?: string
   }
   userId?: string
+  teams?: TeamOption[]
 }
 
 const roleOptions = [
@@ -53,12 +72,31 @@ const roleOptions = [
   { value: 'REQUESTER', label: 'Requester — submit requests only' },
 ]
 
-export default function UserForm({ initialData, userId }: Props) {
+const defaultTeamScope: TeamScopeFlags = {
+  canCloseWO: true,
+  canAssignWO: true,
+  canEditWO: true,
+  canApproveRequest: true,
+  canConvertRequest: true,
+  canManagePM: true,
+  canManageAssets: true,
+}
+
+export default function UserForm({ initialData, userId, teams }: Props) {
   const router = useRouter()
   const isEdit = !!userId
 
   const [customRoles, setCustomRoles] = useState<{ id: string; name: string }[]>([])
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([])
+  const [teamList, setTeamList] = useState<TeamOption[]>(teams ?? [])
+
+  useEffect(() => {
+    if (!teams) {
+      fetch('/api/teams').then(r => r.json()).then(data => {
+        if (Array.isArray(data)) setTeamList(data)
+      }).catch(err => console.error('Error fetching teams', err))
+    }
+  }, [teams])
 
   useEffect(() => {
     fetch('/api/roles').then(r => r.json()).then(roles => {
@@ -84,6 +122,8 @@ export default function UserForm({ initialData, userId }: Props) {
     woVisibility: (initialData as any)?.woVisibility ?? 'FULL',
     customRoleId: (initialData as any)?.customRoleId ?? '',
     assignedLocationIds: (initialData as any)?.assignedLocationIds ?? [],
+    assignedTeamIds: (initialData as any)?.assignedTeamIds ?? [],
+    teamScope: (initialData as any)?.teamScope ?? defaultTeamScope,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -97,7 +137,13 @@ export default function UserForm({ initialData, userId }: Props) {
   })
 
   function set(field: keyof UserFormData, value: string | boolean) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm(prev => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'role' && value !== 'MANAGER'
+        ? { assignedTeamIds: [], teamScope: defaultTeamScope }
+        : {}),
+    }))
   }
 
   function toggleLocation(locationId: string) {
@@ -106,6 +152,22 @@ export default function UserForm({ initialData, userId }: Props) {
       assignedLocationIds: prev.assignedLocationIds.includes(locationId)
         ? prev.assignedLocationIds.filter(id => id !== locationId)
         : [...prev.assignedLocationIds, locationId],
+    }))
+  }
+
+  function toggleTeam(teamId: string) {
+    setForm(prev => ({
+      ...prev,
+      assignedTeamIds: prev.assignedTeamIds.includes(teamId)
+        ? prev.assignedTeamIds.filter(id => id !== teamId)
+        : [...prev.assignedTeamIds, teamId],
+    }))
+  }
+
+  function setFlag(flag: keyof TeamScopeFlags) {
+    setForm(prev => ({
+      ...prev,
+      teamScope: { ...prev.teamScope, [flag]: !prev.teamScope[flag] },
     }))
   }
 
@@ -125,6 +187,8 @@ export default function UserForm({ initialData, userId }: Props) {
         woVisibility: form.woVisibility,
         customRoleId: form.customRoleId || null,
         assignedLocationIds: form.assignedLocationIds,
+        assignedTeamIds: form.assignedTeamIds,
+        teamScope: form.assignedTeamIds.length > 0 ? form.teamScope : undefined,
       }
       if (form.password) payload.password = form.password
 
@@ -438,6 +502,68 @@ export default function UserForm({ initialData, userId }: Props) {
             Restrict this user to see data (WOs, assets, inventory) within these locations and their children. Leave empty for unrestricted access.
           </p>
         </div>
+        {form.role === 'MANAGER' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Teams (Manager Scope)
+            </label>
+            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+              {teamList.length === 0 ? (
+                <p className="text-xs text-gray-400">No teams found</p>
+              ) : (
+                teamList.map(team => {
+                  const checked = form.assignedTeamIds.includes(team.id)
+                  return (
+                    <label key={team.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleTeam(team.id)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{team.name}</span>
+                      {team.trade && <span className="text-xs text-gray-400">({team.trade})</span>}
+                    </label>
+                  )
+                })
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Scoped managers can only manage work orders and requests assigned to these teams. Leave empty for unrestricted team access.
+            </p>
+
+            {form.assignedTeamIds.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Allowed Actions</p>
+                {([
+                  ['canCloseWO', 'Close & complete work orders', 'Approve completion and close work orders'],
+                  ['canAssignWO', 'Assign work orders', 'Assign work orders to technicians or teams'],
+                  ['canEditWO', 'Create & edit work orders', 'Create new work orders and edit existing ones'],
+                  ['canApproveRequest', 'Approve / reject requests', 'Approve or reject maintenance requests'],
+                  ['canConvertRequest', 'Convert requests to WOs', 'Convert approved requests into work orders'],
+                  ['canManagePM', 'Manage PM schedules', 'Create, edit, and delete PM schedules'],
+                  ['canManageAssets', 'Manage assets', 'Create, edit, and archive assets'],
+                ] as const).map(([flag, label, desc]) => {
+                  const key = flag as keyof TeamScopeFlags
+                  return (
+                    <label key={flag} className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.teamScope[key]}
+                        onChange={() => setFlag(key)}
+                        className="w-4 h-4 mt-0.5 text-blue-600 rounded border-gray-300"
+                      />
+                      <span>
+                        <span className="block text-sm text-gray-700">{label}</span>
+                        <span className="block text-xs text-gray-500">{desc}</span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
         {isEdit && (
           <div className="flex items-center gap-3">
             <input

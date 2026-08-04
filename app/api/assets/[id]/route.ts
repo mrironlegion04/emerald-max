@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
-import { canAssignUsers, canViewAsset, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
+import { canAssignUsers, canViewAsset, canWriteToAssets, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -70,6 +70,9 @@ export async function PUT(
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'asset:edit'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManageAssets'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing assets' }, { status: 403 })
     }
 
     const { id } = await params
@@ -193,6 +196,9 @@ export async function DELETE(
     const user = await getCurrentUser()
     if (!user || !(await hasPermission(user, 'asset:delete'))) {
       return NextResponse.json({ error: 'Only admins can archive assets' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManageAssets'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing assets' }, { status: 403 })
     }
 
     const { id } = await params

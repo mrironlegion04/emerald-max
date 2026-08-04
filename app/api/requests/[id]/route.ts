@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
+import { canAccessTeamScope, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
 import { writeAudit } from '@/lib/audit'
 import { sendRequestApproved, sendRequestRejected, sendRequestConverted } from '@/lib/email'
 import { generateWONumber } from '@/lib/wo-number'
@@ -16,6 +17,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const request = await prisma.maintenanceRequest.findUnique({ where: { id } })
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (request.status !== 'PENDING') return NextResponse.json({ error: 'Request already reviewed' }, { status: 422 })
+
+  // Resolve the request's plant through its asset (requests store location as free text)
+  const requestLocationId = request.assetId
+    ? (await prisma.asset.findUnique({
+        where: { id: request.assetId },
+        select: { locationId: true },
+      }))?.locationId ?? null
+    : null
+  const canReviewScope =
+    (await canAccessTeamScope(user, request.teamId)) &&
+    (await canWriteToLocations(user, [requestLocationId]))
 
   const canApprove = await hasPermission(user, 'request:approve')
   const isOwner = request.requesterId === user.userId
@@ -47,6 +59,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!canApprove) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   if (action === 'approve') {
+    if (!(await hasScopeActionFlag(user, 'canApproveRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
     const updated = await prisma.maintenanceRequest.update({
       where: { id },
       data: { status: 'APPROVED', reviewedById: user.userId },
@@ -77,6 +91,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === 'reject') {
+    if (!(await hasScopeActionFlag(user, 'canApproveRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
     const updated = await prisma.maintenanceRequest.update({
       where: { id },
       data: { status: 'REJECTED', rejectionReason: reason ?? null, reviewedById: user.userId },
@@ -109,13 +125,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === 'convert') {
-    const woNumber = await generateWONumber(null)
+    if (!(await hasScopeActionFlag(user, 'canConvertRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
+    const woNumber = await generateWONumber(requestLocationId)
     const [wo, updated] = await prisma.$transaction([
       prisma.workOrder.create({
         data: {
           woNumber, title: request.title, description: request.description,
           type: 'BREAKDOWN', status: 'OPEN', priority: request.priority as never,
-          assetId: request.assetId, locationId: null, issueId: request.issueId,
+          assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
           teamId: request.teamId,
           createdById: user.userId,
         },

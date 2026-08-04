@@ -17,6 +17,18 @@ export default async function EditUserPage({
       userLocations: {
         select: { locationId: true },
       },
+      teamScopes: {
+        select: {
+          teamId: true,
+          canCloseWO: true,
+          canAssignWO: true,
+          canEditWO: true,
+          canApproveRequest: true,
+          canConvertRequest: true,
+          canManagePM: true,
+          canManageAssets: true,
+        },
+      },
       skills: {
         include: {
           skill: true,
@@ -25,6 +37,12 @@ export default async function EditUserPage({
     },
   })
   if (!target) notFound()
+
+  const teams = await prisma.team.findMany({
+    where: { isDeleted: false },
+    select: { id: true, name: true, trade: true },
+    orderBy: { name: 'asc' },
+  })
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -39,6 +57,7 @@ export default async function EditUserPage({
       <PageHeader title={`Edit: ${target.name}`} subtitle={target.email} />
       <UserForm
         userId={id}
+        teams={teams}
         initialData={{
           id,
           name: target.name,
@@ -51,6 +70,16 @@ export default async function EditUserPage({
           woVisibility: target.woVisibility,
           customRoleId: target.customRoleId ?? '',
           assignedLocationIds: target.userLocations.map(ul => ul.locationId),
+          assignedTeamIds: target.teamScopes.map(ts => ts.teamId),
+          teamScope: target.teamScopes.length > 0 ? {
+            canCloseWO: target.teamScopes[0].canCloseWO,
+            canAssignWO: target.teamScopes[0].canAssignWO,
+            canEditWO: target.teamScopes[0].canEditWO,
+            canApproveRequest: target.teamScopes[0].canApproveRequest,
+            canConvertRequest: target.teamScopes[0].canConvertRequest,
+            canManagePM: target.teamScopes[0].canManagePM,
+            canManageAssets: target.teamScopes[0].canManageAssets,
+          } : undefined,
           userSkills: target.skills,
           hasFaceVerification: target.hasFaceVerification,
           lastFaceVerifyAt: target.lastFaceVerifyAt,

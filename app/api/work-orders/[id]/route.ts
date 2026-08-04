@@ -19,6 +19,8 @@ import {
   canAssignUsers,
   canWriteToAssets,
   canWriteToLocations,
+  canWriteToTeams,
+  hasScopeActionFlag,
 } from '@/lib/access-control'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
@@ -153,6 +155,11 @@ export async function PUT(
       return NextResponse.json({ error: editAccess.reason }, { status: 403 })
     }
 
+    // Managers with team-scope rows need the canEditWO flag to edit work orders
+    if (!(await hasScopeActionFlag(user, 'canEditWO'))) {
+      return NextResponse.json({ error: 'Your scope does not allow editing work orders' }, { status: 403 })
+    }
+
     const body = await request.json()
     const data = updateSchema.parse(body)
 
@@ -169,11 +176,33 @@ export async function PUT(
       )
     }
 
+    // Managers with team-scope rows need the right flag for status changes
+    if (data.status && user.role === 'MANAGER') {
+      const needsClose = data.status === 'COMPLETED' || data.status === 'CLOSED'
+      const flag = needsClose ? 'canCloseWO' : 'canEditWO'
+      if (!(await hasScopeActionFlag(user, flag))) {
+        return NextResponse.json(
+          { error: 'Your scope does not allow changing this work order status' },
+          { status: 403 }
+        )
+      }
+    }
+
     if ((data.assignedToId || data.teamId) && !isManagerOrAbove(user)) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign work order' },
         { status: 403 }
       )
+    }
+
+    // Managers with team-scope rows need the canAssignWO flag to reassign
+    if ((data.assignedToId !== undefined || data.teamId !== undefined) && user.role === 'MANAGER') {
+      if (!(await hasScopeActionFlag(user, 'canAssignWO'))) {
+        return NextResponse.json(
+          { error: 'Your scope does not allow reassigning work orders' },
+          { status: 403 }
+        )
+      }
     }
 
     if (data.status === 'COMPLETED' && existingWo.status !== 'COMPLETED') {
@@ -264,7 +293,8 @@ export async function PUT(
       (await canWriteToLocations(user, changedLocationIds)) &&
       (assetIdsChanged ? await canWriteToAssets(user, incomingAssetIds) : true) &&
       (data.assignedToId !== undefined ? await canAssignUsers(user, [data.assignedToId]) : true) &&
-      (data.teamId !== undefined ? await canAssignTeams(user, [data.teamId]) : true)
+      (data.teamId !== undefined ? await canAssignTeams(user, [data.teamId]) : true) &&
+      (data.teamId !== undefined ? await canWriteToTeams(user, [data.teamId]) : true)
     if (!inScope) {
       return NextResponse.json(
         { error: 'You do not have access to the selected location, asset, or assignee' },

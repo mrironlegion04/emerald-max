@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
-import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations, getUserLocationIds } from '@/lib/access-control'
+import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations, canWriteToTeams, getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import {
@@ -76,6 +76,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You do not have permission to create work orders' }, { status: 403 })
     }
 
+    if (!(await hasScopeActionFlag(user, 'canEditWO'))) {
+      return NextResponse.json({ error: 'Your scope does not allow creating work orders' }, { status: 403 })
+    }
+
     const body = await request.json()
     const data = woSchema.parse(body)
 
@@ -113,7 +117,8 @@ export async function POST(request: NextRequest) {
       (await canWriteToLocations(user, [locationId])) &&
       (await canWriteToAssets(user, normalized.entries.map(e => e.assetId))) &&
       (await canAssignUsers(user, [data.assignedToId])) &&
-      (await canAssignTeams(user, [data.teamId]))
+      (await canAssignTeams(user, [data.teamId])) &&
+      (await canWriteToTeams(user, [data.teamId]))
     if (!inScope) {
       return NextResponse.json(
         { error: 'You do not have access to the selected location, asset, or assignee' },

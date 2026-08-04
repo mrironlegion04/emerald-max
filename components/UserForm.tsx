@@ -18,6 +18,7 @@ interface TeamScopeFlags {
 interface UserFormData {
   name: string
   email: string
+  username: string
   password: string
   role: string
   isActive: boolean
@@ -114,6 +115,7 @@ export default function UserForm({ initialData, userId, teams }: Props) {
   const [form, setForm] = useState<UserFormData>({
     name: initialData?.name ?? '',
     email: initialData?.email ?? '',
+    username: initialData?.username ?? '',
     password: '',
     role: initialData?.role ?? 'TECHNICIAN',
     isActive: initialData?.isActive ?? true,
@@ -192,6 +194,7 @@ export default function UserForm({ initialData, userId, teams }: Props) {
       const payload: Record<string, unknown> = {
         name: form.name,
         email: form.email,
+        username: form.username.trim(),
         role: form.role,
         isActive: form.isActive,
         phone: form.phone || null,
@@ -433,6 +436,22 @@ export default function UserForm({ initialData, userId, teams }: Props) {
             placeholder="john@company.com"
             required
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Username <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={form.username}
+            onChange={e => set('username', e.target.value)}
+            className="input-field"
+            placeholder="john.smith"
+            required
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Used to sign in — lowercase letters, numbers, dots, underscores, hyphens
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

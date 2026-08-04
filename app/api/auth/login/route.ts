@@ -5,21 +5,28 @@ import { getSession } from '@/lib/session'
 import { z } from 'zod'
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1),
   password: z.string().min(1),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password } = loginSchema.parse(body)
+    const { identifier, password } = loginSchema.parse(body)
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    const normalized = identifier.toLowerCase()
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalized },
+          { username: normalized },
+        ],
+      },
       select: {
         id: true,
         name: true,
         email: true,
+        username: true,
         passwordHash: true,
         role: true,
         isActive: true,
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!user || !user.isActive) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username or email or password' },
         { status: 401 }
       )
     }
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     const valid = await verifyPassword(password, user.passwordHash)
     if (!valid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid username or email or password' },
         { status: 401 }
       )
     }

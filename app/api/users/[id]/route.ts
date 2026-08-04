@@ -31,6 +31,10 @@ const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
 const updateSchema = z.object({
   name:       z.string().min(1).optional(),
   email:      z.string().email().optional(),
+  username:   z.string().trim().min(3).max(32)
+              .transform(v => v.toLowerCase())
+              .refine(v => /^[a-z0-9][a-z0-9._-]*$/.test(v), 'Username may only contain lowercase letters, numbers, dots, underscores, and hyphens')
+              .optional(),
   password:   z.string().min(6).optional(),
   role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).optional(),
   isActive:   z.boolean().optional(),
@@ -61,7 +65,7 @@ export async function GET(
 
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, isActive: true, phone: true, bio: true, department: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true, canCloseWO: true, canAssignWO: true, canEditWO: true, canApproveRequest: true, canConvertRequest: true, canManagePM: true, canManageAssets: true } } },
+      select: { id: true, name: true, email: true, username: true, role: true, isActive: true, phone: true, bio: true, department: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true, canCloseWO: true, canAssignWO: true, canEditWO: true, canApproveRequest: true, canConvertRequest: true, canManagePM: true, canManageAssets: true } } },
     })
     
     if (!user) {
@@ -125,6 +129,15 @@ export async function PUT(
       }
     }
 
+    if (data.username) {
+      const existingUsername = await prisma.user.findFirst({
+        where: { username: data.username, NOT: { id } },
+      })
+      if (existingUsername) {
+        return NextResponse.json({ error: 'Username already in use' }, { status: 409 })
+      }
+    }
+
     const updateData: Record<string, unknown> = {
       name:       data.name,
       role:       data.role,
@@ -136,6 +149,7 @@ export async function PUT(
       customRoleId: data.customRoleId ?? null,
     }
     if (data.email)    updateData.email        = data.email.toLowerCase()
+    if (data.username) updateData.username     = data.username
     if (data.password) updateData.passwordHash = await hashPassword(data.password)
 
     // Remove undefined keys
@@ -145,7 +159,7 @@ export async function PUT(
       const result = await tx.user.update({
         where: { id },
         data: updateData,
-        select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true },
+        select: { id:true, name:true, email:true, username:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true },
       })
 
       if (data.assignedLocationIds !== undefined) {

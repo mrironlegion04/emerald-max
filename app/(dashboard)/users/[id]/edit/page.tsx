@@ -62,6 +62,7 @@ export default async function EditUserPage({
           id,
           name: target.name,
           email: target.email,
+          username: target.username ?? '',
           role: target.role,
           isActive: target.isActive,
           phone: target.phone ?? '',

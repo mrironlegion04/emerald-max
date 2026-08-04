@@ -6,7 +6,7 @@ import { Settings, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,7 +20,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password }),
       })
 
       const data = await res.json()
@@ -31,7 +31,7 @@ export default function LoginPage() {
       }
 
       // Login successful - redirect based on role
-      const role = data.role
+      const role = data.user?.role
       router.push(role === 'REQUESTER' ? '/my-requests' : '/work-orders')
       router.refresh()
     } catch {
@@ -59,14 +59,14 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email address
+              Username or email
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
               className="input-field"
-              placeholder="you@company.com"
+              placeholder="you@company.com or username"
               required
               autoFocus
               disabled={loading}

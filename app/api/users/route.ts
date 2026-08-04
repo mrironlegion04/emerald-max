@@ -32,6 +32,10 @@ const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
 const createSchema = z.object({
   name:       z.string().min(1, 'Name is required'),
   email:      z.string().email('Invalid email'),
+  username:   z.string().trim().min(3, 'Username must be at least 3 characters').max(32, 'Username must be at most 32 characters')
+              .transform(v => v.toLowerCase())
+              .refine(v => /^[a-z0-9][a-z0-9._-]*$/.test(v), 'Username may only contain lowercase letters, numbers, dots, underscores, and hyphens')
+              .optional(),
   password:   z.string().min(6, 'Password must be at least 6 characters'),
   role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).default('TECHNICIAN'),
   isActive:   z.boolean().default(true),
@@ -105,12 +109,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 409 })
     }
 
+    if (data.username) {
+      const existingUsername = await prisma.user.findUnique({ where: { username: data.username } })
+      if (existingUsername) {
+        return NextResponse.json({ error: 'Username already in use' }, { status: 409 })
+      }
+    }
+
     const passwordHash = await hashPassword(data.password)
     const teamScopeFlags = data.teamScope ?? DEFAULT_TEAM_SCOPE
     const newUser = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email.toLowerCase(),
+        username: data.username || null,
         passwordHash,
         role: data.role,
         isActive: data.isActive,
@@ -135,7 +147,7 @@ export async function POST(request: NextRequest) {
           })),
         },
       },
-      select: { id:true, name:true, email:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true } } },
+      select: { id:true, name:true, email:true, username:true, role:true, isActive:true, phone:true, bio:true, department:true, woVisibility: true, customRoleId: true, userLocations: { select: { locationId: true } }, teamScopes: { select: { teamId: true } } },
     })
 
     await writeAudit({

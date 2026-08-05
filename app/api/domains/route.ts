@@ -14,7 +14,7 @@ export async function GET() {
     const domains = await prisma.maintenanceDomain.findMany({
       orderBy: { name: 'asc' },
       include: {
-        _count: { select: { issues: true, categories: true } },
+        _count: { select: { issues: true } },
       },
     })
     return NextResponse.json(domains)
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { name, description } = schema.parse(body)
     const domain = await prisma.maintenanceDomain.create({
       data: { name, description: description ?? null },
-      include: { _count: { select: { issues: true, categories: true } } },
+      include: { _count: { select: { issues: true } } },
     })
     return NextResponse.json(domain, { status: 201 })
   } catch (error) {

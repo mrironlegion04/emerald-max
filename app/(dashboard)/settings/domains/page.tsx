@@ -26,7 +26,7 @@ export default async function DomainsPage({
   const [domains, totalCount] = await Promise.all([
     prisma.maintenanceDomain.findMany({
       orderBy: { name: 'asc' },
-      include: { _count: { select: { issues: true, categories: true } } },
+      include: { _count: { select: { issues: true } } },
       skip,
       take: ITEMS_PER_PAGE,
     }).then((domains: any) => domains.map((d: any) => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true }))),

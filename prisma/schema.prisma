@@ -424,7 +424,6 @@ model AssetCategory {
   parent   AssetCategory?  @relation("AssetCategoryHierarchy", fields: [parentId], references: [id])
   children AssetCategory[] @relation("AssetCategoryHierarchy")
   assets   Asset[]
-  domains  CategoryDomain[]
   pmSchedules MaintenanceSchedule[] @relation("PMCategoryAssigned")
   workOrders WorkOrder[] @relation("WOCategory")
   templates  WorkOrderTemplate[]
@@ -680,7 +679,6 @@ model MaintenanceDomain {
   updatedAt   DateTime @updatedAt
 
   issues             IssueDomain[]
-  categories         CategoryDomain[]
   teams              TeamDomain[]
   workOrders         WorkOrder[]        @relation("WorkOrderDomain")
   assetLinks         AssetDomain[]
@@ -718,17 +716,6 @@ model IssueDomain {
 
   @@id([issueId, domainId])
   @@map("issue_domains")
-}
-
-model CategoryDomain {
-  categoryId String
-  domainId   String
-
-  category AssetCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  domain   MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
-
-  @@id([categoryId, domainId])
-  @@map("category_domains")
 }
 
 model Part {

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import {
   Plus, Pencil, Trash2, AlertCircle, X, Check,
-  FolderTree, ChevronRight, ChevronDown, Search, Layers, LayoutGrid
+  FolderTree, ChevronRight, ChevronDown, Search, LayoutGrid
 } from 'lucide-react'
 
 interface Category {
@@ -18,15 +18,8 @@ interface TreeNode extends Category {
   depth: number
 }
 
-interface Domain {
-  id: string
-  name: string
-}
-
 interface Props {
   initialCategories: Category[]
-  domains: Domain[]
-  initialDomainMap: Record<string, string[]>  // categoryId → domainId[]
 }
 
 function buildTree(items: Category[], parentId: string | null = null, depth = 0): TreeNode[] {
@@ -58,7 +51,7 @@ function buildPath(categories: Category[], id: string): string {
   return crumbs.join(' › ')
 }
 
-export default function AssetCategoriesManager({ initialCategories, domains, initialDomainMap }: Props) {
+export default function AssetCategoriesManager({ initialCategories }: Props) {
   const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -69,11 +62,6 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
-
-  // Domain assignment state
-  const [domainMap, setDomainMap] = useState<Record<string, string[]>>(initialDomainMap)
-  const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set())
-  const [savingDomains, setSavingDomains] = useState<Set<string>>(new Set())
 
   const tree = useMemo(() => buildTree(categories), [categories])
   const flat = useMemo(() => flattenTree(tree), [tree])
@@ -199,38 +187,6 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
         ...prev,
         [id]: err instanceof Error ? err.message : 'Failed to delete',
       }))
-    }
-  }
-
-  function toggleDomainPanel(id: string) {
-    setExpandedDomains(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
-  async function toggleDomain(categoryId: string, domainId: string) {
-    const current = domainMap[categoryId] ?? []
-    const newIds  = current.includes(domainId)
-      ? current.filter(d => d !== domainId)
-      : [...current, domainId]
-
-    // Optimistic update
-    setDomainMap(prev => ({ ...prev, [categoryId]: newIds }))
-    setSavingDomains(prev => new Set(prev).add(categoryId))
-    try {
-      const res = await fetch('/api/category-domains', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categoryId, domainIds: newIds }),
-      })
-      if (!res.ok) throw new Error('Failed')
-    } catch {
-      // Rollback on failure
-      setDomainMap(prev => ({ ...prev, [categoryId]: current }))
-    } finally {
-      setSavingDomains(prev => { const s = new Set(prev); s.delete(categoryId); return s })
     }
   }
 
@@ -448,17 +404,6 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                       {/* Hover action bars */}
                       <div className="flex items-center gap-1 md:opacity-0 md:group-hover/row:opacity-100 transition-opacity duration-155 ml-1">
                         <button
-                          title="Assign Maintenance Domains"
-                          onClick={() => toggleDomainPanel(cat.id)}
-                          className={`p-1.5 rounded-lg border transition-all ${
-                            expandedDomains.has(cat.id)
-                              ? 'text-violet-700 bg-violet-100/80 border-violet-200'
-                              : 'text-slate-400 hover:text-violet-600 hover:bg-violet-50 hover:border-violet-100 border-transparent'
-                          }`}
-                        >
-                          <Layers className="w-3.5 h-3.5" />
-                        </button>
-                        <button
                           title="Add nested subcategory"
                           onClick={() => openAdd(cat.id)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-colors"
@@ -482,47 +427,6 @@ export default function AssetCategoriesManager({ initialCategories, domains, ini
                       </div>
                     </div>
                   </div>
-
-                  {/* Domain Assignment Tray */}
-                  {expandedDomains.has(cat.id) && (
-                    <div 
-                      className="p-3 bg-violet-50/45 border-y border-violet-100/50 flex flex-col md:flex-row items-stretch md:items-center gap-3.5 animate-in slide-in-from-top-1 duration-150"
-                      style={{ paddingLeft: `${Math.max(28, 28 + cat.depth * 20)}px` }}
-                    >
-                      <div className="flex items-center gap-2 flex-shrink-0 text-violet-700 font-bold text-xs select-none">
-                        <Layers className="w-3.5 h-3.5 text-violet-500" />
-                        <span>Assigned Domains:</span>
-                      </div>
-
-                      {domains.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No domains configured. Register domains first under <a href="/settings/domains" className="underline hover:text-indigo-700 font-semibold text-slate-600">Domains Settings</a>.</p>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {domains.map(d => {
-                            const active = (domainMap[cat.id] ?? []).includes(d.id)
-                            return (
-                              <button
-                                key={d.id}
-                                type="button"
-                                onClick={() => toggleDomain(cat.id, d.id)}
-                                disabled={savingDomains.has(cat.id)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase border transition-all ${
-                                  active
-                                    ? 'bg-violet-600 border-violet-600 text-white shadow-3xs'
-                                    : 'bg-white border-slate-250 text-slate-600 hover:border-violet-300'
-                                }`}
-                              >
-                                {d.name}
-                              </button>
-                            )
-                          })}
-                          {savingDomains.has(cat.id) && (
-                            <span className="text-[10px] font-bold text-violet-400 animate-pulse ml-1 tracking-wider uppercase">Syncing…</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {/* Inline Delete Errors */}
                   {deleteErrors[cat.id] && (

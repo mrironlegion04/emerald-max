@@ -19,45 +19,24 @@ interface GetIssuesOptions {
 }
 
 /**
- * Walk up the category parent chain (max 10 levels) and return the domain IDs
- * of the nearest ancestor (including self) that has active domains assigned.
+ * Resolve the domains for an asset.
+ * Domains come from the asset's own many-to-many links; assets without
+ * domains have none (caller falls back to global issues).
  */
-export async function resolveDomains(startCategoryId: string): Promise<string[]> {
-  const chain: string[] = []
-  let currentId: string | null = startCategoryId
-
-  while (currentId && chain.length < 10) {
-    chain.push(currentId)
-    const row = await prisma.assetCategory.findUnique({
-      where:  { id: currentId },
-      select: { parentId: true },
-    }) as { parentId: string | null } | null
-    currentId = row?.parentId ?? null
-  }
-
-  if (chain.length === 0) return []
-
-  const links = await prisma.categoryDomain.findMany({
-    where: {
-      categoryId: { in: chain },
-      domain: { isActive: true },
+export async function resolveDomainsForAsset(assetId: string): Promise<string[]> {
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: {
+      domains: {
+        where: { domain: { isActive: true } },
+        select: { domainId: true },
+      },
     },
-    select: { categoryId: true, domainId: true },
   })
 
-  const map = new Map<string, string[]>()
-  for (const link of links) {
-    const existing = map.get(link.categoryId) ?? []
-    existing.push(link.domainId)
-    map.set(link.categoryId, existing)
-  }
+  if (!asset) return []
 
-  for (const id of chain) {
-    const domains = map.get(id)
-    if (domains && domains.length > 0) return domains
-  }
-
-  return []
+  return asset.domains.map(d => d.domainId)
 }
 
 async function buildIssueQuery(options?: GetIssuesOptions) {
@@ -69,37 +48,6 @@ async function buildIssueQuery(options?: GetIssuesOptions) {
       { code:  { contains: search, mode: 'insensitive' as const } },
     ],
   }
-}
-
-/**
- * Resolve the domains for an asset, in priority order:
- *   1. The asset's own domain links (many-to-many).
- *   2. Fallback to its category chain (category → parent categories).
- *   3. Empty → caller falls back to global issues.
- */
-export async function resolveDomainsForAsset(assetId: string): Promise<string[]> {
-  const asset = await prisma.asset.findUnique({
-    where: { id: assetId },
-    select: {
-      categoryId: true,
-      domains: {
-        where: { domain: { isActive: true } },
-        select: { domainId: true },
-      },
-    },
-  })
-
-  if (!asset) return []
-
-  if (asset.domains.length > 0) {
-    return asset.domains.map(d => d.domainId)
-  }
-
-  if (asset.categoryId) {
-    return resolveDomains(asset.categoryId)
-  }
-
-  return []
 }
 
 /**
@@ -151,34 +99,20 @@ async function getIssueGroupsForDomainIds(
 export const IssueService = {
 
   /**
-   * Resolve available issues for a given category through its domain chain.
-   *
-   * Priority:
-   *   1. Category/domain issues (with parent inheritance)
-   *   2. Global issues (fallback when no domains configured)
-   *   3. OTHER is always available in the frontend
+   * Issues for a category-scoped context. Categories are classification only
+   * (no domain links), so this always returns global issues.
+   * Kept for the /api/issues?categoryId= contract (the WO form passes '').
    */
   async getIssuesForCategory(
-    categoryId: string | null | undefined,
+    _categoryId: string | null | undefined,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
-    if (!categoryId) {
-      return this.getFallbackIssues(options)
-    }
-
-    const domainIds = await resolveDomains(categoryId)
-
-    if (domainIds.length === 0) {
-      return this.getFallbackIssues(options)
-    }
-
-    const groups = await getIssueGroupsForDomainIds(domainIds, options)
-    return groups ?? this.getFallbackIssues(options)
+    return this.getFallbackIssues(options)
   },
 
   /**
    * Resolve available issues for a given asset.
-   * Priority: asset's own domains → category chain → global issues.
+   * Priority: asset's own domains → global issues.
    */
   async getIssuesForAsset(
     assetId: string,
@@ -195,8 +129,7 @@ export const IssueService = {
   },
 
   /**
-   * Fallback: return global active issues when no domains are configured
-   * for the asset's category.
+   * Fallback: return global active issues when the asset has no domains.
    */
   async getFallbackIssues(options?: GetIssuesOptions): Promise<IssueGroup[]> {
     const issues = await prisma.issue.findMany({
@@ -331,8 +264,6 @@ export const IssueService = {
       activeIssues,
       totalDomains,
       activeDomains,
-      categoriesWithDomains,
-      totalCategories,
       issueDomainCounts,
       woLinkedIssues,
     ] = await Promise.all([
@@ -340,8 +271,6 @@ export const IssueService = {
       prisma.issue.count({ where: { isActive: true } }),
       prisma.maintenanceDomain.count(),
       prisma.maintenanceDomain.count({ where: { isActive: true } }),
-      prisma.categoryDomain.groupBy({ by: ['categoryId'] }).then(r => r.length),
-      prisma.assetCategory.count(),
       prisma.maintenanceDomain.findMany({
         select: { id: true, name: true, _count: { select: { issues: true } } },
         orderBy: { name: 'asc' },
@@ -375,11 +304,6 @@ export const IssueService = {
         active: activeDomains,
         withIssues: domainsWithIssues.length,
         withoutIssues: domainsWithoutIssues.map(d => ({ id: d.id, name: d.name })),
-      },
-      categories: {
-        total: totalCategories,
-        withDomains: categoriesWithDomains,
-        withoutDomains: totalCategories - categoriesWithDomains,
       },
       mostUsedIssues: woLinkedIssues.map(i => ({
         id: i.id,

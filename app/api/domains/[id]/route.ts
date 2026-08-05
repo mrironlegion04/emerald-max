@@ -28,7 +28,7 @@ export async function PUT(
         ...(description !== undefined && { description }),
         ...(isActive    !== undefined && { isActive }),
       },
-      include: { _count: { select: { issues: true, categories: true } } },
+      include: { _count: { select: { issues: true } } },
     })
     return NextResponse.json(domain)
   } catch (error) {

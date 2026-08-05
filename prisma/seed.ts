@@ -377,23 +377,6 @@ async function main() {
       }),
     ])
 
-    // Link categories to domains
-    const catMapping: Record<string, string[]> = {
-      'cat-electrical': ['Electrical'],
-      'cat-mechanical': ['Mechanical'],
-      'cat-hvac':       ['HVAC'],
-      'cat-plumbing':   ['Plumbing'],
-    }
-
-    for (const [catId, domainNames] of Object.entries(catMapping)) {
-      const domainIds = domainNames.map(n => domains.find(d => d.name === n)!.id)
-      await prisma.categoryDomain.deleteMany({ where: { categoryId: catId } })
-      await prisma.categoryDomain.createMany({
-        data: domainIds.map(domainId => ({ categoryId: catId, domainId })),
-        skipDuplicates: true,
-      })
-    }
-
     // Representative issues per domain (5-7 each, ordered by priority)
     const issueData: { code: string; title: string; severity: string; domainName: string; sortOrder: number }[] = [
       // Electrical

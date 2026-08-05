@@ -260,7 +260,7 @@ export default async function WorkOrderDetailPage({
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
                 ...(wo.requestedBy ? [{
                   label: 'Requested by',
-                  value: wo.requestedById ? (
+                  value: wo.requestedById && user?.role === 'ADMIN' ? (
                     <Link href={`/users/${wo.requestedById}`} className="text-blue-600 hover:underline text-xs font-bold">
                       {wo.requestedBy}
                     </Link>

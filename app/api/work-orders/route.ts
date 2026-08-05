@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
         customIssue:    data.customIssue  ?? null,
         shift:          await resolveShift(),
         requestedBy,
+        requestedById:  user.userId,
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,
       },

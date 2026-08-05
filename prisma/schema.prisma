@@ -316,6 +316,7 @@ model User {
 
   assignedWorkOrders    WorkOrder[]             @relation("AssignedTo")
   createdWorkOrders     WorkOrder[]             @relation("CreatedBy")
+  requestedWorkOrders   WorkOrder[]             @relation("WORequestedBy")
   completedWorkOrders   WorkOrder[]             @relation("WOCompletedBy")
   reviewedRequests      MaintenanceRequest[]    @relation("RequestReviewer")
   submittedRequests     MaintenanceRequest[]    @relation("RequestRequester")
@@ -596,6 +597,8 @@ model WorkOrder {
   customFields Json?
   shift       String? // admin-set at creation; read-only for users
   requestedBy String? // user or system who requested the work; set at creation, read-only
+  requestedById String?
+  requestedByUser User? @relation("WORequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
 
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)

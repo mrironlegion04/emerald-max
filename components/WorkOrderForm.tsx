@@ -12,7 +12,7 @@ import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
 interface User  { id: string; name: string; role: string }
-interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean }
+interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean; recommended?: boolean }
 
 interface WOFormData {
   title: string; description: string; type: string; priority: string
@@ -505,36 +505,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             {loadingIssues && <span className="text-[11px] text-slate-400 font-semibold animate-pulse">Loading issues…</span>}
           </div>
 
-          {issueGroups[0]?.isFallback ? (
-            // Fallback — location WO, no category, no domains, or domains have no active issues
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                {!form.assetId && form.locationId ? (
-                  <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full font-bold border border-sky-100 uppercase tracking-wider">Showing general/location issues</span>
-                ) : (
-                  <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold border border-amber-100 uppercase tracking-wider">Using common issues — no category-specific issues configured for this asset</span>
-                )}
-              </div>
-              <WorkOrderIssueSelector
-                groups={issueGroups}
-                value={form.issueId}
-                onChange={handleIssueChange}
-              />
-              {form.issueId === OTHER_ISSUE && (
-                <div className="mt-4">
-                  <input
-                    type="text"
-                    value={form.customIssue}
-                    onChange={e => set('customIssue', e.target.value)}
-                    placeholder="Describe the issue..."
-                    className="input-field text-xs sm:text-sm bg-white"
-                    autoFocus
-                  />
-                </div>
-              )}
-            </>
-          ) : issueGroups.length > 0 ? (
-            // Normal — domain issues available
+          {issueGroups.length > 0 ? (
             <>
               <WorkOrderIssueSelector
                 groups={issueGroups}
@@ -555,12 +526,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               )}
             </>
           ) : !loadingIssues ? (
-            // Fetched but both domains and global issues are absent
             <>
               <p className="text-xs text-slate-400 font-medium mb-3">
-                {!form.assetId && form.locationId
-                  ? 'No general issues available for this location. Describe the problem below.'
-                  : 'This asset has no issues configured and no common issues available. Describe the problem below.'}
+                No issues configured. Describe the problem below.
               </p>
               <input
                 type="text"

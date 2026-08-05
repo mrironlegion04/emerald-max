@@ -22,6 +22,7 @@ interface DomainGroup {
   id: string
   name: string
   isFallback?: boolean
+  recommended?: boolean
   issues: { id: string; code: string; title: string; severity?: string }[]
 }
 
@@ -79,13 +80,16 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
 
   useEffect(() => {
     let active = true
-    fetch('/api/issues?scope=request')
+    const url = form.assetId
+      ? `/api/issues?scope=request&assetId=${encodeURIComponent(form.assetId)}`
+      : '/api/issues?scope=request'
+    fetch(url)
       .then(r => r.json())
       .then((groups: DomainGroup[]) => { if (active) setIssueGroups(groups) })
       .catch(() => {})
       .finally(() => { if (active) setIssuesLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [form.assetId])
 
   useEffect(() => {
     if (!currentUser) return

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Search, X, ChevronDown, Tag, PenLine, AlertTriangle, AlertCircle, CircleAlert } from 'lucide-react'
+import { Search, X, ChevronDown, Tag, PenLine, AlertTriangle, AlertCircle, CircleAlert, Sparkles } from 'lucide-react'
 
 interface Issue { id: string; code: string; title: string; severity?: string }
-interface DomainGroup { id: string; name: string; issues: Issue[]; isFallback?: boolean }
+interface DomainGroup { id: string; name: string; issues: Issue[]; isFallback?: boolean; recommended?: boolean }
 
 // Special sentinel — means user chose "Other (type manually)"
 export const OTHER_ISSUE = '__other__'
@@ -160,29 +160,41 @@ export default function WorkOrderIssueSelector({
                 {groups.length === 0 ? (
                   <p className="px-3 py-4 text-center text-sm text-gray-400">No issues configured for this category.</p>
                 ) : (
-                  groups.map(group => (
-                    <div key={group.id}>
-                      <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.name}</span>
+                  <>
+                    {groups.some(g => g.recommended) && (
+                      <div className="px-3 py-1.5 bg-emerald-50 border-b border-emerald-100 text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> Recommended for this asset
                       </div>
-                      {group.issues.length === 0 ? (
-                        <p className="px-4 py-2 text-xs text-gray-400 italic">No issues in this domain</p>
-                      ) : (
-                        group.issues.map(issue => (
-                          <button
-                            key={issue.id}
-                            type="button"
-                            onClick={() => select(issue.id)}
-                            className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${value === issue.id ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                          >
-                            <code className="text-xs font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">{issue.code}</code>
-                            <span className="flex-1 truncate">{issue.title}</span>
-                            {value === issue.id && <span className="text-violet-600 text-xs font-semibold">✓</span>}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ))
+                    )}
+                    {groups.map(group => (
+                      <div key={group.id}>
+                        <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.name}</span>
+                          {group.recommended && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                              <Sparkles className="w-3 h-3" /> Recommended
+                            </span>
+                          )}
+                        </div>
+                        {group.issues.length === 0 ? (
+                          <p className="px-4 py-2 text-xs text-gray-400 italic">No issues in this domain</p>
+                        ) : (
+                          group.issues.map(issue => (
+                            <button
+                              key={issue.id}
+                              type="button"
+                              onClick={() => select(issue.id)}
+                              className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${value === issue.id ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                            >
+                              <code className="text-xs font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">{issue.code}</code>
+                              <span className="flex-1 truncate">{issue.title}</span>
+                              {value === issue.id && <span className="text-violet-600 text-xs font-semibold">✓</span>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ))}
+                  </>
                 )}
 
                 {/* Other option — always shown at the bottom */}

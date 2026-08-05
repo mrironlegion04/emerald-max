@@ -28,7 +28,10 @@ export async function GET(request: NextRequest) {
     // Requester request form — all active issues grouped by domain + global.
     // Public (used by the anonymous /request form); issue data is non-sensitive.
     if (scope === 'request') {
-      const groups = await IssueService.getAllIssues({ search })
+      const groups = await IssueService.getAllIssues({
+        search,
+        recommendedAssetId: assetId ?? undefined,
+      })
       return NextResponse.json(groups)
     }
 

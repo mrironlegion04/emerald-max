@@ -4,6 +4,7 @@ export interface IssueGroup {
   id: string
   name: string
   isFallback?: boolean
+  recommended?: boolean
   issues: IssueItem[]
 }
 
@@ -51,81 +52,99 @@ async function buildIssueQuery(options?: GetIssuesOptions) {
 }
 
 /**
- * Build domain issue groups from a set of domain IDs.
- * Returns null when none of the domains have active issues (caller should
- * fall back to global issues).
+ * Build every active domain's issue group, plus a trailing "Common Issues"
+ * (global) group. Domains whose id is in `recommendedIds` are returned first
+ * and flagged so the UI can mark them as recommended for the selected asset.
+ * Domains with no active issues are omitted.
  */
-async function getIssueGroupsForDomainIds(
-  domainIds: string[],
+async function getAllDomainGroups(
+  recommendedIds: Set<string> = new Set(),
   options?: GetIssuesOptions
-): Promise<IssueGroup[] | null> {
-  const domains = await prisma.maintenanceDomain.findMany({
-    where: {
-      id: { in: [...new Set(domainIds)] },
-      isActive: true,
-    },
-    orderBy: { name: 'asc' },
-    include: {
-      issues: {
-        where: {
-          issue: {
-            isActive: true,
-            ...(await buildIssueQuery(options)),
-          },
+): Promise<IssueGroup[]> {
+  const [domains, globalIssues] = await Promise.all([
+    prisma.maintenanceDomain.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      include: {
+        issues: {
+          where: { issue: { isActive: true, ...(await buildIssueQuery(options)) } },
+          include: { issue: true },
+          orderBy: { issue: { sortOrder: 'asc' } },
         },
-        include: { issue: true },
-        orderBy: { issue: { sortOrder: 'asc' } },
       },
-    },
+    }),
+    prisma.issue.findMany({
+      where: {
+        isActive: true,
+        isGlobal: true,
+        ...(await buildIssueQuery(options)),
+      },
+      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+    }),
+  ])
+
+  const toGroup = (domain: (typeof domains)[number], recommended: boolean): IssueGroup => ({
+    id: domain.id,
+    name: domain.name,
+    recommended,
+    issues: domain.issues.map(l => ({
+      id: l.issue.id,
+      code: l.issue.code,
+      title: l.issue.title,
+      severity: l.issue.severity,
+    })),
   })
 
-  const totalIssues = domains.reduce((sum, d) => sum + d.issues.length, 0)
-  if (totalIssues === 0) {
-    return null
+  const withIssues = domains.filter(d => d.issues.length > 0)
+
+  const groups: IssueGroup[] = [
+    ...withIssues.filter(d => recommendedIds.has(d.id)).map(d => toGroup(d, true)),
+    ...withIssues.filter(d => !recommendedIds.has(d.id)).map(d => toGroup(d, false)),
+  ]
+
+  if (globalIssues.length > 0) {
+    groups.push({
+      id: '__global__',
+      name: 'Common Issues',
+      isFallback: true,
+      issues: globalIssues.map(i => ({
+        id: i.id,
+        code: i.code,
+        title: i.title,
+        severity: i.severity,
+      })),
+    })
   }
 
-  return domains.map(d => ({
-    id: d.id,
-    name: d.name,
-    issues: d.issues.map(i => ({
-      id: i.issue.id,
-      code: i.issue.code,
-      title: i.issue.title,
-      severity: i.issue.severity,
-    })),
-  }))
+  return groups
 }
 
 export const IssueService = {
 
   /**
    * Issues for a category-scoped context. Categories are classification only
-   * (no domain links), so this always returns global issues.
+   * (no domain links), so all domains are offered without any recommendation.
    * Kept for the /api/issues?categoryId= contract (the WO form passes '').
    */
   async getIssuesForCategory(
     _categoryId: string | null | undefined,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
-    return this.getFallbackIssues(options)
+    return getAllDomainGroups(new Set(), options)
   },
 
   /**
    * Resolve available issues for a given asset.
-   * Priority: asset's own domains → global issues.
+   * Returns every active domain's issues, with the asset's own linked domains
+   * flagged as recommended and listed first, followed by all other domains
+   * and finally common (global) issues.
    */
   async getIssuesForAsset(
     assetId: string,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
     const domainIds = await resolveDomainsForAsset(assetId)
-
-    if (domainIds.length === 0) {
-      return this.getFallbackIssues(options)
-    }
-
-    const groups = await getIssueGroupsForDomainIds(domainIds, options)
-    return groups ?? this.getFallbackIssues(options)
+    return getAllDomainGroups(new Set(domainIds), options)
   },
 
   /**
@@ -157,58 +176,18 @@ export const IssueService = {
   /**
    * All active issues grouped by domain, plus a "Common Issues" (global) group.
    * Used by the requester request form where there is no asset category scope.
+   * When `recommendedAssetId` is provided, that asset's linked domains are
+   * flagged as recommended and shown first.
    */
-  async getAllIssues(options?: GetIssuesOptions): Promise<IssueGroup[]> {
-    const [domains, globalIssues] = await Promise.all([
-      prisma.maintenanceDomain.findMany({
-        where: { isActive: true },
-        orderBy: { name: 'asc' },
-        include: {
-          issues: {
-            where: { issue: { isActive: true } },
-            include: { issue: true },
-            orderBy: { issue: { sortOrder: 'asc' } },
-          },
-        },
-      }),
-      prisma.issue.findMany({
-        where: {
-          isActive: true,
-          isGlobal: true,
-          ...(await buildIssueQuery(options)),
-        },
-        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-      }),
-    ])
-
-    const groups: IssueGroup[] = []
-    for (const domain of domains) {
-      if (domain.issues.length === 0) continue
-      groups.push({
-        id: domain.id,
-        name: domain.name,
-        issues: domain.issues.map(l => ({
-          id: l.issue.id,
-          code: l.issue.code,
-          title: l.issue.title,
-          severity: l.issue.severity,
-        })),
-      })
+  async getAllIssues(
+    options?: GetIssuesOptions & { recommendedAssetId?: string }
+  ): Promise<IssueGroup[]> {
+    const recommendedIds = new Set<string>()
+    if (options?.recommendedAssetId) {
+      const ids = await resolveDomainsForAsset(options.recommendedAssetId)
+      ids.forEach(id => recommendedIds.add(id))
     }
-    if (globalIssues.length > 0) {
-      groups.push({
-        id: '__global__',
-        name: 'Common Issues',
-        isFallback: true,
-        issues: globalIssues.map(i => ({
-          id: i.id,
-          code: i.code,
-          title: i.title,
-          severity: i.severity,
-        })),
-      })
-    }
-    return groups
+    return getAllDomainGroups(recommendedIds, options)
   },
 
   /**

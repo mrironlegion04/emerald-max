@@ -71,8 +71,6 @@ const updateSchema = z.object({
   recurrenceRule:       recurrenceRuleSchema,
   occurrenceLimit:      z.number().int().min(1).nullable().optional(),
   endDate:              z.string().nullable().optional(),
-  // MaintWiz-style facility shift (informational)
-  facilityShift:        z.string().nullable().optional(),
   // External system ID (bulk-import dedupe)
   externalId:           z.string().nullable().optional(),
   // Task template — replace-all semantics when provided
@@ -230,9 +228,6 @@ export async function PUT(
             : undefined,
           endDate:             data.endDate !== undefined
             ? (data.endDate ? new Date(data.endDate) : null)
-            : undefined,
-          facilityShift:       data.facilityShift !== undefined
-            ? data.facilityShift
             : undefined,
           externalId:          data.externalId !== undefined
             ? data.externalId

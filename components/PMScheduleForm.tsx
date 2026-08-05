@@ -68,7 +68,6 @@ interface PMFormData {
   recurrenceDayOfMonth: string
   occurrenceLimit: string
   endDate: string
-  facilityShift: string
 }
 
 interface Props {
@@ -207,7 +206,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
       ? String((initialData as any).occurrenceLimit) : '',
     endDate:            (initialData as any)?.endDate
       ? new Date((initialData as any).endDate).toISOString().split('T')[0] : '',
-    facilityShift:      (initialData as any)?.facilityShift ?? '',
   })
 
   const [nestedTiers, setNestedTiers] = useState<NestedTier[]>(
@@ -350,7 +348,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             : null,
         occurrenceLimit:      form.occurrenceLimit ? parseInt(form.occurrenceLimit) : null,
         endDate:              form.endDate || null,
-        facilityShift:        form.facilityShift || null,
         tasks:                tasks
           .filter(t => t.title.trim())
           .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null, required: t.required })),
@@ -786,20 +783,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             />
             <p className="text-xs text-gray-400 mt-1">
               How many WOs to pre-generate at once (1 = one at a time).
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Facility Shift</label>
-            <input
-              type="text"
-              value={form.facilityShift}
-              onChange={e => set('facilityShift', e.target.value)}
-              placeholder="e.g. A, B, Rotating"
-              className="input-field"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Shift that performs this maintenance (informational, e.g. &ldquo;A&rdquo;).
             </p>
           </div>
         </div>

@@ -71,8 +71,6 @@ const pmSchema = z.object({
   recurrenceRule:       recurrenceRuleSchema,
   occurrenceLimit:      z.number().int().min(1).nullable().optional(),
   endDate:              z.string().nullable().optional(),
-  // MaintWiz-style facility shift (informational)
-  facilityShift:        z.string().nullable().optional(),
   // External system ID (bulk-import dedupe)
   externalId:           z.string().nullable().optional(),
   // Task template — copied to every generated work order as subtasks
@@ -163,7 +161,6 @@ export async function POST(request: NextRequest) {
         recurrenceRule:      recurrenceRule === null ? Prisma.JsonNull as unknown as Prisma.InputJsonValue : recurrenceRule,
         occurrenceLimit:     data.occurrenceLimit ?? null,
         endDate:             data.endDate ? new Date(data.endDate) : null,
-        facilityShift:       data.facilityShift ?? null,
         externalId:          data.externalId ?? null,
         assetId:             finalAssetId,
         assets:              assetIds.length > 0

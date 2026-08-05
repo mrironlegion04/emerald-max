@@ -85,7 +85,6 @@ export async function POST(
         occurrenceLimit:     existing.occurrenceLimit,
         occurrenceCount:     0,
         endDate:             existing.endDate,
-        facilityShift:       existing.facilityShift,
         woPriority:          existing.woPriority,
         woDescription:       existing.woDescription,
         woAssignedToId:      existing.woAssignedToId,

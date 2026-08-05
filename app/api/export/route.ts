@@ -141,13 +141,13 @@ export async function GET(request: NextRequest) {
       filename = `pm-schedules-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
         'Title','Description','Trigger','Frequency','Interval','Next Due',
-        'Asset','Asset Code','Location','Facility Shift','Active','Created At',
+        'Asset','Asset Code','Location','Active','Created At',
       ]
       const rows = schedules.map(s => [
         s.title, s.description ?? '',
         s.triggerType, s.frequency, s.interval, fmt(s.nextDueDate),
         s.asset?.name ?? '', s.asset?.assetCode ?? '', s.asset?.location?.name ?? s.location?.name ?? '',
-        s.facilityShift ?? '', s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
+        s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
       ])
       csv = toCSV(headers, rows)
 

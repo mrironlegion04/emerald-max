@@ -243,9 +243,6 @@ export default async function PMDetailPage({
                   { label: 'Start offset', value: `${schedule.startDateOffset} day${schedule.startDateOffset !== 1 ? 's' : ''} before due` },
                 ] : []),
                 { label: 'WO Priority', value: schedule.woPriority ?? 'Medium' },
-                ...(schedule.facilityShift ? [
-                  { label: 'Facility Shift', value: schedule.facilityShift },
-                ] : []),
                 ...(schedule.woAssignedTo ? [
                   { label: 'WO Assignee', value: schedule.woAssignedTo.name },
                 ] : []),

@@ -8,10 +8,27 @@ const prisma = new PrismaClient()
 const CSV_PATH = join(__dirname, 'data', 'maintenance-users-list.csv')
 const DEFAULT_PASSWORD = 'pass12!@'
 
-function parseCSV(filePath: string): { code: string; name: string; department: string; plant: string }[] {
+const ROLE_MAP: Record<string, 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'> = {
+  ADMIN: 'ADMIN',
+  MANAGER: 'MANAGER',
+  TECHNICIAN: 'TECHNICIAN',
+  REQUESTER: 'REQUESTER',
+  VIEWER: 'VIEWER',
+}
+
+interface CsvUser {
+  code: string
+  name: string
+  department: string
+  role: string
+  phone: string
+  team: string
+}
+
+function parseCSV(filePath: string): CsvUser[] {
   const lines = readFileSync(filePath, 'utf-8').split('\n').map(l => l.trim()).filter(Boolean)
   if (lines.length < 2) return []
-  const result: { code: string; name: string; department: string; plant: string }[] = []
+  const result: CsvUser[] = []
   for (let i = 1; i < lines.length; i++) {
     const parts = lines[i].split(',')
     if (parts.length >= 4) {
@@ -19,11 +36,24 @@ function parseCSV(filePath: string): { code: string; name: string; department: s
         code: parts[0].trim(),
         name: parts[1].trim(),
         department: parts[2].trim(),
-        plant: parts[3].trim(),
+        role: parts[3].trim(),
+        phone: (parts[4] ?? '').trim(),
+        team: (parts[5] ?? '').trim(),
       })
     }
   }
   return result
+}
+
+async function getOrCreateTeam(name: string) {
+  let team = await prisma.team.findFirst({
+    where: { name: { equals: name, mode: 'insensitive' } },
+  })
+  if (!team) {
+    team = await prisma.team.create({ data: { name, trade: name } })
+    console.log(`  Created team: "${name}"`)
+  }
+  return team
 }
 
 async function main() {
@@ -46,17 +76,30 @@ async function main() {
 
   for (const u of users) {
     const email = `${u.code}@emerald.local`
+    const role = ROLE_MAP[u.role.toUpperCase()] ?? 'TECHNICIAN'
     try {
+      let team: { id: string } | null = null
+      if (u.team) {
+        team = await getOrCreateTeam(u.team)
+      }
       await prisma.user.create({
         data: {
           name: u.name,
           email,
+          username: u.code,
           passwordHash,
-          role: 'TECHNICIAN',
-          department: u.department,
+          role,
+          department: u.department || null,
+          phone: u.phone || null,
+          ...(team
+            ? {
+                teamMemberships: { create: [{ teamId: team.id, role: 'MEMBER' }] },
+                teamScopes: { create: [{ teamId: team.id }] },
+              }
+            : {}),
         },
       })
-      console.log(`  Created: ${u.code} — ${u.name} (${email})`)
+      console.log(`  Created: ${u.code} — ${u.name} (${email}) [${role}]${team ? ` → team ${u.team}` : ''}`)
       created++
     } catch (e: any) {
       if (e.code === 'P2002') {

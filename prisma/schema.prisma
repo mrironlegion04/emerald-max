@@ -595,6 +595,7 @@ model WorkOrder {
   notes       String?
   customFields Json?
   shift       String? // admin-set at creation; read-only for users
+  requestedBy String? // user or system who requested the work; set at creation, read-only
 
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)

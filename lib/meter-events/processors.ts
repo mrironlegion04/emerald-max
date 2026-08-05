@@ -187,6 +187,7 @@ async function triggerPMSchedules(
         assetId,
         maintenanceScheduleId: schedule.id,
         createdById: 'system',
+        requestedBy: 'System Generated',
       },
     })
 

@@ -136,6 +136,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
           teamId: request.teamId,
           createdById: user.userId,
+          requestedBy: request.requesterName || user.name,
         },
       }),
       prisma.maintenanceRequest.update({

@@ -94,6 +94,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User session invalid. Please log in again.' }, { status: 401 })
     }
 
+    // RequestedBy = creating user, with their team when they have one
+    const userTeam = await prisma.teamMember.findFirst({
+      where: { userId: user.userId },
+      select: { team: { select: { name: true, isActive: true, isDeleted: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    const requestedBy =
+      userTeam?.team.isActive && !userTeam.team.isDeleted
+        ? `${user.name} (${userTeam.team.name})`
+        : user.name
+
     // ── Normalize asset scope ────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
       data.assetId,
@@ -164,6 +175,7 @@ export async function POST(request: NextRequest) {
         issueId:        data.issueId      ?? null,
         customIssue:    data.customIssue  ?? null,
         shift:          await resolveShift(),
+        requestedBy,
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,
       },

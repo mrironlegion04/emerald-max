@@ -103,6 +103,8 @@ export default async function WorkOrderPrintPage({
             {wo.domain && <p><strong>Domain:</strong> {wo.domain.name}</p>}
             {wo.assignedTo && <p><strong>Assigned to:</strong> {wo.assignedTo.name}</p>}
             {!wo.domain && !wo.assignedTo && <p className="text-gray-500">Unassigned</p>}
+            {wo.requestedBy && <p><strong>Requested by:</strong> {wo.requestedBy}</p>}
+            {wo.createdBy && <p><strong>Created by:</strong> {wo.createdBy.name}</p>}
           </div>
         </div>
       </div>

@@ -374,6 +374,7 @@ export async function generateWOsForSchedule(
               locationScope: schedule.locationScope,
               maintenanceScheduleId: schedule.id,
               createdById: options?.userId ?? null,
+              requestedBy: 'System Generated',
               assignedToId: schedule.woAssignedToId ?? null,
               teamId: schedule.woTeamId ?? null,
               categoryId: schedule.woCategoryId ?? null,

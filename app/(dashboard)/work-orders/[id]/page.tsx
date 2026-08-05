@@ -258,6 +258,7 @@ export default async function WorkOrderDetailPage({
                   <span className="text-slate-400 italic">Unassigned</span>
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
+                ...(wo.requestedBy ? [{ label: 'Requested by', value: wo.requestedBy }] : []),
                 ...(wo.shift ? [{ label: 'Shift', value: SHIFT_LABELS[wo.shift] ?? wo.shift }] : []),
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
                 { label: 'Start date',  value: fmtDateTime(wo.startDate) },

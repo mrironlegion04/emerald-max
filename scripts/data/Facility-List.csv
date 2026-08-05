@@ -1,0 +1,64 @@
+Facility Name,Facility Code,Part of Facility,Description,Type
+AdminBuilding,ETL-GPD-ADM,EmeraldGummidipoondiPlant,AdminBuilding,Facility
+Bandbuilding,ETL-GPD-IPT-BB,IndustrialPneumaticTyres,IPTBandbuilding,Facility
+BeadwireLine,ETL-GPD-RIM-BW,WheelRim,Wheel-BeadWire,Facility
+BOILER,ETL-GPD-UTL-BOI,Utilities,BOILER,Facility
+Calender,ETL-GPD-IPT-CAL,IndustrialPneumaticTyres,Calender,Facility
+Chillerunit,ETL-GPD-UTL-CHIL,Utilities,Chillerunit,Facility
+Compressors,ETL-GPD-UTL-COMP,Utilities,Compressors,Facility
+Coolingtowers,ETL-GPD-UTL-CT,Utilities,Coolingtowers,Facility
+Corefixingmachine,ETL-GPD-TUB-CFM,TubeSection,Corefixingmachine,Facility
+CuringLine-1,ETL-GPD-SRT-CUR-1,SolidTyresSection,SRTCuringLine,Facility
+Curingline-1,ETL-GPD-IPT-CUR,IndustrialPneumaticTyres,IPTCuringline,Facility
+CuringLine-2,ETL-GPD-SRT-CUR-2,SolidTyresSection,SRTCuringLine,Facility
+CuringPress,ETL-GPD-TUB-CUR,TubeSection,TubeCuringPress,Facility
+Cuttingmachine,ETL-GPD-TUB-CUT,TubeSection,TubeCutting,Facility
+DieselGenerators,ETL-GPD-UTL-DG,Utilities,DGsets,Facility
+EmeraldGummidipoondiPlant,ETL-GPD,,EmeraldGummidipoondiPlant,Plant
+Flappresses,ETL-GPD-SRT-FPRE,SolidTyresSection,SRTFlappresses,Facility
+Hoist,ETL-GPD-SRT-HST,SolidTyresSection,Hoist,Facility
+Hoist,ETL-GPD-IPT-HST,IndustrialPneumaticTyres,Hoist,Facility
+Hoist,ETL-GPD-MIX-HST,MixingSection,Hoist,Facility
+Hoist,ETL-GPD-TUB-HST,TubeSection,Hoist,Facility
+Hoist,ETL-GPD-RIM-HST,WheelRim,Hoist,Facility
+Hydraulichandpallet,ETL-GPD-MIX-HHP,MixingSection,Hydraulichandpallet,Facility
+IndustrialPneumaticTyres,ETL-GPD-IPT,EmeraldGummidipoondiPlant,IndustrialPneumaticTyres,Facility
+Instruments IPT,ETL-GPD-IPT-MIS,IndustrialPneumaticTyres,instruments IPT,Facility
+Instruments LAB,ETL-GPD-LAB-MIS,Laboratory,instruments LAB,Facility
+Instruments MIX,ETL-GPD-MIX-MIS,MixingSection,instruments MIX,Facility
+Instruments RIM,ETL-GPD-RIM-MIS,WheelRim,instruments RIM,Facility
+Instruments SRT,ETL-GPD-SRT-MIS,SolidTyresSection,Instruments SRT,Facility
+InterMixerLine,ETL-GPD-MIX-INTMX,MixingSection,Mixing-Intermixer,Facility
+IPT mould,ETL-GPD-IPT-MLD,IndustrialPneumaticTyres,IPT mould,Facility
+K2Line,ETL-GPD-MIX-K2BBY,MixingSection,Mixing-K2Banbury,Facility
+KneaderLine,ETL-GPD-MIX-KNR,MixingSection,Mixing-Kneader,Facility
+Laboratory,ETL-GPD-LAB,EmeraldGummidipoondiPlant,Laboratory,Facility
+Mill,ETL-GPD-SRT-MILL,SolidTyresSection,SRTMill,Facility
+Mill,ETL-GPD-IPT-MILL,IndustrialPneumaticTyres,IPTMill,Facility
+Mill,ETL-GPD-TUB-MILL,TubeSection,TubeMill,Facility
+Mill,ETL-GPD-MIX-MILL,MixingSection,MixingMill,Facility
+MixingSection,ETL-GPD-MIX,EmeraldGummidipoondiPlant,MixingSection,Facility
+Motherpresses,ETL-GPD-SRT-MPRE,SolidTyresSection,SRTMotherpresses,Facility
+Mould tube,ETL-GPD-TUB-MLD,TubeSection,Mould tube,Facility
+Outstationcuring,ETL-GPD-SRT-OSCUR,SolidTyresSection,SRTCuringoutstation,Facility
+Outstationpress,ETL-GPD-SRT-OSPRE,SolidTyresSection,SRTPressoutstation,Facility
+PobcuringLine-1,ETL-GPD-SRT-PCUR-1,SolidTyresSection,SRTCuringLine,Facility
+PobcuringLine-2,ETL-GPD-SRT-PCUR-2,SolidTyresSection,SRTCuringLine,Facility
+Postcuringinflator,ETL-GPD-IPT-PCI,IndustrialPneumaticTyres,Postcuringinflator,Facility
+RIM-Tool & Die,ETL-GPD-RIM-TD,WheelRim,RIM-Tool & Die,Facility
+Sealingmachine,ETL-GPD-TUB-SEAL,TubeSection,Tubesealing,Facility
+SolidTyresSection,ETL-GPD-SRT,EmeraldGummidipoondiPlant,SolidTyresSection,Facility
+Splicing,ETL-GPD-TUB-SPL,TubeSection,TubeSplicing,Facility
+Splitrimline,ETL-GPD-RIM-SR,WheelRim,Wheel-Splitrim,Facility
+SRT mould,ETL-GPD-SRT-MLD,SolidTyresSection,SRT mould,Facility
+Steelbandline,ETL-GPD-RIM-SB,WheelRim,Wheel-SteelBand,Facility
+Transfercart,ETL-GPD-SRT-TRFC,SolidTyresSection,SRTTransfercart,Facility
+Transformers,ETL-GPD-UTL-TFR,Utilities,Transformers,Facility
+Trimmingmachine,ETL-GPD-IPT-TME,IndustrialPneumaticTyres,Trimmingmachine,Facility
+TubeSection,ETL-GPD-TUB,EmeraldGummidipoondiPlant,TubeSection,Facility
+Tyrebuilding,ETL-GPD-SRT-TBL,SolidTyresSection,SRTTyrebuilding,Facility
+Tyrebuilding,ETL-GPD-IPT-TBL,IndustrialPneumaticTyres,IPTTyrebuilding,Facility
+Utilities,ETL-GPD-UTL,EmeraldGummidipoondiPlant,Utilities,Facility
+Valvefixing,ETL-GPD-TUB-VLFX,TubeSection,TubeValvefixing,Facility
+Weighingscale,ETL-GPD-WSC,EmeraldGummidipoondiPlant,Weighingscale,Facility
+WheelRim,ETL-GPD-RIM,EmeraldGummidipoondiPlant,RimSection,Facility

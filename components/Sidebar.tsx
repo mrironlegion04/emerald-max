@@ -20,6 +20,7 @@ import {
   Shield,
   Settings,
   Cog,
+  Clock,
   QrCode,
   LogOut,
   ClipboardCheck,
@@ -180,6 +181,12 @@ const enterpriseSettingsItems = [
     label: 'Automation',
     href: '/settings/automation',
     icon: <Cog className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
+    label: 'Shifts',
+    href: '/settings/shifts',
+    icon: <Clock className="w-4 h-4" />,
     adminOnly: true,
   },
   {

@@ -25,6 +25,9 @@ const typeLabels: Record<string,string> = {
 const priorityLabels: Record<string,string> = {
   LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical',
 }
+const SHIFT_LABELS: Record<string,string> = {
+  SHIFTA: 'Shift A', SHIFTB: 'Shift B', SHIFTC: 'Shift C', NON_WORKING_HOURS: 'Non Working Hours',
+}
 const scopeLabels: Record<string,string> = {
   SINGLE_ASSET:'Single Asset', MULTI_ASSET:'Multi-Asset',
   LOCATION_GENERAL:'Location General', LOCATION_ALL_ASSETS:'Location All Assets',
@@ -255,6 +258,7 @@ export default async function WorkOrderDetailPage({
                   <span className="text-slate-400 italic">Unassigned</span>
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
+                ...(wo.shift ? [{ label: 'Shift', value: SHIFT_LABELS[wo.shift] ?? wo.shift }] : []),
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
                 { label: 'Start date',  value: fmtDateTime(wo.startDate) },
                 { label: 'Due date',    value: (

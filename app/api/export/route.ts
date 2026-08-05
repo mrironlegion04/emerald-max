@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
         'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
+        'Shift',
       ]
       const rows = wos.map(w => [
         w.woNumber, w.title, w.type, w.status, w.priority,
@@ -116,6 +117,7 @@ export async function GET(request: NextRequest) {
         w.laborHours ?? '', w.laborCost ?? '', w.partsCost ?? '',
         ((w.laborCost ?? 0) + (w.partsCost ?? 0)) || '',
         fmt(w.createdAt),
+        w.shift ?? '',
       ])
       csv = toCSV(headers, rows)
 

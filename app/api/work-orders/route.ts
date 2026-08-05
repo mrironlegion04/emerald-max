@@ -12,6 +12,7 @@ import {
   syncWorkOrderAssets,
 } from '@/lib/work-order-assets'
 import { generateWONumber } from '@/lib/wo-number'
+import { resolveShift } from '@/lib/shift'
 
 const woSchema = z.object({
   title:               z.string().min(1, 'Title is required'),
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
         customFields:   data.customFields as any ?? undefined,
         issueId:        data.issueId      ?? null,
         customIssue:    data.customIssue  ?? null,
+        shift:          await resolveShift(),
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,
       },

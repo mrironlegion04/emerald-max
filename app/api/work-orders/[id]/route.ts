@@ -82,6 +82,7 @@ const updateSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
+  shift:               z.string().nullable().optional(),
 }).refine(
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
@@ -334,6 +335,7 @@ export async function PUT(
       ...(data.teamId ? { domainId: derivedDomainId } : {}),
       ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
       ...extra,
+      ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
       startDate: data.startDate ? new Date(data.startDate) : undefined,
       assetId: normalized.assetId, // use normalized single-asset display value

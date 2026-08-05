@@ -594,6 +594,7 @@ model WorkOrder {
   partsCost   Float?
   notes       String?
   customFields Json?
+  shift       String? // admin-set at creation; read-only for users
 
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)
@@ -1308,6 +1309,19 @@ model TelegramPairing {
   @@index([token])
   @@index([userId])
   @@map("telegram_pairings")
+}
+
+model ShiftConfig {
+  id        String   @id @default(cuid())
+  name      String   @unique // SHIFTA, SHIFTB, SHIFTC, NON_WORKING_HOURS
+  label     String            // display label, e.g. "Shift A"
+  startTime String            // "HH:mm" start of shift window
+  endTime   String            // "HH:mm" end (end <= start means it wraps past midnight)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("shift_configs")
 }
 
 

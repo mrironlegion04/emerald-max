@@ -37,6 +37,9 @@ export async function POST(
     const now = new Date()
     const newDueDate = new Date(now)
     switch (existing.frequency) {
+      case 'HOURLY':
+        newDueDate.setTime(newDueDate.getTime() + existing.interval * 3600000)
+        break
       case 'DAILY':
         newDueDate.setDate(newDueDate.getDate() + existing.interval)
         break
@@ -78,6 +81,11 @@ export async function POST(
         nestedConfig:        existing.nestedConfig as any,
         nestedCounter:       0,
         nestedStartIndex:    existing.nestedStartIndex,
+        recurrenceRule:      existing.recurrenceRule as any,
+        occurrenceLimit:     existing.occurrenceLimit,
+        occurrenceCount:     0,
+        endDate:             existing.endDate,
+        facilityShift:       existing.facilityShift,
         woPriority:          existing.woPriority,
         woDescription:       existing.woDescription,
         woAssignedToId:      existing.woAssignedToId,

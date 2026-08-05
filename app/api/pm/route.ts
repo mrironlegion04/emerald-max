@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client'
 
 const nestedTierSchema = z.object({
   label:     z.string(),
-  frequency: z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
+  frequency: z.enum(['HOURLY','DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
   interval:  z.number().int().min(1),
   runEvery:  z.number().int().min(1),
   enabled:   z.boolean(),
@@ -40,8 +40,8 @@ const recurrenceRuleSchema = z
 const pmSchema = z.object({
   title:                z.string().min(1, 'Title is required'),
   description:          z.string().nullable().optional(),
-  triggerType:          z.enum(['TIME','METER','TIME_OR_METER']).default('TIME'),
-  frequency:            z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
+  triggerType:          z.enum(['TIME','METER','TIME_OR_METER','EVENT']).default('TIME'),
+  frequency:            z.enum(['HOURLY','DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
   interval:             z.number().int().min(1).default(1),
   nextDueDate:          z.string().min(1, 'Next due date is required'),
   assetId:              z.string().nullable().optional(),
@@ -71,6 +71,10 @@ const pmSchema = z.object({
   recurrenceRule:       recurrenceRuleSchema,
   occurrenceLimit:      z.number().int().min(1).nullable().optional(),
   endDate:              z.string().nullable().optional(),
+  // MaintWiz-style facility shift (informational)
+  facilityShift:        z.string().nullable().optional(),
+  // External system ID (bulk-import dedupe)
+  externalId:           z.string().nullable().optional(),
   // Task template — copied to every generated work order as subtasks
   tasks:                z.array(pmTaskSchema).optional().default([]),
 }).refine(data => data.assetId || data.locationId || (data.assetIds && data.assetIds.length > 0), {
@@ -159,6 +163,8 @@ export async function POST(request: NextRequest) {
         recurrenceRule:      recurrenceRule === null ? Prisma.JsonNull as unknown as Prisma.InputJsonValue : recurrenceRule,
         occurrenceLimit:     data.occurrenceLimit ?? null,
         endDate:             data.endDate ? new Date(data.endDate) : null,
+        facilityShift:       data.facilityShift ?? null,
+        externalId:          data.externalId ?? null,
         assetId:             finalAssetId,
         assets:              assetIds.length > 0
           ? { create: assetIds.map(assetId => ({ assetId })) }

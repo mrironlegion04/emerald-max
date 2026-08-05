@@ -14,6 +14,7 @@ interface Props {
 
 const freqOptions = [
   { value: '', label: 'All frequencies' },
+  { value: 'HOURLY',    label: 'Hourly' },
   { value: 'DAILY',     label: 'Daily' },
   { value: 'WEEKLY',    label: 'Weekly' },
   { value: 'MONTHLY',   label: 'Monthly' },

@@ -68,6 +68,7 @@ interface PMFormData {
   recurrenceDayOfMonth: string
   occurrenceLimit: string
   endDate: string
+  facilityShift: string
 }
 
 interface Props {
@@ -82,11 +83,12 @@ interface Props {
 }
 
 const freqOptions = [
-  { value: 'DAILY',     label: 'Daily' },
-  { value: 'WEEKLY',    label: 'Weekly' },
-  { value: 'MONTHLY',   label: 'Monthly' },
-  { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'YEARLY',    label: 'Yearly' },
+  { value: 'HOURLY',     label: 'Hourly' },
+  { value: 'DAILY',      label: 'Daily' },
+  { value: 'WEEKLY',     label: 'Weekly' },
+  { value: 'MONTHLY',    label: 'Monthly' },
+  { value: 'QUARTERLY',  label: 'Quarterly' },
+  { value: 'YEARLY',     label: 'Yearly' },
 ]
 
 const WEEKDAY_LABELS: Record<string, string> = {
@@ -205,6 +207,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
       ? String((initialData as any).occurrenceLimit) : '',
     endDate:            (initialData as any)?.endDate
       ? new Date((initialData as any).endDate).toISOString().split('T')[0] : '',
+    facilityShift:      (initialData as any)?.facilityShift ?? '',
   })
 
   const [nestedTiers, setNestedTiers] = useState<NestedTier[]>(
@@ -347,6 +350,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             : null,
         occurrenceLimit:      form.occurrenceLimit ? parseInt(form.occurrenceLimit) : null,
         endDate:              form.endDate || null,
+        facilityShift:        form.facilityShift || null,
         tasks:                tasks
           .filter(t => t.title.trim())
           .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null, required: t.required })),
@@ -489,7 +493,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
       {/* Trigger type & Schedule */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <h2 className="font-semibold text-gray-900 text-sm">Trigger type</h2>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <button
             type="button"
             onClick={() => set('triggerType', 'TIME')}
@@ -523,7 +527,27 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           >
             Time or Usage
           </button>
+          <button
+            type="button"
+            onClick={() => set('triggerType', 'EVENT')}
+            className={`flex-1 px-3 py-2 rounded-lg border-2 font-medium text-sm transition-colors ${
+              form.triggerType === 'EVENT'
+                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}
+          >
+            Condition/Event
+          </button>
         </div>
+
+        {form.triggerType === 'EVENT' && (
+          <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+            <p className="text-sm text-amber-700">
+              Condition/event-based schedules are generated manually (or by an external
+              event) — the due date does not auto-advance.
+            </p>
+          </div>
+        )}
 
         {(form.triggerType === 'TIME' || form.triggerType === 'TIME_OR_METER') && (
           <>
@@ -710,7 +734,9 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           <p className="text-xs text-gray-400 mt-1">
             {form.triggerType === 'METER'
               ? 'Start date for tracking meter-based maintenance. Does not auto-advance.'
-              : 'After a work order is generated, this date will advance by the frequency interval.'}
+              : form.triggerType === 'EVENT'
+                ? 'Reference due date for condition/event-based maintenance. Does not auto-advance.'
+                : 'After a work order is generated, this date will advance by the frequency interval.'}
           </p>
         </div>
 
@@ -760,6 +786,20 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             />
             <p className="text-xs text-gray-400 mt-1">
               How many WOs to pre-generate at once (1 = one at a time).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Facility Shift</label>
+            <input
+              type="text"
+              value={form.facilityShift}
+              onChange={e => set('facilityShift', e.target.value)}
+              placeholder="e.g. A, B, Rotating"
+              className="input-field"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Shift that performs this maintenance (informational, e.g. &ldquo;A&rdquo;).
             </p>
           </div>
         </div>

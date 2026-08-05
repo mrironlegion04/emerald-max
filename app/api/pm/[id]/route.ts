@@ -10,7 +10,7 @@ import { Prisma } from '@prisma/client'
 
 const nestedTierSchema = z.object({
   label:     z.string(),
-  frequency: z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
+  frequency: z.enum(['HOURLY','DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']),
   interval:  z.number().int().min(1),
   runEvery:  z.number().int().min(1),
   enabled:   z.boolean(),
@@ -40,8 +40,8 @@ const recurrenceRuleSchema = z
 const updateSchema = z.object({
   title:                z.string().min(1).optional(),
   description:          z.string().nullable().optional(),
-  triggerType:          z.enum(['TIME','METER','TIME_OR_METER']).optional(),
-  frequency:            z.enum(['DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']).optional(),
+  triggerType:          z.enum(['TIME','METER','TIME_OR_METER','EVENT']).optional(),
+  frequency:            z.enum(['HOURLY','DAILY','WEEKLY','MONTHLY','QUARTERLY','YEARLY']).optional(),
   interval:             z.number().int().min(1).optional(),
   nextDueDate:          z.string().optional(),
   assetId:              z.string().nullable().optional(),
@@ -71,6 +71,10 @@ const updateSchema = z.object({
   recurrenceRule:       recurrenceRuleSchema,
   occurrenceLimit:      z.number().int().min(1).nullable().optional(),
   endDate:              z.string().nullable().optional(),
+  // MaintWiz-style facility shift (informational)
+  facilityShift:        z.string().nullable().optional(),
+  // External system ID (bulk-import dedupe)
+  externalId:           z.string().nullable().optional(),
   // Task template — replace-all semantics when provided
   tasks:                z.array(pmTaskSchema).optional(),
 })
@@ -226,6 +230,12 @@ export async function PUT(
             : undefined,
           endDate:             data.endDate !== undefined
             ? (data.endDate ? new Date(data.endDate) : null)
+            : undefined,
+          facilityShift:       data.facilityShift !== undefined
+            ? data.facilityShift
+            : undefined,
+          externalId:          data.externalId !== undefined
+            ? data.externalId
             : undefined,
           assetId:             finalAssetId,
           locationId:          finalLocationId,

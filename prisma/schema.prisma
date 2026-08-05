@@ -77,6 +77,7 @@ enum LocationScope {
 }
 
 enum PMFrequency {
+  HOURLY
   DAILY
   WEEKLY
   MONTHLY
@@ -104,6 +105,7 @@ enum PMTriggerType {
   TIME
   METER
   TIME_OR_METER
+  EVENT // Condition/event-based trigger — no date advancement, not picked up by cron
 }
 
 enum ScheduleBehavior {
@@ -842,6 +844,12 @@ model MaintenanceSchedule {
 
   // Start date offset — WO startDate = dueDate - N days
   startDateOffset   Int  @default(0)
+
+  // MaintWiz-style facility shift (e.g. "A", "B", "Rotating") — informational
+  facilityShift String?
+
+  // External system ID — used to dedupe bulk imports on re-run
+  externalId    String?  @unique
 
   assetId             String?
   asset               Asset?             @relation(fields: [assetId], references: [id])

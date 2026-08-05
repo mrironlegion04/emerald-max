@@ -101,6 +101,7 @@ export default async function EditPMPage({
     recurrenceRule:      schedule.recurrenceRule as unknown as RecurrenceRule | null,
     occurrenceLimit:     schedule.occurrenceLimit != null ? String(schedule.occurrenceLimit) : '',
     endDate:             schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : '',
+    facilityShift:       schedule.facilityShift ?? '',
     tasks:               (schedule.tasks ?? []).map(t => ({
       title:        t.title,
       assignedToId: t.assignedToId ?? '',

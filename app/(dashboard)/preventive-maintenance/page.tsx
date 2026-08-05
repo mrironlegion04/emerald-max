@@ -26,7 +26,7 @@ interface SearchParams {
 const ITEMS_PER_PAGE = 25
 
 const freqLabels: Record<string, string> = {
-  DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
+  HOURLY: 'Hourly', DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly', YEARLY: 'Yearly',
 }
 
@@ -251,6 +251,9 @@ export default async function PMPage({
                         {s.triggerType === 'TIME_OR_METER' && (
                           <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px] font-semibold">Time or Usage</span>
                         )}
+                        {s.triggerType === 'EVENT' && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold">Condition/Event</span>
+                        )}
                         {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
                           <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>
                         )}
@@ -363,6 +366,9 @@ export default async function PMPage({
                         )}
                         {s.triggerType === 'TIME_OR_METER' && (
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px] font-semibold">Time or Usage</span>
+                        )}
+                        {s.triggerType === 'EVENT' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-semibold">Condition/Event</span>
                         )}
                         {(s.nestedConfig && Array.isArray(s.nestedConfig) && s.nestedConfig.length > 0) && (
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-semibold">+{s.nestedConfig.length} tier{s.nestedConfig.length !== 1 ? 's' : ''}</span>

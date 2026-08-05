@@ -94,6 +94,9 @@ export function advanceDate(
 ): Date {
   const next = new Date(current)
   switch (frequency) {
+    case 'HOURLY':
+      next.setTime(next.getTime() + interval * 3600000)
+      break
     case 'DAILY':
       next.setDate(next.getDate() + interval)
       break
@@ -285,6 +288,9 @@ export async function generateWOsForSchedule(
       for (let b = 0; b < horizon; b++) {
         if (schedule.triggerType === 'METER') {
           batchDates.push(new Date())
+        } else if (schedule.triggerType === 'EVENT') {
+          // Condition-triggered: never auto-advances — reuse the current due date
+          batchDates.push(new Date(due))
         } else if (b === 0) {
           batchDates.push(new Date(due))
         } else {

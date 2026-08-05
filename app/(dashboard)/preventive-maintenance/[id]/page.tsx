@@ -15,7 +15,7 @@ import { getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 
 const freqLabels: Record<string, string> = {
-  DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
+  HOURLY: 'Hourly', DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly', YEARLY: 'Yearly',
 }
 const woStatusLabels = WO_STATUS_LABELS
@@ -226,8 +226,8 @@ export default async function PMDetailPage({
                 ] : []),
                 { label: 'Trigger',    value: (
                   <Badge
-                    label={schedule.triggerType === 'TIME_OR_METER' ? 'Time or Usage' : schedule.triggerType === 'METER' ? 'Meter' : 'Time'}
-                    variant={schedule.triggerType === 'METER' ? 'yellow' : schedule.triggerType === 'TIME_OR_METER' ? 'orange' : 'gray'}
+                    label={schedule.triggerType === 'TIME_OR_METER' ? 'Time or Usage' : schedule.triggerType === 'METER' ? 'Meter' : schedule.triggerType === 'EVENT' ? 'Condition/Event' : 'Time'}
+                    variant={schedule.triggerType === 'METER' ? 'yellow' : schedule.triggerType === 'TIME_OR_METER' ? 'orange' : schedule.triggerType === 'EVENT' ? 'red' : 'gray'}
                   />
                 )},
                 { label: 'Behavior',   value: (
@@ -243,6 +243,9 @@ export default async function PMDetailPage({
                   { label: 'Start offset', value: `${schedule.startDateOffset} day${schedule.startDateOffset !== 1 ? 's' : ''} before due` },
                 ] : []),
                 { label: 'WO Priority', value: schedule.woPriority ?? 'Medium' },
+                ...(schedule.facilityShift ? [
+                  { label: 'Facility Shift', value: schedule.facilityShift },
+                ] : []),
                 ...(schedule.woAssignedTo ? [
                   { label: 'WO Assignee', value: schedule.woAssignedTo.name },
                 ] : []),

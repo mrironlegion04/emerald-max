@@ -1,0 +1,414 @@
+1: SM_ID,2: SM_VERSION,3: SM Creation Date,4: Facility,5: Facility Code,6: Equipment,7: Equipment Code,8: SM Description,9: SM Category,10: Nature of Issue,11: Owner,12: SM Trigger,13: SM Status,14: Facility Shift,16: Next Schedule Date,17: Checklist Mechanical,18: Checklist Electrical,19: Checklist Instrument,20: Checklist Others
+UTL--SM000035,1,2021-09-23,Coolingtowers,ETL-GPD-UTL-CT,COOLING TOWER-02,COOTOW05,MONTHLY PLAN,Preventive maintenance,Mech-Elec,Maintenance-IPT,TBM,Active,,07-Sep-2026,0,0,0,0
+UTL--SM000036,1,2021-09-23,Coolingtowers,ETL-GPD-UTL-CT,COOLING TOWER-03,COOTOW06,MONTHLY PLAN,Preventive maintenance,Mech-Elec,Maintenance-IPT,TBM,Active,,06-Oct-2026,0,0,0,0
+UTL--SM000038,1,2021-09-23,DieselGenerators,ETL-GPD-UTL-DG,DIESEL GENERATOR-40 KVA,40DGSET01,MONTHLY PLAN,Preventive maintenance,Mech-Elec,Maintenance-IPT,TBM,Active,,03-Sep-2026,0,0,0,0
+TUB--SM000028,1,2021-10-25,TubeSection,ETL-GPD-TUB,"EXTRUDER 6""",6EXT01,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,11-Sep-2026,0,0,0,20
+TUB--SM000034,1,2021-10-25,TubeSection,ETL-GPD-TUB,VACUUM PUMP - 15 HP,VACPUM01,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,0
+TUB--SM000035,1,2021-10-25,TubeSection,ETL-GPD-TUB,VACUUM PUMP - 10 HP,VACPUM02,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,0
+TUB--SM000036,1,2021-10-25,TubeSection,ETL-GPD-TUB,POWER PACK-1,POWPAK29,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,10
+TUB--SM000037,1,2021-10-25,TubeSection,ETL-GPD-TUB,POWER PACK-2,POWPAK30,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,10
+MIX--SM000026,1,2021-10-25,MixingSection,ETL-GPD-MIX,KNEADER  - 35 LTRS,35KNE01,Monthly plan,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,19
+UTL--SM000042,1,2021-11-24,Utilities,ETL-GPD-UTL,BOILER 8 TON,BOI01,WEEKLY PLAN,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,0
+UTL--SM000053,1,2023-06-30,Coolingtowers,ETL-GPD-UTL-CT,COOLING TOWER-01,COOTOW04,BI Monthly - COOLING TOWER-01,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,11-Oct-2026,0,0,0,0
+UTL--SM000054,1,2023-06-30,Coolingtowers,ETL-GPD-UTL-CT,COOLING TOWER,COOTOW01,BI Monthly - Cooling tower,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,11-Oct-2026,0,0,0,0
+TUB--SM000064,1,2023-06-30,TubeSection,ETL-GPD-TUB,SPLICING MACHINE - 01,SPLMAC01,BI Monthly - TS-108-04 SPLICING M/C,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,18-Oct-2026,0,0,0,9
+TUB--SM000065,1,2023-06-30,TubeSection,ETL-GPD-TUB,SPLICING MACHINE - 04,SPLMAC02,BI Monthly - TS-108-03 SPLICING M/C,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,18-Oct-2026,0,0,0,9
+TUB--SM000066,1,2023-06-30,CuringPress,ETL-GPD-TUB-CUR,"30"" CURING PRESS - TUBE  HYDRAULIC WITH 3 CAVITIES",30PRE01,"BI Monthly - 30""  CURING PRESS (20-02)",Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,16-Sep-2026,0,0,0,71
+TUB--SM000067,1,2023-06-30,Mill,ETL-GPD-TUB-MILL,"MIXING MILL - 42""-1",42MIL06,"BI Monthly - MIXING MILL - 42""-1",Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,04-Oct-2026,0,0,0,18
+TUB--SM000068,1,2023-06-30,Mill,ETL-GPD-TUB-MILL,"MIXING MILL - 42""-2",42MIL07,"BI Monthly - MIXING MILL - 42""-2",Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,04-Oct-2026,0,0,0,18
+TUB--SM000069,1,2023-06-30,CuringPress,ETL-GPD-TUB-CUR,"30"" CURING PRESS - TUBE  HYDRAULIC WITH 3 CAVITIES",30PRE01,BI Monthly - PRETM-04 ABC (TUBE CURING),Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,16-Oct-2026,0,0,0,71
+TUB--SM000070,1,2023-06-30,CuringPress,ETL-GPD-TUB-CUR,"38""CURING PRESS - TUBE - HYDRAULIC WITH 4 CAVITIES",38PRE01,BI Monthly - PRETM-02 AB (TUBE CURING),Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,25-Oct-2026,0,0,0,10
+TUB--SM000072,1,2023-06-30,TubeSection,ETL-GPD-TUB,"6"" HOT FEED EXTRUDER",6EXT01TP,BI Monthly - TUBE EXTRUDER,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,04-Oct-2026,0,0,0,0
+MIX--SM000028,1,2023-11-03,MixingSection,ETL-GPD-MIX,BALE CUTTER,BALCUT01,Monthly,Preventive maintenance,Mech,pavalavannan,TBM,Active,,06-Sep-2026,0,0,0,4
+MIX--SM000041,1,2023-11-03,InterMixerLine,ETL-GPD-MIX-INTMX,INTER MIXER - GK 50 BANBURY,GK50BAN01,Monthly,Preventive maintenance,Mech,pavalavannan,TBM,Active,,13-Sep-2026,0,0,0,18
+MIX--SM000042,1,2023-11-03,MixingSection,ETL-GPD-MIX,BUCKET CONVEYOR,BUCON01,Monthly,Preventive maintenance,Mech,pavalavannan,TBM,Active,,20-Sep-2026,0,0,0,17
+MIX--SM000043,1,2023-11-03,Mill,ETL-GPD-MIX-MILL,"MIXING MILL - 60""-1",60MIL01,Monthly,Preventive maintenance,Mech,pavalavannan,TBM,Active,,13-Sep-2026,0,0,0,21
+MIX--SM000044,1,2023-11-03,Mill,ETL-GPD-MIX-MILL,"MIXING MILL  - 60""-2",60MIL02,Monthly,Preventive maintenance,Mech,pavalavannan,TBM,Active,,20-Sep-2026,0,0,0,21
+MIX--SM000045,1,2023-11-03,MixingSection,ETL-GPD-MIX,BATCH OFF UNIT Auto,BATOFF01,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,17
+MIX--SM000046,1,2023-11-03,Mill,ETL-GPD-MIX-MILL,"MIXING MILL 48""",48MIL03,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,17
+IPT--SM001535,1,2024-02-21,IndustrialPneumaticTyres,ETL-GPD-IPT,BEAD FILLERING MACHINE,FILMAC01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,20-Sep-2026,0,0,0,4
+IPT--SM001537,1,2024-02-21,IndustrialPneumaticTyres,ETL-GPD-IPT,HOT WATER CIRCULATION SYSTEM,GENHOT01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,27-Sep-2026,0,0,0,0
+IPT--SM001539,1,2024-02-21,IndustrialPneumaticTyres,ETL-GPD-IPT,BEAD WINDING MACHINE,BEAWIN01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,20-Sep-2026,0,0,0,19
+IPT--SM001545,1,2024-02-21,IndustrialPneumaticTyres,ETL-GPD-IPT,CHAFFER SLITTING MACHINE,SLIMAC01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,10-Sep-2026,0,0,0,0
+IPT--SM001546,1,2024-02-21,IndustrialPneumaticTyres,ETL-GPD-IPT,"EXTRUDER - 8"" HOT FEED",8EXTHOT01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,13-Sep-2026,0,0,0,38
+IPT--SM001548,1,2024-02-21,Mill,ETL-GPD-IPT-MILL,"MIXING MILL - 42""",42MIL01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,13-Sep-2026,0,0,0,29
+IPT--SM001550,1,2024-02-21,Mill,ETL-GPD-IPT-MILL,MIXING MILL - 42,42MIL02P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,06-Sep-2026,0,0,0,29
+IPT--SM001560,1,2024-02-23,Curingline-1,ETL-GPD-IPT-CUR,"30"" CURING PRESS - 1 (20-02)",30PRE01P,Bi Monthly PM-20-02,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,06-Oct-2026,0,0,0,0
+IPT--SM001561,1,2024-02-23,Curingline-1,ETL-GPD-IPT-CUR,30'' CURING PRESS -2 (20-32),30PRE02P,Bi Monthly PM-20-32,Preventive maintenance,Mech-Elec,IPT_MIX_ENGG,TBM,Active,,12-Oct-2026,0,0,0,0
+SRT--SM001936,1,2024-03-20,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS- 17,100MOTPRE17,BI Monthly (06--17),Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Oct-2026,0,0,0,20
+SRT--SM001937,1,2024-03-20,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS- 18,100MOTPRE18,BI Monthly (06--18),Preventive maintenance,Mech,Manikandan,TBM,Active,,21-Oct-2026,0,0,0,20
+SRT--SM001944,1,2024-03-20,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS- 17,100MOTPRE17,BI Monthly (06--17),Preventive maintenance,Elect,Prem,TBM,Active,,20-Oct-2026,0,0,0,12
+SRT--SM001945,1,2024-03-20,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS- 18,100MOTPRE18,BI Monthly (06--18),Preventive maintenance,Elect,Prem,TBM,Active,,21-Oct-2026,0,0,0,12
+SRT--SM001990,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-13,3HOI13,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,13-Sep-2026,0,0,0,10
+SRT--SM001991,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-14,3HOI14,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,13-Sep-2026,0,0,0,10
+SRT--SM001992,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-15,3HOI15,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Sep-2026,0,0,0,10
+SRT--SM001993,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-16,3HOI16,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Sep-2026,0,0,0,10
+SRT--SM001994,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-17,3HOI17,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Sep-2026,0,0,0,10
+SRT--SM001995,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-18,3HOI18,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Sep-2026,0,0,0,10
+SRT--SM001996,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-19,3HOI19,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,27-Sep-2026,0,0,0,10
+SRT--SM002008,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-04,5HOI04,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,13-Sep-2026,0,0,0,10
+SRT--SM002015,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-13,3HOI13,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,13-Sep-2026,0,0,0,0
+SRT--SM002016,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-14,3HOI14,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,13-Sep-2026,0,0,0,0
+SRT--SM002017,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-15,3HOI15,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,20-Sep-2026,0,0,0,0
+SRT--SM002018,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-16,3HOI16,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,20-Sep-2026,0,0,0,0
+SRT--SM002019,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-17,3HOI17,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,20-Sep-2026,0,0,0,0
+SRT--SM002020,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-18,3HOI18,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,20-Sep-2026,0,0,0,0
+SRT--SM002021,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-19,3HOI19,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,27-Sep-2026,0,0,0,0
+SRT--SM002033,1,2024-03-20,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-04,5HOI04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,13-Sep-2026,0,0,0,0
+SRT--SM002034,1,2024-03-20,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS - 17,300PRE17,BI Monthly (04--22),Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Sep-2026,0,0,0,42
+SRT--SM002054,1,2024-03-20,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS - 17,300PRE17,BI Monthly (04--22),Preventive maintenance,Elect,Prem,TBM,Active,,07-Sep-2026,0,0,0,12
+SRT--SM002154,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,KNEADER  - 55 LTR,55KNE02,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,19
+SRT--SM002155,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,SHOT BLAST MOULD CLEAN MACHINE,SHOBLAMLD01,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,19
+SRT--SM002156,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,SHOT BLASTING MACHINE,SHOBLA01,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,14
+SRT--SM002157,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,TRANSFER CART-1,TRACAR01,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,30
+SRT--SM002158,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,TRANSFER CART-2,TRACAR02,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,30
+SRT--SM002159,1,2024-03-21,SolidTyresSection,ETL-GPD-SRT,TRANSFER CART-3,TRACAR03,Weekly,Preventive  Maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,30
+IPT--SM001616,1,2024-03-21,IndustrialPneumaticTyres,ETL-GPD-IPT,AWLING MACHINE,AWLMAC01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,07-Sep-2026,0,0,0,5
+IPT--SM001617,1,2024-03-21,IndustrialPneumaticTyres,ETL-GPD-IPT,AWLING MACHINE,AWLMAC02P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,06-Oct-2026,0,0,0,5
+SRT--SM002232,1,2024-07-31,Outstationpress,ETL-GPD-SRT-OSPRE,250 TON MOTHER PRESS-O/S-3,250MOTPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,11-Sep-2026,0,0,0,0
+SRT--SM002233,1,2024-07-31,Outstationpress,ETL-GPD-SRT-OSPRE,250 TON MOTHER PRESS-O/S-3,250MOTPRE01,"Monthly,O/S-6",Preventive maintenance,Elect,Prem,TBM,Active,,11-Sep-2026,0,0,0,11
+SRT--SM002302,1,2024-07-31,Mill,ETL-GPD-SRT-MILL,"MIXING MILL - 42""-4",42MIL03,"Monthly,02--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Oct-2026,0,0,0,0
+SRT--SM002303,1,2024-07-31,Mill,ETL-GPD-SRT-MILL,"MIXING MILL - 42""-4",42MIL03,"Monthly,02--05",Preventive maintenance,Elect,Prem,TBM,Active,,03-Sep-2026,0,0,0,13
+IPT--SM001624,1,2025-02-06,Hoist,ETL-GPD-IPT-HST,ELECTRIC HOIST (CALENDAR)- 1 TON - 03,1HOI03,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,24-Sep-2026,0,0,0,10
+IPT--SM001625,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,27' CURING PRESS -1 (20-01),27PRE01,Bi-Monthly,Preventive maintenance-(PM-20-01),Mech,IPT_MIX_ENGG,TBM,Active,,05-Oct-2026,0,0,0,71
+IPT--SM001626,1,2025-02-06,Hoist,ETL-GPD-IPT-HST,ELECTRIC HOIST - 2 TON-1,2HOI02,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Sep-2026,0,0,0,10
+IPT--SM001627,1,2025-02-06,Hoist,ETL-GPD-IPT-HST,EELECTRIC HOIST - 2 TON-1,2HOI03,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,12-Sep-2026,0,0,0,10
+IPT--SM001628,1,2025-02-06,Calender,ETL-GPD-IPT-CAL,36'' CALENDAR,36CAL03,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,06-Sep-2026,0,0,0,20
+IPT--SM001629,1,2025-02-06,Hoist,ETL-GPD-IPT-HST,ELECTRIC HOIST (CALENDAR) 3 TON - 20,3HOI20,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,16-Sep-2026,0,0,0,10
+IPT--SM001630,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,"40"" CURING PRESS-1 (20-31)",40PRE01,Bi-Monthly,Preventive maintenance-(PM-20-31),Mech,IPT_MIX_ENGG,TBM,Active,,22-Oct-2026,0,0,0,71
+IPT--SM001631,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,"40"" CURING PRESS-2 (20-33)",40PRE02,Bi-Monthly,Preventive maintenance-(PM-20-33),Mech,IPT_MIX_ENGG,TBM,Active,,02-Oct-2026,0,0,0,71
+IPT--SM001632,1,2025-02-06,Mill,ETL-GPD-IPT-MILL,"MIXING MILL - 16"" x 42""",42MIL03P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,06-Sep-2026,0,0,0,27
+IPT--SM001633,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -1 (20-04),42PRE01,Bi-Monthly,Preventive maintenance-(PM-20-04),Mech,IPT_MIX_ENGG,TBM,Active,,10-Oct-2026,0,0,0,71
+IPT--SM001634,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -2 (20-05),42PRE02,Bi-Monthly,Preventive maintenance-(PM-20-05),Mech,IPT_MIX_ENGG,TBM,Active,,19-Oct-2026,0,0,0,71
+IPT--SM001635,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -3 (20-06),42PRE03,Bi-Monthly,Preventive maintenance-(PM-20-06),Mech,IPT_MIX_ENGG,TBM,Active,,27-Oct-2026,0,0,0,71
+IPT--SM001636,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -4 (20-07),42PRE04,Bi-Monthly,Preventive maintenance-(PM-20-07),Mech,IPT_MIX_ENGG,TBM,Active,,07-Oct-2026,0,0,0,71
+IPT--SM001637,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42'' CURING PRESS -5   (20-10),42PRE05,Bi-Monthly,Preventive maintenance-(PM-20-10),Mech,IPT_MIX_ENGG,TBM,Active,,08-Oct-2026,0,0,0,71
+IPT--SM001638,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42'' CURING PRESS -6    (20-14),42PRE06,Bi-Monthly,Preventive maintenance-(PM-20-14),Mech,IPT_MIX_ENGG,TBM,Active,,16-Oct-2026,0,0,0,71
+IPT--SM001639,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -7 (20-15),42PRE07,Bi-Monthly,Preventive maintenance(PM-20-15),Mech,IPT_MIX_ENGG,TBM,Active,,24-Oct-2026,0,0,0,71
+IPT--SM001640,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -8 (20-20),42PRE08,Bi-Monthly,Preventive maintenance-(PM-20-20),Mech,IPT_MIX_ENGG,TBM,Active,,05-Oct-2026,0,0,0,71
+IPT--SM001641,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -9 (20-21),42PRE09,Bi-Monthly,Preventive maintenance-(PM-20-21),Mech,IPT_MIX_ENGG,TBM,Active,,13-Oct-2026,0,0,0,71
+IPT--SM001642,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42'' CURING PRESS -10 (20-22),42PRE10,Bi-Monthly,Preventive maintenance-(PM-20-22),Mech,IPT_MIX_ENGG,TBM,Active,,21-Oct-2026,0,0,0,71
+IPT--SM001643,1,2025-02-06,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -11 (20-23),42PRE11,Bi-Monthly,Preventive maintenance-(PM-20-23),Mech,IPT_MIX_ENGG,TBM,Active,,22-Oct-2026,0,0,0,71
+IPT--SM001654,1,2025-02-06,Calender,ETL-GPD-IPT-CAL,48'' CALENDAR,48CAL01,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,06-Sep-2026,0,0,0,32
+IPT--SM001660,1,2025-02-06,Mill,ETL-GPD-IPT-MILL,"MIXING MILL - 60""",60MIL01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,13-Sep-2026,0,0,0,17
+IPT--SM001663,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,6.00 - 9 APEX WINDING MACHINE,69APXWNDGMAC01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,20-Sep-2026,0,0,0,4
+IPT--SM001670,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,LOW TABLE BIAS CUTTING MACHINE,BIACUT02P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,20-Sep-2026,0,0,0,8
+IPT--SM001671,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,COLD WATER PM,COLWAT01P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,27-Sep-2026,0,0,0,15
+IPT--SM001672,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,ENDURANCE TESTING MACHINE,ENDTESMAC01,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,23-Sep-2026,0,0,0,5
+IPT--SM001673,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,JAMMING MACHINE,JAMMAC01,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,26-Sep-2026,0,0,0,5
+IPT--SM001692,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,TRIMMING MACHINE-01,TRMMAC01,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,07-Oct-2026,0,0,0,5
+IPT--SM001693,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,TRIMMING MACHINE-02,TRMMAC02,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,10-Sep-2026,0,0,0,5
+IPT--SM001694,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,TRIMMING MACHINE-03,TRMMAC03,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,18-Sep-2026,0,0,0,5
+IPT--SM001695,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,VACUUM PM,VACPM02P,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,27-Sep-2026,0,0,0,7
+IPT--SM001696,1,2025-02-06,IndustrialPneumaticTyres,ETL-GPD-IPT,VACUUM RECEIVER TANK,VACRECTNK01,Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,27-Sep-2026,0,0,0,16
+SRT--SM002392,1,2025-02-19,Outstationcuring,ETL-GPD-SRT-OSCUR,100 TON CURING PRESS -8,100MOTPRE08,"BI Monthly,06--11",Preventive maintenance,Mech,Manikandan,TBM,Active,,05-Oct-2026,0,0,0,20
+SRT--SM002393,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -9,100MOTPRE09,"BI Monthly,06--12",Preventive maintenance,Mech,Manikandan,TBM,Active,,06-Oct-2026,0,0,0,20
+SRT--SM002394,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -10,100MOTPRE10,"BI Monthly,06--13",Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Oct-2026,0,0,0,20
+SRT--SM002395,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -11,100MOTPRE11,"BI Monthly,06--14",Preventive maintenance,Mech,Manikandan,TBM,Active,,01-Oct-2026,0,0,0,20
+SRT--SM002396,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -12,100MOTPRE12,"BI Monthly,06--15",Preventive maintenance,Mech,Manikandan,TBM,Active,,02-Oct-2026,0,0,0,20
+SRT--SM002397,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-1,100FLPRE01,"BI Monthly,30--01",Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Oct-2026,0,0,0,3
+SRT--SM002398,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-1,100FLPRE01,"BI Monthly,30--01",Preventive maintenance,Elect,Prem,TBM,Active,,28-Oct-2026,0,0,0,3
+SRT--SM002399,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-2,100FLPRE02,"BI Monthly,30--02",Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Oct-2026,0,0,0,3
+SRT--SM002400,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-2,100FLPRE02,"BI Monthly,30--02",Preventive maintenance,Elect,Prem,TBM,Active,,22-Oct-2026,0,0,0,3
+SRT--SM002401,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-3,100FLPRE03,"BI Monthly,30--03",Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Oct-2026,0,0,0,3
+SRT--SM002402,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-3,100FLPRE03,"BI Monthly,30--03",Preventive maintenance,Elect,Prem,TBM,Active,,23-Oct-2026,0,0,0,3
+SRT--SM002403,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-4,100FLPRE04,"BI Monthly,30--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,24-Oct-2026,0,0,0,3
+SRT--SM002404,1,2025-02-19,Flappresses,ETL-GPD-SRT-FPRE,100 TON FLAP PRESS-4,100FLPRE04,"BI Monthly,30--04",Preventive maintenance,Elect,Prem,TBM,Active,,24-Oct-2026,0,0,0,3
+SRT--SM002405,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS- 1,100MOTPRE01,"BI Monthly,06--01",Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Oct-2026,0,0,0,20
+SRT--SM002406,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS- 1,100MOTPRE01,"BI Monthly,06--01",Preventive maintenance,Elect,Prem,TBM,Active,,19-Oct-2026,0,0,0,12
+SRT--SM002407,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -2,100MOTPRE02,"BI Monthly,06--02",Preventive maintenance,Mech,Manikandan,TBM,Active,,03-Oct-2026,0,0,0,20
+SRT--SM002408,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -2,100MOTPRE02,"BI Monthly,06--02",Preventive maintenance,Elect,Prem,TBM,Active,,03-Oct-2026,0,0,0,12
+SRT--SM002409,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -3,100MOTPRE03,"BI Monthly,06--03",Preventive maintenance,Mech,Manikandan,TBM,Active,,12-Oct-2026,0,0,0,20
+SRT--SM002410,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -3,100MOTPRE03,"BI Monthly,06--03",Preventive maintenance,Elect,Prem,TBM,Active,,12-Oct-2026,0,0,0,12
+SRT--SM002411,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS-4,100MOTPRE04,"BI Monthly,06--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,13-Oct-2026,0,0,0,20
+SRT--SM002412,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS-4,100MOTPRE04,"BI Monthly,06--04",Preventive maintenance,Elect,Prem,TBM,Active,,13-Oct-2026,0,0,0,12
+SRT--SM002413,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -5,100MOTPRE05,"BI Monthly,06--05",Preventive maintenance,Mech,Manikandan,TBM,Active,,14-Oct-2026,0,0,0,20
+SRT--SM002414,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -5,100MOTPRE05,"BI Monthly,06--05",Preventive maintenance,Elect,Prem,TBM,Active,,14-Oct-2026,0,0,0,12
+SRT--SM002415,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -6,100MOTPRE06,"BI Monthly,06--09",Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Oct-2026,0,0,0,20
+SRT--SM002416,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -6,100MOTPRE06,"BI Monthly,06--09",Preventive maintenance,Elect,Prem,TBM,Active,,09-Oct-2026,0,0,0,12
+SRT--SM002417,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -7,100MOTPRE07,"BI Monthly,06--10",Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Oct-2026,0,0,0,20
+SRT--SM002418,1,2025-02-19,PobcuringLine-1,ETL-GPD-SRT-PCUR-1,100 TON CURING PRESS -7,100MOTPRE07,"BI Monthly,06--10",Preventive maintenance,Elect,Prem,TBM,Active,,10-Oct-2026,0,0,0,12
+SRT--SM002419,1,2025-02-19,Outstationcuring,ETL-GPD-SRT-OSCUR,100 TON CURING PRESS -8,100MOTPRE08,"BI Monthly,06--11",Preventive maintenance,Elect,Prem,TBM,Active,,05-Oct-2026,0,0,0,12
+SRT--SM002420,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -9,100MOTPRE09,"BI Monthly,06--12",Preventive maintenance,Elect,Prem,TBM,Active,,06-Oct-2026,0,0,0,12
+SRT--SM002421,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -10,100MOTPRE10,"BI Monthly,06--13",Preventive maintenance,Elect,Prem,TBM,Active,,07-Oct-2026,0,0,0,12
+SRT--SM002422,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -11,100MOTPRE11,"BI Monthly,06--14",Preventive maintenance,Elect,Prem,TBM,Active,,01-Oct-2026,0,0,0,12
+SRT--SM002423,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -12,100MOTPRE12,"BI Monthly,06--15",Preventive maintenance,Elect,Prem,TBM,Active,,02-Oct-2026,0,0,0,12
+SRT--SM002424,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -13,100MOTPRE13,"BI Monthly,06--17",Preventive maintenance,Mech,Manikandan,TBM,Active,,20-Oct-2026,0,0,0,20
+SRT--SM002425,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -13,100MOTPRE13,"BI Monthly,06--17",Preventive maintenance,Elect,Prem,TBM,Active,,20-Oct-2026,0,0,0,12
+SRT--SM002426,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -14,100MOTPRE14,"BI Monthly,06--18",Preventive maintenance,Mech,Manikandan,TBM,Active,,21-Oct-2026,0,0,0,20
+SRT--SM002427,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS -14,100MOTPRE14,"BI Monthly,06--18",Preventive maintenance,Elect,Prem,TBM,Active,,21-Oct-2026,0,0,0,12
+SRT--SM002428,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS - 15,100MOTPRE15,"BI Monthly,06--19",Preventive maintenance,Mech,Manikandan,TBM,Active,,15-Oct-2026,0,0,0,20
+SRT--SM002429,1,2025-02-19,PobcuringLine-2,ETL-GPD-SRT-PCUR-2,100 TON CURING PRESS - 15,100MOTPRE15,"BI Monthly,06--19",Preventive maintenance,Elect,Prem,TBM,Active,,15-Oct-2026,0,0,0,12
+SRT--SM002430,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,1500 TON MOTHER PRESS - O/S-3,1500MOTPRE01,"Monthly,O/S-3",Preventive maintenance,Mech,Manikandan,TBM,Active,,11-Sep-2026,0,0,0,20
+SRT--SM002431,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,1500 TON MOTHER PRESS - O/S-3,1500MOTPRE01,"Monthly,O/S-3",Preventive maintenance,Elect,Prem,TBM,Active,,11-Sep-2026,0,0,0,12
+SRT--SM002432,1,2025-02-19,Outstationcuring,ETL-GPD-SRT-OSCUR,150 TON CURING PRESS,150MOTPRE01,"BI Monthly,06--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,08-Oct-2026,0,0,0,20
+SRT--SM002433,1,2025-02-19,Outstationcuring,ETL-GPD-SRT-OSCUR,150 TON CURING PRESS,150MOTPRE01,"BI Monthly,06--06",Preventive maintenance,Elect,Prem,TBM,Active,,08-Oct-2026,0,0,0,12
+SRT--SM002434,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,150 TON MOTHER PRESS- O/S-1,150MOTPRE02,"Monthly,OS-1",Preventive maintenance,Mech,Manikandan,TBM,Active,,14-Sep-2026,0,0,0,20
+SRT--SM002435,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,150 TON MOTHER PRESS- O/S-1,150MOTPRE02,"Monthly,OS-1",Preventive maintenance,Elect,Prem,TBM,Active,,14-Sep-2026,0,0,0,12
+SRT--SM002436,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 1 TON-01,1HOI01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,16-Sep-2026,0,0,0,10
+SRT--SM002437,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 1 TON-01,1HOI01,"Monthly,",Preventive maintenance,Elect,Prem,TBM,Active,,16-Sep-2026,0,0,0,11
+SRT--SM002438,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 1 TON-02,1HOI02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,17-Sep-2026,0,0,0,10
+SRT--SM002439,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 1 TON-02,1HOI02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,17-Sep-2026,0,0,0,11
+SRT--SM002440,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,250 TON CURING PRESS - 2,250MOTPRE02,"Monthly,OS-6",Preventive maintenance,Mech,Manikandan,TBM,Active,,08-Sep-2026,0,0,0,12
+SRT--SM002441,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,250 TON CURING PRESS - 2,250MOTPRE02,"Monthly,OS-6",Preventive maintenance,Elect,Prem,TBM,Active,,08-Sep-2026,0,0,0,12
+SRT--SM002442,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -1,300PRE01,"BI Monthly,04--05",Preventive maintenance,Mech,Manikandan,TBM,Active,,03-Nov-2026,0,0,0,21
+SRT--SM002443,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -1,300PRE01,"BI Monthly,04--05",Preventive maintenance,Elect,Prem,TBM,Active,,03-Nov-2026,0,0,0,12
+SRT--SM002444,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -2,300PRE02,"BI Monthly,04--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,21
+SRT--SM002445,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -2,300PRE02,"BI Monthly,04--06",Preventive maintenance,Elect,Prem,TBM,Active,,09-Sep-2026,0,0,0,12
+SRT--SM002446,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -3,300PRE03,"BI Monthly,04--07",Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Sep-2026,0,0,0,21
+SRT--SM002448,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -4,300PRE04,"BI Monthly,04--08",Preventive maintenance,Mech,Manikandan,TBM,Active,,11-Sep-2026,0,0,0,21
+SRT--SM002449,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -4,300PRE04,"BI Monthly,04--08",Preventive maintenance,Elect,Prem,TBM,Active,,11-Sep-2026,0,0,0,12
+SRT--SM002450,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -5,300PRE05,"BI Monthly,04--09",Preventive maintenance,Mech,Manikandan,TBM,Active,,12-Sep-2026,0,0,0,21
+SRT--SM002451,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -5,300PRE05,"BI Monthly,04--09",Preventive maintenance,Elect,Prem,TBM,Active,,12-Sep-2026,0,0,0,12
+SRT--SM002452,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -6,300PRE06,"BI Monthly,04--10",Preventive maintenance,Mech,Manikandan,TBM,Active,,21-Sep-2026,0,0,0,21
+SRT--SM002453,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -6,300PRE06,"BI Monthly,04--10",Preventive maintenance,Elect,Prem,TBM,Active,,21-Sep-2026,0,0,0,12
+SRT--SM002454,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -7,300PRE07,"BI Monthly,04--14",Preventive maintenance,Mech,Manikandan,TBM,Active,,15-Sep-2026,0,0,0,21
+SRT--SM002455,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -7,300PRE07,"BI Monthly,04--14",Preventive maintenance,Elect,Prem,TBM,Active,,15-Sep-2026,0,0,0,12
+SRT--SM002456,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -8,300PRE08,"BI Monthly,04--15",Preventive maintenance,Mech,Manikandan,TBM,Active,,16-Sep-2026,0,0,0,21
+SRT--SM002457,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS -8,300PRE08,"BI Monthly,04--15",Preventive maintenance,Elect,Prem,TBM,Active,,16-Sep-2026,0,0,0,12
+SRT--SM002458,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -9,300PRE09,"BI Monthly,04--16",Preventive maintenance,Mech,Manikandan,TBM,Active,,17-Sep-2026,0,0,0,21
+SRT--SM002459,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -9,300PRE09,"BI Monthly,04--16",Preventive maintenance,Elect,Prem,TBM,Active,,17-Sep-2026,0,0,0,12
+SRT--SM002460,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -10,300PRE10,"BI Monthly,04--18",Preventive maintenance,Mech,Manikandan,TBM,Active,,04-Nov-2026,0,0,0,21
+SRT--SM002461,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -10,300PRE10,"BI Monthly,04--18",Preventive maintenance,Elect,Prem,TBM,Active,,04-Nov-2026,0,0,0,12
+SRT--SM002462,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -11,300PRE11,"BI Monthly,04--19",Preventive maintenance,Mech,Manikandan,TBM,Active,,03-Sep-2026,0,0,0,21
+SRT--SM002463,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -11,300PRE11,"BI Monthly,04--19",Preventive maintenance,Elect,Prem,TBM,Active,,03-Sep-2026,0,0,0,12
+SRT--SM002464,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -12,300PRE12,"BI Monthly,04--20",Preventive maintenance,Mech,Manikandan,TBM,Active,,04-Sep-2026,0,0,0,21
+SRT--SM002465,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -12,300PRE12,"BI Monthly,04--20",Preventive maintenance,Elect,Prem,TBM,Active,,04-Sep-2026,0,0,0,12
+SRT--SM002466,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -13,300PRE13,"BI Monthly,04--21",Preventive maintenance,Mech,Manikandan,TBM,Active,,05-Sep-2026,0,0,0,21
+SRT--SM002467,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -13,300PRE13,"BI Monthly,04--21",Preventive maintenance,Elect,Prem,TBM,Active,,05-Sep-2026,0,0,0,12
+SRT--SM002468,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -14,300PRE14,"BI Monthly,04--22",Preventive maintenance,Mech,Manikandan,TBM,Active,,14-Sep-2026,0,0,0,21
+SRT--SM002469,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -14,300PRE14,"BI Monthly,04--22",Preventive maintenance,Elect,Prem,TBM,Active,,14-Sep-2026,0,0,0,12
+SRT--SM002470,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -15,300PRE15,"BI Monthly,04--23",Preventive maintenance,Mech,Manikandan,TBM,Active,,08-Sep-2026,0,0,0,21
+SRT--SM002471,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,300 TON CURING PRESS -15,300PRE15,"BI Monthly,04--23",Preventive maintenance,Elect,Prem,TBM,Active,,08-Sep-2026,0,0,0,12
+SRT--SM002472,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,"CALENDER 10"" x 30"" - 3 ROLL",30CAL01,"Monthly,03--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,14-Sep-2026,0,0,0,22
+SRT--SM002473,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,"CALENDER 10"" x 30"" - 3 ROLL",30CAL01,"Monthly,03--04",Preventive maintenance,Elect,Prem,TBM,Active,,14-Sep-2026,0,0,0,11
+SRT--SM002474,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,"CALENDER 36"" - 3 ROLL",36CAL01,"Monthly,03--05",Preventive maintenance,Mech,Manikandan,TBM,Active,,04-Sep-2026,0,0,0,22
+SRT--SM002475,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,"CALENDER 36"" - 3 ROLL",36CAL01,"Monthly,03--05",Preventive maintenance,Elect,Prem,TBM,Active,,04-Sep-2026,0,0,0,11
+SRT--SM002476,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,CALENDER 250 MM x 1000 MM - 2 ROLL,36CAL02,"Monthly,03--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,05-Sep-2026,0,0,0,22
+SRT--SM002477,1,2025-02-19,Tyrebuilding,ETL-GPD-SRT-TBL,CALENDER 250 MM x 1000 MM - 2 ROLL,36CAL02,"Monthly,03--06",Preventive maintenance,Elect,Prem,TBM,Active,,05-Sep-2026,0,0,0,11
+SRT--SM002478,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-1,3HOI01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,10
+SRT--SM002479,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-1,3HOI01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,11
+SRT--SM002480,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-2,3HOI02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,10
+SRT--SM002481,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-2,3HOI02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,11
+SRT--SM002482,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-3,3HOI03,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,10
+SRT--SM002483,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-3,3HOI03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,09-Sep-2026,0,0,0,11
+SRT--SM002484,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-4,3HOI04,"Monthly,26--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,10
+SRT--SM002485,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-4,3HOI04,"Monthly,26--04",Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,11
+SRT--SM002486,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-5,3HOI05,"Monthly,26--05",Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,10
+SRT--SM002487,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-5,3HOI05,"Monthly,26--05",Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,11
+SRT--SM002488,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-6,3HOI06,"Monthly,26--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Sep-2026,0,0,0,10
+SRT--SM002489,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-6,3HOI06,"Monthly,26--06",Preventive maintenance,Elect,Prem,TBM,Active,,28-Sep-2026,0,0,0,11
+SRT--SM002490,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-7,3HOI07,"Monthly,26--07",Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,10
+SRT--SM002491,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-7,3HOI07,"Monthly,26--07",Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,11
+SRT--SM002492,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-8,3HOI08,"Monthly,26--08",Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Sep-2026,0,0,0,10
+SRT--SM002493,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-8,3HOI08,"Monthly,26--08",Preventive maintenance,Elect,Prem,TBM,Active,,23-Sep-2026,0,0,0,11
+SRT--SM002494,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-9,3HOI09,"Monthly,26--09",Preventive maintenance,Mech,Manikandan,TBM,Active,,24-Sep-2026,0,0,0,10
+SRT--SM002495,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-9,3HOI09,"Monthly,26--09",Preventive maintenance,Elect,Prem,TBM,Active,,24-Sep-2026,0,0,0,11
+SRT--SM002496,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-10,3HOI10,"Monthly,26--10",Preventive maintenance,Mech,Manikandan,TBM,Active,,25-Sep-2026,0,0,0,10
+SRT--SM002497,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-10,3HOI10,"Monthly,26--10",Preventive maintenance,Elect,Prem,TBM,Active,,25-Sep-2026,0,0,0,11
+SRT--SM002498,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-11,3HOI11,"Monthly,26--11",Preventive maintenance,Mech,Manikandan,TBM,Active,,26-Sep-2026,0,0,0,10
+SRT--SM002499,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-11,3HOI11,"Monthly,26--11",Preventive maintenance,Elect,Prem,TBM,Active,,26-Sep-2026,0,0,0,11
+SRT--SM002500,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-12,3HOI12,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,14-Sep-2026,0,0,0,10
+SRT--SM002501,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 3 TON-12,3HOI12,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,14-Sep-2026,0,0,0,11
+SRT--SM002502,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,"CRACKER MILL - 40""-3",40CRAMIL01,"Monthly,02--08",Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Sep-2026,0,0,0,19
+SRT--SM002503,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,"CRACKER MILL - 40""-3",40CRAMIL01,"Monthly,02--08",Preventive maintenance,Elect,Prem,TBM,Active,,07-Sep-2026,0,0,0,12
+SRT--SM002504,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,"EXTRUDER 4 1/2""",412EXT01,BI Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,13
+SRT--SM002505,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,"EXTRUDER 4 1/2""",412EXT01,BI Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,14
+SRT--SM002506,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,"MIXING MILL - 16"" x 42""-1",42MIL01,"Monthly,02--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,06-Oct-2026,0,0,0,19
+SRT--SM002507,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,"MIXING MILL - 16"" x 42""-1",42MIL01,"Monthly,02--04",Preventive maintenance,Elect,Prem,TBM,Active,,06-Oct-2026,0,0,0,13
+SRT--SM002508,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,MIXING MILL - 16,42MIL02,"Monthly,02--05(POB)",Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Oct-2026,0,0,0,19
+SRT--SM002509,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,MIXING MILL - 16,42MIL02,"Monthly,02--05(POB)",Preventive maintenance,Elect,Prem,TBM,Active,,07-Oct-2026,0,0,0,13
+SRT--SM002510,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,MIXING MILL 48,48MIL01,"Monthly,02--07",Preventive maintenance,Mech,Manikandan,TBM,Active,,03-Sep-2026,0,0,0,19
+SRT--SM002511,1,2025-02-19,Mill,ETL-GPD-SRT-MILL,MIXING MILL 48,48MIL01,"Monthly,02--07",Preventive maintenance,Elect,Prem,TBM,Active,,03-Sep-2026,0,0,0,13
+SRT--SM002512,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,550 TON MOTHER PRESS-O/S-4,550MOTPRE01,"Monthly,OS-4",Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,12
+SRT--SM002513,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,550 TON MOTHER PRESS-O/S-4,550MOTPRE01,"Monthly,OS-4",Preventive maintenance,Elect,Prem,TBM,Active,,09-Sep-2026,0,0,0,10
+SRT--SM002514,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS -01,550PRE01,"BI Monthly,04--12",Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,21
+SRT--SM002515,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS -01,550PRE01,"BI Monthly,04--12",Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,12
+SRT--SM002516,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS -02,550PRE02,"BI Monthly,04--03",Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,21
+SRT--SM002517,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS -02,550PRE02,"BI Monthly,04--03",Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,12
+SRT--SM002518,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,550 TON CURING PRESS -03,550PRE03,"BI Monthly,04--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Sep-2026,0,0,0,21
+SRT--SM002519,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,550 TON CURING PRESS -03,550PRE03,"BI Monthly,04--04",Preventive maintenance,Elect,Prem,TBM,Active,,28-Sep-2026,0,0,0,12
+SRT--SM002520,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS - 04,550PRE04,"BI Monthly,04--13",Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,21
+SRT--SM002521,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS - 04,550PRE04,"BI Monthly,04--13",Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,12
+SRT--SM002522,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS - 05,550PRE05,"BI Monthly,04--17",Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Sep-2026,0,0,0,21
+SRT--SM002523,1,2025-02-19,CuringLine-1,ETL-GPD-SRT-CUR-1,550 TON CURING PRESS - 05,550PRE05,"BI Monthly,04--17",Preventive maintenance,Elect,Prem,TBM,Active,,23-Sep-2026,0,0,0,12
+SRT--SM002524,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-01,5HOI01,"Monthly,26--01",Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Sep-2026,0,0,0,10
+SRT--SM002525,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-01,5HOI01,"Monthly,26--01",Preventive maintenance,Elect,Prem,TBM,Active,,10-Sep-2026,0,0,0,11
+SRT--SM002526,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-02,5HOI02,"Monthly,O/S-3",Preventive maintenance,Mech,Manikandan,TBM,Active,,08-Sep-2026,0,0,0,10
+SRT--SM002527,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-02,5HOI02,"Monthly,O/S-3",Preventive maintenance,Elect,Prem,TBM,Active,,08-Sep-2026,0,0,0,11
+SRT--SM002528,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-03,5HOI03,"Monthly,26--03",Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Sep-2026,0,0,0,10
+SRT--SM002529,1,2025-02-19,Hoist,ETL-GPD-SRT-HST,ELECTRIC HOIST - 5 TON-03,5HOI03,"Monthly,26--03",Preventive maintenance,Elect,Prem,TBM,Active,,07-Sep-2026,0,0,0,11
+SRT--SM002530,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,650 TON CURING PRESS,650PRE01,"BI Monthly,04--11",Preventive maintenance,Mech,Manikandan,TBM,Active,,24-Sep-2026,0,0,0,21
+SRT--SM002531,1,2025-02-19,CuringLine-2,ETL-GPD-SRT-CUR-2,650 TON CURING PRESS,650PRE01,"BI Monthly,04--11",Preventive maintenance,Elect,Prem,TBM,Active,,24-Sep-2026,0,0,0,24
+SRT--SM002532,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,750 TON MOTHER PRESS-O/S-5,750MOTPRE01,"Monthly,OS-5",Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Sep-2026,0,0,0,12
+SRT--SM002533,1,2025-02-19,Outstationpress,ETL-GPD-SRT-OSPRE,750 TON MOTHER PRESS-O/S-5,750MOTPRE01,"Monthly,OS-5",Preventive maintenance,Elect,Prem,TBM,Active,,10-Sep-2026,0,0,0,22
+SRT--SM002534,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-4,80MOTPRE04,"Monthly,05--04",Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,12
+SRT--SM002535,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-4,80MOTPRE04,"Monthly,05--04",Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,22
+SRT--SM002536,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-5,80MOTPRE05,"Monthly,05--05",Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,12
+SRT--SM002537,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-5,80MOTPRE05,"Monthly,05--05",Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,22
+SRT--SM002538,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-6,80MOTPRE06,"Monthly,05--06",Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Sep-2026,0,0,0,12
+SRT--SM002539,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-6,80MOTPRE06,"Monthly,05--06",Preventive maintenance,Elect,Prem,TBM,Active,,28-Sep-2026,0,0,0,22
+SRT--SM002540,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-7,80MOTPRE07,"Monthly,05--07",Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,12
+SRT--SM002541,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-7,80MOTPRE07,"Monthly,05--07",Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,22
+SRT--SM002542,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-8,80MOTPRE08,"Monthly,05--08",Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Sep-2026,0,0,0,12
+SRT--SM002543,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-8,80MOTPRE08,"Monthly,05--08",Preventive maintenance,Elect,Prem,TBM,Active,,23-Sep-2026,0,0,0,22
+SRT--SM002544,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-9,80MOTPRE09,"Monthly,05--09",Preventive maintenance,Mech,Manikandan,TBM,Active,,24-Sep-2026,0,0,0,12
+SRT--SM002545,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-9,80MOTPRE09,"Monthly,05--09",Preventive maintenance,Elect,Prem,TBM,Active,,24-Sep-2026,0,0,0,22
+SRT--SM002546,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-10,80MOTPRE10,"Monthly,05--10",Preventive maintenance,Mech,Manikandan,TBM,Active,,25-Sep-2026,0,0,0,12
+SRT--SM002547,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-10,80MOTPRE10,"Monthly,05--10",Preventive maintenance,Elect,Prem,TBM,Active,,25-Sep-2026,0,0,0,22
+SRT--SM002548,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-11,80MOTPRE11,"Monthly,05--11",Preventive maintenance,Mech,Manikandan,TBM,Active,,26-Sep-2026,0,0,0,12
+SRT--SM002549,1,2025-02-19,Motherpresses,ETL-GPD-SRT-MPRE,80 TON MOTHER PRESS-11,80MOTPRE11,"Monthly,05--11",Preventive maintenance,Elect,Prem,TBM,Active,,26-Sep-2026,0,0,0,22
+SRT--SM002550,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-1,POWPAK01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,8
+SRT--SM002551,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-1,POWPAK01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,12
+SRT--SM002552,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-2,POWPAK02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,8
+SRT--SM002553,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-2,POWPAK02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,12
+SRT--SM002554,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-3,POWPAK03,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Sep-2026,0,0,0,8
+SRT--SM002555,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-3,POWPAK03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,28-Sep-2026,0,0,0,12
+SRT--SM002556,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-4,POWPAK04,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,8
+SRT--SM002557,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-4,POWPAK04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,12
+SRT--SM002558,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-5,POWPAK05,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Sep-2026,0,0,0,8
+SRT--SM002559,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-5,POWPAK05,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,23-Sep-2026,0,0,0,12
+SRT--SM002560,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-6,POWPAK06,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,24-Sep-2026,0,0,0,8
+SRT--SM002561,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-6,POWPAK06,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,24-Sep-2026,0,0,0,12
+SRT--SM002562,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-7,POWPAK07,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,25-Sep-2026,0,0,0,8
+SRT--SM002563,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-7,POWPAK07,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,25-Sep-2026,0,0,0,12
+SRT--SM002564,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-8,POWPAK08,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,26-Sep-2026,0,0,0,8
+SRT--SM002565,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-8,POWPAK08,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,26-Sep-2026,0,0,0,12
+SRT--SM002566,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-9,POWPAK09,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,8
+SRT--SM002567,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-9,POWPAK09,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,06-Sep-2026,0,0,0,12
+SRT--SM002568,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-10,POWPAK10,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,27-Sep-2026,0,0,0,8
+SRT--SM002569,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-10,POWPAK10,Monthly,Preventive maintenance,Elect,,TBM,Active,,27-Sep-2026,0,0,0,12
+SRT--SM002570,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-11,POWPAK11,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,8
+SRT--SM002571,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-11,POWPAK11,Monthly,Preventive maintenance,Elect,,TBM,Active,,27-Sep-2026,0,0,0,12
+SRT--SM002572,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-12,POWPAK12,Monthly,Preventive maintenance,Mech,,TBM,Active,,06-Sep-2026,0,0,0,8
+SRT--SM002573,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-12,POWPAK12,Monthly,Preventive maintenance,Elect,,TBM,Active,,06-Sep-2026,0,0,0,12
+SRT--SM002574,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-13,POWPAK13,Monthly,Preventive maintenance,Mech,,TBM,Active,,06-Sep-2026,0,0,0,8
+SRT--SM002575,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-13,POWPAK13,Monthly,Preventive maintenance,Elect,,TBM,Active,,06-Sep-2026,0,0,0,12
+SRT--SM002576,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-14,POWPAK14,Monthly,Preventive maintenance,Mech,,TBM,Active,,13-Sep-2026,0,0,0,8
+SRT--SM002577,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-14,POWPAK14,Monthly,Preventive maintenance,Elect,,TBM,Active,,13-Sep-2026,0,0,0,12
+SRT--SM002578,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-15,POWPAK15,Monthly,Preventive maintenance,Mech,,TBM,Active,,13-Sep-2026,0,0,0,8
+SRT--SM002579,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-15,POWPAK15,Monthly,Preventive maintenance,Elect,,TBM,Active,,13-Sep-2026,0,0,0,12
+SRT--SM002580,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-16,POWPAK16,Monthly,Preventive maintenance,Mech,,TBM,Active,,20-Sep-2026,0,0,0,8
+SRT--SM002581,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-16,POWPAK16,Monthly,Preventive maintenance,Elect,,TBM,Active,,20-Sep-2026,0,0,0,12
+SRT--SM002582,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-17,POWPAK17,Monthly,Preventive maintenance,Mech,,TBM,Active,,20-Sep-2026,0,0,0,8
+SRT--SM002583,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-17,POWPAK17,Monthly,Preventive maintenance,Elect,,TBM,Active,,20-Sep-2026,0,0,0,12
+SRT--SM002584,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-18,POWPAK18,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,8
+SRT--SM002585,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-18,POWPAK18,Monthly,Preventive maintenance,Elect,,TBM,Active,,27-Sep-2026,0,0,0,12
+SRT--SM002586,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-19,POWPAK19,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,8
+SRT--SM002587,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-19,POWPAK19,Monthly,Preventive maintenance,Elect,,TBM,Active,,27-Sep-2026,0,0,0,12
+SRT--SM002588,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-20,POWPAK20,Monthly,Preventive maintenance,Mech,,TBM,Active,,20-Sep-2026,0,0,0,8
+SRT--SM002589,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-20,POWPAK20,Monthly,Preventive maintenance,Elect,,TBM,Active,,20-Sep-2026,0,0,0,12
+SRT--SM002590,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-21,POWPAK21,Monthly,Preventive maintenance,Mech,,TBM,Active,,27-Sep-2026,0,0,0,8
+SRT--SM002591,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-21,POWPAK21,Monthly,Preventive maintenance,Elect,,TBM,Active,,27-Sep-2026,0,0,0,12
+SRT--SM002592,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-22,POWPAK22,Monthly,Preventive maintenance,Mech,,TBM,Active,,14-Sep-2026,0,0,0,8
+SRT--SM002593,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-22,POWPAK22,Monthly,Preventive maintenance,Elect,,TBM,Active,,14-Sep-2026,0,0,0,12
+SRT--SM002594,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-23,POWPAK23,Monthly,Preventive maintenance,Mech,,TBM,Active,,14-Sep-2026,0,0,0,8
+SRT--SM002595,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-23,POWPAK23,Monthly,Preventive maintenance,Elect,,TBM,Active,,14-Sep-2026,0,0,0,12
+SRT--SM002596,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-24,POWPAK24,Monthly,Preventive maintenance,Mech,,TBM,Active,,07-Sep-2026,0,0,0,8
+SRT--SM002597,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-24,POWPAK24,Monthly,Preventive maintenance,Elect,,TBM,Active,,07-Sep-2026,0,0,0,12
+SRT--SM002598,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-25,POWPAK25,Monthly,Preventive maintenance,Mech,,TBM,Active,,09-Sep-2026,0,0,0,8
+SRT--SM002599,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-25,POWPAK25,Monthly,Preventive maintenance,Elect,,TBM,Active,,09-Sep-2026,0,0,0,12
+SRT--SM002600,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-26,POWPAK26,Monthly,Preventive maintenance,Mech,,TBM,Active,,10-Sep-2026,0,0,0,8
+SRT--SM002601,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-26,POWPAK26,Monthly,Preventive maintenance,Elect,,TBM,Active,,10-Sep-2026,0,0,0,12
+SRT--SM002602,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-27,POWPAK27,Monthly,Preventive maintenance,Mech,,TBM,Active,,08-Sep-2026,0,0,0,8
+SRT--SM002603,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-27,POWPAK27,Monthly,Preventive maintenance,Elect,,TBM,Active,,08-Sep-2026,0,0,0,12
+SRT--SM002604,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-28,POWPAK28,Monthly,Preventive maintenance,Mech,,TBM,Active,,08-Sep-2026,0,0,0,8
+SRT--SM002605,1,2025-02-19,SolidTyresSection,ETL-GPD-SRT,POWER PACK-28,POWPAK28,Monthly,Preventive maintenance,Elect,,TBM,Active,,08-Sep-2026,0,0,0,12
+IPT--SM001697,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,42' CURING PRESS -12 (20-24),42PRE12,"BI Monthly,PM-20-24",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Sep-2026,0,0,0,71
+IPT--SM001698,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"42"" CURING PRESS -13 (20-27)",42PRE13,"BI Monthly,PM-20-27",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,12-Sep-2026,0,0,0,71
+IPT--SM001699,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"42"" CURING PRESS -14 (20-28)",42PRE14,"BI Monthly,PM-20-28",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Sep-2026,0,0,0,71
+IPT--SM001700,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,42'' CURING PRESS -15 (20-29),42PRE15,"BI Monthly,PM-20-29",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Sep-2026,0,0,0,71
+IPT--SM001701,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"42"" CURING PRESS -16 (20-30)",42PRE16,"BI Monthly,PM-20-30",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Nov-2026,0,0,0,71
+IPT--SM001702,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"45""CURING PRESS - 1 (20-08)",45PRE01,"BI Monthly,PM-20-08",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,10-Sep-2026,0,0,0,71
+IPT--SM001703,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"45"" CURING PRESS -2 (20-09)",45PRE02,"BI Monthly,PM-20-09",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,18-Sep-2026,0,0,0,71
+IPT--SM001704,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,46'' CURING PRESS -1  (20-03),46PRE01,"BI Monthly,PM-20-03",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,26-Sep-2026,0,0,0,71
+IPT--SM001705,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,46'' CURING PRESS -2  (20-11),46PRE02,"BI Monthly,PM-20-11",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,07-Sep-2026,0,0,0,71
+IPT--SM001706,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,46'' CURING PRESS - 3 (20-12),46PRE03,"BI Monthly,PM-20-12",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,08-Sep-2026,0,0,0,71
+IPT--SM001707,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,48'' CURING PRESS -01 (20-13),48PRE01,"BI Monthly,PM-20-13",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,16-Sep-2026,0,0,0,71
+IPT--SM001708,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"48"" CURING PRESS -2 (20-25)",48PRE02,"BI Monthly,PM-20-25",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,24-Sep-2026,0,0,0,71
+IPT--SM001709,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"48"" CURING PRESS -3 (20-26)",48PRE03,"BI Monthly,PM-20-26",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Sep-2026,0,0,0,71
+IPT--SM001710,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,55' CURING PRESS -1 (20-16),55PRE01,"BI Monthly,PM-20-16",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,12-Sep-2026,0,0,0,71
+IPT--SM001711,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,55' CURING PRESS -2 (20-17),55PRE02,"BI Monthly,PM-20-17",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Sep-2026,0,0,0,71
+IPT--SM001712,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"63.5"" CURING PRESS -1 (20-18)",635PRE01,"BI Monthly,PM-20-18",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Sep-2026,0,0,0,71
+IPT--SM001713,1,2025-02-20,Curingline-1,ETL-GPD-IPT-CUR,"63.5"" CURING PRESS -2 (20-19)",635PRE02,"BI Monthly,PM-20-19",Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Nov-2026,0,0,0,71
+IPT--SM001714,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-28-01 RB-1,TBM01,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,08-Oct-2026,0,0,0,19
+IPT--SM001715,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-(28-02) RB-1,TBM02,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,16-Oct-2026,0,0,0,19
+IPT--SM001716,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-(28-03) RB-3,TBM03,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,24-Oct-2026,0,0,0,19
+IPT--SM001717,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-(28-04) RB-3,TBM04,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,05-Oct-2026,0,0,0,19
+IPT--SM001718,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-(28-05) RB-3,TBM05,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,13-Oct-2026,0,0,0,19
+IPT--SM001719,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING MACHINE-(28-06) RB-3,TBM06,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Oct-2026,0,0,0,19
+IPT--SM001720,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-07) RB-3,TBM07,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Oct-2026,0,0,0,19
+IPT--SM001721,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING- (28-08) RB-3,TBM08,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,02-Oct-2026,0,0,0,19
+IPT--SM001722,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-09) RB-5,TBM09,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,10-Oct-2026,0,0,0,19
+IPT--SM001723,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-10) RB-5,TBM10,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Sep-2026,0,0,0,19
+IPT--SM001724,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-11) RB-3,TBM11,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Sep-2026,0,0,0,19
+IPT--SM001725,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-12) RB-3,TBM12,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,04-Nov-2026,0,0,0,19
+IPT--SM001726,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING -13,TBM13,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,10-Sep-2026,0,0,0,19
+IPT--SM001727,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-14) RB-3,TBM14,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,18-Sep-2026,0,0,0,19
+IPT--SM001728,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-15) RB-1,TBM15,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,26-Sep-2026,0,0,0,19
+IPT--SM001729,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-16) RB-1,TBM16,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,07-Sep-2026,0,0,0,19
+IPT--SM001730,1,2025-02-20,Tyrebuilding,ETL-GPD-IPT-TBL,TYRE BUILDING-(28-17) RB-1,TBM17,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,08-Sep-2026,0,0,0,19
+IPT--SM001731,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI01P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Oct-2026,0,0,0,10
+IPT--SM001732,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI02P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Oct-2026,0,0,0,10
+IPT--SM001733,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI03P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,02-Oct-2026,0,0,0,10
+IPT--SM001734,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI04P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,12-Sep-2026,0,0,0,10
+IPT--SM001735,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI05P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,21-Sep-2026,0,0,0,10
+IPT--SM001736,1,2025-02-20,Bandbuilding,ETL-GPD-IPT-BB,BAND BUILDING MACHINE,BANBUI06P,BI Monthly,Preventive maintenance,Mech,IPT_MIX_ENGG,TBM,Active,,22-Sep-2026,0,0,0,10
+SRT--SM002606,1,2025-03-12,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS - 23,300PRE23,BI Monthly (04--31),Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,25-Sep-2026,0,0,0,18
+SRT--SM002607,1,2025-03-12,CuringLine-1,ETL-GPD-SRT-CUR-1,300 TON CURING PRESS - 23,300PRE23,BI Monthly (04--31),Preventive maintenance,Elect,Prem,TBM,Active,,25-Sep-2026,0,0,0,12
+RIM--SM000147,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,200 TON HYDRAULIC PRESS,200PRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,05-Sep-2026,0,0,0,22
+RIM--SM000148,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,150 TON MECHANICAL PRESS,150TMECPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,06-Oct-2026,0,0,0,22
+RIM--SM000149,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,16 TON MECHANICAL PRESS - 1,16TMECPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,07-Oct-2026,0,0,0,17
+RIM--SM000150,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,16 TON MECHANICAL PRESS - 2,16TMECPRE02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,03-Sep-2026,0,0,0,17
+RIM--SM000151,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,160 TON MECHANICAL PRESS,160TMECPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,04-Sep-2026,0,0,0,28
+RIM--SM000152,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,250 ton mechanical press,250TMECPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,33
+RIM--SM000154,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,150 TON MECHANICAL PRESS,150TMECPRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,06-Oct-2026,0,0,0,0
+RIM--SM000155,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,16 TON MECHANICAL PRESS - 1,16TMECPRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,07-Oct-2026,0,0,0,0
+RIM--SM000156,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,16 TON MECHANICAL PRESS - 2,16TMECPRE02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,03-Sep-2026,0,0,0,0
+RIM--SM000157,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,160 TON MECHANICAL PRESS,160TMECPRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,04-Sep-2026,0,0,0,0
+RIM--SM000158,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,200 TON HYDRAULIC PRESS,200PRE01,Monthly,Preventive maintenance,Mech-Elec,Prem,TBM,Active,,05-Sep-2026,0,0,0,0
+RIM--SM000159,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,250 ton mechanical press,250TMECPRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,06-Sep-2026,0,0,0,0
+RIM--SM000160,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,ACCCURATE LATHE,LATMAC04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,06-Sep-2026,0,0,0,0
+RIM--SM000161,1,2025-03-26,WheelRim,ETL-GPD-RIM,CNC machine,CNCLAT01RP,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,12-Sep-2026,0,0,0,46
+RIM--SM000162,1,2025-03-26,WheelRim,ETL-GPD-RIM,CNC machine,CNCLAT01RP,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,12-Sep-2026,0,0,0,0
+RIM--SM000163,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,4 ROLLING MACHINE (AKYAPAK),4ROLMAC01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,08-Sep-2026,0,0,0,21
+RIM--SM000164,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,BENCH GRINDER,BENGRI04,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,12-Sep-2026,0,0,0,6
+RIM--SM000165,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,LATHE  PAYAL 1000 MM,LATMAC02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,20
+RIM--SM000166,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,4 ROLLING MACHINE (AKYAPAK),4ROLMAC01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,08-Sep-2026,0,0,0,0
+RIM--SM000167,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,BENCH GRINDER,BENGRI04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,12-Sep-2026,0,0,0,0
+RIM--SM000168,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,LATHE  PAYAL 1000 MM,LATMAC02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,09-Sep-2026,0,0,0,0
+RIM--SM000170,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,50 TON FITMENT PRESS-1,50TYRFITPRE01SB,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,09-Sep-2026,0,0,0,0
+RIM--SM000171,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,50 TON FITMENT PRESS-2,50TYRFITPRE02SB,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Sep-2026,0,0,0,0
+RIM--SM000172,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,600 TON HYDRAULIC PRESS,600PRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,13-Sep-2026,0,0,0,24
+RIM--SM000173,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,75 TON MECHANICAL PRESS,75TMECPRE01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,10-Sep-2026,0,0,0,22
+RIM--SM000174,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,ANIL LATHE,LATMAC03,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,11-Sep-2026,0,0,0,20
+RIM--SM000175,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,300 TON HYDRAULIC PRESS,300PRE16,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,14-Sep-2026,0,0,0,0
+RIM--SM000176,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,50 TON FITMENT PRESS-1,50TYRFITPRE01SB,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,09-Sep-2026,0,0,0,0
+RIM--SM000177,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,50 TON FITMENT PRESS-2,50TYRFITPRE02SB,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,10-Sep-2026,0,0,0,0
+RIM--SM000178,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,600 TON HYDRAULIC PRESS,600PRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,13-Sep-2026,0,0,0,0
+RIM--SM000179,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,75 TON MECHANICAL PRESS,75TMECPRE01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,10-Sep-2026,0,0,0,0
+RIM--SM000180,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,ANIL LATHE,LATMAC03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,11-Sep-2026,0,0,0,0
+RIM--SM000181,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,FLASH BUTT WELDING MACHINE,FLWELMAC04,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,21-Sep-2026,0,0,0,7
+RIM--SM000182,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,LINEAR MIG WELDING MACHINE - WARPP,NELMIGWELMAC03,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,15-Sep-2026,0,0,0,12
+RIM--SM000183,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,PEDESTAL DRILLING MACHINE -3,PEDDRIMAC03,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,19-Sep-2026,0,0,0,11
+RIM--SM000184,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,FLASH BUTT WELDING MACHINE,FLWELMAC04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,21-Sep-2026,0,0,0,0
+RIM--SM000185,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,LINEAR MIG WELDING MACHINE - WARPP,NELMIGWELMAC03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,15-Sep-2026,0,0,0,0
+RIM--SM000186,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,PEDESTAL DRILLING MACHINE -3,PEDDRIMAC03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,19-Sep-2026,0,0,0,0
+RIM--SM000187,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,MILLING MACHINE,VERMILMAC01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,16-Sep-2026,0,0,0,11
+RIM--SM000188,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,PEDESTAL DRILLING MACHINE -1,PEDDRIMAC01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,17-Sep-2026,0,0,0,11
+RIM--SM000189,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,PEDESTAL DRILLING MACHINE -2,PEDDRIMAC02,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,18-Sep-2026,0,0,0,11
+RIM--SM000190,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,MILLING MACHINE,VERMILMAC01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,16-Sep-2026,0,0,0,0
+RIM--SM000191,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,PEDESTAL DRILLING MACHINE -1,PEDDRIMAC01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,17-Sep-2026,0,0,0,0
+RIM--SM000192,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,PEDESTAL DRILLING MACHINE -2,PEDDRIMAC02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,18-Sep-2026,0,0,0,0
+RIM--SM000193,1,2025-03-26,WheelRim,ETL-GPD-RIM,VMC machine,VMC01RP,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,22-Sep-2026,0,0,0,24
+RIM--SM000194,1,2025-03-26,WheelRim,ETL-GPD-RIM,VMC machine,VMC01RP,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,22-Sep-2026,0,0,0,0
+RIM--SM000195,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,PEDESTAL DRILLING MACHINE -4,PEDDRIMAC04,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,27-Sep-2026,0,0,0,11
+RIM--SM000196,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,WELDING FIXTURE,WELDFIX01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,23-Sep-2026,0,0,0,17
+RIM--SM000197,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,PEDESTAL DRILLING MACHINE -4,PEDDRIMAC04,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,27-Sep-2026,0,0,0,0
+RIM--SM000198,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,WELDING FIXTURE,WELDFIX01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,23-Sep-2026,0,0,0,0
+RIM--SM000199,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,MIG WELDING MACHINE - ARPP,MIGWELMAC03,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,24-Sep-2026,0,0,0,0
+RIM--SM000200,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,MIG WELDING MACHINE - ESAB,MIGWELMAC01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,25-Sep-2026,0,0,0,0
+RIM--SM000201,1,2025-03-26,Steelbandline,ETL-GPD-RIM-SB,MIG WELDING MACHINE - L & T,MIGWELMAC02,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,26-Sep-2026,0,0,0,0
+RIM--SM000202,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,RADIAL DRILLING MACHINE,RADDRIMAC01,Monthly,Preventive maintenance,Mech,Manikandan,TBM,Active,,28-Sep-2026,0,0,0,12
+RIM--SM000203,1,2025-03-26,Splitrimline,ETL-GPD-RIM-SR,RADIAL DRILLING MACHINE,RADDRIMAC01,Monthly,Preventive maintenance,Elect,Prem,TBM,Active,,28-Sep-2026,0,0,0,0
+RIM--SM000205,3,2026-04-13,Splitrimline,ETL-GPD-RIM-SR,ACCCURATE LATHE,LATMAC04,Monthly,Preventive maintenance,Mech-Elec,Manikandan,TBM,Active,,06-Sep-2026,0,0,0,21

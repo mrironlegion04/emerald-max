@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { advanceDate } from '@/lib/pm-generation'
+import { advanceDate, type RecurrenceRule } from '@/lib/pm-generation'
 import { buildLocationFilter } from '@/lib/access-control'
 
 interface PreviewWO {
@@ -51,6 +51,32 @@ export async function GET(
     const horizon = schedule.schedulingHorizon ?? 1
     const previewWOs: PreviewWO[] = []
     const baseCounter = (schedule.nestedCounter ?? 0) + (schedule.nestedStartIndex ?? 0)
+    const recurrence = (schedule.recurrenceRule ?? null) as RecurrenceRule | null
+
+    // Precompute per-batch due dates (stepwise so recurrence rules apply per step)
+    const batchDates: Date[] = []
+    {
+      let due = new Date(schedule.nextDueDate)
+      for (let b = 0; b < horizon; b++) {
+        if (schedule.triggerType === 'METER') {
+          batchDates.push(new Date())
+        } else if (b === 0) {
+          batchDates.push(new Date(due))
+        } else {
+          due = advanceDate(due, schedule.frequency, schedule.interval, recurrence)
+          batchDates.push(new Date(due))
+        }
+      }
+    }
+
+    // Honor occurrence limit + end date
+    const startingCount = schedule.occurrenceCount ?? 0
+    const eligibleBatches: number[] = []
+    for (let b = 0; b < batchDates.length; b++) {
+      if (schedule.endDate && batchDates[b] > new Date(schedule.endDate)) break
+      if (schedule.occurrenceLimit != null && startingCount + eligibleBatches.length >= schedule.occurrenceLimit) break
+      eligibleBatches.push(b)
+    }
 
     // Resolve target assets: junction rows win, fall back to the legacy single assetId
     const targetAssets = schedule.assets.length > 0
@@ -60,17 +86,9 @@ export async function GET(
       targetAssets.length > 0 ? targetAssets : [null]
 
     for (const asset of targets) {
-      for (let batch = 0; batch < horizon; batch++) {
-        // Calculate due date for this batch
-        let dueDate: Date
-        if (schedule.triggerType === 'METER') {
-          dueDate = new Date()
-        } else {
-          const baseDate = new Date(schedule.nextDueDate)
-          dueDate = batch === 0
-            ? baseDate
-            : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
-        }
+      for (const batch of eligibleBatches) {
+        // Due date for this batch (precomputed)
+        const dueDate = batchDates[batch]
 
         // Build tiers for this batch
         const counter = baseCounter + batch

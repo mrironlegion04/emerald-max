@@ -24,9 +24,74 @@ interface GenerationResult {
   errors: string[]
 }
 
+// ── Recurrence Rules (MaintWiz-style monthly rules) ─────────────────────
+// NTH_WEEKDAY: "The {occurrence} {dayOfWeek} of every N month(s)"
+//   occurrence: 1-5 (1st, 2nd, … 5th) or -1 (last)
+//   dayOfWeek: 0=Sunday … 6=Saturday
+// DAY_OF_MONTH: "The {dayOfMonth} of every N month(s)"
+//   dayOfMonth: 1-31 (clamped to month length) or -1 (last day)
+
+export type RecurrenceRule =
+  | { type: 'NTH_WEEKDAY'; dayOfWeek: number; occurrence: number }
+  | { type: 'DAY_OF_MONTH'; dayOfMonth: number }
+
+function nthWeekdayDate(year: number, month: number, dayOfWeek: number, occurrence: number): Date {
+  const lastDayNum = new Date(year, month + 1, 0).getDate()
+  if (occurrence === -1) {
+    const lastDow = new Date(year, month, lastDayNum).getDay()
+    return new Date(year, month, lastDayNum - ((lastDow - dayOfWeek + 7) % 7))
+  }
+  const firstDow = new Date(year, month, 1).getDay()
+  let day = 1 + ((dayOfWeek - firstDow + 7) % 7) + (occurrence - 1) * 7
+  if (day > lastDayNum) day -= 7 // 5th weekday doesn't exist → use the last one
+  return new Date(year, month, day)
+}
+
+function dayOfMonthDate(year: number, month: number, dayOfMonth: number): Date {
+  const lastDayNum = new Date(year, month + 1, 0).getDate()
+  const day = dayOfMonth === -1 ? lastDayNum : Math.min(dayOfMonth, lastDayNum)
+  return new Date(year, month, day)
+}
+
+function dateForRule(year: number, month: number, rule: RecurrenceRule): Date {
+  if (rule.type === 'NTH_WEEKDAY') {
+    return nthWeekdayDate(year, month, rule.dayOfWeek, rule.occurrence)
+  }
+  return dayOfMonthDate(year, month, rule.dayOfMonth)
+}
+
+// First recurrence-conformant date on or after `date` (monthly rules only)
+export function snapToRecurrence(date: Date, rule: RecurrenceRule): Date {
+  const candidate = dateForRule(date.getFullYear(), date.getMonth(), rule)
+  if (candidate.getTime() >= date.getTime()) return candidate
+  const targetMonth = date.getMonth() + 1
+  const year = date.getFullYear() + Math.floor(targetMonth / 12)
+  const monthInYear = ((targetMonth % 12) + 12) % 12
+  return dateForRule(year, monthInYear, rule)
+}
+
+// Compute the initial nextDueDate for a schedule from its start date.
+// With a monthly recurrence rule, snaps to the first conformant date.
+export function computeNextDueDate(
+  startDate: Date,
+  frequency: string,
+  _interval: number,
+  recurrenceRule?: RecurrenceRule | null,
+): Date {
+  if (recurrenceRule && frequency === 'MONTHLY') {
+    return snapToRecurrence(startDate, recurrenceRule)
+  }
+  return startDate
+}
+
 // ── Date Utilities (with month-overflow fix) ────────────────────────────
 
-export function advanceDate(current: Date, frequency: string, interval: number): Date {
+export function advanceDate(
+  current: Date,
+  frequency: string,
+  interval: number,
+  recurrenceRule?: RecurrenceRule | null,
+): Date {
   const next = new Date(current)
   switch (frequency) {
     case 'DAILY':
@@ -35,16 +100,23 @@ export function advanceDate(current: Date, frequency: string, interval: number):
     case 'WEEKLY':
       next.setDate(next.getDate() + interval * 7)
       break
-    case 'MONTHLY': {
-      const targetMonth = next.getMonth() + interval
-      const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
-      const monthInYear = ((targetMonth % 12) + 12) % 12
-      const lastDay = new Date(targetYear, monthInYear + 1, 0).getDate()
-      next.setDate(Math.min(next.getDate(), lastDay))
-      next.setMonth(monthInYear)
-      next.setFullYear(targetYear)
+    case 'MONTHLY':
+      if (recurrenceRule) {
+        const targetMonth = next.getMonth() + interval
+        const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
+        const monthInYear = ((targetMonth % 12) + 12) % 12
+        return dateForRule(targetYear, monthInYear, recurrenceRule)
+      }
+      {
+        const targetMonth = next.getMonth() + interval
+        const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
+        const monthInYear = ((targetMonth % 12) + 12) % 12
+        const lastDay = new Date(targetYear, monthInYear + 1, 0).getDate()
+        next.setDate(Math.min(next.getDate(), lastDay))
+        next.setMonth(monthInYear)
+        next.setFullYear(targetYear)
+      }
       break
-    }
     case 'QUARTERLY': {
       const targetMonth = next.getMonth() + interval * 3
       const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
@@ -201,54 +273,72 @@ export async function generateWOsForSchedule(
     }
   }
 
-  // Determine how many horizon batches to generate
-  const horizon = options?.horizon ?? schedule.schedulingHorizon ?? 1
-  const baseCounter = (schedule.nestedCounter ?? 0) + (schedule.nestedStartIndex ?? 0)
+    // Determine how many horizon batches to generate
+    const horizon = options?.horizon ?? schedule.schedulingHorizon ?? 1
+    const baseCounter = (schedule.nestedCounter ?? 0) + (schedule.nestedStartIndex ?? 0)
+    const recurrence = (schedule.recurrenceRule ?? null) as RecurrenceRule | null
 
-  // Generate WOs in a transaction
-  const generated = await prisma.$transaction(async tx => {
-    const woIds: string[] = []
-    const woNumbers: string[] = []
-    let currentCounter = schedule.nestedCounter ?? 0
-    const eligibleAssets = targetAssets.filter(a => !skippedAssets.has(a.id))
-    const targets: (typeof eligibleAssets[number] | null)[] =
-      eligibleAssets.length > 0 ? eligibleAssets : [null]
+    // Precompute per-batch due dates (stepwise so recurrence rules apply per step)
+    const batchDates: Date[] = []
+    {
+      let due = new Date(schedule.nextDueDate)
+      for (let b = 0; b < horizon; b++) {
+        if (schedule.triggerType === 'METER') {
+          batchDates.push(new Date())
+        } else if (b === 0) {
+          batchDates.push(new Date(due))
+        } else {
+          due = advanceDate(due, schedule.frequency, schedule.interval, recurrence)
+          batchDates.push(new Date(due))
+        }
+      }
+    }
 
-    for (const asset of targets) {
-      for (let batch = 0; batch < horizon; batch++) {
-        // Build tiers for this batch's counter value
-        const tiers = buildTiers({
-          ...schedule,
-          nestedCounter: baseCounter + batch,
-        })
+    // Honor occurrence limit + end date — compute which batches may generate
+    const startingCount = schedule.occurrenceCount ?? 0
+    const eligibleBatches: number[] = []
+    for (let b = 0; b < batchDates.length; b++) {
+      if (schedule.endDate && batchDates[b] > new Date(schedule.endDate)) break
+      if (schedule.occurrenceLimit != null && startingCount + eligibleBatches.length >= schedule.occurrenceLimit) break
+      eligibleBatches.push(b)
+    }
 
-        const tiersToGenerate = options?.maxWOs
-          ? tiers.slice(0, options.maxWOs)
-          : tiers
+    // Generate WOs in a transaction
+    const generated = await prisma.$transaction(async tx => {
+      const woIds: string[] = []
+      const woNumbers: string[] = []
+      let currentCounter = schedule.nestedCounter ?? 0
+      const eligibleAssets = targetAssets.filter(a => !skippedAssets.has(a.id))
+      const targets: (typeof eligibleAssets[number] | null)[] =
+        eligibleAssets.length > 0 ? eligibleAssets : [null]
 
-        for (let i = 0; i < tiersToGenerate.length; i++) {
-          const tier = tiersToGenerate[i]
-          const woNumber = await generateWONumber(
-            schedule.locationId ?? asset?.locationId,
-            tx,
-          )
+      for (const asset of targets) {
+        for (const batch of eligibleBatches) {
+          // Build tiers for this batch's counter value
+          const tiers = buildTiers({
+            ...schedule,
+            nestedCounter: baseCounter + batch,
+          })
 
-          // Build title
-          let woTitle = schedule.title
-          if (tier.label) woTitle += ` — ${tier.label}`
-          if (asset) woTitle += ` — ${asset.name}`
-          else if (schedule.location) woTitle += ` — ${schedule.location.name}`
+          const tiersToGenerate = options?.maxWOs
+            ? tiers.slice(0, options.maxWOs)
+            : tiers
 
-          // Calculate due date (advance by batch * interval from base date)
-          let dueDate: Date
-          if (schedule.triggerType === 'METER') {
-            dueDate = new Date()
-          } else {
-            const baseDate = new Date(schedule.nextDueDate)
-            dueDate = batch === 0
-              ? baseDate
-              : advanceDate(baseDate, schedule.frequency, schedule.interval * batch)
-          }
+          for (let i = 0; i < tiersToGenerate.length; i++) {
+            const tier = tiersToGenerate[i]
+            const woNumber = await generateWONumber(
+              schedule.locationId ?? asset?.locationId,
+              tx,
+            )
+
+            // Build title
+            let woTitle = schedule.title
+            if (tier.label) woTitle += ` — ${tier.label}`
+            if (asset) woTitle += ` — ${asset.name}`
+            else if (schedule.location) woTitle += ` — ${schedule.location.name}`
+
+            // Due date for this batch (precomputed)
+            const dueDate = batchDates[batch]
 
           // Calculate start date from offset
           const startDate = (schedule.startDateOffset ?? 0) > 0
@@ -317,26 +407,35 @@ export async function generateWOsForSchedule(
       }
     }
 
-    currentCounter += horizon
+    currentCounter += eligibleBatches.length
 
-    // Advance nextDueDate (for fixed intervals, advance from current due date)
+    // Advance nextDueDate (for fixed intervals, advance stepwise from current due date)
     let nextDue: Date | null = null
     if (schedule.triggerType === 'TIME' && schedule.scheduleBehavior === 'FIXED') {
-      nextDue = advanceDate(
-        new Date(schedule.nextDueDate),
-        schedule.frequency,
-        schedule.interval * horizon,
-      )
+      nextDue = new Date(schedule.nextDueDate)
+      for (let i = 0; i < eligibleBatches.length; i++) {
+        nextDue = advanceDate(nextDue, schedule.frequency, schedule.interval, recurrence)
+      }
     }
     // For FLOATING: nextDue is advanced when the WO is completed (handled in handleWOCompletion)
     // For METER: don't advance the date
-    // For TIME_OR_METER with fixed: advance by horizon batches
+    // For TIME_OR_METER with fixed: advance by the eligible batches
+
+    const newOccurrenceCount = startingCount + eligibleBatches.length
+    const reachedLimit = schedule.occurrenceLimit != null
+      && newOccurrenceCount >= schedule.occurrenceLimit
+    const pastEnd = schedule.endDate != null
+      && eligibleBatches.length === 0
+      && batchDates.length > 0
+      && batchDates[0] > new Date(schedule.endDate)
 
     await tx.maintenanceSchedule.update({
       where: { id: scheduleId },
       data: {
         ...(nextDue ? { nextDueDate: nextDue } : {}),
         nestedCounter: currentCounter,
+        occurrenceCount: newOccurrenceCount,
+        ...(reachedLimit || pastEnd ? { isActive: false } : {}),
         ...(schedule.triggerType === 'METER' && eligibleAssets.length > 0
           ? { lastTriggeredValue: Math.max(...eligibleAssets.map(a => a.currentMeterValue ?? 0)) }
           : {}),
@@ -367,19 +466,26 @@ export async function handleWOCompletion(workOrderId: string) {
       frequency: true,
       interval: true,
       nextDueDate: true,
+      recurrenceRule: true,
+      endDate: true,
     },
   })
   if (!schedule || schedule.scheduleBehavior !== 'FLOATING') return
 
   // Reschedule from completion date
   const completedAt = new Date()
-  const nextDue = advanceDate(completedAt, schedule.frequency, schedule.interval)
+  const recurrence = (schedule.recurrenceRule ?? null) as RecurrenceRule | null
+  const nextDue = advanceDate(completedAt, schedule.frequency, schedule.interval, recurrence)
+
+  const pastEnd = schedule.endDate != null
+    && nextDue > new Date(schedule.endDate)
 
   await prisma.maintenanceSchedule.update({
     where: { id: wo.maintenanceScheduleId },
     data: {
       lastCompletedAt: completedAt,
       nextDueDate: nextDue,
+      ...(pastEnd ? { isActive: false } : {}),
     },
   })
 }

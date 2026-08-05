@@ -61,6 +61,13 @@ interface PMFormData {
   startDateOffset: string
   // Nested start index
   nestedStartIndex: string
+  // Recurrence rule (MaintWiz-style monthly rules)
+  recurrenceType: string
+  recurrenceDayOfWeek: string
+  recurrenceOccurrence: string
+  recurrenceDayOfMonth: string
+  occurrenceLimit: string
+  endDate: string
 }
 
 interface Props {
@@ -81,6 +88,14 @@ const freqOptions = [
   { value: 'QUARTERLY', label: 'Quarterly' },
   { value: 'YEARLY',    label: 'Yearly' },
 ]
+
+const WEEKDAY_LABELS: Record<string, string> = {
+  '0': 'Sunday', '1': 'Monday', '2': 'Tuesday', '3': 'Wednesday',
+  '4': 'Thursday', '5': 'Friday', '6': 'Saturday',
+}
+const OCCURRENCE_LABELS: Record<string, string> = {
+  '1': 'First', '2': 'Second', '3': 'Third', '4': 'Fourth', '5': 'Fifth', '-1': 'Last',
+}
 
 const METER_UNITS = [
   // Distance
@@ -129,6 +144,23 @@ function defaultDueDate() {
   return d.toISOString().split('T')[0]
 }
 
+function recurrenceSummary(frequency: string, interval: string, type: string, occurrence: string, dayOfWeek: string, dayOfMonth: string): string {
+  const every = `every ${interval === '1' ? '' : `${interval} `}month${interval === '1' ? '' : 's'}`
+  if (frequency !== 'MONTHLY') {
+    return `every ${interval === '1' ? '' : `${interval} `}${freqOptions.find(f => f.value === frequency)?.label.toLowerCase() ?? 'month'}`
+  }
+  if (type === 'NTH_WEEKDAY') {
+    const occ = (OCCURRENCE_LABELS[occurrence] ?? 'First').toLowerCase()
+    const dow = (WEEKDAY_LABELS[dayOfWeek] ?? 'monday').toLowerCase()
+    return `on the ${occ} ${dow} of ${every}`
+  }
+  if (type === 'DAY_OF_MONTH') {
+    const day = dayOfMonth === '-1' ? 'last day' : `day ${dayOfMonth}`
+    return `on the ${day} of ${every}`
+  }
+  return every
+}
+
 export default function PMScheduleForm({ assets, locations, users = [], teams = [], categories = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
@@ -162,6 +194,17 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     woCategoryId:       (initialData as any)?.woCategoryId      ?? '',
     startDateOffset:    (initialData as any)?.startDateOffset   ?? '0',
     nestedStartIndex:   (initialData as any)?.nestedStartIndex  ?? '0',
+    recurrenceType:     (initialData as any)?.recurrenceRule?.type ?? '',
+    recurrenceDayOfWeek: (initialData as any)?.recurrenceRule?.dayOfWeek != null
+      ? String((initialData as any).recurrenceRule.dayOfWeek) : '0',
+    recurrenceOccurrence: (initialData as any)?.recurrenceRule?.occurrence != null
+      ? String((initialData as any).recurrenceRule.occurrence) : '1',
+    recurrenceDayOfMonth: (initialData as any)?.recurrenceRule?.dayOfMonth != null
+      ? String((initialData as any).recurrenceRule.dayOfMonth) : '1',
+    occurrenceLimit:    (initialData as any)?.occurrenceLimit != null
+      ? String((initialData as any).occurrenceLimit) : '',
+    endDate:            (initialData as any)?.endDate
+      ? new Date((initialData as any).endDate).toISOString().split('T')[0] : '',
   })
 
   const [nestedTiers, setNestedTiers] = useState<NestedTier[]>(
@@ -191,6 +234,11 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   function set(field: keyof PMFormData, value: string | boolean | string[]) {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  function handleFrequencyChange(value: string) {
+    set('frequency', value)
+    if (value !== 'MONTHLY') set('recurrenceType', '')
   }
 
   // Fetch meters for the selected asset
@@ -292,6 +340,13 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         woCategoryId:         form.woCategoryId || null,
         startDateOffset:      parseInt(form.startDateOffset) || 0,
         nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
+        recurrenceRule:       form.frequency === 'MONTHLY' && form.recurrenceType === 'NTH_WEEKDAY'
+          ? { type: 'NTH_WEEKDAY', dayOfWeek: parseInt(form.recurrenceDayOfWeek) || 0, occurrence: parseInt(form.recurrenceOccurrence) || 1 }
+          : form.frequency === 'MONTHLY' && form.recurrenceType === 'DAY_OF_MONTH'
+            ? { type: 'DAY_OF_MONTH', dayOfMonth: parseInt(form.recurrenceDayOfMonth) || 1 }
+            : null,
+        occurrenceLimit:      form.occurrenceLimit ? parseInt(form.occurrenceLimit) : null,
+        endDate:              form.endDate || null,
         tasks:                tasks
           .filter(t => t.title.trim())
           .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null, required: t.required })),
@@ -481,17 +536,101 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
-                <select value={form.frequency} onChange={e => set('frequency', e.target.value)} className="input-field">
+                <select value={form.frequency} onChange={e => handleFrequencyChange(e.target.value)} className="input-field">
                   {freqOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+              </div>
+            </div>
+
+            {form.frequency === 'MONTHLY' && (
+              <div className="border-t border-gray-100 pt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Repeats on</label>
+                  <select value={form.recurrenceType} onChange={e => set('recurrenceType', e.target.value)} className="input-field">
+                    <option value="">Same day of the month</option>
+                    <option value="NTH_WEEKDAY">The Nth weekday of the month</option>
+                    <option value="DAY_OF_MONTH">A specific day of the month</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    e.g. &ldquo;The first Monday of every month&rdquo;, &ldquo;The last day of every month&rdquo;.
+                  </p>
+                </div>
+
+                {form.recurrenceType === 'NTH_WEEKDAY' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Occurrence</label>
+                      <select value={form.recurrenceOccurrence} onChange={e => set('recurrenceOccurrence', e.target.value)} className="input-field">
+                        {Object.entries(OCCURRENCE_LABELS).map(([v, label]) => (
+                          <option key={v} value={v}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Weekday</label>
+                      <select value={form.recurrenceDayOfWeek} onChange={e => set('recurrenceDayOfWeek', e.target.value)} className="input-field">
+                        {Object.entries(WEEKDAY_LABELS).map(([v, label]) => (
+                          <option key={v} value={v}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {form.recurrenceType === 'DAY_OF_MONTH' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Day of the month</label>
+                    <input
+                      type="number"
+                      min="-1"
+                      max="31"
+                      value={form.recurrenceDayOfMonth}
+                      onChange={e => set('recurrenceDayOfMonth', e.target.value)}
+                      className="input-field"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      1–31 (clamped to the month length) or -1 for the last day.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End after occurrences</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.occurrenceLimit}
+                  onChange={e => set('occurrenceLimit', e.target.value)}
+                  placeholder="No limit"
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Stop after this many scheduled occurrences (blank = never).
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End date</label>
+                <input
+                  type="date"
+                  value={form.endDate}
+                  onChange={e => set('endDate', e.target.value)}
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Stop generating work orders after this date (blank = never).
+                </p>
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
               <p className="text-sm text-blue-700">
                 <span className="font-medium">Schedule preview:</span>{' '}
-                This task will repeat every {form.interval === '1' ? '' : `${form.interval} `}
-                {freqOptions.find(f => f.value === form.frequency)?.label.toLowerCase() ?? 'month'}.
+                This task will repeat {recurrenceSummary(form.frequency, form.interval, form.recurrenceType, form.recurrenceOccurrence, form.recurrenceDayOfWeek, form.recurrenceDayOfMonth)}.
+                {form.occurrenceLimit && <> Ending after {form.occurrenceLimit} occurrence{form.occurrenceLimit !== '1' ? 's' : ''}.</>}
+                {form.endDate && <> Ending {form.endDate}.</>}
               </p>
             </div>
           </>

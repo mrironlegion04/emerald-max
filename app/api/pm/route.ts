@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
+import { computeNextDueDate } from '@/lib/pm-generation'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -20,6 +21,21 @@ const pmTaskSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   required:     z.boolean().default(true),
 })
+
+const recurrenceRuleSchema = z
+  .discriminatedUnion('type', [
+    z.object({
+      type: z.literal('NTH_WEEKDAY'),
+      dayOfWeek: z.number().int().min(0).max(6),
+      occurrence: z.number().int().refine(v => v === -1 || (v >= 1 && v <= 5), 'Occurrence must be -1 (last) or 1-5'),
+    }),
+    z.object({
+      type: z.literal('DAY_OF_MONTH'),
+      dayOfMonth: z.number().int().min(-1).max(31),
+    }),
+  ])
+  .nullable()
+  .optional()
 
 const pmSchema = z.object({
   title:                z.string().min(1, 'Title is required'),
@@ -51,6 +67,10 @@ const pmSchema = z.object({
   startDateOffset:      z.number().int().min(0).default(0),
   // Nested start index
   nestedStartIndex:     z.number().int().min(0).default(0),
+  // Recurrence rule (MaintWiz-style monthly rules)
+  recurrenceRule:       recurrenceRuleSchema,
+  occurrenceLimit:      z.number().int().min(1).nullable().optional(),
+  endDate:              z.string().nullable().optional(),
   // Task template — copied to every generated work order as subtasks
   tasks:                z.array(pmTaskSchema).optional().default([]),
 }).refine(data => data.assetId || data.locationId || (data.assetIds && data.assetIds.length > 0), {
@@ -92,6 +112,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = pmSchema.parse(body)
 
+    // Recurrence-aware start: snap nextDueDate to the first conformant date
+    const recurrenceRule = data.recurrenceRule ?? null
+    let nextDueDate = new Date(data.nextDueDate)
+    if (data.recurrenceRule && data.frequency === 'MONTHLY') {
+      nextDueDate = computeNextDueDate(nextDueDate, data.frequency, data.interval, data.recurrenceRule)
+    }
+
     // Derive the full asset list: explicit assetIds wins, falls back to assetId
     const assetIds = data.assetIds && data.assetIds.length > 0
       ? data.assetIds
@@ -128,7 +155,10 @@ export async function POST(request: NextRequest) {
         triggerType:         data.triggerType,
         frequency:           data.frequency,
         interval:            data.interval,
-        nextDueDate:         new Date(data.nextDueDate),
+        nextDueDate:         nextDueDate,
+        recurrenceRule:      recurrenceRule === null ? Prisma.JsonNull as unknown as Prisma.InputJsonValue : recurrenceRule,
+        occurrenceLimit:     data.occurrenceLimit ?? null,
+        endDate:             data.endDate ? new Date(data.endDate) : null,
         assetId:             finalAssetId,
         assets:              assetIds.length > 0
           ? { create: assetIds.map(assetId => ({ assetId })) }

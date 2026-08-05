@@ -6,6 +6,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import PMScheduleForm from '@/components/PMScheduleForm'
+import type { RecurrenceRule } from '@/lib/pm-generation'
 
 export default async function EditPMPage({
   params,
@@ -97,6 +98,9 @@ export default async function EditPMPage({
     woCategoryId:        schedule.woCategoryId   ?? '',
     startDateOffset:     String(schedule.startDateOffset),
     nestedStartIndex:    String(schedule.nestedStartIndex),
+    recurrenceRule:      schedule.recurrenceRule as unknown as RecurrenceRule | null,
+    occurrenceLimit:     schedule.occurrenceLimit != null ? String(schedule.occurrenceLimit) : '',
+    endDate:             schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : '',
     tasks:               (schedule.tasks ?? []).map(t => ({
       title:        t.title,
       assignedToId: t.assignedToId ?? '',

@@ -20,6 +20,36 @@ const freqLabels: Record<string, string> = {
 }
 const woStatusLabels = WO_STATUS_LABELS
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const OCCURRENCE_NAMES: Record<number, string> = {
+  1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', 5: 'Fifth', [-1]: 'Last',
+}
+
+interface RecurrenceRuleLike {
+  type?: string
+  dayOfWeek?: number
+  occurrence?: number
+  dayOfMonth?: number
+}
+
+function ordinal(n: number): string {
+  const rem100 = n % 100
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`
+  const rem10 = n % 10
+  return `${n}${rem10 === 1 ? 'st' : rem10 === 2 ? 'nd' : rem10 === 3 ? 'rd' : 'th'}`
+}
+
+function formatRecurrence(rule: RecurrenceRuleLike | null | undefined, interval: number): string {
+  const every = `every ${interval > 1 ? `${interval} ` : ''}month${interval > 1 ? 's' : ''}`
+  if (rule?.type === 'NTH_WEEKDAY') {
+    return `The ${OCCURRENCE_NAMES[rule.occurrence ?? -1] ?? 'First'} ${WEEKDAY_NAMES[rule.dayOfWeek ?? 1] ?? 'day'} of ${every}`
+  }
+  if (rule?.type === 'DAY_OF_MONTH') {
+    return rule.dayOfMonth === -1 ? `The last day of ${every}` : `The ${ordinal(rule.dayOfMonth ?? 1)} of ${every}`
+  }
+  return every
+}
+
 export default async function PMDetailPage({
   params,
 }: { params: Promise<{ id: string }> }) {
@@ -183,6 +213,17 @@ export default async function PMDetailPage({
                   { label: 'Scope', value: schedule.locationScope === 'ALL_ASSETS' ? 'All Assets Checklist' : 'General Maintenance' },
                 ] : []),
                 { label: 'Frequency',  value: `Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` },
+                ...(schedule.recurrenceRule && schedule.frequency === 'MONTHLY' ? [
+                  { label: 'Recurrence', value: formatRecurrence(schedule.recurrenceRule as unknown as RecurrenceRuleLike, schedule.interval) },
+                ] : []),
+                ...(schedule.occurrenceLimit != null || (schedule.occurrenceCount ?? 0) > 0 ? [
+                  { label: 'Occurrences', value: schedule.occurrenceLimit != null
+                    ? `${schedule.occurrenceCount} of ${schedule.occurrenceLimit} used`
+                    : `${schedule.occurrenceCount} generated` },
+                ] : []),
+                ...(schedule.endDate ? [
+                  { label: 'Ends', value: fmt(schedule.endDate) },
+                ] : []),
                 { label: 'Trigger',    value: (
                   <Badge
                     label={schedule.triggerType === 'TIME_OR_METER' ? 'Time or Usage' : schedule.triggerType === 'METER' ? 'Meter' : 'Time'}

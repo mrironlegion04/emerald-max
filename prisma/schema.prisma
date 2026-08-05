@@ -822,6 +822,14 @@ model MaintenanceSchedule {
   nestedCounter     Int  @default(0)  // Increments each time WOs are generated
   nestedStartIndex  Int  @default(0)  // Starting point in nested cycle (for mid-cycle setup)
 
+  // Recurrence rule (MaintWiz-style monthly rules)
+  //   { type: 'NTH_WEEKDAY', dayOfWeek: 0-6, occurrence: -1|1-5 }
+  //   { type: 'DAY_OF_MONTH', dayOfMonth: -1|1-31 }
+  recurrenceRule  Json?
+  occurrenceLimit Int?      // End after N occurrences (null = no limit)
+  occurrenceCount Int      @default(0)  // Occurrences generated so far
+  endDate         DateTime? // Stop generating WOs after this date
+
   // WO Template — defaults applied to generated work orders
   woPriority        WorkOrderPriority @default(MEDIUM)
   woDescription     String?           // Additional description appended to WO description

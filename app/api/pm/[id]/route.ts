@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
+import { computeNextDueDate, type RecurrenceRule } from '@/lib/pm-generation'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -20,6 +21,21 @@ const pmTaskSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   required:     z.boolean().default(true),
 })
+
+const recurrenceRuleSchema = z
+  .discriminatedUnion('type', [
+    z.object({
+      type: z.literal('NTH_WEEKDAY'),
+      dayOfWeek: z.number().int().min(0).max(6),
+      occurrence: z.number().int().refine(v => v === -1 || (v >= 1 && v <= 5), 'Occurrence must be -1 (last) or 1-5'),
+    }),
+    z.object({
+      type: z.literal('DAY_OF_MONTH'),
+      dayOfMonth: z.number().int().min(-1).max(31),
+    }),
+  ])
+  .nullable()
+  .optional()
 
 const updateSchema = z.object({
   title:                z.string().min(1).optional(),
@@ -51,6 +67,10 @@ const updateSchema = z.object({
   startDateOffset:      z.number().int().min(0).optional(),
   // Nested start index
   nestedStartIndex:     z.number().int().min(0).optional(),
+  // Recurrence rule (MaintWiz-style monthly rules)
+  recurrenceRule:       recurrenceRuleSchema,
+  occurrenceLimit:      z.number().int().min(1).nullable().optional(),
+  endDate:              z.string().nullable().optional(),
   // Task template — replace-all semantics when provided
   tasks:                z.array(pmTaskSchema).optional(),
 })
@@ -157,6 +177,17 @@ export async function PUT(
       )
     }
 
+    // Recurrence-aware start: snap nextDueDate to the first conformant date
+    const recurrenceRule = data.recurrenceRule !== undefined
+      ? data.recurrenceRule
+      : ((existing.recurrenceRule ?? null) as unknown as RecurrenceRule | null)
+    const effectiveFrequency = data.frequency ?? existing.frequency
+    const effectiveInterval = data.interval ?? existing.interval
+    let nextDueDate = data.nextDueDate ? new Date(data.nextDueDate) : existing.nextDueDate
+    if (recurrenceRule && effectiveFrequency === 'MONTHLY') {
+      nextDueDate = computeNextDueDate(nextDueDate, effectiveFrequency, effectiveInterval, recurrenceRule)
+    }
+
     const schedule = await prisma.$transaction(async tx => {
       if (data.tasks !== undefined) {
         await tx.pmScheduleTask.deleteMany({ where: { scheduleId: id } })
@@ -186,7 +217,16 @@ export async function PUT(
           triggerType:         data.triggerType,
           frequency:           data.frequency,
           interval:            data.interval,
-          nextDueDate:         data.nextDueDate ? new Date(data.nextDueDate) : undefined,
+          nextDueDate:         nextDueDate,
+          recurrenceRule:      data.recurrenceRule !== undefined
+            ? (recurrenceRule === null ? Prisma.JsonNull as unknown as Prisma.InputJsonValue : recurrenceRule)
+            : undefined,
+          occurrenceLimit:     data.occurrenceLimit !== undefined
+            ? data.occurrenceLimit
+            : undefined,
+          endDate:             data.endDate !== undefined
+            ? (data.endDate ? new Date(data.endDate) : null)
+            : undefined,
           assetId:             finalAssetId,
           locationId:          finalLocationId,
           locationScope:       finalLocationScope,

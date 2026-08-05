@@ -26,7 +26,10 @@ export default async function EditAssetPage({
     : null
 
   const [asset, categories, assetTypes, locations, assets, users, domains] = await Promise.all([
-    prisma.asset.findUnique({ where: { id } }),
+    prisma.asset.findUnique({
+      where: { id },
+      include: { domains: { select: { domainId: true } } },
+    }),
     prisma.assetCategory.findMany({ orderBy: [{ parentId: 'asc' }, { name: 'asc' }] }),
     prisma.assetType.findMany({ orderBy: { name: 'asc' } }),
     prisma.location.findMany({
@@ -75,7 +78,7 @@ export default async function EditAssetPage({
     assetTypeId:  asset.assetTypeId  ?? '',
     criticality:  asset.criticality  ?? '',
     ownerId:      asset.ownerId      ?? '',
-    domainId:     asset.domainId     ?? '',
+    domainIds:    asset.domains.map(d => d.domainId),
     customFields: (asset.customFields && typeof asset.customFields === 'object' ? asset.customFields : null) as Record<string, any> | null,
   }
 

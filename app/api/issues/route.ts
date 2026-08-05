@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const categoryId = searchParams.get('categoryId')
+    const assetId    = searchParams.get('assetId')
     const search     = searchParams.get('search')?.trim()
     const domainId   = searchParams.get('domainId')?.trim()
     const isGlobal   = searchParams.get('isGlobal')?.trim()
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // No categoryId param at all → admin/manager overview
-    if (categoryId === null) {
+    if (categoryId === null && assetId === null) {
       const where: Record<string, unknown> = {}
       if (search) {
         where.OR = [
@@ -62,7 +63,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(issues)
     }
 
-    // Issue picker for WO form — uses fallback hierarchy.
+    // Issue picker for WO form — asset-driven (asset domains → category → global).
+    if (assetId) {
+      const groups = await IssueService.getIssuesForAsset(assetId, { search })
+      return NextResponse.json(groups)
+    }
+
+    // Category-driven picker — uses fallback hierarchy.
     // When categoryId is empty string (no category on asset), getFallbackIssues handles it.
     const groups = await IssueService.getIssuesForCategory(categoryId || null, { search })
     return NextResponse.json(groups)

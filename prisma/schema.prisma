@@ -459,8 +459,6 @@ model Asset {
   purchaseCost      Float?
   assetTypeId       String?
   criticality       Criticality?
-  domainId          String?
-  domain            MaintenanceDomain? @relation("AssetDomain", fields: [domainId], references: [id], onDelete: SetNull)
   customFields      Json?
   // Warranty fields (Part 7)
   warrantyExpiry    DateTime?
@@ -491,6 +489,8 @@ model Asset {
   createdById String?
   createdBy  User?          @relation("AssetCreatedBy", fields: [createdById], references: [id])
 
+  domains AssetDomain[]
+
   workOrders           WorkOrder[]
   workOrderAssets      WorkOrderAsset[]
   maintenanceSchedules MaintenanceSchedule[]
@@ -513,6 +513,18 @@ model Asset {
   imageName String?
 
   @@map("assets")
+}
+
+model AssetDomain {
+  assetId  String
+  domainId String
+
+  asset  Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  domain MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, domainId])
+  @@index([domainId])
+  @@map("asset_domains")
 }
 
 model Meter {
@@ -671,7 +683,7 @@ model MaintenanceDomain {
   categories         CategoryDomain[]
   teams              TeamDomain[]
   workOrders         WorkOrder[]        @relation("WorkOrderDomain")
-  assets             Asset[]            @relation("AssetDomain")
+  assetLinks         AssetDomain[]
   assignedSubtasks   Subtask[]          @relation("SubtasksAssignedToDomain")
   defaultCategories  AssetCategory[]    @relation("CategoryDefaultDomain")
 

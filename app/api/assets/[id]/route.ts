@@ -24,7 +24,7 @@ const updateSchema = z.object({
   assetTypeId:  z.string().nullable().optional(),
   criticality:  z.string().nullable().optional(),
   ownerId:      z.string().nullable().optional(),
-  domainId:     z.string().nullable().optional(),
+  domainIds:    z.array(z.string()).optional(),
   customFields: z.any().nullable().optional(),
 })
 
@@ -48,7 +48,7 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
         },
         maintenanceSchedules: true,
-        domain: true,
+        domains: { include: { domain: { select: { id: true, name: true } } } },
       },
     })
     if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -151,12 +151,28 @@ export async function PUT(
       where: { id },
       data: {
         ...data,
+        domainIds: undefined,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : undefined,
+        ...(data.domainIds !== undefined
+          ? { domains: { deleteMany: {}, create: data.domainIds.map(domainId => ({ domainId })) } }
+          : {}),
       } as any,
     })
 
     const changes: Record<string, { before: any; after: any }> = {}
     for (const key of Object.keys(data)) {
+      if (key === 'domainIds') {
+        const beforeDomains = await prisma.assetDomain.findMany({
+          where: { assetId: id },
+          select: { domainId: true },
+        })
+        const beforeStr = JSON.stringify(beforeDomains.map(d => d.domainId).sort())
+        const afterStr = JSON.stringify([...(data.domainIds ?? [])].sort())
+        if (beforeStr !== afterStr) {
+          changes.domainIds = { before: beforeDomains.map(d => d.domainId), after: data.domainIds ?? [] }
+        }
+        continue
+      }
       const beforeVal = existingAsset[key as keyof typeof existingAsset]
       const afterVal = asset[key as keyof typeof asset]
       const beforeStr = beforeVal instanceof Date ? beforeVal.toISOString() : JSON.stringify(beforeVal)

@@ -19,10 +19,15 @@ function getField(row: Record<string, string>, ...names: string[]): string {
   return ''
 }
 
-function engineeringDomain(name: string): string {
+function engineeringDomains(name: string): string[] {
   const n = name.trim()
-  if (!n) return ''
-  return n.toLowerCase() === 'mech' ? 'Mechanical' : n
+  if (!n) return []
+  const normalized = n.toLowerCase() === 'mech' ? 'Mechanical' : n
+  const SPLIT: Record<string, string[]> = {
+    'Mech-Elec': ['Mechanical', 'Electrical'],
+    'Hyd-Elec':  ['Hydraulic', 'Electrical'],
+  }
+  return SPLIT[normalized] ?? [normalized]
 }
 
 function slugify(name: string): string {
@@ -185,7 +190,7 @@ async function planMaintwizImport(rows: Record<string, string>[], user: ImportUs
       .filter(x => x.sub)
       .map(x => `${x.group}|||${x.sub}`),
   )]
-  const domainNames = [...new Set(validRows.map(r => engineeringDomain(getField(r, 'Engineering Group'))).filter(Boolean))]
+  const domainNames = [...new Set(validRows.flatMap(r => engineeringDomains(getField(r, 'Engineering Group'))).filter(Boolean))]
   const ownerNames = [...new Set(validRows.map(r => getField(r, 'Owner')).filter(Boolean))]
   const ownerEmails = ownerNames.map(toOwnerEmail)
 
@@ -303,7 +308,7 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
         name: getField(r, 'Equipment Name'),
         location: getField(r, 'Facility code'),
         category: getField(r, 'Group') + (getField(r, 'Sub Group') ? ` / ${getField(r, 'Sub Group')}` : ''),
-        domain: engineeringDomain(getField(r, 'Engineering Group')),
+        domain: engineeringDomains(getField(r, 'Engineering Group')).join(', '),
         owner: getField(r, 'Owner'),
         status: getField(r, 'Equipment Status'),
       })),
@@ -321,7 +326,7 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
     plan.locationByCode.set(code, loc.id)
   }
 
-  const domainNames = [...new Set(validRows.map(r => engineeringDomain(getField(r, 'Engineering Group'))).filter(Boolean))]
+  const domainNames = [...new Set(validRows.flatMap(r => engineeringDomains(getField(r, 'Engineering Group'))).filter(Boolean))]
   for (const name of domainNames) {
     if (plan.domainByName.has(name)) continue
     const d = await prisma.maintenanceDomain.create({ data: { name } })
@@ -422,8 +427,11 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
       categoryId = plan.categoryParentByName.get(sub.toLowerCase()) ?? null
     }
 
-    const domain = engineeringDomain(getField(r, 'Engineering Group'))
-    const domainId = domain ? (plan.domainByName.get(domain) ?? null) : null
+    const domainIds = [...new Set(
+      engineeringDomains(getField(r, 'Engineering Group'))
+        .map(n => plan.domainByName.get(n))
+        .filter((id): id is string => !!id),
+    )]
 
     const owner = getField(r, 'Owner')
     const ownerId = owner ? (plan.ownerIdByName.get(owner) ?? null) : null
@@ -435,7 +443,7 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
     const criticality = VALID_CRITICALITY.includes(rawCrit) ? rawCrit : null
 
     const equipmentClass = getField(r, 'Equipment Class')
-    const customFields: Record<string, unknown> = { source: 'MaintWiz' }
+    const customFields: Record<string, unknown> = {}
     if (equipmentClass) customFields.equipmentClass = equipmentClass
 
     try {
@@ -448,7 +456,7 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
           criticality: criticality as never,
           categoryId,
           locationId,
-          domainId,
+          domains: { create: domainIds.map(domainId => ({ domainId })) },
           ownerId,
           customFields: customFields as never,
           createdById: user.userId,

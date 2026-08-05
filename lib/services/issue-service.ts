@@ -71,6 +71,83 @@ async function buildIssueQuery(options?: GetIssuesOptions) {
   }
 }
 
+/**
+ * Resolve the domains for an asset, in priority order:
+ *   1. The asset's own domain links (many-to-many).
+ *   2. Fallback to its category chain (category → parent categories).
+ *   3. Empty → caller falls back to global issues.
+ */
+export async function resolveDomainsForAsset(assetId: string): Promise<string[]> {
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: {
+      categoryId: true,
+      domains: {
+        where: { domain: { isActive: true } },
+        select: { domainId: true },
+      },
+    },
+  })
+
+  if (!asset) return []
+
+  if (asset.domains.length > 0) {
+    return asset.domains.map(d => d.domainId)
+  }
+
+  if (asset.categoryId) {
+    return resolveDomains(asset.categoryId)
+  }
+
+  return []
+}
+
+/**
+ * Build domain issue groups from a set of domain IDs.
+ * Returns null when none of the domains have active issues (caller should
+ * fall back to global issues).
+ */
+async function getIssueGroupsForDomainIds(
+  domainIds: string[],
+  options?: GetIssuesOptions
+): Promise<IssueGroup[] | null> {
+  const domains = await prisma.maintenanceDomain.findMany({
+    where: {
+      id: { in: [...new Set(domainIds)] },
+      isActive: true,
+    },
+    orderBy: { name: 'asc' },
+    include: {
+      issues: {
+        where: {
+          issue: {
+            isActive: true,
+            ...(await buildIssueQuery(options)),
+          },
+        },
+        include: { issue: true },
+        orderBy: { issue: { sortOrder: 'asc' } },
+      },
+    },
+  })
+
+  const totalIssues = domains.reduce((sum, d) => sum + d.issues.length, 0)
+  if (totalIssues === 0) {
+    return null
+  }
+
+  return domains.map(d => ({
+    id: d.id,
+    name: d.name,
+    issues: d.issues.map(i => ({
+      id: i.issue.id,
+      code: i.issue.code,
+      title: i.issue.title,
+      severity: i.issue.severity,
+    })),
+  }))
+}
+
 export const IssueService = {
 
   /**
@@ -95,57 +172,26 @@ export const IssueService = {
       return this.getFallbackIssues(options)
     }
 
-    const domains = await prisma.maintenanceDomain.findMany({
-      where: {
-        id: { in: domainIds },
-        isActive: true,
-      },
-      orderBy: { name: 'asc' },
-      include: {
-        issues: {
-          where: {
-            issue: {
-              isActive: true,
-              ...(await buildIssueQuery(options)),
-            },
-          },
-          include: { issue: true },
-          orderBy: { issue: { sortOrder: 'asc' } },
-        },
-      },
-    })
-
-    const totalIssues = domains.reduce((sum, d) => sum + d.issues.length, 0)
-    if (totalIssues === 0) {
-      return this.getFallbackIssues(options)
-    }
-
-    const groups: IssueGroup[] = domains.map(d => ({
-      id: d.id,
-      name: d.name,
-      issues: d.issues.map(i => ({
-        id: i.issue.id,
-        code: i.issue.code,
-        title: i.issue.title,
-        severity: i.issue.severity,
-      })),
-    }))
-
-    return groups
+    const groups = await getIssueGroupsForDomainIds(domainIds, options)
+    return groups ?? this.getFallbackIssues(options)
   },
 
   /**
-   * Resolve available issues for a given asset (resolves its category first).
+   * Resolve available issues for a given asset.
+   * Priority: asset's own domains → category chain → global issues.
    */
   async getIssuesForAsset(
     assetId: string,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
-    const asset = await prisma.asset.findUnique({
-      where: { id: assetId },
-      select: { categoryId: true },
-    })
-    return this.getIssuesForCategory(asset?.categoryId, options)
+    const domainIds = await resolveDomainsForAsset(assetId)
+
+    if (domainIds.length === 0) {
+      return this.getFallbackIssues(options)
+    }
+
+    const groups = await getIssueGroupsForDomainIds(domainIds, options)
+    return groups ?? this.getFallbackIssues(options)
   },
 
   /**
@@ -243,19 +289,7 @@ export const IssueService = {
   ): Promise<{ valid: boolean }> {
     if (!assetId) return { valid: true }
 
-    const asset = await prisma.asset.findUnique({
-      where: { id: assetId },
-      select: { categoryId: true },
-    })
-
-    if (!asset?.categoryId) {
-      const issue = await prisma.issue.findFirst({
-        where: { id: issueId, isActive: true, isGlobal: true },
-      })
-      return { valid: !!issue }
-    }
-
-    const domainIds = await resolveDomains(asset.categoryId)
+    const domainIds = await resolveDomainsForAsset(assetId)
     if (domainIds.length === 0) {
       const issue = await prisma.issue.findFirst({
         where: { id: issueId, isActive: true, isGlobal: true },

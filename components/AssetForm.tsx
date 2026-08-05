@@ -70,7 +70,7 @@ interface AssetFormData {
   assetTypeId: string
   criticality: string
   ownerId: string
-  domainId: string
+  domainIds: string[]
   customFields: Record<string, any> | null
 }
 
@@ -127,7 +127,7 @@ export default function AssetForm({
     assetTypeId:  initialData?.assetTypeId  ?? '',
     criticality:  initialData?.criticality  ?? '',
     ownerId:      initialData?.ownerId      ?? '',
-    domainId:     initialData?.domainId     ?? '',
+    domainIds:    initialData?.domainIds    ?? [],
     customFields: initialData?.customFields ?? null,
   })
 
@@ -139,6 +139,15 @@ export default function AssetForm({
 
   function set(field: keyof AssetFormData, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  function toggleDomain(id: string) {
+    setForm(prev => ({
+      ...prev,
+      domainIds: prev.domainIds.includes(id)
+        ? prev.domainIds.filter(d => d !== id)
+        : [...prev.domainIds, id],
+    }))
   }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
@@ -154,7 +163,7 @@ export default function AssetForm({
         purchaseDate: form.purchaseDate || null,
         categoryId:  form.categoryId  || null,
         locationId:  form.locationId  || null,
-        domainId:    form.domainId    || null,
+        domainIds:   form.domainIds,
         serialNumber: form.serialNumber || null,
         model:        form.model        || null,
         manufacturer: form.manufacturer || null,
@@ -435,17 +444,29 @@ export default function AssetForm({
 
           {domains.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Industrial Domain</label>
-              <select
-                value={form.domainId}
-                onChange={e => set('domainId', e.target.value)}
-                className="input-field"
-              >
-                <option value="">— No industrial domain —</option>
-                {domains.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Industrial Domains</label>
+              <div className="flex flex-wrap gap-2">
+                {domains.map(d => {
+                  const active = form.domainIds.includes(d.id)
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDomain(d.id)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                        active
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                      }`}
+                    >
+                      {d.name}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                A machine can belong to multiple industrial domains (e.g. Mechanical + Electrical).
+              </p>
             </div>
           )}
         </div>

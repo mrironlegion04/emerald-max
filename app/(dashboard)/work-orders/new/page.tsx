@@ -27,7 +27,7 @@ export default async function NewWorkOrderPage({
   const [assets, locations, users, teams, template] = await Promise.all([
     prisma.asset.findMany({
       where: { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ?? {}) },
-      select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, domainId: true },
+      select: { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true },
       orderBy: { name: 'asc' },
     }),
     prisma.location.findMany({

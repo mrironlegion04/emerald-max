@@ -9,7 +9,7 @@ import LocationSelect from './LocationSelect'
 import CustomFieldsPanel from './CustomFieldsPanel'
 import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
 
-interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; domainId?: string | null }
+interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
 interface User  { id: string; name: string; role: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean }
@@ -156,10 +156,12 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   const selectedAsset = assets.find(a => a.id === primaryAssetId)
 
   useEffect(() => {
-    const categoryId = selectedAsset?.categoryId
     if (!primaryAssetId && !form.locationId) { setIssueGroups([]); return }
     setLoadingIssues(true)
-    fetch(`/api/issues?categoryId=${categoryId ?? ''}`)
+    const url = primaryAssetId
+      ? `/api/issues?assetId=${encodeURIComponent(primaryAssetId)}`
+      : `/api/issues?categoryId=${selectedAsset?.categoryId ?? ''}`
+    fetch(url)
       .then(r => r.json())
       .then((groups: DomainGroup[]) => {
         setIssueGroups(groups)

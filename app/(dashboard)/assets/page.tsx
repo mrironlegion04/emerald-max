@@ -27,7 +27,7 @@ interface AssetWithRelations {
   model?: string | null
   category?: { id: string; name: string } | null
   location?: { id: string; name: string } | null
-  domain?: { id: string; name: string } | null
+  domains?: { domain: { id: string; name: string } }[] | null
   _count?: { workOrders: number; children: number } | null
 }
 
@@ -84,7 +84,7 @@ async function getAssets(filters: SearchParams, locationFilter: Record<string, u
       include: {
         category: { select: { id: true, name: true } },
         location: { select: { id: true, name: true } },
-        domain: { select: { id: true, name: true } },
+        domains: { include: { domain: { select: { id: true, name: true } } } },
         _count: { select: { workOrders: true, children: true } },
       },
       orderBy: { name: 'asc' },
@@ -232,7 +232,22 @@ export default async function AssetsPage({
                     </td>
                     <td className="px-4 py-3 text-gray-600">{asset.category?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{asset.location?.name ?? '—'}</td>
-                    <td className="px-4 py-3 font-semibold text-blue-700">{asset.domain?.name ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      {asset.domains && asset.domains.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {asset.domains.map(d => (
+                            <span
+                              key={d.domain.id}
+                              className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium"
+                            >
+                              {d.domain.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {asset.isDeleted ? (
                         <Badge label="Deleted" variant="red" />
@@ -346,9 +361,9 @@ export default async function AssetsPage({
                           📁 {asset.category.name}
                         </span>
                       )}
-                      {asset.domain?.name && (
+                      {asset.domains && asset.domains.length > 0 && (
                         <span className="text-[10px] text-blue-700 font-semibold bg-blue-50/55 border border-blue-100/30 px-1.5 py-0.5 rounded">
-                          👥 {asset.domain.name}
+                          👥 {asset.domains.map(d => d.domain.name).join(', ')}
                         </span>
                       )}
                     </div>

@@ -22,6 +22,7 @@ interface WOFormData {
   assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
   customFields: Record<string, any> | null
+  woCategoryId: string
 }
 
 interface Meta {
@@ -74,6 +75,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
     customFields:   (initialData as any)?.customFields ?? null,
+    woCategoryId:   (initialData as any)?.woCategoryId ?? '',
   })
 
   const [initialForm] = useState<WOFormData>(buildInitialForm)
@@ -138,6 +140,18 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   // ── Issue groups fetched dynamically when asset or location changes ──
   const [issueGroups, setIssueGroups] = useState<DomainGroup[]>([])
   const [loadingIssues, setLoadingIssues] = useState(false)
+
+  // ── Work order categories (admin-defined) ──
+  const [woCategories, setWOCategories] = useState<{ id: string; name: string; isActive: boolean }[]>([])
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/wo-categories')
+      .then(r => r.json())
+      .then((data: { id: string; name: string; isActive: boolean }[]) => { if (active) setWOCategories(data) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   // ── Smart recommendations from the primary asset ──
   const [recommendation, setRecommendation] = useState<{
@@ -290,6 +304,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
         customFields: form.customFields,
+        woCategoryId: form.woCategoryId || null,
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'
@@ -368,6 +383,14 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
                 <p className="text-[11px] text-emerald-700 font-semibold mt-1">Auto-set from issue severity</p>
               )}
             </>
+          )}
+          {inputRow('Category', false,
+            <select value={form.woCategoryId} onChange={e => set('woCategoryId', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
+              <option value="">None</option>
+              {woCategories.filter(c => c.isActive || c.id === form.woCategoryId).map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           )}
           {isEdit && inputRow('Status', false,
             <select value={form.status} onChange={e => set('status', e.target.value)} className="input-field text-xs sm:text-sm bg-white">

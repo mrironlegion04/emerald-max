@@ -83,6 +83,7 @@ const updateSchema = z.object({
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
   shift:               z.string().nullable().optional(),
+  woCategoryId:        z.string().nullable().optional(),
 }).refine(
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
@@ -323,13 +324,25 @@ export async function PUT(
     // ── Sync WorkOrderAsset rows ──────────────────────────────────────
     await syncWorkOrderAssets(id, normalized.entries)
 
+    // ── Validate work order category ───────────────────────────────────
+    if (data.woCategoryId) {
+      const category = await prisma.workOrderCategory.findUnique({
+        where: { id: data.woCategoryId },
+        select: { id: true, isActive: true },
+      })
+      if (!category || !category.isActive) {
+        return NextResponse.json({ error: 'Work order category not found' }, { status: 400 })
+      }
+    }
+
     // ── Update the WorkOrder record ───────────────────────────────────
     const updateData = {
       ...Object.fromEntries(
         Object.entries(data).filter(([key]) =>
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
-           'partsCost','notes','customFields','issueId','customIssue','startDate'].includes(key)
+           'partsCost','notes','customFields','issueId','customIssue','startDate',
+           'woCategoryId'].includes(key)
         )
       ),
       ...(data.teamId ? { domainId: derivedDomainId } : {}),

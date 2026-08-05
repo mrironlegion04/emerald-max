@@ -190,6 +190,12 @@ const enterpriseSettingsItems = [
     adminOnly: true,
   },
   {
+    label: 'WO Categories',
+    href: '/settings/wo-categories',
+    icon: <Tag className="w-4 h-4" />,
+    adminOnly: true,
+  },
+  {
     label: 'Bulk Import',
     href: '/import',
     icon: <Upload className="w-4 h-4" />,
@@ -214,7 +220,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
     const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
     const isReportsActive = pathname.startsWith('/reports') || pathname.startsWith('/sla-breach-reports') || pathname.startsWith('/sites')
     const isSettingsActive = pathname.startsWith('/settings') || pathname.startsWith('/sla-policies') || pathname.startsWith('/import')
-    const isLibraryActive = pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues')
+    const isLibraryActive = pathname.startsWith('/settings/locations') || pathname.startsWith('/settings/asset-types') || pathname.startsWith('/settings/asset-categories') || pathname.startsWith('/settings/domains') || pathname.startsWith('/settings/issues') || pathname.startsWith('/settings/wo-categories')
     return {
       assets: isAssetsActive,
       reports: isReportsActive,

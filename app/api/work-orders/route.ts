@@ -35,6 +35,7 @@ const woSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
+  woCategoryId:        z.string().nullable().optional(),
 
 }).refine(
   data => !(data.issueId && data.customIssue),
@@ -138,6 +139,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ── Validate work order category ───────────────────────────────────
+    if (data.woCategoryId) {
+      const category = await prisma.workOrderCategory.findUnique({
+        where: { id: data.woCategoryId },
+        select: { id: true, isActive: true },
+      })
+      if (!category || !category.isActive) {
+        return NextResponse.json({ error: 'Work order category not found' }, { status: 400 })
+      }
+    }
+
     const woNumber = await generateWONumber(locationId)
 
     // ── Auto-derive domainId from team ───────────────────────────────
@@ -177,6 +189,7 @@ export async function POST(request: NextRequest) {
         shift:          await resolveShift(),
         requestedBy,
         requestedById:  user.userId,
+        woCategoryId:   data.woCategoryId ?? null,
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,
       },

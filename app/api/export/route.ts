@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
           assignedTo:   { select: { name: true, email: true } },
           createdBy:    { select: { name: true } },
           domain:       { select: { name: true } },
+          woCategory:   { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
       })
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
         'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
-        'Shift','Requested By',
+        'Shift','Requested By','WO Category',
       ]
       const rows = wos.map(w => [
         w.woNumber, w.title, w.type, w.status, w.priority,
@@ -119,6 +120,7 @@ export async function GET(request: NextRequest) {
         fmt(w.createdAt),
         w.shift ?? '',
         w.requestedBy ?? '',
+        w.woCategory?.name ?? '',
       ])
       csv = toCSV(headers, rows)
 

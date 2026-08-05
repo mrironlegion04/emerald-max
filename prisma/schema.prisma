@@ -437,6 +437,20 @@ model AssetCategory {
   @@map("asset_categories")
 }
 
+model WorkOrderCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workOrders WorkOrder[] @relation("WorkOrderWOCategory")
+
+  @@index([isActive, sortOrder])
+  @@map("work_order_categories")
+}
+
 model AssetType {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -631,6 +645,9 @@ model WorkOrder {
 
   categoryId String?
   category   AssetCategory? @relation("WOCategory", fields: [categoryId], references: [id], onDelete: SetNull)
+
+  woCategoryId String?
+  woCategory   WorkOrderCategory? @relation("WorkOrderWOCategory", fields: [woCategoryId], references: [id], onDelete: SetNull)
 
   // Nested PM tracking
   nestedLevel   Int?     // Index in the nestedConfig array (0 = base)

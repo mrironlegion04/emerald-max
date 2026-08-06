@@ -13,6 +13,7 @@ import {
 } from '@/lib/work-order-assets'
 import { generateWONumber } from '@/lib/wo-number'
 import { resolveShift } from '@/lib/shift'
+import { isDescendantOf } from '@/lib/asset-hierarchy'
 
 const woSchema = z.object({
   title:               z.string().min(1, 'Title is required'),
@@ -23,6 +24,7 @@ const woSchema = z.object({
   dueDate:             z.string().nullable().optional(),
   startDate:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
+  failedComponentId:   z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional().default([]),
@@ -115,6 +117,33 @@ export async function POST(request: NextRequest) {
       data.locationScope,
     )
 
+    // ── Failed component must be a descendant of the primary asset ───
+    const failedComponentId: string | null = data.failedComponentId ?? null
+    if (failedComponentId) {
+      if (!normalized.assetId) {
+        return NextResponse.json(
+          { error: 'Failed component requires a primary asset to be selected' },
+          { status: 400 }
+        )
+      }
+      if (failedComponentId === normalized.assetId) {
+        return NextResponse.json(
+          { error: 'Failed component must be a component within the asset, not the asset itself' },
+          { status: 400 }
+        )
+      }
+      const allAssets = await prisma.asset.findMany({
+        where: { isDeleted: false },
+        select: { id: true, parentId: true },
+      })
+      if (!isDescendantOf(allAssets, normalized.assetId, failedComponentId)) {
+        return NextResponse.json(
+          { error: 'Failed component must be a component within the selected asset' },
+          { status: 400 }
+        )
+      }
+    }
+
     // ── Derive WO location from primary asset when not explicitly set ─
     let locationId: string | null = data.locationId ?? null
     if (!locationId && normalized.entries.length > 0) {
@@ -174,6 +203,7 @@ export async function POST(request: NextRequest) {
         dueDate:        data.dueDate      ? new Date(data.dueDate) : null,
         startDate:      data.startDate    ? new Date(data.startDate) : null,
         assetId:        normalized.assetId,
+        failedComponentId,
         locationId:     locationId,
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,

@@ -164,3 +164,43 @@ export async function getAssetWithTree(assetId: string) {
 
   return { ...result, children }
 }
+
+// ── Pure in-memory hierarchy helpers (client-safe) ──────────────────────────
+
+export interface HierarchyAsset {
+  id: string
+  parentId?: string | null
+}
+
+/**
+ * Collect all descendant IDs of a root asset (BFS over the in-memory list).
+ * Does not include the root itself.
+ */
+export function collectDescendantIds(assets: HierarchyAsset[], rootId: string): Set<string> {
+  const ids = new Set<string>()
+  const queue = [rootId]
+  while (queue.length > 0) {
+    const parentId = queue.shift()!
+    for (const asset of assets) {
+      if (asset.parentId === parentId && !ids.has(asset.id)) {
+        ids.add(asset.id)
+        queue.push(asset.id)
+      }
+    }
+  }
+  return ids
+}
+
+/**
+ * Whether candidateId is a descendant of rootId (walks up the parent chain).
+ */
+export function isDescendantOf(assets: HierarchyAsset[], rootId: string, candidateId: string): boolean {
+  const allIds = new Set(assets.map(a => a.id))
+  let cur = assets.find(a => a.id === candidateId)
+  while (cur && cur.parentId) {
+    if (cur.parentId === rootId) return true
+    if (!allIds.has(cur.parentId)) return false
+    cur = assets.find(a => a.id === cur!.parentId)
+  }
+  return false
+}

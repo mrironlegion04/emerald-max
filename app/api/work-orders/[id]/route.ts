@@ -24,6 +24,7 @@ import {
   hasScopeActionFlag,
   isValidWOStatusTransition,
 } from '@/lib/access-control'
+import { isDescendantOf } from '@/lib/asset-hierarchy'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
 import {
@@ -71,6 +72,7 @@ const updateSchema = z.object({
   dueDate:             z.string().nullable().optional(),
   startDate:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
+  failedComponentId:   z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional(),
@@ -337,6 +339,39 @@ export async function PUT(
       existingAssetIds.length !== incomingAssetIds.length ||
       !existingAssetIds.every((id, i) => id === incomingAssetIds[i])
 
+    // ── Failed component must be a descendant of the primary asset ───
+    let failedComponentId = existingWo.failedComponentId
+    if (data.failedComponentId !== undefined) {
+      failedComponentId = data.failedComponentId
+    }
+    if (failedComponentId) {
+      const explicitlyProvided = data.failedComponentId !== undefined
+      const invalidReason = !normalized.assetId
+        ? 'Failed component requires a primary asset to be selected'
+        : failedComponentId === normalized.assetId
+          ? 'Failed component must be a component within the asset, not the asset itself'
+          : null
+      if (!invalidReason) {
+        const allAssets = await prisma.asset.findMany({
+          where: { isDeleted: false },
+          select: { id: true, parentId: true },
+        })
+        if (!isDescendantOf(allAssets, normalized.assetId!, failedComponentId)) {
+          if (explicitlyProvided) {
+            return NextResponse.json(
+              { error: 'Failed component must be a component within the selected asset' },
+              { status: 400 }
+            )
+          }
+          failedComponentId = null // auto-clear when the asset changed out from under it
+        }
+      } else if (explicitlyProvided) {
+        return NextResponse.json({ error: invalidReason }, { status: 400 })
+      } else {
+        failedComponentId = null
+      }
+    }
+
     // ── Plant scope enforcement (only for fields actually changed) ────
     const changedLocationIds: (string | null | undefined)[] = []
     if (data.locationId !== undefined) changedLocationIds.push(derivedLocationId)
@@ -391,6 +426,7 @@ export async function PUT(
         ? (data.downtimeEndedAt ? new Date(data.downtimeEndedAt) : null)
         : undefined,
       assetId: normalized.assetId, // use normalized single-asset display value
+      failedComponentId,
     }
 
     const wo = await prisma.workOrder.update({

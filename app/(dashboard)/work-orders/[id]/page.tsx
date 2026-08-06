@@ -52,6 +52,7 @@ export default async function WorkOrderDetailPage({
     where: { id },
     include: {
       asset:        { select: { id: true, name: true, assetCode: true, location: { select: { name: true } }, assetParts: { select: { partId: true } } } },
+      failedComponent: { select: { id: true, name: true, assetCode: true } },
       assets:       { include: { asset: { select: { id: true, name: true, assetCode: true } } } },
       location:     { select: { id: true, name: true, address: true } },
       assignedTo:   { select: { id: true, name: true, email: true } },
@@ -250,6 +251,11 @@ export default async function WorkOrderDetailPage({
                     {wo.asset.name}
                   </Link>
                 ) : '—' },
+                ...(wo.failedComponent ? [{ label: 'Failed component', value: (
+                  <Link href={`/assets/${wo.failedComponent.id}`} className="text-blue-600 hover:text-blue-850 hover:underline text-xs font-bold">
+                    {wo.failedComponent.name}
+                  </Link>
+                ) }] : []),
                 { label: 'Location',    value: wo.asset?.location?.name ?? '—' },
                 { label: 'Assigned to', value: wo.domain ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">

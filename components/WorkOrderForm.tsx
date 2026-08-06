@@ -19,6 +19,7 @@ interface WOFormData {
   status: string; startDate: string; startTime: string; dueDate: string; dueTime: string
   assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
+  failedComponentId: string
   assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
   notes: string; issueId: string; customIssue: string;
   customFields: Record<string, any> | null
@@ -67,6 +68,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     locationId:     initialData?.locationId     ?? preselectedLocationId ?? '',
     locationScope:  initialData?.locationScope  ?? 'GENERAL',
     selectedAssetIds: initialData?.selectedAssetIds ?? [],
+    failedComponentId: initialData?.failedComponentId ?? '',
     assignedToId:   initialData?.assignedToId   ?? '',
     teamId:         initialData?.teamId         ?? '',
     laborHours:     initialData?.laborHours     ?? '',
@@ -137,7 +139,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     if (type === 'ASSET') {
       setForm(prev => ({ ...prev, locationId: '', locationScope: 'GENERAL', selectedAssetIds: [] }))
     } else {
-      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '' }))
+      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '', failedComponentId: '' }))
     }
   }
 
@@ -296,6 +298,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         startDate:    form.startDate ? (form.startDate + (form.startTime ? 'T' + form.startTime : 'T00:00')) : null,
         dueDate:      form.dueDate ? (form.dueDate + (form.dueTime ? 'T' + form.dueTime : 'T12:00')) : null,
         assetId:      form.assetId        || null,
+        failedComponentId: form.failedComponentId || null,
         locationId:   form.locationId     || null,
         locationScope: form.locationId && form.selectedAssetIds.length === 0 ? form.locationScope : null,
         selectedAssetIds: uniqueAssetIds,
@@ -480,15 +483,34 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         </div>
 
         {targetType === 'ASSET' ? (
-          <div>
-            <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-3">Asset</label>
-            <AssetTreeSelect
-              assets={assets}
-              value={form.assetId || form.selectedAssetIds[0] || ''}
-              onChange={id => { set('assetId', id); set('selectedAssetIds', []) }}
-              placeholder="Select an asset..."
-            />
-          </div>
+          <>
+            <div>
+              <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-3">Asset</label>
+              <AssetTreeSelect
+                assets={assets}
+                value={form.assetId || form.selectedAssetIds[0] || ''}
+                onChange={id => { set('assetId', id); set('selectedAssetIds', []); set('failedComponentId', '') }}
+                placeholder="Select an asset..."
+              />
+            </div>
+            {primaryAssetId && (
+              <div className="mt-4">
+                <label className="block text-xs font-bold text-slate-705 uppercase tracking-wider mb-1.5">
+                  Failed component <span className="text-slate-400 font-semibold normal-case">(optional)</span>
+                </label>
+                <AssetTreeSelect
+                  assets={assets}
+                  subtreeId={primaryAssetId}
+                  value={form.failedComponentId}
+                  onChange={id => set('failedComponentId', id as string)}
+                  placeholder="Select a failed component..."
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5 font-medium">
+                  The component within {selectedAsset?.name ?? 'the asset'} where the failure occurred. Only its sub-assets are shown.
+                </p>
+              </div>
+            )}
+          </>
         ) : (
           <div className="space-y-4">
             <div>

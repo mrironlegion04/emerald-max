@@ -511,6 +511,7 @@ model Asset {
 
   workOrders           WorkOrder[]
   workOrderAssets      WorkOrderAsset[]
+  failedComponentWorkOrders WorkOrder[] @relation("WOFailedComponent")
   maintenanceSchedules MaintenanceSchedule[]
   pmScheduleLinks      MaintenanceScheduleAsset[]
   meters               Meter[]
@@ -633,6 +634,8 @@ model WorkOrder {
 
   assetId      String?
   asset        Asset?  @relation(fields: [assetId], references: [id])
+  failedComponentId String?
+  failedComponent   Asset? @relation("WOFailedComponent", fields: [failedComponentId], references: [id], onDelete: SetNull)
   locationId   String?
   location     Location? @relation("WorkOrdersAtLocation", fields: [locationId], references: [id])
   locationScope LocationScope? // null for asset-based WOs, set for location-based WOs
@@ -681,6 +684,7 @@ requests      MaintenanceRequest[]
   @@index([assignedToId])
   @@index([domainId])
   @@index([assetId])
+  @@index([failedComponentId])
   @@index([locationId])
   @@index([teamId])
   @@index([createdAt])

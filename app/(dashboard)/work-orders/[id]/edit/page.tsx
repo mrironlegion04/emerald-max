@@ -80,6 +80,7 @@ export default async function EditWorkOrderPage({
     dueDate:         wo.dueDate ? new Date(wo.dueDate).toISOString().split('T')[0] : '',
     dueTime:         wo.dueDate ? new Date(wo.dueDate).toTimeString().slice(0, 5) : '',
     assetId:         wo.assetId       ?? '',
+    failedComponentId: wo.failedComponentId ?? '',
     locationId:      wo.locationId    ?? '',
     locationScope:   wo.locationScope ?? 'ALL_ASSETS',
     selectedAssetIds,

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDown, ChevronRight, X, Package, Search, MapPin, Check } from 'lucide-react'
+import { collectDescendantIds } from '@/lib/asset-hierarchy'
 
 interface Asset {
   id: string
@@ -41,6 +42,7 @@ interface Props {
   onChange: (id: string | string[]) => void
   placeholder?: string
   multiSelect?: boolean
+  subtreeId?: string
 }
 
 // ── Asset-Only Tree Builders ──
@@ -187,6 +189,7 @@ export default function AssetTreeSelect({
   onChange,
   placeholder = '— No asset —',
   multiSelect = false,
+  subtreeId,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -230,6 +233,7 @@ export default function AssetTreeSelect({
 
   // 1. Fetch locations client-side to keep the component self-contained
   useEffect(() => {
+    if (subtreeId) return
     if ((viewMode === 'location' || value) && locations.length === 0 && !loadingLocations) {
       setLoadingLocations(true)
       fetch('/api/locations')
@@ -256,8 +260,8 @@ export default function AssetTreeSelect({
     }
   }, [viewMode, value, locations.length, loadingLocations])
 
-  // Asset-only tree
-  const assetRootTree = useMemo(() => buildTree(assets), [assets])
+  // Asset-only tree (rooted at subtreeId when provided, excluding the root itself)
+  const assetRootTree = useMemo(() => buildTree(assets, subtreeId ?? null), [assets, subtreeId])
 
   // Combined location-asset tree
   const locationCombinedTree = useMemo(() => {
@@ -282,15 +286,24 @@ export default function AssetTreeSelect({
 
   const trimmed = search.trim().toLowerCase()
 
+  const effectiveViewMode = subtreeId ? 'asset' as const : viewMode
+
+  // Restrict options to the subtree when subtreeId is provided
+  const subtreeIds = useMemo(
+    () => (subtreeId ? collectDescendantIds(assets, subtreeId) : null),
+    [assets, subtreeId]
+  )
+
   // Search Results — only assets are searchable and selectable
   const searchResults = useMemo(() => {
     if (!trimmed) return []
-    
+
     // We search the asset list, but enrich their paths based on what mode we are in
     return assets
-      .filter(asset => 
-        asset.name.toLowerCase().includes(trimmed) ||
-        (asset.assetCode && asset.assetCode.toLowerCase().includes(trimmed))
+      .filter(asset =>
+        (!subtreeIds || subtreeIds.has(asset.id)) &&
+        (asset.name.toLowerCase().includes(trimmed) ||
+        (asset.assetCode && asset.assetCode.toLowerCase().includes(trimmed)))
       )
       .map(asset => {
         const path = locations.length > 0 
@@ -298,7 +311,7 @@ export default function AssetTreeSelect({
           : buildPath(assets, asset.id)
         return { asset, path }
       })
-  }, [trimmed, assets, locations])
+  }, [trimmed, assets, locations, subtreeIds])
 
   // Click outside listener to close dropdown
   useEffect(() => {
@@ -630,30 +643,32 @@ export default function AssetTreeSelect({
       {open && (
         <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
           {/* Tabs segmented control */}
-          <div className="flex border-b border-gray-100 p-1 bg-gray-50">
-            <button
-              type="button"
-              onClick={() => setViewMode('asset')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                viewMode === 'asset'
-                  ? 'bg-white text-indigo-700 shadow-sm border border-gray-100'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              📦 By Asset
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('location')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                viewMode === 'location'
-                  ? 'bg-white text-emerald-700 shadow-sm border border-gray-100'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              📍 By Location
-            </button>
-          </div>
+          {!subtreeId && (
+            <div className="flex border-b border-gray-100 p-1 bg-gray-50">
+              <button
+                type="button"
+                onClick={() => setViewMode('asset')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  viewMode === 'asset'
+                    ? 'bg-white text-indigo-700 shadow-sm border border-gray-100'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                📦 By Asset
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('location')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  viewMode === 'location'
+                    ? 'bg-white text-emerald-700 shadow-sm border border-gray-100'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                📍 By Location
+              </button>
+            </div>
+          )}
 
           {/* Search */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
@@ -663,7 +678,7 @@ export default function AssetTreeSelect({
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={viewMode === 'location' ? "Search assets in locations…" : "Search assets…"}
+              placeholder={effectiveViewMode === 'location' ? "Search assets in locations…" : "Search assets…"}
               className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400"
             />
             {search && (
@@ -713,6 +728,8 @@ export default function AssetTreeSelect({
               </div>
             ) : assets.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-gray-400">No assets available.</p>
+            ) : subtreeId && subtreeIds && subtreeIds.size === 0 ? (
+              <p className="px-3 py-6 text-center text-sm text-gray-400">No components under this asset.</p>
             ) : trimmed ? (
               searchResults.length === 0 ? (
                 <p className="px-3 py-6 text-center text-sm text-gray-400">No results for &ldquo;{search}&rdquo;</p>
@@ -779,7 +796,7 @@ export default function AssetTreeSelect({
                   </div>
                 </>
               )
-            ) : viewMode === 'location' ? (
+            ) : effectiveViewMode === 'location' ? (
               locationCombinedTree.length === 0 ? (
                 <p className="px-3 py-6 text-center text-sm text-gray-400">No locations configured.</p>
               ) : (

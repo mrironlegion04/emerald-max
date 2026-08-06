@@ -614,6 +614,9 @@ model WorkOrder {
   requestedById String?
   requestedByUser User? @relation("WORequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
 
+  downtimeStartedAt DateTime? // when the machine/equipment actually went down (user-chosen)
+  downtimeEndedAt   DateTime? // when it was back up (user-chosen); Lost Hours = ended - started
+
   otherProblemDescription String?
   hasCustomProblemDescription Boolean @default(false)
 
@@ -1011,6 +1014,7 @@ model MaintenanceRequest {
   priority        RequestPriority @default(MEDIUM)
   requestType     RequestType?
   desiredDate     DateTime?
+  downtimeStartedAt DateTime? // when the machine/equipment went down, recorded at request time
   status          RequestStatus @default(PENDING)
   rejectionReason String?
   createdAt       DateTime      @default(now())

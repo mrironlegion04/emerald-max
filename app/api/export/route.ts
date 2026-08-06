@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
-        'Shift','Requested By','WO Category',
+        'Shift','Requested By','WO Category','Lost Hours',
       ]
       const rows = wos.map(w => [
         w.woNumber, w.title, w.type, w.status, w.priority,
@@ -121,6 +121,9 @@ export async function GET(request: NextRequest) {
         w.shift ?? '',
         w.requestedBy ?? '',
         w.woCategory?.name ?? '',
+        w.downtimeStartedAt && w.downtimeEndedAt
+          ? (Math.round(((new Date(w.downtimeEndedAt).getTime() - new Date(w.downtimeStartedAt).getTime()) / 3600000) * 100) / 100).toFixed(2)
+          : '',
       ])
       csv = toCSV(headers, rows)
 

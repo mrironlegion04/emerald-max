@@ -16,6 +16,8 @@ interface Props {
   initialStartAt?: string | null
   initialLaborHours?: number | null
   initialLaborCost?: number | null
+  initialDowntimeStartedAt?: string | null
+  initialDowntimeEndedAt?: string | null
   onStatusChanged?: () => void
 }
 
@@ -57,13 +59,15 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [notes, setNotes]       = useState('')
   const [laborHours, setLaborHours] = useState('')
   const [laborCost, setLaborCost]   = useState('')
+  const [downSince, setDownSince]   = useState('')
+  const [backUpAt, setBackUpAt]     = useState(() => toLocalDatetimeString(new Date()))
   const [showComplete, setShowComplete] = useState(false)
   const [showFaceVerification, setShowFaceVerification] = useState(false)
   const [hasFaceVerification, setHasFaceVerification] = useState(false)
@@ -87,6 +91,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [adjustedStartAt, setAdjustedStartAt] = useState(() => initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
   const [adjustedLaborHours, setAdjustedLaborHours] = useState(() => initialLaborHours != null ? String(initialLaborHours) : '')
   const [adjustedLaborCost, setAdjustedLaborCost] = useState(() => initialLaborCost != null ? String(initialLaborCost) : '')
+  const [adjustedDownSince, setAdjustedDownSince] = useState(() => initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
+  const [adjustedBackUpAt, setAdjustedBackUpAt] = useState(() => initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : '')
 
   const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER'
   const canClose = userRole === 'ADMIN' || canCloseWO
@@ -109,12 +115,15 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setShowComplete(true)
       setRequestedTime(toLocalDatetimeString(new Date()))
       setRequestNotes('')
+      setDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
+      setBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
       return
     }
 
     if (newStatus === 'IN_PROGRESS') {
       setShowStartWork(true)
       setStartedAtValue(toLocalDatetimeString(new Date()))
+      setDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
       return
     }
 
@@ -161,6 +170,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         body: JSON.stringify({
           status: 'IN_PROGRESS',
           startedAt: new Date(startedAtValue).toISOString(),
+          downtimeStartedAt: downSince ? new Date(downSince).toISOString() : undefined,
         }),
       })
       const data = await res.json()
@@ -200,6 +210,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           laborCost:  laborCost  ? parseFloat(laborCost)  : undefined,
           requestedCompletionTime: new Date(requestedTime).toISOString(),
           requestedCompletionNotes: requestNotes || undefined,
+          downtimeStartedAt: downSince ? new Date(downSince).toISOString() : undefined,
+          downtimeEndedAt: backUpAt ? new Date(backUpAt).toISOString() : undefined,
         }),
       })
       const data = await res.json()
@@ -256,6 +268,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           startedAt: adjustedStartAt ? new Date(adjustedStartAt).toISOString() : undefined,
           laborHours: adjustedLaborHours ? parseFloat(adjustedLaborHours) : undefined,
           laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
+          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
+          downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
         }),
       })
       const data = await res.json()
@@ -436,6 +450,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                       setAdjustedStartAt(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
                       setAdjustedLaborHours(initialLaborHours != null ? String(initialLaborHours) : '')
                       setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
+                      setAdjustedDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
+                      setAdjustedBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
                     }}
                     className="w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-blue-100 shadow-md">
                     <Pencil className="w-3 h-3 inline mr-1.5" />
@@ -469,6 +485,20 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                     <input type="number" min="0" step="0.01" value={adjustedLaborCost}
                       onChange={e => setAdjustedLaborCost(e.target.value)}
                       placeholder="0.00" className="input-field text-xs bg-white border-slate-200 w-full" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Machine down since</label>
+                    <input type="datetime-local" value={adjustedDownSince}
+                      onChange={e => setAdjustedDownSince(e.target.value)}
+                      className="input-field text-xs bg-white border-slate-200 w-full" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Back up at</label>
+                    <input type="datetime-local" value={adjustedBackUpAt}
+                      onChange={e => setAdjustedBackUpAt(e.target.value)}
+                      className="input-field text-xs bg-white border-slate-200 w-full" />
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
@@ -526,6 +556,15 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               onChange={e => setStartedAtValue(e.target.value)}
               className="input-field text-xs bg-white border-slate-200" />
           </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Machine down since</label>
+            <input type="datetime-local" value={downSince}
+              onChange={e => setDownSince(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+            <p className="text-[10px] text-slate-400 font-medium mt-1">
+              When the machine actually went down (may be before work started). Optional — leave blank if not down.
+            </p>
+          </div>
           <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
             <button onClick={confirmStartWork} disabled={loading}
               className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
@@ -563,6 +602,30 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               onChange={e => setRequestedTime(e.target.value)}
               className="input-field text-xs bg-white border-slate-200" />
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Machine down since</label>
+              <input type="datetime-local" value={downSince}
+                onChange={e => setDownSince(e.target.value)}
+                className="input-field text-xs bg-white border-slate-200" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Back up at</label>
+              <input type="datetime-local" value={backUpAt}
+                onChange={e => setBackUpAt(e.target.value)}
+                className="input-field text-xs bg-white border-slate-200" />
+            </div>
+          </div>
+          {downSince && backUpAt && (() => {
+            const ms = new Date(backUpAt).getTime() - new Date(downSince).getTime()
+            const lost = ms > 0 ? (ms / 3600000).toFixed(2) : null
+            return lost !== null && (
+              <p className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">
+                Estimated lost hours: {lost} {lost === '1.00' ? 'hour' : 'hours'}
+                {ms <= 0 && ' — back-up time must be after down time'}
+              </p>
+            )
+          })()}
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Notes for approver (optional)</label>
             <textarea value={requestNotes} onChange={e => setRequestNotes(e.target.value)}

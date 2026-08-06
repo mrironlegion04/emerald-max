@@ -23,6 +23,7 @@ interface WOFormData {
   notes: string; issueId: string; customIssue: string;
   customFields: Record<string, any> | null
   woCategoryId: string
+  downtimeStartedAt: string
 }
 
 interface Meta {
@@ -76,6 +77,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     customIssue:    initialData?.customIssue    ?? '',
     customFields:   (initialData as any)?.customFields ?? null,
     woCategoryId:   (initialData as any)?.woCategoryId ?? '',
+    downtimeStartedAt: (initialData as any)?.downtimeStartedAt
+      ? toLocalInput((initialData as any).downtimeStartedAt)
+      : '',
   })
 
   const [initialForm] = useState<WOFormData>(buildInitialForm)
@@ -305,6 +309,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
         customFields: form.customFields,
         woCategoryId: form.woCategoryId || null,
+        downtimeStartedAt: form.type === 'BREAKDOWN' && form.downtimeStartedAt
+          ? new Date(form.downtimeStartedAt).toISOString()
+          : null,
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'
@@ -315,6 +322,13 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       router.refresh()
     } catch { setError('Network error') }
     finally  { setSaving(false) }
+  }
+
+  const toLocalInput = (v: string | Date) => {
+    const d = new Date(v)
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
   const inputRow = (label: string, required = false, children: React.ReactNode) => (
@@ -416,6 +430,19 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             )}
           </div>
         </div>
+        {form.type === 'BREAKDOWN' && inputRow('Machine down since', false,
+          <>
+            <input
+              type="datetime-local"
+              value={form.downtimeStartedAt}
+              onChange={e => set('downtimeStartedAt', e.target.value)}
+              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-400 font-medium mt-1">
+              When the machine actually went down. If unknown, leave blank — the tech can record it when work starts.
+            </p>
+          </>
+        )}
         {inputRow('Description', false,
           <textarea value={form.description} onChange={e => set('description', e.target.value)}
             className="input-field text-xs sm:text-sm resize-none" rows={3} placeholder="Describe the work to be done..." />

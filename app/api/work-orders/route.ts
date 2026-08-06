@@ -36,6 +36,7 @@ const woSchema = z.object({
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
   woCategoryId:        z.string().nullable().optional(),
+  downtimeStartedAt:   z.string().nullable().optional(),
 
 }).refine(
   data => !(data.issueId && data.customIssue),
@@ -190,6 +191,7 @@ export async function POST(request: NextRequest) {
         requestedBy,
         requestedById:  user.userId,
         woCategoryId:   data.woCategoryId ?? null,
+        downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,
       },

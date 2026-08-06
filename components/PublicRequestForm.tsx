@@ -28,7 +28,7 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', issueId: '', teamId: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '', teamId: '',
 }
 
 export default function PublicRequestForm({ currentUser }: { currentUser: CurrentUser | null }) {
@@ -205,6 +205,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
         requestType: form.requestType || undefined,
         assetId: form.assetId || undefined,
         desiredDate: form.desiredDate || undefined,
+        downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId || undefined,
         teamId: form.teamId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
@@ -337,6 +338,11 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desired completion date</label>
                 <input type="date" value={form.desiredDate} onChange={e => set('desiredDate', e.target.value)} className="input-field" />
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Machine down since</label>
+              <input type="datetime-local" value={form.downtimeStartedAt} onChange={e => set('downtimeStartedAt', e.target.value)} className="input-field" />
+              <p className="text-[11px] text-gray-400 mt-1">Optional — if the machine is down, when did it stop working? This helps the team prioritize.</p>
             </div>
             {currentUser && (
               <div>

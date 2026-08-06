@@ -171,6 +171,8 @@ export default async function WorkOrderDetailPage({
               initialStartAt={wo.startedAt?.toISOString() ?? null}
               initialLaborHours={wo.laborHours}
               initialLaborCost={wo.laborCost}
+              initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}
+              initialDowntimeEndedAt={wo.downtimeEndedAt?.toISOString() ?? null}
             />
             <SkipPMButton
               woId={wo.id}
@@ -338,6 +340,36 @@ export default async function WorkOrderDetailPage({
                   <span className="font-bold text-slate-750">{r.value}</span>
                 </div>
               ))}
+              {wo.downtimeStartedAt && (
+                <>
+                  <div className="border-t border-slate-100 pt-3 flex justify-between items-center text-xs">
+                    <span className="text-slate-450 font-semibold uppercase tracking-wider">Down since</span>
+                    <span className="font-bold text-slate-750">{fmtDateTime(wo.downtimeStartedAt)}</span>
+                  </div>
+                  {wo.downtimeEndedAt ? (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-450 font-semibold uppercase tracking-wider">Back up at</span>
+                      <span className="font-bold text-slate-750">{fmtDateTime(wo.downtimeEndedAt)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-450 font-semibold uppercase tracking-wider">Back up at</span>
+                      <span className="font-bold text-amber-600">Still down</span>
+                    </div>
+                  )}
+                  {(() => {
+                    const lost = wo.downtimeEndedAt
+                      ? (new Date(wo.downtimeEndedAt).getTime() - new Date(wo.downtimeStartedAt).getTime()) / 3600000
+                      : null
+                    return lost !== null && lost > 0 ? (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-450 font-semibold uppercase tracking-wider">Lost hours</span>
+                        <span className="font-bold text-rose-600">{lost % 1 === 0 ? lost.toFixed(0) : lost.toFixed(2)} hrs</span>
+                      </div>
+                    ) : null
+                  })()}
+                </>
+              )}
               <div className="border-t border-slate-100 pt-3.5 flex justify-between items-center text-xs">
                 <span className="font-bold text-slate-650 uppercase tracking-wide">Total cost</span>
                 <span className="text-sm font-extrabold text-slate-900">{fmtCurrency(totalCost || null)}</span>

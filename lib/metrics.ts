@@ -195,16 +195,20 @@ export async function updateAssetMetrics(assetId: string): Promise<void> {
   })
   const totalRepairTime = repairSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0)
 
-  // Total downtime = sum of (completedAt - createdAt) for completed WOs.
-  // Guard against bad data: skip WOs where completion precedes creation so
+  // Total downtime = sum of downtime windows for completed WOs.
+  // Uses the real downtime window (downtimeEndedAt - downtimeStartedAt) when
+  // both are set, otherwise falls back to (completedAt - createdAt).
+  // Guard against bad data: skip WOs where the window is empty/negative so
   // downtime can never go negative.
   const downtimeWOs = await prisma.workOrder.findMany({
     where: { assetId, status: 'COMPLETED', completedAt: { not: null } },
-    select: { createdAt: true, completedAt: true },
+    select: { createdAt: true, completedAt: true, downtimeStartedAt: true, downtimeEndedAt: true },
   })
   const totalDowntimeMinutes = downtimeWOs.reduce((sum, wo) => {
     if (!wo.completedAt) return sum
-    const minutes = Math.floor((wo.completedAt.getTime() - wo.createdAt.getTime()) / (1000 * 60))
+    const end = wo.downtimeEndedAt ?? wo.completedAt
+    const start = wo.downtimeStartedAt ?? wo.createdAt
+    const minutes = Math.floor((end.getTime() - start.getTime()) / (1000 * 60))
     if (minutes <= 0) return sum
     return sum + minutes
   }, 0)

@@ -26,6 +26,7 @@ const schema = z.object({
   issueId: z.string().optional(),
   teamId: z.string().optional(),
   desiredDate: z.string().optional(),
+  downtimeStartedAt: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(),
 })
 
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
         issueId: data.issueId, teamId: data.teamId, desiredDate,
+        downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         requesterId: user.userId,
         attachments: data.attachments && data.attachments.length > 0 ? {
           create: data.attachments.map(a => ({

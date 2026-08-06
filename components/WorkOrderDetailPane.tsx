@@ -73,6 +73,12 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
   }
 
   const isOverdue = wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED', 'CANCELLED'].includes(wo.status)
+  const lostHours = wo.downtimeStartedAt && wo.downtimeEndedAt
+    ? (new Date(wo.downtimeEndedAt).getTime() - new Date(wo.downtimeStartedAt).getTime()) / 3600000
+    : null
+  const fmtLost = lostHours !== null && lostHours > 0
+    ? (lostHours % 1 === 0 ? lostHours.toFixed(0) : lostHours.toFixed(2))
+    : null
   const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
   const viewer = wo.viewer ?? {}
   const canEdit = viewer.canEdit ?? false
@@ -118,6 +124,8 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           initialStartAt={wo.startedAt ?? null}
           initialLaborHours={wo.laborHours ?? null}
           initialLaborCost={wo.laborCost ?? null}
+          initialDowntimeStartedAt={wo.downtimeStartedAt ?? null}
+          initialDowntimeEndedAt={wo.downtimeEndedAt ?? null}
           onStatusChanged={() => setReloadKey(k => k + 1)}
         />
       </div>
@@ -153,6 +161,15 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
               </span>
             )},
             { label: 'Completed', value: fmtDateTime(wo.completedAt) },
+            ...(wo.downtimeStartedAt ? [
+              { label: 'Down since', value: fmtDateTime(wo.downtimeStartedAt) },
+              ...(wo.downtimeEndedAt ? [
+                { label: 'Back up at', value: fmtDateTime(wo.downtimeEndedAt) },
+                { label: 'Lost hours', value: fmtLost !== null ? <span className={(lostHours ?? 0) > 0 ? 'text-rose-600' : ''}>{fmtLost} {fmtLost === '1' ? 'hr' : 'hrs'}</span> : '—' },
+              ] : [
+                { label: 'Lost hours', value: <span className="text-slate-400 italic">still down</span> },
+              ]),
+            ] : []),
           ].map(row => (
             <div key={row.label} className="flex justify-between items-center gap-3">
               <dt className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">{row.label}</dt>

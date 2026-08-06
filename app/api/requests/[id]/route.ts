@@ -135,6 +135,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           type: 'BREAKDOWN', status: 'OPEN', priority: request.priority as never,
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
           teamId: request.teamId,
+          downtimeStartedAt: request.downtimeStartedAt ?? null,
           createdById: user.userId,
           requestedBy: request.requesterName || user.name,
           requestedById: request.requesterId ?? user.userId,

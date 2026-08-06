@@ -26,6 +26,8 @@ const statusSchema = z.object({
   completedAt: z.string().optional(),
   requestedCompletionTime:  z.string().optional(),
   requestedCompletionNotes: z.string().optional(),
+  downtimeStartedAt: z.string().optional(),
+  downtimeEndedAt:   z.string().optional(),
 })
 
 export async function PATCH(
@@ -40,7 +42,14 @@ export async function PATCH(
     const body = await request.json()
     const parsed = statusSchema.parse(body)
     let { status, notes, laborHours, laborCost, startedAt, completedAt,
-          requestedCompletionTime, requestedCompletionNotes } = parsed
+          requestedCompletionTime, requestedCompletionNotes,
+          downtimeStartedAt, downtimeEndedAt } = parsed
+
+    // Downtime window sanity check: "back up at" must come after "down since"
+    if (downtimeStartedAt && downtimeEndedAt &&
+        new Date(downtimeEndedAt).getTime() <= new Date(downtimeStartedAt).getTime()) {
+      return NextResponse.json({ error: 'Back up time must be after the down time' }, { status: 400 })
+    }
 
     // Load current WO
     const wo = await prisma.workOrder.findUnique({ 
@@ -168,6 +177,11 @@ export async function PATCH(
     }
     if (status === 'IN_PROGRESS' && !wo.respondedAt) updateData.respondedAt = new Date()
     
+    // Downtime capture at start of work — machine may have been down before the WO
+    if (status === 'IN_PROGRESS' && downtimeStartedAt) {
+      updateData.downtimeStartedAt = new Date(downtimeStartedAt)
+    }
+    
     // Tech submitting for approval
     if (status === 'PENDING_APPROVAL') {
       updateData.requestedCompletionTime = requestedCompletionTime
@@ -179,6 +193,8 @@ export async function PATCH(
       if (notes) updateData.notes = notes
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost
+      if (downtimeStartedAt) updateData.downtimeStartedAt = new Date(downtimeStartedAt)
+      if (downtimeEndedAt) updateData.downtimeEndedAt = new Date(downtimeEndedAt)
     }
     
     // Final completion (admin/manager approving)
@@ -198,6 +214,8 @@ export async function PATCH(
       if (notes) updateData.notes = notes
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost
+      if (downtimeStartedAt) updateData.downtimeStartedAt = new Date(downtimeStartedAt)
+      if (downtimeEndedAt) updateData.downtimeEndedAt = new Date(downtimeEndedAt)
     }
 
     // Rejection: PENDING_APPROVAL → IN_PROGRESS

@@ -84,6 +84,8 @@ const updateSchema = z.object({
   customIssue:         z.string().nullable().optional(),
   shift:               z.string().nullable().optional(),
   woCategoryId:        z.string().nullable().optional(),
+  downtimeStartedAt:   z.string().nullable().optional(),
+  downtimeEndedAt:     z.string().nullable().optional(),
 }).refine(
   data => !(data.issueId && data.customIssue),
   { message: 'Provide either a standard issue or custom description, not both' }
@@ -185,6 +187,11 @@ export async function PUT(
     if (data.customIssue) {
       data.customIssue = data.customIssue.trim()
       if (data.customIssue.length === 0) data.customIssue = null
+    }
+
+    if (data.downtimeStartedAt && data.downtimeEndedAt &&
+        new Date(data.downtimeEndedAt).getTime() <= new Date(data.downtimeStartedAt).getTime()) {
+      return NextResponse.json({ error: 'Back up time must be after the down time' }, { status: 400 })
     }
 
     // ── Permission checks ─────────────────────────────────────────────
@@ -342,7 +349,7 @@ export async function PUT(
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','customFields','issueId','customIssue','startDate',
-           'woCategoryId'].includes(key)
+           'woCategoryId','downtimeStartedAt','downtimeEndedAt'].includes(key)
         )
       ),
       ...(data.teamId ? { domainId: derivedDomainId } : {}),
@@ -351,6 +358,12 @@ export async function PUT(
       ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
       startDate: data.startDate ? new Date(data.startDate) : undefined,
+      downtimeStartedAt: data.downtimeStartedAt !== undefined
+        ? (data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null)
+        : undefined,
+      downtimeEndedAt: data.downtimeEndedAt !== undefined
+        ? (data.downtimeEndedAt ? new Date(data.downtimeEndedAt) : null)
+        : undefined,
       assetId: normalized.assetId, // use normalized single-asset display value
     }
 

@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/db'
 import { createNotificationForUsers } from '@/lib/notifications'
 import { writeAudit } from '@/lib/audit'
 import { generateWONumber } from '@/lib/wo-number'
@@ -178,12 +177,7 @@ async function triggerPMSchedules(
 
     if (existingWO) continue
 
-    // Generate WO number (scoped to the asset's plant)
-    const asset = await tx.asset.findUnique({
-      where: { id: assetId },
-      select: { locationId: true },
-    })
-    const woNumber = await generateWONumber(asset?.locationId, tx)
+    const woNumber = await generateWONumber(tx)
 
     // Create work order
     const wo = await tx.workOrder.create({

@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const woNumber = await generateWONumber(locationId)
+    const woNumber = await generateWONumber()
 
     // ── Auto-derive domainId from team ───────────────────────────────
     let derivedDomainId: string | null = null

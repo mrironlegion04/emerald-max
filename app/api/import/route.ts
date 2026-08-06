@@ -712,16 +712,8 @@ export async function POST(request: NextRequest) {
         const validStatuses = ['OPEN', 'IN_PROGRESS', 'ON_HOLD']
         const status = validStatuses.includes(row.status?.toUpperCase()) ? row.status.toUpperCase() : 'OPEN'
 
-        // Generate WO number (scoped to the asset's plant)
-        let importLocationId: string | null = null
-        if (assetId) {
-          const importAsset = await prisma.asset.findUnique({
-            where: { id: assetId },
-            select: { locationId: true },
-          })
-          importLocationId = importAsset?.locationId ?? null
-        }
-        const woNumber = await generateWONumber(importLocationId)
+        // Generate WO number
+        const woNumber = await generateWONumber()
 
         try {
           const wo = await prisma.workOrder.create({

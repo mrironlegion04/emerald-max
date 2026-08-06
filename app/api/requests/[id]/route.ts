@@ -133,7 +133,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const woType: 'BREAKDOWN' | 'PREVENTIVE' =
       request.requestType === 'REPAIR' ? 'BREAKDOWN' : 'PREVENTIVE'
 
-    const woNumber = await generateWONumber(requestLocationId)
+    const woNumber = await generateWONumber()
     const [wo, updated] = await prisma.$transaction([
       prisma.workOrder.create({
         data: {

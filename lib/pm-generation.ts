@@ -349,10 +349,7 @@ export async function generateWOsForSchedule(
 
           for (let i = 0; i < tiersToGenerate.length; i++) {
             const tier = tiersToGenerate[i]
-            const woNumber = await generateWONumber(
-              schedule.locationId ?? asset?.locationId,
-              tx,
-            )
+            const woNumber = await generateWONumber(tx)
 
             // Build title
             let woTitle = schedule.title

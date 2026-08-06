@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { canWriteToAssets } from '@/lib/access-control'
 import {
   uploadFile,
@@ -11,7 +9,6 @@ import {
   ensureBucket,
 } from '@/lib/minio'
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB for images
 const ALLOWED = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
@@ -75,62 +72,25 @@ export async function POST(
       )
     }
 
-    // Initialize MinIO if configured
-    const useMinIO = isMinioConfigured()
-    if (useMinIO) {
-      try {
-        await ensureBucket()
-      } catch (error) {
-        console.error('MinIO initialization failed, falling back to local storage:', error)
-      }
+    if (!isMinioConfigured()) {
+      return NextResponse.json({ error: 'Storage service not configured' }, { status: 503 })
     }
 
-    // Ensure local upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true })
+    await ensureBucket()
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    let photoUrl = `/uploads/${file.name}`
-    let photoName = file.name
 
-    try {
-      // Try MinIO upload first
-      if (useMinIO) {
-        const objectName = generateObjectName(id, file.name)
-        await uploadFile(objectName, buffer, file.type, {
-          'x-amz-meta-original-name': file.name,
-          'x-amz-meta-uploaded-by': user.name || 'unknown',
-          'x-amz-meta-asset-id': id,
-        })
+    const objectName = generateObjectName(id, file.name)
+    await uploadFile(objectName, buffer, file.type, {
+      'x-amz-meta-original-name': file.name,
+      'x-amz-meta-uploaded-by': user.name || 'unknown',
+      'x-amz-meta-asset-id': id,
+    })
 
-        // Generate presigned URL (7 days max for MinIO)
-        photoUrl = await getPresignedUrl(objectName, 604800)
-        photoName = objectName
-        console.log(`Photo uploaded to MinIO: ${objectName}`)
-      } else {
-        // Fallback to local filesystem
-        const ext = file.name.split('.').pop() ?? 'jpg'
-        const filename = `asset-${id}-${Date.now()}.${ext}`
-        const filepath = path.join(UPLOAD_DIR, filename)
-        await writeFile(filepath, buffer)
-        photoUrl = `/uploads/${filename}`
-        photoName = filename
-        console.log(`Photo uploaded locally: ${filename}`)
-      }
-    } catch (uploadError) {
-      console.error('Photo upload failed:', uploadError)
-      // Fallback to local storage if MinIO fails
-      if (useMinIO) {
-        const ext = file.name.split('.').pop() ?? 'jpg'
-        const filename = `asset-${id}-${Date.now()}.${ext}`
-        const filepath = path.join(UPLOAD_DIR, filename)
-        await writeFile(filepath, buffer)
-        photoUrl = `/uploads/${filename}`
-        photoName = filename
-        console.log(`MinIO upload failed, fell back to local storage: ${filename}`)
-      } else {
-        throw uploadError
-      }
-    }
+    // Generate presigned URL (7 days max for MinIO)
+    const photoUrl = await getPresignedUrl(objectName, 604800)
+    const photoName = objectName
+    console.log(`Photo uploaded to MinIO: ${objectName}`)
 
     // Update asset with photo URL
     const updatedAsset = await prisma.asset.update({
@@ -158,7 +118,7 @@ export async function POST(
     }, { status: 200 })
   } catch (error) {
     console.error('Photo upload failed:', error)
-    return NextResponse.json({ error: 'Failed to upload photo' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to upload photo. Storage service unavailable — please try again.' }, { status: 500 })
   }
 }
 

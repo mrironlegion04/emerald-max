@@ -196,9 +196,16 @@ export default function AssetForm({
         try {
           const formData = new FormData()
           formData.append('photo', photoFile)
-          await fetch(`/api/assets/${data.id}/photo`, { method: 'POST', body: formData })
+          const photoRes = await fetch(`/api/assets/${data.id}/photo`, { method: 'POST', body: formData })
+          const photoData = await photoRes.json()
+          if (!photoRes.ok) {
+            setError(photoData.error ?? 'Photo upload failed — please try again')
+            return
+          }
         } catch (photoError) {
           console.error('Photo upload error:', photoError)
+          setError('Photo upload failed — please try again')
+          return
         } finally {
           setUploadingPhoto(false)
         }

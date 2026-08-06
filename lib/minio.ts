@@ -1,6 +1,24 @@
 import { Client } from 'minio'
+import http from 'http'
+import https from 'https'
 
 let minioClient: Client | null = null
+
+const REQUEST_TIMEOUT_MS = Number(process.env.MINIO_TIMEOUT_MS || 15000)
+
+// minio's Transport type is `Pick<typeof http, 'request'>`; wrap the request
+// method so an unresponsive (blackholed) connection fails fast instead of
+// hanging the upload until the OS TCP timeout.
+function withRequestTimeout(proto: Pick<typeof http, 'request'>): Pick<typeof http, 'request'> {
+  const request = ((options: http.RequestOptions | string | URL, callback?: (res: http.IncomingMessage) => void) => {
+    const req = proto.request(options, callback)
+    req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      req.destroy(new Error(`MinIO request timed out after ${REQUEST_TIMEOUT_MS}ms`))
+    })
+    return req
+  }) as typeof http.request
+  return { request }
+}
 
 /**
  * Get or initialize MinIO client
@@ -21,7 +39,7 @@ export function getMinioClient(): Client {
 
   // Parse endpoint - remove protocol if present
   const url = new URL(endpoint.includes('://') ? endpoint : `http://${endpoint}`)
-  
+
   minioClient = new Client({
     endPoint: url.hostname,
     port: url.port ? parseInt(url.port) : (useSSL ? 443 : 80),
@@ -29,6 +47,7 @@ export function getMinioClient(): Client {
     accessKey: accessKey,
     secretKey: secretKey,
     region: process.env.MINIO_REGION || 'us-east-1',
+    transport: withRequestTimeout(useSSL ? https : http),
   })
 
   return minioClient

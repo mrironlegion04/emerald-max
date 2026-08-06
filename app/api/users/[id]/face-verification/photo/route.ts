@@ -106,7 +106,7 @@ export async function POST(
   } catch (error) {
     console.error('Face photo upload error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload face photo' },
+      { error: 'Failed to upload face photo. Storage service unavailable — please try again.' },
       { status: 500 }
     )
   }

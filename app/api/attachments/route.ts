@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { canEditWorkOrder, canUploadWOAttachment, canWriteToAssets } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import {
   uploadFile,
   getPresignedUrl,
   ensureBucket,
-  getMinioClient,
 } from '@/lib/minio'
 
-const UPLOAD_DIR  = path.join(process.cwd(), 'public', 'uploads')
 const MAX_SIZE    = 10 * 1024 * 1024  // 10 MB
 const ALLOWED     = ['image/jpeg','image/png','image/gif','image/webp','application/pdf',
   'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -83,18 +79,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Initialize MinIO if configured
-    const useMinIO = isMinioConfigured()
-    if (useMinIO) {
-      try {
-        await ensureBucket()
-      } catch (error) {
-        console.error('MinIO initialization failed, falling back to local storage:', error)
-      }
+    if (!isMinioConfigured()) {
+      return NextResponse.json({ error: 'Storage service not configured' }, { status: 503 })
     }
 
-    // Ensure local upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true })
+    await ensureBucket()
 
     const created = []
     for (const file of files) {
@@ -109,45 +98,16 @@ export async function POST(req: NextRequest) {
       }
 
       const buffer = Buffer.from(await file.arrayBuffer())
-      let url = `/uploads/${file.name}`
-      let expiresAt: Date | null = null
 
-      try {
-        // Try MinIO upload first
-        if (useMinIO) {
-          const objectName = generateObjectName(file.name)
-          await uploadFile(objectName, buffer, file.type, {
-            'x-amz-meta-original-name': file.name,
-            'x-amz-meta-uploaded-by': user.name || 'unknown',
-          })
+      const objectName = generateObjectName(file.name)
+      await uploadFile(objectName, buffer, file.type, {
+        'x-amz-meta-original-name': file.name,
+        'x-amz-meta-uploaded-by': user.name || 'unknown',
+      })
 
-          // Generate presigned URL (7 days expiry)
-          url = await getPresignedUrl(objectName, 604800)
-          expiresAt = new Date(Date.now() + 604800 * 1000)
-          console.log(`File uploaded to MinIO: ${objectName}`)
-        } else {
-          // Fall back to local filesystem
-          const ext = file.name.split('.').pop() ?? 'bin'
-          const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-          const filepath = path.join(UPLOAD_DIR, filename)
-          await writeFile(filepath, buffer)
-          url = `/uploads/${filename}`
-          console.log(`File uploaded locally: ${filename}`)
-        }
-      } catch (uploadError) {
-        console.error('Upload failed:', uploadError)
-        // Try local fallback if MinIO upload fails
-        if (useMinIO) {
-          const ext = file.name.split('.').pop() ?? 'bin'
-          const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-          const filepath = path.join(UPLOAD_DIR, filename)
-          await writeFile(filepath, buffer)
-          url = `/uploads/${filename}`
-          console.log(`MinIO upload failed, fell back to local storage: ${filename}`)
-        } else {
-          throw uploadError
-        }
-      }
+      const url = await getPresignedUrl(objectName, 604800)
+      const expiresAt = new Date(Date.now() + 604800 * 1000)
+      console.log(`File uploaded to MinIO: ${objectName}`)
 
       const data: Record<string, unknown> = {
         filename: file.name.split('.').slice(0, -1).join('.'),
@@ -171,6 +131,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(created, { status: 201 })
   } catch (error) {
     console.error('Upload failed:', error)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed. Storage service unavailable — please try again.' }, { status: 500 })
   }
 }

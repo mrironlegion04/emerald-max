@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/session'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import {
   uploadFile,
   getPresignedUrl,
   ensureBucket,
 } from '@/lib/minio'
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 const MAX_SIZE = 25 * 1024 * 1024  // 25 MB max
 const ALLOWED = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
@@ -51,50 +48,29 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    let url = `/uploads/${file.name}`
-    let key = `local-${Date.now()}`
 
-    const useMinIO = isMinioConfigured()
-    if (useMinIO) {
-      try {
-        await ensureBucket()
-        const objectName = generateObjectName(file.name)
-        await uploadFile(objectName, buffer, file.type, {
-          'x-amz-meta-original-name': file.name,
-          'x-amz-meta-uploaded-by': user.name || 'unknown',
-        })
-        url = await getPresignedUrl(objectName, 604800) // valid for 7 days
-        key = objectName
-        console.log(`Chat file uploaded to MinIO: ${objectName}`)
-      } catch (uploadError) {
-        console.error('MinIO Chat upload failed, falling back to local storage:', uploadError)
-        await mkdir(UPLOAD_DIR, { recursive: true })
-        const ext = file.name.split('.').pop() ?? 'bin'
-        const filename = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const filepath = path.join(UPLOAD_DIR, filename)
-        await writeFile(filepath, buffer)
-        url = `/uploads/${filename}`
-        key = filename
-      }
-    } else {
-      await mkdir(UPLOAD_DIR, { recursive: true })
-      const ext = file.name.split('.').pop() ?? 'bin'
-      const filename = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const filepath = path.join(UPLOAD_DIR, filename)
-      await writeFile(filepath, buffer)
-      url = `/uploads/${filename}`
-      key = filename
+    if (!isMinioConfigured()) {
+      return NextResponse.json({ error: 'Storage service not configured' }, { status: 503 })
     }
+
+    await ensureBucket()
+    const objectName = generateObjectName(file.name)
+    await uploadFile(objectName, buffer, file.type, {
+      'x-amz-meta-original-name': file.name,
+      'x-amz-meta-uploaded-by': user.name || 'unknown',
+    })
+    const url = await getPresignedUrl(objectName, 604800) // valid for 7 days
+    console.log(`Chat file uploaded to MinIO: ${objectName}`)
 
     return NextResponse.json({
       url,
       name: file.name,
       type: file.type,
       size: file.size,
-      key
+      key: objectName
     }, { status: 201 })
   } catch (error) {
     console.error('Chat file upload failed:', error)
-    return NextResponse.json({ error: 'File upload failure' }, { status: 500 })
+    return NextResponse.json({ error: 'Upload failed. Storage service unavailable — please try again.' }, { status: 500 })
   }
 }

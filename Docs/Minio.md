@@ -1,6 +1,6 @@
 <!-- Add later in Emerald Repo in Documentary Section -->
 mc mb localminio/max-attachments
-mc admin user add localminio max_user max_password
+mc admin user add localminio max_user CHANGE_ME
 
 
 

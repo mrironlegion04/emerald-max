@@ -355,7 +355,7 @@ export default async function AssetDetailPage({
                   { label: 'Owner',         value: asset.owner?.name },
                   { label: 'Criticality',   value: asset.criticality },
                   { label: 'Purchase date', value: formatDate(asset.purchaseDate) },
-                  { label: 'Purchase cost', value: asset.purchaseCost != null ? Number(asset.purchaseCost) : null },
+                  { label: 'Purchase cost', value: asset.purchaseCost != null ? formatCurrency(Number(asset.purchaseCost)) : null },
                   { label: 'Created by',    value: asset.createdBy?.name },
                 ] as { label: string; value: string | null | undefined }[]).map(row => (
                   <div key={row.label} className="flex justify-between gap-4">

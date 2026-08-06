@@ -18,7 +18,7 @@ CREATE DATABASE cmms_db;
 ## ✅ 2. Create a new user
 
 ```sql
-CREATE USER cmms_user WITH PASSWORD 'secure_password';
+CREATE USER cmms_user WITH PASSWORD 'CHANGE_ME';
 ```
 
 ---
@@ -72,7 +72,7 @@ GRANT ALL ON SEQUENCES TO cmms_user;
 ## ✅ 7. Update your Prisma `.env`
 
 ```env
-DATABASE_URL="postgresql://cmms_user:secure_password@localhost:5433/cmms_db"
+DATABASE_URL="postgresql://cmms_user:CHANGE_ME@localhost:5433/cmms_db"
 ```
 
 ---
@@ -80,7 +80,7 @@ DATABASE_URL="postgresql://cmms_user:secure_password@localhost:5433/cmms_db"
 ## ✅ 8. Test connection
 
 ```bash
-psql "postgresql://cmms_user:secure_password@localhost:5433/cmms_db"
+psql "postgresql://cmms_user:CHANGE_ME@localhost:5433/cmms_db"
 ```
 
 ---
@@ -90,7 +90,7 @@ psql "postgresql://cmms_user:secure_password@localhost:5433/cmms_db"
 If you want a more powerful user:
 
 ```sql
-CREATE USER cmms_user WITH PASSWORD 'secure_password' CREATEDB;
+CREATE USER cmms_user WITH PASSWORD 'CHANGE_ME' CREATEDB;
 ```
 
 ---

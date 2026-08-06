@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { getIronSession } from 'iron-session'
 import type { SessionData } from '@/lib/session'
 import { getSessionSecret } from '@/lib/env'
+import { logger } from '@/lib/logger'
 
 export const sessionOptions = {
   password: getSessionSecret(),
@@ -52,6 +53,18 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const PUBLIC_MUTATING_PREFIXES = ['/api/cron/']
 
 export async function middleware(request: NextRequest) {
+  const startedAt = performance.now()
+  const response = await handleRequest(request)
+  logger.info('http_request', {
+    method: request.method,
+    path: request.nextUrl.pathname,
+    status: response.status,
+    durationMs: Math.round(performance.now() - startedAt),
+  })
+  return response
+}
+
+async function handleRequest(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth needed

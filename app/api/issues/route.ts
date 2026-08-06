@@ -23,10 +23,18 @@ export async function GET(request: NextRequest) {
     const search     = searchParams.get('search')?.trim()
     const domainId   = searchParams.get('domainId')?.trim()
     const isGlobal   = searchParams.get('isGlobal')?.trim()
+    const scope      = searchParams.get('scope')?.trim()
 
     // Every issue scope requires an authenticated user
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Requester form contract: all domain groups + common issues, with the
+    // asset's own linked domains flagged as recommended when an asset is given.
+    if (scope === 'request') {
+      const groups = await IssueService.getAllIssues({ search, recommendedAssetId: assetId || undefined })
+      return NextResponse.json(groups)
+    }
 
     // No categoryId param at all → admin/manager overview
     if (categoryId === null && assetId === null) {

@@ -85,7 +85,7 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
       : '/api/issues?scope=request'
     fetch(url)
       .then(r => r.json())
-      .then((groups: DomainGroup[]) => { if (active) setIssueGroups(groups) })
+      .then((groups: DomainGroup[]) => { if (active && Array.isArray(groups)) setIssueGroups(groups) })
       .catch(() => {})
       .finally(() => { if (active) setIssuesLoading(false) })
     return () => { active = false }
@@ -115,12 +115,12 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
     return () => { active = false }
   }, [currentUser, form.assetId])
 
-  const hasIssues = issueGroups.some(g => g.issues.length > 0)
+  const hasIssues = issueGroups.some(g => (g.issues?.length ?? 0) > 0)
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
   function handleIssueChange(id: string) {
-    const issue = issueGroups.flatMap(g => g.issues).find(i => i.id === id)
+    const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === id)
     setForm(p => {
       const next = { ...p, issueId: id }
       if (issue?.severity && (p.priority === lastAutoPriority.current || !lastAutoPriority.current)) {

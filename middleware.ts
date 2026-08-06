@@ -143,5 +143,10 @@ function csrfCheck(request: NextRequest, pathname: string) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Middleware runs before static files are served, so it cannot see the real
+  // status of static responses (it would log false 200s for 404s). Exclude
+  // static asset extensions so the access log only covers app/API routes.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpe?g|gif|svg|webp|ico|css|js|mjs|woff2?|ttf|eot|map|webmanifest|txt)$).*)',
+  ],
 }

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import BOMTemplatesManager from '@/components/BOMTemplatesManager'
+import { bomTemplateToClient, partToClient } from '@/lib/client-safe'
 
 interface SearchParams {
   page?: string
@@ -46,7 +47,11 @@ export default async function BOMTemplatesPage({
         title="BOM Templates" 
         subtitle={`Create reusable Bill of Materials to quickly assign common parts to multiple assets. · ${totalCount} total · ${templates.length} showing`}
       />
-      <BOMTemplatesManager key={page} initialTemplates={templates} allParts={allParts} />
+      <BOMTemplatesManager
+        key={page}
+        initialTemplates={templates.map(bomTemplateToClient)}
+        allParts={allParts.map(partToClient)}
+      />
 
       {/* Pagination controls */}
       {totalPages > 1 && (

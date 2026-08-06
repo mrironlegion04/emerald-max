@@ -128,8 +128,8 @@ export async function showDesktopNotification(options: NotificationOptions): Pro
   try {
     const notificationOptions: any = {
       body: options.body,
-      icon: options.icon || '/assets/logo.png',
-      badge: options.badge || '/assets/logo.png',
+      icon: options.icon || '/icon.svg',
+      badge: options.badge || '/icon.svg',
       tag: options.tag || 'cmms-notification',
       requireInteraction: options.requireInteraction ?? options.level === 'critical',
       vibrate: [200, 100, 200], // Vibration pattern for mobile

@@ -17,8 +17,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Notification';
   const options = {
     body: data.body || 'You have a new message.',
-    icon: data.icon || '/assets/logo.png',
-    badge: data.badge || '/assets/logo.png',
+    icon: data.icon || '/icon.svg',
+    badge: data.badge || '/icon.svg',
     tag: data.tag || 'cmms-notification',
     vibrate: [200, 100, 200],
     data: {

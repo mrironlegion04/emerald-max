@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState'
 import AdvancedWOFilters from '@/components/AdvancedWOFilters'
 import WorkOrderViewShell from '@/components/WorkOrderViewShell'
 import { WO_STATUS_LABELS, ACTIVE_STATUSES, DONE_STATUSES } from '@/lib/work-order-status'
+import { woToClient } from '@/lib/client-safe'
 
 interface SearchParams {
   search?:      string
@@ -152,7 +153,7 @@ async function getWorkOrders(
     }),
   ])
 
-  return { workOrders, technicians, domains, assets, totalCount, page }
+  return { workOrders: workOrders.map(woToClient), technicians, domains, assets, totalCount, page }
 }
 
 async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null, locationScopeIds: string[] | null) {
@@ -234,13 +235,13 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
   const poolWOs = allOpen.filter((wo: any) => !allOpenIds.has(wo.id))
 
   return {
-    myWOs,
+    myWOs: myWOs.map(woToClient),
     mySubtasks,
-    teamWOs,
+    teamWOs: teamWOs.map(woToClient),
     teamSubtasks,
-    createdWOs: uniqueCreatedWOs,
-    allOpen: [...myWOs, ...teamWOs, ...uniqueCreatedWOs, ...poolWOs],
-    done,
+    createdWOs: uniqueCreatedWOs.map(woToClient),
+    allOpen: [...myWOs, ...teamWOs, ...uniqueCreatedWOs, ...poolWOs].map(woToClient),
+    done: done.map(woToClient),
     totalCount: allOpen.length + done.length,
   }
 }

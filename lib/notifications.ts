@@ -35,7 +35,7 @@ export async function createNotification(payload: NotificationPayload) {
       title: payload.title,
       body: payload.message,
       url: payload.href ?? '/',
-      icon: '/assets/logo.png'
+      icon: '/icon.svg'
     }).catch(err => console.error('Push error:', err))
     
     // Trigger Telegram notification if user has linked their chat
@@ -90,7 +90,7 @@ export async function createNotificationForUsers(
           title: payload.title,
           body: payload.message,
           url: payload.href ?? '/',
-          icon: '/assets/logo.png'
+          icon: '/icon.svg'
         })
       )
     )

@@ -25,7 +25,7 @@ export default function NotificationPermissionRequest() {
       // Show a test notification
       new Notification('CMMS Notifications Enabled', {
         body: 'You will now receive desktop notifications for important events.',
-        icon: '/assets/logo.png',
+        icon: '/icon.svg',
       })
     }
   }

@@ -1,5 +1,5 @@
 // Shared environment validation.
-// Edge-runtime safe (no Node-only APIs) so it can be imported from middleware.
+// Edge-runtime safe (no Node-only APIs) so it can be imported from the proxy.
 
 const PLACEHOLDER_PATTERNS = [
   /change-this/,

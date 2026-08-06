@@ -1,3 +1,20 @@
+self.addEventListener('install', (event) => {
+  // Take over from a previous service worker immediately instead of waiting
+  // for all tabs to close. Ensures updated handlers (icons, payloads) apply
+  // on the next load.
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Clean up caches from previous versions (none are currently used).
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
+    ])
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 

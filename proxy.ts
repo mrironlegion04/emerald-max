@@ -52,7 +52,7 @@ const REQUESTER_ONLY_PATHS = [
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const PUBLIC_MUTATING_PREFIXES = ['/api/cron/']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const startedAt = performance.now()
   const response = await handleRequest(request)
   logger.info('http_request', {
@@ -143,7 +143,7 @@ function csrfCheck(request: NextRequest, pathname: string) {
 }
 
 export const config = {
-  // Middleware runs before static files are served, so it cannot see the real
+  // Proxy runs before static files are served, so it cannot see the real
   // status of static responses (it would log false 200s for 404s). Exclude
   // static asset extensions so the access log only covers app/API routes.
   matcher: [

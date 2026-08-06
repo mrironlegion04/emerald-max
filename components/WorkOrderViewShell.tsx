@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import Link from 'next/link'
 import { LayoutList, Table, Calendar } from 'lucide-react'
 import WorkOrdersTable from './WorkOrdersTable'
@@ -9,6 +9,45 @@ import CalendarView from './CalendarView'
 
 export type WOView = 'panel' | 'table' | 'calendar'
 const STORAGE_KEY = 'wo-view-preference'
+const VALID_VIEWS: WOView[] = ['panel', 'table', 'calendar']
+
+// The view preference lives in localStorage. A tiny external store lets React
+// read it without calling setState in an effect and without reading
+// localStorage during the server render (which would mismatch hydration).
+const viewPrefStore = {
+  get(): WOView {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY) as WOView | null
+      if (stored && VALID_VIEWS.includes(stored)) return stored
+    } catch { /* empty */ }
+    return 'panel'
+  },
+  listeners: new Set<() => void>(),
+  subscribe(listener: () => void) {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  },
+  set(view: WOView) {
+    try {
+      localStorage.setItem(STORAGE_KEY, view)
+    } catch { /* empty */ }
+    this.listeners.forEach((listener) => listener())
+  },
+}
+
+function subscribeViewPref(listener: () => void) {
+  return viewPrefStore.subscribe(listener)
+}
+
+function getClientSnapshot(): WOView {
+  return viewPrefStore.get()
+}
+
+function getServerSnapshot(): WOView {
+  return 'panel'
+}
 
 interface Props {
   panelData?: any
@@ -33,18 +72,10 @@ const views: { id: WOView; label: string; icon: typeof LayoutList }[] = [
 export default function WorkOrderViewShell({
   panelData, tableData, technicians, typeLabels, statusLabels, totalPages, currentPage, baseUrl, userRole, userId, children,
 }: Props) {
-  const [view, setView] = useState<WOView>(() => {
-    if (typeof window === 'undefined') return 'panel'
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) as WOView | null
-      if (stored && ['panel', 'table', 'calendar'].includes(stored)) return stored
-    } catch { /* empty */ }
-    return 'panel'
-  })
+  const view = useSyncExternalStore(subscribeViewPref, getClientSnapshot, getServerSnapshot)
 
   function switchView(v: WOView) {
-    setView(v)
-    localStorage.setItem(STORAGE_KEY, v)
+    viewPrefStore.set(v)
   }
 
   return (

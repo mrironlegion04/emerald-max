@@ -143,7 +143,7 @@ The app logs structured JSON lines (no external dependencies) via `lib/logger.ts
 {"ts":"2026-08-06T10:30:00.000Z","level":"info","message":"http_request","method":"GET","path":"/work-orders","status":200,"durationMs":42}
 ```
 
-Every request matched by `middleware.ts` produces one `http_request` line with method,
+Every request matched by `proxy.ts` produces one `http_request` line with method,
 path, status, and duration. Collect these from stdout/stderr (journald, a log agent, or a
 file). All log lines include `ts`, `level`, and `message`; `error`-level lines go to stderr.
 

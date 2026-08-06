@@ -40,10 +40,24 @@ export async function GET(
   const members = await prisma.teamMember.findMany({
     where: { teamId },
     include: {
-      user: { select: { id: true, name: true, email: true, role: true } },
+      user: {
+        select: {
+          id: true, name: true, email: true, role: true,
+          userLocations: { select: { locationId: true } },
+        },
+      },
     },
     orderBy: { createdAt: 'asc' },
   })
+
+  // Plant-scoped users must not see members from other plants. Return only
+  // members assigned to the caller's plants, plus platform admins.
+  if (allowedIds) {
+    return NextResponse.json(members.filter(m =>
+      m.user.role === 'ADMIN' ||
+      m.user.userLocations.some(loc => allowedIds.includes(loc.locationId)),
+    ))
+  }
 
   return NextResponse.json(members)
 }

@@ -115,11 +115,11 @@ export default async function AssetDetailPage({
   })
 
   const totalPartsValue = asset.assetParts.reduce(
-    (sum, ap) => sum + ap.expectedQuantity * (ap.part.unitCost ?? 0), 0
+    (sum, ap) => sum + ap.expectedQuantity * Number(ap.part.unitCost ?? 0), 0
   )
   const totalPartsUsedQty = partsUsage.reduce((s, p) => s + p.quantity, 0)
   const totalPartsUsedCost = partsUsage.reduce(
-    (s, p) => s + p.quantity * (p.unitCost ?? p.part.unitCost ?? 0), 0
+    (s, p) => s + p.quantity * Number(p.unitCost ?? p.part.unitCost ?? 0), 0
   )
 
   const metrics = await getAssetMetrics(id)
@@ -164,8 +164,8 @@ export default async function AssetDetailPage({
     ['OPEN', 'IN_PROGRESS', 'ON_HOLD'].includes(w.status)
   ).length
 
-  const totalLaborCost = asset.workOrders.reduce((sum: number, w: { laborCost: number | null }) => sum + (w.laborCost ?? 0), 0)
-  const totalPartsCost = asset.workOrders.reduce((sum: number, w: { partsCost: number | null }) => sum + (w.partsCost ?? 0), 0)
+  const totalLaborCost = asset.workOrders.reduce((sum: number, w) => sum + Number(w.laborCost ?? 0), 0)
+  const totalPartsCost = asset.workOrders.reduce((sum: number, w) => sum + Number(w.partsCost ?? 0), 0)
 
   const activeTab = (await searchParams)?.tab || 'overview'
 
@@ -355,7 +355,7 @@ export default async function AssetDetailPage({
                   { label: 'Owner',         value: asset.owner?.name },
                   { label: 'Criticality',   value: asset.criticality },
                   { label: 'Purchase date', value: formatDate(asset.purchaseDate) },
-                  { label: 'Purchase cost', value: formatCurrency(asset.purchaseCost) },
+                  { label: 'Purchase cost', value: asset.purchaseCost != null ? Number(asset.purchaseCost) : null },
                   { label: 'Created by',    value: asset.createdBy?.name },
                 ] as { label: string; value: string | null | undefined }[]).map(row => (
                   <div key={row.label} className="flex justify-between gap-4">
@@ -529,10 +529,17 @@ export default async function AssetDetailPage({
       {activeTab === 'parts' && (
         <AssetPartsTab
           assetId={asset.id}
-          assetParts={asset.assetParts}
+          assetParts={asset.assetParts.map(ap => ({
+            ...ap,
+            part: { ...ap.part, unitCost: ap.part.unitCost != null ? Number(ap.part.unitCost) : null },
+          }))}
           allParts={allParts}
           bomTemplates={bomTemplates}
-          partsUsage={partsUsage}
+          partsUsage={partsUsage.map(pu => ({
+            ...pu,
+            unitCost: pu.unitCost != null ? Number(pu.unitCost) : null,
+            part: { ...pu.part, unitCost: pu.part.unitCost != null ? Number(pu.part.unitCost) : null },
+          }))}
           totalPartsValue={totalPartsValue}
           totalPartsUsedQty={totalPartsUsedQty}
           totalPartsUsedCost={totalPartsUsedCost}

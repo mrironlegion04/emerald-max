@@ -1,9 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { KeyRound, CheckCircle, AlertCircle } from 'lucide-react'
 
+const MIN_PASSWORD_LENGTH = 12
+
 export default function ChangePasswordForm() {
+  const router = useRouter()
+  const forced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('forcePasswordChange') === '1'
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -16,8 +21,8 @@ export default function ChangePasswordForm() {
     setError('')
     setSuccess('')
 
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters')
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters`)
       return
     }
     if (newPassword !== confirmPassword) {
@@ -41,6 +46,12 @@ export default function ChangePasswordForm() {
       setNewPassword('')
       setConfirmPassword('')
       setSuccess('Password changed successfully')
+      if (forced) {
+        setTimeout(() => {
+          router.replace('/work-orders')
+          router.refresh()
+        }, 800)
+      }
     } catch {
       setError('Network error')
     } finally {
@@ -59,6 +70,15 @@ export default function ChangePasswordForm() {
           </p>
         </div>
       </div>
+
+      {forced && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 mb-4 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-medium text-amber-900">
+            You are using a temporary password. Please set a new password before continuing.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -84,7 +104,7 @@ export default function ChangePasswordForm() {
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             autoComplete="new-password"
             className="input-field text-sm"
           />
@@ -99,7 +119,7 @@ export default function ChangePasswordForm() {
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             autoComplete="new-password"
             className="input-field text-sm"
           />

@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { generateWOsForSchedule } from '@/lib/pm-generation'
 import { writeAudit } from '@/lib/audit'
+import { getCronSecret } from '@/lib/env'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token = process.env.CRON_SECRET
-    // Fail closed: without a configured secret, this state-changing endpoint stays locked
-    if (!token || authHeader !== `Bearer ${token}`) {
+    const token = getCronSecret()
+    // Fail closed: without a valid secret, this state-changing endpoint stays locked
+    if (authHeader !== `Bearer ${token}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -65,7 +66,8 @@ export async function POST(request: NextRequest) {
 
     for (const schedule of meterSchedules) {
       if (!schedule.meterInterval || !schedule.asset?.currentMeterValue) continue
-      if (schedule.asset.currentMeterValue < schedule.meterInterval) continue
+      const lastTriggered = schedule.lastTriggeredValue ?? 0
+      if (schedule.asset.currentMeterValue - lastTriggered < schedule.meterInterval) continue
 
       // Check for duplicate: existing OPEN or IN_PROGRESS WO for this asset
       const existingWO = await prisma.workOrder.findFirst({
@@ -109,9 +111,10 @@ export async function POST(request: NextRequest) {
 
     for (const schedule of timeOrMeterSchedules) {
       const timeDue = schedule.nextDueDate <= now
+      const lastTriggered = schedule.lastTriggeredValue ?? 0
       const meterCrossed = schedule.meterInterval != null
         && schedule.asset?.currentMeterValue != null
-        && schedule.asset.currentMeterValue >= schedule.meterInterval
+        && schedule.asset.currentMeterValue - lastTriggered >= schedule.meterInterval
 
       if (!timeDue && !meterCrossed) continue
 

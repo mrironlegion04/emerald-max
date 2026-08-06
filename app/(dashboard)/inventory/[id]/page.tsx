@@ -52,7 +52,7 @@ export default async function PartDetailPage({
   if (!part) notFound()
 
   const totalUsed   = part.usedInWorkOrders.reduce((s: number, u: any) => s + u.quantity, 0)
-  const totalSpend  = part.usedInWorkOrders.reduce((s: number, u: any) => s + u.quantity * (u.unitCost ?? part.unitCost ?? 0), 0)
+  const totalSpend  = part.usedInWorkOrders.reduce((s: number, u: any) => s + u.quantity * Number(u.unitCost ?? part.unitCost ?? 0), 0)
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -97,7 +97,7 @@ export default async function PartDetailPage({
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-xs text-gray-400">Unit cost</p>
-                <p className="text-sm font-bold text-gray-900 mt-0.5">{fmtCurrency(part.unitCost)}</p>
+                <p className="text-sm font-bold text-gray-900 mt-0.5">{fmtCurrency(part.unitCost != null ? Number(part.unitCost) : null)}</p>
               </div>
               <div className="bg-purple-50 rounded-lg p-3">
                 <p className="text-xs text-gray-400">Total spend</p>
@@ -205,7 +205,7 @@ export default async function PartDetailPage({
                           {use.quantity} {part.unit}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {fmtCurrency(use.quantity * (use.unitCost ?? part.unitCost ?? 0))}
+                          {fmtCurrency(use.quantity * Number(use.unitCost ?? part.unitCost ?? 0))}
                         </p>
                       </div>
                       <span className={`badge text-xs ${woStatusColors[use.workOrder.status] ?? 'bg-gray-100 text-gray-500'}`}>

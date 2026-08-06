@@ -53,11 +53,12 @@ export async function POST(
           unitCost: part.unitCost,
         },
       }),
-      // Update parts cost on WO
-      prisma.workOrder.update({
-        where: { id: workOrderId },
-        data:  { partsCost: { increment: quantity * (part.unitCost ?? 0) } },
-      }),
+      // Update parts cost on WO atomically (COALESCE handles a previously-NULL partsCost)
+      prisma.$executeRaw`
+        UPDATE work_orders
+        SET "partsCost" = COALESCE("partsCost", 0) + ${quantity * Number(part.unitCost ?? 0)}
+        WHERE id = ${workOrderId}
+      `,
     ])
 
     await writeAudit({

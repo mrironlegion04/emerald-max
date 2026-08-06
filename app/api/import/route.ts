@@ -7,9 +7,14 @@ import { generateWONumber } from '@/lib/wo-number'
 import { canAssignUsers, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
 import { parseCSV, parseCSVExact } from '@/lib/csv'
 import { hashPassword } from '@/lib/auth'
+import { randomBytes } from 'crypto'
 
-const OWNER_TEMP_PASSWORD = 'Changeme123!'
 const VALID_CRITICALITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+
+// Random, high-entropy temporary password for imported owner accounts.
+function generateTempPassword(): string {
+  return randomBytes(12).toString('base64url')
+}
 
 function getField(row: Record<string, string>, ...names: string[]): string {
   for (const n of names) {
@@ -369,7 +374,8 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
       continue
     }
     const email = toOwnerEmail(name).toLowerCase()
-    const passwordHash = await hashPassword(OWNER_TEMP_PASSWORD)
+    const tempPassword = generateTempPassword()
+    const passwordHash = await hashPassword(tempPassword)
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -378,10 +384,11 @@ async function handleMaintwizAssetsImport(text: string, user: ImportUser, dryRun
         passwordHash,
         role: 'TECHNICIAN',
         isActive: true,
+        mustChangePassword: true,
       },
     })
     plan.ownerIdByName.set(name, newUser.id)
-    ownerPasswords.push({ email, password: OWNER_TEMP_PASSWORD })
+    ownerPasswords.push({ email, password: tempPassword })
   }
 
   // ── Assets ──────────────────────────────────────────────────────────────────

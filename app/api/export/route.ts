@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
         w.assignedTo?.name ?? '', w.domain?.name ?? '', w.createdBy?.name ?? '',
         fmt(w.dueDate), fmt(w.startedAt), fmt(w.completedAt),
         w.laborHours ?? '', w.laborCost ?? '', w.partsCost ?? '',
-        ((w.laborCost ?? 0) + (w.partsCost ?? 0)) || '',
+        ((Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0))) || '',
         fmt(w.createdAt),
         w.shift ?? '',
         w.requestedBy ?? '',

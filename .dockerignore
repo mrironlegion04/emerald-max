@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+.next
+
+# Environment — NEVER bake secrets into an image
+.env
+.env.local
+.env.*.local
+
+# Prisma generated (regenerated at build time)
+prisma/*.db
+
+# Local data / uploads
+public/uploads
+
+# Test / tooling
+.git
+.vercel
+coverage
+*.tsbuildinfo
+
+# Logs / OS junk
+*.log
+.DS_Store

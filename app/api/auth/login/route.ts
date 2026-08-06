@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { verifyPassword } from '@/lib/auth'
+import { verifyPasswordTimingSafe } from '@/lib/auth'
 import { getSession } from '@/lib/session'
+import { checkRateLimit, clientIp } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -9,12 +10,38 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
+const LOGIN_WINDOW_MS = 15 * 60 * 1000
+const LOGIN_ATTEMPTS_PER_KEY = 5
+const LOGIN_ATTEMPTS_PER_IP = 20
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { identifier, password } = loginSchema.parse(body)
 
     const normalized = identifier.toLowerCase()
+    const ip = clientIp(request)
+
+    // Per-account + per-IP throttling. The account key also includes the IP so
+    // one user behind a shared NAT does not lock everyone else out of a target.
+    const accountKey = `login:${normalized}:${ip}`
+    const ipKey = `login:ip:${ip}`
+
+    const acctLimit = checkRateLimit(accountKey, LOGIN_ATTEMPTS_PER_KEY, LOGIN_WINDOW_MS)
+    if (!acctLimit.ok) {
+      return NextResponse.json(
+        { error: 'Too many failed login attempts. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(acctLimit.retryAfterSeconds) } }
+      )
+    }
+    const ipLimit = checkRateLimit(ipKey, LOGIN_ATTEMPTS_PER_IP, LOGIN_WINDOW_MS)
+    if (!ipLimit.ok) {
+      return NextResponse.json(
+        { error: 'Too many failed login attempts. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(ipLimit.retryAfterSeconds) } }
+      )
+    }
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -30,18 +57,14 @@ export async function POST(request: NextRequest) {
         passwordHash: true,
         role: true,
         isActive: true,
+        mustChangePassword: true,
+        sessionVersion: true,
       },
     })
 
-    if (!user || !user.isActive) {
-      return NextResponse.json(
-        { error: 'Invalid username or email or password' },
-        { status: 401 }
-      )
-    }
-
-    const valid = await verifyPassword(password, user.passwordHash)
-    if (!valid) {
+    // Timing-safe: unknown/inactive users still burn a bcrypt compare.
+    const valid = await verifyPasswordTimingSafe(password, user?.passwordHash ?? '')
+    if (!user || !user.isActive || !valid) {
       return NextResponse.json(
         { error: 'Invalid username or email or password' },
         { status: 401 }
@@ -54,11 +77,18 @@ export async function POST(request: NextRequest) {
     session.email = user.email
     session.role = user.role
     session.isLoggedIn = true
+    session.sessionVersion = user.sessionVersion
     await session.save()
 
     return NextResponse.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+      },
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

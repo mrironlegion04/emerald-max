@@ -40,7 +40,7 @@ export default async function WorkOrderPrintPage({
   // Plant isolation: cross-plant WOs render as 404 on the print view too
   if (user && !(await canViewWorkOrder(user, wo.id)).allowed) notFound()
 
-  const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
+  const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)
   const isOverdue =
     wo.dueDate && new Date(wo.dueDate) < new Date() &&
     !['COMPLETED', 'CANCELLED'].includes(wo.status)
@@ -146,8 +146,8 @@ export default async function WorkOrderPrintPage({
               </div>
             )}
             {wo.laborHours && <p><strong>Labor hours:</strong> {wo.laborHours} hrs</p>}
-            <p><strong>Labor cost:</strong> {fmtCurrency(wo.laborCost)}</p>
-            <p><strong>Parts cost:</strong> {fmtCurrency(wo.partsCost)}</p>
+            <p><strong>Labor cost:</strong> {fmtCurrency(wo.laborCost != null ? Number(wo.laborCost) : null)}</p>
+            <p><strong>Parts cost:</strong> {fmtCurrency(wo.partsCost != null ? Number(wo.partsCost) : null)}</p>
             <p className="border-t border-gray-300 pt-1 font-bold"><strong>Total:</strong> {fmtCurrency(totalCost)}</p>
           </div>
         </div>
@@ -168,7 +168,7 @@ export default async function WorkOrderPrintPage({
             </thead>
             <tbody>
               {wo.partsUsed.map((p: any) => {
-                const unitCost = p.unitCost ?? p.part.unitCost ?? 0
+                const unitCost = Number(p.unitCost ?? p.part.unitCost ?? 0)
                 const total = unitCost * p.quantity
                 return (
                   <tr key={p.id} className="border-b border-gray-200">

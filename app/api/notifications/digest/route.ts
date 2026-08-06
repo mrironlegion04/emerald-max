@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendOverdueDigest } from '@/lib/email'
 import { getUserLocationIds } from '@/lib/access-control'
+import { getCronSecret } from '@/lib/env'
 
 // This route is meant to be called by a cron job or manually.
 // Protect with a secret token so it can't be called by anyone.
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token      = process.env.CRON_SECRET
-    // Fail closed: without a configured secret, this state-changing endpoint stays locked
-    if (!token || authHeader !== `Bearer ${token}`) {
+    const token      = getCronSecret()
+    // Fail closed: without a valid secret, this state-changing endpoint stays locked
+    if (authHeader !== `Bearer ${token}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

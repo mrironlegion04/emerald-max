@@ -30,10 +30,11 @@ export async function DELETE(
     // Remove record and update work order cost atomically without touching stock levels
     await prisma.$transaction([
       prisma.workOrderPart.delete({ where: { id: partUsedId } }),
-      prisma.workOrder.update({
-        where: { id: workOrderId },
-        data:  { partsCost: { decrement: woPart.quantity * (woPart.unitCost ?? 0) } },
-      }),
+      prisma.$executeRaw`
+        UPDATE work_orders
+        SET "partsCost" = COALESCE("partsCost", 0) - ${woPart.quantity * Number(woPart.unitCost ?? 0)}
+        WHERE id = ${workOrderId}
+      `,
     ])
 
 

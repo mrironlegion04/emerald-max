@@ -127,12 +127,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (action === 'convert') {
     if (!(await hasScopeActionFlag(user, 'canConvertRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
+    // Derive the WO type from the request type: only REPAIR requests become
+    // BREAKDOWN work orders (which count toward failure metrics), everything
+    // else is PREVENTIVE maintenance.
+    const woType: 'BREAKDOWN' | 'PREVENTIVE' =
+      request.requestType === 'REPAIR' ? 'BREAKDOWN' : 'PREVENTIVE'
+
     const woNumber = await generateWONumber(requestLocationId)
     const [wo, updated] = await prisma.$transaction([
       prisma.workOrder.create({
         data: {
           woNumber, title: request.title, description: request.description,
-          type: 'BREAKDOWN', status: 'OPEN', priority: request.priority as never,
+          type: woType, status: 'OPEN', priority: request.priority as never,
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
           teamId: request.teamId,
           downtimeStartedAt: request.downtimeStartedAt ?? null,
@@ -148,6 +154,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ])
     // Link WO to request
     await prisma.maintenanceRequest.update({ where: { id }, data: { workOrderId: wo.id } })
+
+    // Record the WO's initial status history
+    await prisma.workOrderStatusHistory.create({
+      data: {
+        workOrderId: wo.id,
+        status: 'OPEN',
+        changedById: user.userId,
+        changedByName: user.name,
+        notes: 'Converted from work request',
+      },
+    })
 
     // Send email to requester
     if (request.requesterEmail) {

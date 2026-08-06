@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import QRCode from 'qrcode'
+import { escapeXml } from '@/lib/xml'
+import { getPublicBaseUrl } from '@/lib/env'
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +22,7 @@ export async function GET(
 
     const format = new URL(request.url).searchParams.get('format') ?? 'svg'
     const raw    = new URL(request.url).searchParams.get('raw') === 'true'
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+    const baseUrl = getPublicBaseUrl()
     const partUrl = `${baseUrl}/inventory/${id}`
 
     if (format === 'png') {
@@ -53,19 +55,22 @@ export async function GET(
       })
     }
 
-    // Wrap in a printable card SVG
+    // Wrap in a printable card SVG — all user-controlled values are XML-escaped.
+    const safeName = escapeXml(part.name)
+    const safePart = escapeXml(part.partNumber ?? '')
+    const safeUrl  = escapeXml(partUrl)
     const cardSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="360" viewBox="0 0 300 360">
   <rect width="300" height="360" rx="12" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
   <text x="150" y="32" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="13" font-weight="600" fill="#111827">${part.name}</text>
+    font-size="13" font-weight="600" fill="#111827">${safeName}</text>
   <text x="150" y="52" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="11" fill="#6b7280">${part.partNumber}</text>
+    font-size="11" fill="#6b7280">${safePart}</text>
   <g transform="translate(30, 65) scale(0.93)">${svgData.replace(/<\?xml[^>]*\?>/, '').replace(/<svg[^>]*>/, '').replace('</svg>', '')}</g>
   <text x="150" y="328" text-anchor="middle" font-family="-apple-system,sans-serif"
     font-size="9" fill="#9ca3af">Scan to view part details</text>
   <text x="150" y="344" text-anchor="middle" font-family="-apple-system,sans-serif"
-    font-size="8" fill="#d1d5db">${partUrl}</text>
+    font-size="8" fill="#d1d5db">${safeUrl}</text>
 </svg>`
 
     return new NextResponse(cardSvg, {

@@ -59,7 +59,7 @@ export default async function SitesPage() {
       overdueWOs:     allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status) && w.dueDate && new Date(w.dueDate) < now).length,
       criticalWOs:    allWOs.filter((w: any) => w.priority === 'CRITICAL' && ['OPEN','IN_PROGRESS'].includes(w.status)).length,
       completedWOs:   allWOs.filter((w: any) => w.status === 'COMPLETED').length,
-      totalCost:      allWOs.filter((w: any) => w.status === 'COMPLETED').reduce((s: number, w: any) => s + (w.laborCost??0) + (w.partsCost??0), 0),
+      totalCost:      allWOs.filter((w: any) => w.status === 'COMPLETED').reduce((s: number, w: any) => s + Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0), 0),
     }
   }
 

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { createNotification } from '@/lib/notifications'
+import { createNotificationForUsers } from '@/lib/notifications'
 import { writeAudit } from '@/lib/audit'
 import { generateWONumber } from '@/lib/wo-number'
 
@@ -106,14 +106,16 @@ export async function processMeterReading(
 
   // 4. NotificationProcessor — alert on SUSPECT status
   if (input.status === 'SUSPECT') {
-    await createNotification({
-      userId: 'admin',
-      title: `SUSPECT Reading: ${meter.name}`,
-      message: `Meter reading of ${input.value} ${input.unit} flagged as SUSPECT on ${meter.asset.name}`,
-      type: 'METER_ALERT',
-      entityId: meter.assetId,
-      href: `/assets/${meter.assetId}/meters/${input.meterId}`,
-    }).catch(() => {})
+    const recipients = await getNotificationRecipients(tx, meter.assetId)
+    if (recipients.length > 0) {
+      await createNotificationForUsers(recipients, {
+        title: `SUSPECT Reading: ${meter.name}`,
+        message: `Meter reading of ${input.value} ${input.unit} flagged as SUSPECT on ${meter.asset.name}`,
+        type: 'METER_ALERT',
+        entityId: meter.assetId,
+        href: `/assets/${meter.assetId}/meters/${input.meterId}`,
+      }).catch(() => {})
+    }
   }
 
   // 5. Audit
@@ -146,6 +148,14 @@ async function triggerPMSchedules(
       triggerType: 'METER',
       meterInterval: { not: null },
     },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      meterInterval: true,
+      lastTriggeredValue: true,
+      woAssignedToId: true,
+    },
   })
 
   for (const schedule of schedules) {
@@ -176,7 +186,7 @@ async function triggerPMSchedules(
     const woNumber = await generateWONumber(asset?.locationId, tx)
 
     // Create work order
-    await tx.workOrder.create({
+    const wo = await tx.workOrder.create({
       data: {
         woNumber,
         title: `${schedule.title} (Meter: ${currentValue} ${unit})`,
@@ -186,8 +196,19 @@ async function triggerPMSchedules(
         status: 'OPEN',
         assetId,
         maintenanceScheduleId: schedule.id,
-        createdById: 'system',
+        createdById: null,
         requestedBy: 'System Generated',
+      },
+    })
+
+    // Create initial status history
+    await tx.workOrderStatusHistory.create({
+      data: {
+        workOrderId: wo.id,
+        status: 'OPEN',
+        changedById: null,
+        changedByName: 'System',
+        notes: 'Generated from PM schedule (meter trigger)',
       },
     })
 
@@ -207,14 +228,62 @@ async function triggerPMSchedules(
       delta,
     })
 
-    // Create notification
-    await createNotification({
-      userId: 'admin',
-      title: `PM Triggered: ${schedule.title}`,
-      message: `Work order created — meter ${currentValue} ${unit}`,
-      type: 'PM_GENERATED',
-      entityId: assetId,
-      href: `/assets/${assetId}`,
-    }).catch(() => {})
+    // Create notification for the assignee (if any) and plant managers/admins
+    const recipients = await getNotificationRecipients(
+      tx,
+      assetId,
+      schedule.woAssignedToId ? [schedule.woAssignedToId] : [],
+    )
+    if (recipients.length > 0) {
+      await createNotificationForUsers(recipients, {
+        title: `PM Triggered: ${schedule.title}`,
+        message: `Work order created — meter ${currentValue} ${unit}`,
+        type: 'PM_GENERATED',
+        entityId: assetId,
+        href: `/assets/${assetId}`,
+      }).catch(() => {})
+    }
   }
+}
+
+/**
+ * Resolve notification recipients for an asset:
+ * preferred IDs (if active) plus active managers/admins at the asset's plant.
+ * Falls back to all active managers/admins when the asset has no location.
+ */
+async function getNotificationRecipients(
+  tx: any,
+  assetId: string,
+  preferredIds: string[] = [],
+): Promise<string[]> {
+  const uniquePreferred = [...new Set(preferredIds.filter(Boolean))]
+  const preferred = uniquePreferred.length > 0
+    ? (await tx.user.findMany({
+        where: { id: { in: uniquePreferred }, isActive: true },
+        select: { id: true },
+      })).map((u: { id: string }) => u.id)
+    : []
+
+  const asset = await tx.asset.findUnique({
+    where: { id: assetId },
+    select: { locationId: true },
+  })
+
+  const managers = await tx.user.findMany({
+    where: {
+      isActive: true,
+      role: { in: ['ADMIN', 'MANAGER'] },
+      ...(asset?.locationId
+        ? {
+            OR: [
+              { role: 'ADMIN' },
+              { userLocations: { some: { locationId: asset.locationId } } },
+            ],
+          }
+        : {}),
+    },
+    select: { id: true },
+  }).then((rows: { id: string }[]) => rows.map(r => r.id))
+
+  return [...new Set([...preferred, ...managers])]
 }

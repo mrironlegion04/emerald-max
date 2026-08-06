@@ -32,6 +32,10 @@ export default function LoginPage() {
 
       // Login successful - redirect based on role
       const role = data.user?.role
+      if (data.user?.mustChangePassword) {
+        router.push('/profile?forcePasswordChange=1')
+        return
+      }
       router.push(role === 'REQUESTER' ? '/my-requests' : '/work-orders')
       router.refresh()
     } catch {

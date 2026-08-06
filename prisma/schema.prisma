@@ -287,6 +287,8 @@ model User {
   passwordHash String
   role         Role     @default(TECHNICIAN)
   isActive     Boolean  @default(true)
+  mustChangePassword Boolean @default(false)
+  sessionVersion Int    @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -472,7 +474,7 @@ model Asset {
   model             String?
   manufacturer      String?
   purchaseDate      DateTime?
-  purchaseCost      Float?
+  purchaseCost      Decimal?   @db.Decimal(12, 2)
   assetTypeId       String?
   criticality       Criticality?
   customFields      Json?
@@ -528,6 +530,10 @@ model Asset {
   imageUrl  String?
   imageName String?
 
+  @@index([parentId])
+  @@index([locationId])
+  @@index([categoryId])
+  @@index([assetTypeId])
   @@map("assets")
 }
 
@@ -605,8 +611,8 @@ model WorkOrder {
   requestedCompletionTime  DateTime?
   requestedCompletionNotes String?
   laborHours  Float?
-  laborCost   Float?
-  partsCost   Float?
+  laborCost   Decimal?  @db.Decimal(12, 2)
+  partsCost   Decimal?  @db.Decimal(12, 2)
   notes       String?
   customFields Json?
   shift       String? // admin-set at creation; read-only for users
@@ -678,6 +684,9 @@ requests      MaintenanceRequest[]
   @@index([locationId])
   @@index([teamId])
   @@index([createdAt])
+  @@index([maintenanceScheduleId])
+  @@index([categoryId])
+  @@index([woCategoryId])
   @@map("work_orders")
 }
 
@@ -692,6 +701,8 @@ model WorkOrderAsset {
   createdAt DateTime @default(now())
 
   @@id([workOrderId, assetId])
+  @@index([workOrderId])
+  @@index([assetId])
   @@map("work_order_assets")
 }
 
@@ -750,7 +761,7 @@ model Part {
   name        String
   partNumber  String   @unique
   description String?
-  unitCost    Float?
+  unitCost    Decimal?  @db.Decimal(12, 2)
   unit        String   @default("pcs")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -774,7 +785,7 @@ model Part {
 model WorkOrderPart {
   id       String @id @default(cuid())
   quantity Int
-  unitCost Float?
+  unitCost Decimal? @db.Decimal(12, 2)
 
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
@@ -793,6 +804,7 @@ model AssetPart {
   expectedQuantity Int @default(1)
 
   @@id([assetId, partId])
+  @@index([partId])
   @@map("asset_parts")
 }
 
@@ -885,6 +897,8 @@ model MaintenanceSchedule {
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
 
   @@index([locationId])
+  @@index([assetId])
+  @@index([triggerType, isActive])
   @@map("maintenance_schedules")
 }
 
@@ -895,6 +909,8 @@ model MaintenanceScheduleAsset {
   asset      Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@id([scheduleId, assetId])
+  @@index([scheduleId])
+  @@index([assetId])
   @@map("maintenance_schedule_assets")
 }
 
@@ -1041,6 +1057,8 @@ model MaintenanceRequest {
   @@index([requesterId])
   @@index([issueId])
   @@index([teamId])
+  @@index([assetId])
+  @@index([workOrderId])
   @@index([status])
   @@index([createdAt])
   @@map("maintenance_requests")
@@ -1177,8 +1195,8 @@ model ChatMessage {
   channelRel    ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   channel       String   // Keep as string helper for backward compatibility
   channelName   String
-  senderId      String
-  sender        User     @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId      String?
+  sender        User?    @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
   senderName    String
   senderRole    Role     @default(TECHNICIAN)
   
@@ -1347,6 +1365,16 @@ model ShiftConfig {
   updatedAt DateTime @updatedAt
 
   @@map("shift_configs")
+}
+
+// Atomic per-prefix counters for WO / request number generation.
+// Incurred via `INSERT ... ON CONFLICT (prefix) DO UPDATE SET counter = counter + 1
+// RETURNING counter` so concurrent generators can never produce the same number.
+model NumberSequence {
+  prefix  String @id
+  counter Int    @default(0)
+
+  @@map("number_sequences")
 }
 
 

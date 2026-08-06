@@ -22,6 +22,7 @@ import {
   canWriteToLocations,
   canWriteToTeams,
   hasScopeActionFlag,
+  isValidWOStatusTransition,
 } from '@/lib/access-control'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
@@ -247,6 +248,27 @@ export async function PUT(
       }
     }
 
+    // Validate the status transition, mirroring the status route.
+    // Skipped when the status is unchanged (idempotent re-save).
+    if (data.status && data.status !== existingWo.status) {
+      if (!isValidWOStatusTransition(existingWo.status, data.status)) {
+        return NextResponse.json(
+          { error: `Cannot transition from ${existingWo.status} to ${data.status}` },
+          { status: 422 }
+        )
+      }
+    }
+
+    // Unlock: CLOSED → COMPLETED — Admin only, reason required (same as status route)
+    if (data.status === 'COMPLETED' && existingWo.status === 'CLOSED') {
+      if (user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Only admins can unlock closed work orders' }, { status: 403 })
+      }
+      if (!data.notes || !data.notes.trim()) {
+        return NextResponse.json({ error: 'Unlock reason is required' }, { status: 400 })
+      }
+    }
+
     // Block edits on CLOSED work orders
     if (existingWo.status === 'CLOSED' && !isManagerOrAbove(user)) {
       return NextResponse.json(
@@ -263,6 +285,10 @@ export async function PUT(
       extra.completedAt = new Date()
       extra.completedById = user.userId
       extra.completionType = getCompletionType(user, isManagerOrAbove(user))
+      if (existingWo.status === 'CLOSED') {
+        extra.completedAt = existingWo.completedAt
+        extra.closedAt = null
+      }
     }
 
     // ── Mutual exclusion: team vs individual ──────────────────────────

@@ -5,6 +5,10 @@ import { hasPermission } from '@/lib/permissions'
 
 export async function GET() {
   try {
+    const user = await getCurrentUser()
+    if (!user || !(await hasPermission(user, 'bom:read'))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
     const templates = await prisma.bOMTemplate.findMany({
       include: {
         _count: { select: { parts: true } },

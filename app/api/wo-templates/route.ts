@@ -21,7 +21,9 @@ const templateSchema = z.object({
 export async function GET() {
   try {
     const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user || !(await hasPermission(user, 'pm:read'))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
     const templates = await prisma.workOrderTemplate.findMany({
       include: {

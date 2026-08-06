@@ -48,10 +48,8 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
   }
 
   async function printQR() {
-    // For printing, we fetch the formatted card SVG instead of raw
-    const res = await fetch(`/api/assets/${assetId}/qr`)
-    const fullCardSvg = await res.text()
-
+    // For printing, render the card SVG through an <img> element. An SVG loaded
+    // as an image cannot execute scripts, so no markup is injected into the page.
     const win = window.open('', '_blank')
     if (!win) return
     win.document.write(`<!DOCTYPE html>
@@ -59,10 +57,7 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
 <style>
   body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
   .card { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center; max-width: 350px; }
-  svg { width: 100%; height: auto; max-width: 280px; }
-  .info { margin-top: 24px; }
-  .name { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.2; }
-  .code { font-size: 14px; font-weight: 600; color: #64748b; font-family: monospace; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+  img { width: 100%; height: auto; max-width: 280px; }
   @media print {
     body { background: white; }
     .card { border: none; box-shadow: none; padding: 0; }
@@ -70,7 +65,7 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
 </style></head>
 <body>
   <div class="card">
-    ${fullCardSvg.replace(/<\?xml[^>]*\?>/, '')}
+    <img src="/api/assets/${assetId}/qr" alt="QR asset label" />
   </div>
   <script>
     window.onload = () => {
@@ -126,9 +121,10 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
               {/* QR Container */}
               <div className="p-8 pb-4">
                 <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 shadow-inner flex flex-col items-center">
-                  <div
+                  <img
+                    src={`/api/assets/${assetId}/qr?format=png`}
+                    alt={`QR code for ${assetName}`}
                     className="w-full max-w-[200px]"
-                    dangerouslySetInnerHTML={{ __html: svgContent }}
                   />
                   <div className="mt-6 text-center">
                     <p className="text-sm font-bold text-slate-900 leading-tight">{assetName}</p>

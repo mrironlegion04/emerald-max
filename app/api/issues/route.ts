@@ -23,19 +23,8 @@ export async function GET(request: NextRequest) {
     const search     = searchParams.get('search')?.trim()
     const domainId   = searchParams.get('domainId')?.trim()
     const isGlobal   = searchParams.get('isGlobal')?.trim()
-    const scope      = searchParams.get('scope')?.trim()
 
-    // Requester request form — all active issues grouped by domain + global.
-    // Public (used by the anonymous /request form); issue data is non-sensitive.
-    if (scope === 'request') {
-      const groups = await IssueService.getAllIssues({
-        search,
-        recommendedAssetId: assetId ?? undefined,
-      })
-      return NextResponse.json(groups)
-    }
-
-    // Every other issue scope requires an authenticated user
+    // Every issue scope requires an authenticated user
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 

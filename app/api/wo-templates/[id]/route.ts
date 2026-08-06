@@ -25,7 +25,9 @@ export async function GET(
 ) {
   try {
     const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user || !(await hasPermission(user, 'pm:read'))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
 
     const { id } = await params
     const template = await prisma.workOrderTemplate.findUnique({

@@ -7,6 +7,13 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding database...')
 
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'prisma/seed.ts uses well-known development credentials and must never run in production. ' +
+        'Use `npm run seed:prod` (prisma/seed2.ts) instead.'
+    )
+  }
+
   // ── Users ───────────────────────────────────────────────────────────────────
   const adminHash = await bcrypt.hash('admin123', 12)
   const techHash  = await bcrypt.hash('tech123', 12)

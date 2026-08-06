@@ -2,15 +2,16 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getIronSession } from 'iron-session'
 import type { SessionData } from '@/lib/session'
+import { getSessionSecret } from '@/lib/env'
 
-const sessionOptions = {
-  password: process.env.SESSION_SECRET as string,
+export const sessionOptions = {
+  password: getSessionSecret(),
   cookieName: 'cmms_session',
   cookieOptions: {
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'none',
-    partitioned: true,
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   },
 }
 
@@ -47,18 +48,36 @@ const REQUESTER_ONLY_PATHS = [
   '/my-requests',
 ]
 
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+const PUBLIC_MUTATING_PREFIXES = ['/api/cron/']
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth needed
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/cron/') || pathname.startsWith('/api/issues') || pathname === '/request') {
-    return NextResponse.next()
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/health') ||
+    pathname === '/request'
+  ) {
+    // /request is the only public page; it is no longer reachable anonymously
+    // (see below), so unauthenticated visitors land here only when logged in.
+    if (pathname === '/request' && !request.cookies.get('cmms_session')) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return csrfCheck(request, pathname) ?? NextResponse.next()
   }
 
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, sessionOptions)
 
   if (!session.isLoggedIn) {
+    // API consumers get JSON, page navigation gets a redirect.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -80,7 +99,34 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  const csrf = csrfCheck(request, pathname)
+  if (csrf) return csrf
+
   return response
+}
+
+// Defense-in-depth against CSRF. The session cookie is SameSite=Lax, which blocks
+// cross-site requests from carrying the cookie in the classic vectors. On top of
+// that, state-changing requests that DO include an Origin/Referer header must come
+// from a host we trust. Requests with no Origin (curl, cron, non-browser clients)
+// are passed through to the route handlers.
+function csrfCheck(request: NextRequest, pathname: string) {
+  if (!MUTATING_METHODS.has(request.method)) return null
+  if (PUBLIC_MUTATING_PREFIXES.some(p => pathname.startsWith(p))) return null
+
+  const header = request.headers.get('origin') ?? request.headers.get('referer')
+  if (!header) return null
+
+  let headerHost: string | null = null
+  try {
+    headerHost = new URL(header).host
+  } catch {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  if (headerHost !== request.nextUrl.host) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  return null
 }
 
 export const config = {

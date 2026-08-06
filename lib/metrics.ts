@@ -44,7 +44,7 @@ async function computeMTBF(assetId: string): Promise<number> {
     where: {
       assetId,
       type: 'BREAKDOWN',
-      status: 'COMPLETED',
+      status: { in: ['COMPLETED', 'CLOSED'] },
       completedAt: { not: null },
     },
     select: { completedAt: true },
@@ -67,7 +67,7 @@ async function computeFleetMTBF(): Promise<number> {
   const failures = await prisma.workOrder.findMany({
     where: {
       type: 'BREAKDOWN',
-      status: 'COMPLETED',
+      status: { in: ['COMPLETED', 'CLOSED'] },
       completedAt: { not: null },
     },
     select: { completedAt: true },
@@ -166,21 +166,21 @@ export async function getFleetMetrics(): Promise<FleetMetrics> {
  * Only writes the 5 source fields — derived metrics are computed on the fly.
  */
 export async function updateAssetMetrics(assetId: string): Promise<void> {
-  // Total failures
+  // Total failures (COMPLETED or CLOSED — closing a WO must not erase its history)
   const totalFailures = await prisma.workOrder.count({
-    where: { assetId, type: 'BREAKDOWN', status: 'COMPLETED' },
+    where: { assetId, type: 'BREAKDOWN', status: { in: ['COMPLETED', 'CLOSED'] } },
   })
 
   // Last failure date
   const lastFailureWO = await prisma.workOrder.findFirst({
-    where: { assetId, type: 'BREAKDOWN', status: 'COMPLETED', completedAt: { not: null } },
+    where: { assetId, type: 'BREAKDOWN', status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { not: null } },
     select: { completedAt: true },
     orderBy: { completedAt: 'desc' },
   })
 
   // Last repair date (any completed WO)
   const lastRepairWO = await prisma.workOrder.findFirst({
-    where: { assetId, status: 'COMPLETED', completedAt: { not: null } },
+    where: { assetId, status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { not: null } },
     select: { completedAt: true },
     orderBy: { completedAt: 'desc' },
   })
@@ -188,7 +188,7 @@ export async function updateAssetMetrics(assetId: string): Promise<void> {
   // Total repair time = sum of RepairSession.durationMinutes for completed WOs on this asset
   const repairSessions = await prisma.repairSession.findMany({
     where: {
-      workOrder: { assetId, status: 'COMPLETED' },
+      workOrder: { assetId, status: { in: ['COMPLETED', 'CLOSED'] } },
       durationMinutes: { not: null },
     },
     select: { durationMinutes: true },
@@ -201,7 +201,7 @@ export async function updateAssetMetrics(assetId: string): Promise<void> {
   // Guard against bad data: skip WOs where the window is empty/negative so
   // downtime can never go negative.
   const downtimeWOs = await prisma.workOrder.findMany({
-    where: { assetId, status: 'COMPLETED', completedAt: { not: null } },
+    where: { assetId, status: { in: ['COMPLETED', 'CLOSED'] }, completedAt: { not: null } },
     select: { createdAt: true, completedAt: true, downtimeStartedAt: true, downtimeEndedAt: true },
   })
   const totalDowntimeMinutes = downtimeWOs.reduce((sum, wo) => {

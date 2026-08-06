@@ -13,7 +13,7 @@ import {
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 const MAX_SIZE = 25 * 1024 * 1024  // 25 MB max
 const ALLOWED = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
   'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain', 'text/csv'
@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         await uploadFile(objectName, buffer, file.type, {
           'x-amz-meta-original-name': file.name,
           'x-amz-meta-uploaded-by': user.name || 'unknown',
+          'x-amz-meta-uploaded-by-id': user.userId,
         })
         url = await getPresignedUrl(objectName, 604800) // valid for 7 days
         key = objectName
@@ -123,10 +124,15 @@ export async function DELETE(req: NextRequest) {
     if (key && !key.startsWith('local-')) {
       if (useMinIO) {
         // Ownership: only the uploading user (or staff) may delete the object.
+        // Ownership is tracked by immutable user ID, not by mutable display name.
         try {
           const meta = await getFileMetadata(key)
-          const uploadedBy = meta?.metaData?.['uploaded-by']
-          if (!isStaff && (!uploadedBy || uploadedBy !== user.name)) {
+          const uploadedById = meta?.metaData?.['uploaded-by-id']
+          const uploadedByName = meta?.metaData?.['uploaded-by']
+          const ownsFile = uploadedById
+            ? uploadedById === user.userId
+            : uploadedByName === user.name
+          if (!isStaff && !ownsFile) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
           }
         } catch (err) {

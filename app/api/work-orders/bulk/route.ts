@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
-import { buildWOVisibilityFilter, hasScopeActionFlag } from '@/lib/access-control'
+import { buildWOVisibilityFilter, hasScopeActionFlag, canAssignUsers, isValidWOStatusTransition } from '@/lib/access-control'
 import { z } from 'zod'
 
 const bulkSchema = z.object({
@@ -44,6 +44,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Technician not found' }, { status: 404 })
       }
 
+      // Plant isolation: the technician must belong to the user's write scope
+      if (!(await canAssignUsers(user, [technicianId]))) {
+        return NextResponse.json({ error: 'You do not have access to this technician' }, { status: 403 })
+      }
+
       // Bulk assign (scoped to the user's visible work orders)
       const result = await prisma.workOrder.updateMany({
         where: scopedWhere,
@@ -65,11 +70,73 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Your scope does not allow changing this work order status' }, { status: 403 })
       }
 
-      // Only allow certain transitions
-      const result = await prisma.workOrder.updateMany({
+      // Completion is a per-WO workflow (required subtasks, repair sessions,
+      // asset metrics, mandatory manager approval) — never a bulk target.
+      if (status === 'COMPLETED') {
+        return NextResponse.json(
+          { error: 'Complete or approve work orders from the work order detail page' },
+          { status: 400 }
+        )
+      }
+
+      // Only operate on the work orders the user can see, and validate every
+      // transition against the same rules as the single-WO status route.
+      const wos = await prisma.workOrder.findMany({
         where: scopedWhere,
-        data: { status },
+        select: { id: true, status: true, assetId: true, woNumber: true },
       })
+
+      const invalid = wos.filter(wo => {
+        if (!isValidWOStatusTransition(wo.status, status)) return true
+        // Reopen (COMPLETED→OPEN) and unlock (CLOSED→COMPLETED) require
+        // field cleanup that bulk updates must not perform implicitly.
+        if (status === 'OPEN' && (wo.status === 'COMPLETED' || wo.status === 'CLOSED')) return true
+        return false
+      })
+      if (invalid.length > 0) {
+        const first = invalid[0]
+        const suffix = invalid.length > 1 ? ` (and ${invalid.length - 1} more)` : ''
+        return NextResponse.json(
+          { error: `Cannot transition ${first.woNumber} from ${first.status} to ${status}${suffix}` },
+          { status: 422 }
+        )
+      }
+
+      const result = await prisma.workOrder.updateMany({
+        where: { id: { in: wos.map(w => w.id) } },
+        data: {
+          status,
+          ...(status === 'CLOSED' ? { closedAt: new Date() } : {}),
+        },
+      })
+
+      // Record the transition in each WO's status history
+      if (result.count > 0) {
+        await prisma.workOrderStatusHistory.createMany({
+          data: wos.map(wo => ({
+            workOrderId: wo.id,
+            status,
+            changedById: user.userId,
+            changedByName: user.name,
+            notes: `Bulk status change from ${wo.status} to ${status}`,
+          })),
+        })
+
+        // Sync linked asset status
+        const assetIds = [...new Set(
+          wos.map(w => w.assetId).filter((id): id is string => !!id),
+        )]
+        if (assetIds.length > 0) {
+          await prisma.asset.updateMany({
+            where: { id: { in: assetIds } },
+            data: status === 'IN_PROGRESS'
+              ? { status: 'UNDER_MAINTENANCE' }
+              : status === 'CANCELLED' || status === 'CLOSED'
+                ? { status: 'ACTIVE' }
+                : {},
+          })
+        }
+      }
 
       return NextResponse.json({ success: true, updated: result.count })
     }

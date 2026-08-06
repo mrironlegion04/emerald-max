@@ -106,7 +106,7 @@ export default async function WorkOrderDetailPage({
     wo.dueDate && new Date(wo.dueDate) < new Date() &&
     !['COMPLETED','CANCELLED'].includes(wo.status)
 
-  const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
+  const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
@@ -170,7 +170,7 @@ export default async function WorkOrderDetailPage({
               requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
               initialStartAt={wo.startedAt?.toISOString() ?? null}
               initialLaborHours={wo.laborHours}
-              initialLaborCost={wo.laborCost}
+              initialLaborCost={wo.laborCost != null ? Number(wo.laborCost) : null}
               initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}
               initialDowntimeEndedAt={wo.downtimeEndedAt?.toISOString() ?? null}
             />
@@ -332,8 +332,8 @@ export default async function WorkOrderDetailPage({
             <div className="space-y-3.5">
               {[
                 { label: 'Labor hours', value: wo.laborHours ? `${wo.laborHours} hrs` : '—' },
-                { label: 'Labor cost',  value: fmtCurrency(wo.laborCost) },
-                { label: 'Parts cost',  value: fmtCurrency(wo.partsCost) },
+                { label: 'Labor cost',  value: fmtCurrency(wo.laborCost != null ? Number(wo.laborCost) : null) },
+                { label: 'Parts cost',  value: fmtCurrency(wo.partsCost != null ? Number(wo.partsCost) : null) },
               ].map(r => (
                 <div key={r.label} className="flex justify-between items-center text-xs">
                   <span className="text-slate-450 font-semibold uppercase tracking-wider">{r.label}</span>
@@ -408,13 +408,13 @@ export default async function WorkOrderDetailPage({
               name: p.part.name,
               partNumber: p.part.partNumber,
               quantity: p.quantity,
-              unitCost: p.unitCost ?? p.part.unitCost ?? 0,
+              unitCost: Number(p.unitCost ?? p.part.unitCost ?? 0),
             }))}
             allParts={allParts.map((p: any) => ({
               id: p.id,
               name: p.name,
               partNumber: p.partNumber,
-              unitCost: p.unitCost ?? 0,
+              unitCost: Number(p.unitCost ?? 0),
             }))}
             canEdit={canEdit}
             woStatus={wo.status}

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { hashPassword, verifyPassword } from '@/lib/auth'
+import { hashPassword, verifyPassword, MIN_PASSWORD_LENGTH } from '@/lib/auth'
 import { getSession } from '@/lib/session'
 import { z } from 'zod'
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  newPassword: z.string().min(MIN_PASSWORD_LENGTH, `New password must be at least ${MIN_PASSWORD_LENGTH} characters`),
 })
 
 export async function POST(request: NextRequest) {
@@ -45,8 +45,16 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await hashPassword(newPassword) },
+      data: {
+        passwordHash: await hashPassword(newPassword),
+        mustChangePassword: false,
+        sessionVersion: { increment: 1 },
+      },
     })
+
+    // Bump the live session so the (re)authenticated session stays valid with the new version.
+    session.sessionVersion = (session.sessionVersion ?? 0) + 1
+    await session.save()
 
     return NextResponse.json({ success: true })
   } catch (error) {

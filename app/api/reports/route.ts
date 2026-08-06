@@ -58,9 +58,9 @@ export async function GET(request: NextRequest) {
       )
       return {
         month:  b.label,
-        labor:  Math.round(completed.reduce((s, w) => s + (w.laborCost ?? 0), 0)),
-        parts:  Math.round(completed.reduce((s, w) => s + (w.partsCost ?? 0), 0)),
-        total:  Math.round(completed.reduce((s, w) => s + (w.laborCost ?? 0) + (w.partsCost ?? 0), 0)),
+        labor:  Math.round(completed.reduce((s, w) => s + Number(w.laborCost ?? 0), 0)),
+        parts:  Math.round(completed.reduce((s, w) => s + Number(w.partsCost ?? 0), 0)),
+        total:  Math.round(completed.reduce((s, w) => s + Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0), 0)),
       }
     })
 
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         assetMap[w.assetId] = { name: w.asset.name, code: w.asset.assetCode, count: 0, cost: 0, hours: 0 }
       }
       assetMap[w.assetId].count++
-      assetMap[w.assetId].cost  += (w.laborCost ?? 0) + (w.partsCost ?? 0)
+      assetMap[w.assetId].cost  += Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0)
       assetMap[w.assetId].hours += (w.laborHours ?? 0)
     })
     const topAssets = Object.entries(assetMap)
@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
 
     // ── Summary KPIs ──────────────────────────────────────────────────────────
     const allCompleted = wos.filter(w => ['COMPLETED', 'CLOSED'].includes(w.status))
-    const totalLaborCost  = allCompleted.reduce((s, w) => s + (w.laborCost ?? 0), 0)
-    const totalPartsCost  = allCompleted.reduce((s, w) => s + (w.partsCost ?? 0), 0)
+    const totalLaborCost  = allCompleted.reduce((s, w) => s + Number(w.laborCost ?? 0), 0)
+    const totalPartsCost  = allCompleted.reduce((s, w) => s + Number(w.partsCost ?? 0), 0)
     const totalLaborHours = allCompleted.reduce((s, w) => s + (w.laborHours ?? 0), 0)
     const avgCostPerWO    = allCompleted.length > 0
       ? Math.round((totalLaborCost + totalPartsCost) / allCompleted.length)

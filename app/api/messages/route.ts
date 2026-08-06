@@ -36,6 +36,20 @@ async function canAccessChatChannel(channelId: string, userId: string, role: str
   return null
 }
 
+// Media URLs may only reference files our own upload endpoint produced:
+// a local /uploads/<server-generated> path, or a MinIO presigned URL whose
+// object lives under the uploads/ prefix. Arbitrary external URLs are rejected.
+function isValidMediaUrl(url: string): boolean {
+  if (url.startsWith('/uploads/')) return true
+  try {
+    const u = new URL(url)
+    const path = decodeURIComponent(u.pathname).replace(/^\//, '')
+    return path.split('/').includes('uploads')
+  } catch {
+    return false
+  }
+}
+
 // Helper to check if channel exists and dynamically create it if it doesn't
 async function ensureChannelExists(channelId: string, currentUserId: string): Promise<boolean> {
   try {
@@ -616,6 +630,9 @@ export async function POST(req: NextRequest) {
     if ((!content || !content.trim()) && !mediaUrl) {
       return NextResponse.json({ error: 'Content or media is required' }, { status: 400 })
     }
+    if (mediaUrl && !isValidMediaUrl(mediaUrl)) {
+      return NextResponse.json({ error: 'Invalid media URL' }, { status: 400 })
+    }
 
     // Plant isolation: verify the user may send to the channel's underlying entity
     const sendAccessError = await canAccessChatChannel(channelId, user.userId, user.role)
@@ -848,16 +865,20 @@ export async function DELETE(req: NextRequest) {
           const urlObj = new URL(msg.mediaUrl)
           const pathname = decodeURIComponent(urlObj.pathname.replace(/^\//, ''))
           const parts = pathname.split('/')
-          if (parts.length > 1) {
+          // Only delete objects under the uploads/ prefix (never raw bucket roots).
+          if (parts.length > 1 && parts.slice(1).join('/').startsWith('uploads/')) {
             const objectName = parts.slice(1).join('/') // strip off the bucket name prefix
             await deleteFile(objectName)
             console.log(`Deleted chat attachment from MinIO: ${objectName}`)
           }
         } else if (msg.mediaUrl.startsWith('/uploads/')) {
           const filename = path.basename(msg.mediaUrl)
-          const filepath = path.join(process.cwd(), 'public', 'uploads', filename)
-          await unlink(filepath)
-          console.log(`Deleted chat attachment locally: ${filename}`)
+          // Only server-generated uploads may be removed.
+          if (filename.startsWith('proc-')) {
+            const filepath = path.join(process.cwd(), 'public', 'uploads', filename)
+            await unlink(filepath)
+            console.log(`Deleted chat attachment locally: ${filename}`)
+          }
         }
       } catch (err) {
         console.error('Failed to delete chat file attachment:', err)

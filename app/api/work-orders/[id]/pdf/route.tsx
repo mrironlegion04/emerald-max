@@ -74,7 +74,7 @@ export async function GET(
       return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     }
 
-    const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
+    const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)
 
     const doc = (
       <Document>
@@ -127,8 +127,8 @@ export async function GET(
           {/* Labor & Cost */}
           <View style={styles.sectionTitle}><Text style={styles.label}>Labor & Cost</Text></View>
           {wo.laborHours && <Text style={styles.text}>Labor hours: {wo.laborHours} hrs</Text>}
-          <Text style={styles.text}>Labor cost: {fmtCurrency(wo.laborCost)}</Text>
-          <Text style={styles.text}>Parts cost: {fmtCurrency(wo.partsCost)}</Text>
+          <Text style={styles.text}>Labor cost: {fmtCurrency(wo.laborCost != null ? Number(wo.laborCost) : null)}</Text>
+          <Text style={styles.text}>Parts cost: {fmtCurrency(wo.partsCost != null ? Number(wo.partsCost) : null)}</Text>
           <Text style={[styles.text, { fontWeight: 'bold' }]}>Total: {fmtCurrency(totalCost)}</Text>
 
           {/* Parts used */}
@@ -142,7 +142,7 @@ export async function GET(
                 <Text style={[styles.tableHeaderText, { width: '23%', textAlign: 'right' }]}>Total</Text>
               </View>
               {wo.partsUsed.map((p: any) => {
-                const unitCost = p.unitCost ?? p.part.unitCost ?? 0
+                const unitCost = Number(p.unitCost ?? p.part.unitCost ?? 0)
                 const total = unitCost * p.quantity
                 return (
                   <View key={p.id} style={styles.tableRow}>

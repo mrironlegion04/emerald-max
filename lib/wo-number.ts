@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 
-type WoNumberClient = Pick<typeof prisma, 'workOrder' | 'location'>
+type WoNumberClient = Pick<typeof prisma, 'workOrder' | 'location' | '$queryRaw' | '$executeRaw'>
 
 const DEFAULT_PREFIX = 'GLB'
 
@@ -28,10 +28,32 @@ export async function getLocationCode(
 }
 
 /**
+ * Atomically increment the per-prefix counter and return its new value.
+ * Uses `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` so concurrent
+ * generators can never observe the same value.
+ */
+async function nextSequence(prefix: string, client: WoNumberClient): Promise<number> {
+  const rows = await client.$queryRaw<{ counter: number }[]>`
+    INSERT INTO "number_sequences" (prefix, counter)
+    VALUES (${prefix}, 1)
+    ON CONFLICT (prefix) DO UPDATE SET counter = "number_sequences".counter + 1
+    RETURNING counter
+  `
+  return Number(rows[0]?.counter ?? 0)
+}
+
+/** Raise the counter past a colliding number (manually created records). */
+async function bumpSequence(prefix: string, min: number, client: WoNumberClient): Promise<void> {
+  await client.$executeRaw`
+    UPDATE "number_sequences" SET counter = GREATEST(counter, ${min + 1}) WHERE prefix = ${prefix}
+  `
+}
+
+/**
  * Generate the next work order number for a location, e.g. `A-WO-0001`.
  * Sequences are per-prefix, so every plant starts at `{CODE}-WO-0001`.
- * Retries on collision to stay race-safe; numbers remain globally unique
- * because the prefix is part of the value.
+ * Numbers remain globally unique because the prefix is part of the value,
+ * and the atomic counter removes the read-modify-write race.
  */
 export async function generateWONumber(
   locationId: string | null | undefined,
@@ -42,24 +64,18 @@ export async function generateWONumber(
   const prefix = `${code}-WO-`
 
   for (let attempt = 0; attempt < retries; attempt++) {
-    const last = await client.workOrder.findFirst({
-      where: { woNumber: { startsWith: prefix } },
-      orderBy: { woNumber: 'desc' },
-      select: { woNumber: true },
-    })
+    const counter = await nextSequence(prefix, client)
+    const candidate = `${prefix}${String(counter).padStart(4, '0')}`
 
-    let next = 1
-    if (last?.woNumber) {
-      const num = parseInt(last.woNumber.slice(prefix.length), 10)
-      if (!isNaN(num)) next = num + 1
-    }
-
-    const candidate = `${prefix}${String(next).padStart(4, '0')}`
     const exists = await client.workOrder.findUnique({
       where: { woNumber: candidate },
       select: { id: true },
     })
     if (!exists) return candidate
+
+    // A manually created WO already holds this number — advance the counter
+    // past the collision and try again.
+    await bumpSequence(prefix, counter, client)
   }
 
   throw new Error('Failed to generate unique WO number after retries')

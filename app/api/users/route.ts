@@ -8,25 +8,25 @@ import { getUserLocationIds } from '@/lib/access-control'
 import { z } from 'zod'
 
 const teamScopeSchema = z.object({
-  canCloseWO:        z.boolean().default(true),
-  canAssignWO:       z.boolean().default(true),
-  canEditWO:         z.boolean().default(true),
-  canApproveRequest: z.boolean().default(true),
-  canConvertRequest: z.boolean().default(true),
-  canManagePM:       z.boolean().default(true),
-  canManageAssets:   z.boolean().default(true),
+  canCloseWO:        z.boolean().default(false),
+  canAssignWO:       z.boolean().default(false),
+  canEditWO:         z.boolean().default(false),
+  canApproveRequest: z.boolean().default(false),
+  canConvertRequest: z.boolean().default(false),
+  canManagePM:       z.boolean().default(false),
+  canManageAssets:   z.boolean().default(false),
 })
 
 type TeamScopeFlags = z.infer<typeof teamScopeSchema>
 
 const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
-  canCloseWO: true,
-  canAssignWO: true,
-  canEditWO: true,
-  canApproveRequest: true,
-  canConvertRequest: true,
-  canManagePM: true,
-  canManageAssets: true,
+  canCloseWO: false,
+  canAssignWO: false,
+  canEditWO: false,
+  canApproveRequest: false,
+  canConvertRequest: false,
+  canManagePM: false,
+  canManageAssets: false,
 }
 
 const createSchema = z.object({
@@ -36,7 +36,7 @@ const createSchema = z.object({
               .transform(v => v.toLowerCase())
               .refine(v => /^[a-z0-9][a-z0-9._-]*$/.test(v), 'Username may only contain lowercase letters, numbers, dots, underscores, and hyphens')
               .optional(),
-  password:   z.string().min(6, 'Password must be at least 6 characters'),
+  password:   z.string().min(12, 'Password must be at least 12 characters'),
   role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).default('TECHNICIAN'),
   isActive:   z.boolean().default(true),
   phone:      z.string().nullable().optional(),
@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
         passwordHash,
         role: data.role,
         isActive: data.isActive,
+        mustChangePassword: true,
         phone: data.phone || null,
         bio: data.bio || null,
         department: data.department || null,
@@ -137,13 +138,13 @@ export async function POST(request: NextRequest) {
         teamScopes: {
           create: data.assignedTeamIds.map(teamId => ({
             teamId,
-            canCloseWO:        teamScopeFlags.canCloseWO ?? true,
-            canAssignWO:       teamScopeFlags.canAssignWO ?? true,
-            canEditWO:         teamScopeFlags.canEditWO ?? true,
-            canApproveRequest: teamScopeFlags.canApproveRequest ?? true,
-            canConvertRequest: teamScopeFlags.canConvertRequest ?? true,
-            canManagePM:       teamScopeFlags.canManagePM ?? true,
-            canManageAssets:   teamScopeFlags.canManageAssets ?? true,
+            canCloseWO:        teamScopeFlags.canCloseWO ?? false,
+            canAssignWO:       teamScopeFlags.canAssignWO ?? false,
+            canEditWO:         teamScopeFlags.canEditWO ?? false,
+            canApproveRequest: teamScopeFlags.canApproveRequest ?? false,
+            canConvertRequest: teamScopeFlags.canConvertRequest ?? false,
+            canManagePM:       teamScopeFlags.canManagePM ?? false,
+            canManageAssets:   teamScopeFlags.canManageAssets ?? false,
           })),
         },
       },

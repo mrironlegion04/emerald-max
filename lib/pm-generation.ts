@@ -252,9 +252,10 @@ export async function generateWOsForSchedule(
       }
 
       if (schedule.triggerType === 'METER' && schedule.meterInterval) {
+        const lastTriggered = schedule.lastTriggeredValue ?? 0
         if (
           !asset.currentMeterValue ||
-          asset.currentMeterValue < schedule.meterInterval
+          asset.currentMeterValue - lastTriggered < schedule.meterInterval
         ) {
           skippedAssets.add(asset.id)
           result.errors.push(`${asset.name}: meter value below threshold`)
@@ -319,6 +320,22 @@ export async function generateWOsForSchedule(
         eligibleAssets.length > 0 ? eligibleAssets : [null]
 
       for (const asset of targets) {
+        // Re-check for an active WO inside the transaction to close the
+        // race window between the outer dedupe check and the insert.
+        if (asset) {
+          const existingWO = await tx.workOrder.findFirst({
+            where: {
+              assetId: asset.id,
+              status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
+              type: 'PREVENTIVE',
+            },
+            select: { woNumber: true },
+          })
+          if (existingWO) {
+            result.errors.push(`Active WO already exists for ${asset.name}: ${existingWO.woNumber}`)
+            continue
+          }
+        }
         for (const batch of eligibleBatches) {
           // Build tiers for this batch's counter value
           const tiers = buildTiers({

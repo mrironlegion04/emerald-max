@@ -106,6 +106,16 @@ export async function PATCH(
       status = 'PENDING_APPROVAL'
     }
 
+    // Manager approval is mandatory: a submitted WO (PENDING_APPROVAL) can only
+    // be completed by an admin or a manager holding the canCloseWO scope flag.
+    // This blocks technicians from self-approving their own submission.
+    if (status === 'COMPLETED' && wo.status === 'PENDING_APPROVAL' && !managerCloseAllowed) {
+      return NextResponse.json(
+        { error: 'Only admins and managers can approve completion' },
+        { status: 403 }
+      )
+    }
+
     // Validate transition
     if (!isValidWOStatusTransition(wo.status, status)) {
       return NextResponse.json(

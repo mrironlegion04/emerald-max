@@ -7,25 +7,25 @@ import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const teamScopeSchema = z.object({
-  canCloseWO:        z.boolean().default(true),
-  canAssignWO:       z.boolean().default(true),
-  canEditWO:         z.boolean().default(true),
-  canApproveRequest: z.boolean().default(true),
-  canConvertRequest: z.boolean().default(true),
-  canManagePM:       z.boolean().default(true),
-  canManageAssets:   z.boolean().default(true),
+  canCloseWO:        z.boolean().default(false),
+  canAssignWO:       z.boolean().default(false),
+  canEditWO:         z.boolean().default(false),
+  canApproveRequest: z.boolean().default(false),
+  canConvertRequest: z.boolean().default(false),
+  canManagePM:       z.boolean().default(false),
+  canManageAssets:   z.boolean().default(false),
 })
 
 type TeamScopeFlags = z.infer<typeof teamScopeSchema>
 
 const DEFAULT_TEAM_SCOPE: TeamScopeFlags = {
-  canCloseWO: true,
-  canAssignWO: true,
-  canEditWO: true,
-  canApproveRequest: true,
-  canConvertRequest: true,
-  canManagePM: true,
-  canManageAssets: true,
+  canCloseWO: false,
+  canAssignWO: false,
+  canEditWO: false,
+  canApproveRequest: false,
+  canConvertRequest: false,
+  canManagePM: false,
+  canManageAssets: false,
 }
 
 const updateSchema = z.object({
@@ -35,7 +35,7 @@ const updateSchema = z.object({
               .transform(v => v.toLowerCase())
               .refine(v => /^[a-z0-9][a-z0-9._-]*$/.test(v), 'Username may only contain lowercase letters, numbers, dots, underscores, and hyphens')
               .optional(),
-  password:   z.string().min(6).optional(),
+  password:   z.string().min(12).optional(),
   role:       z.enum(['ADMIN','MANAGER','TECHNICIAN','REQUESTER','VIEWER']).optional(),
   isActive:   z.boolean().optional(),
   phone:      z.string().nullable().optional(),
@@ -105,17 +105,32 @@ export async function PUT(
     const data   = updateSchema.parse(body)
 
     // Privilege-sensitive fields are ADMIN-only. A user:edit holder (manager /
-    // custom role) may update profile details but never roles, custom roles,
-    // scope assignments, or account state.
+    // custom role) may update profile details but never roles, passwords,
+    // custom roles, scope assignments, or account state.
     const isAdmin = user.role === 'ADMIN'
     if (!isAdmin) {
       const adminOnlyFields: (keyof typeof data)[] = [
-        'role', 'isActive', 'woVisibility', 'customRoleId',
+        'password', 'role', 'isActive', 'woVisibility', 'customRoleId',
         'assignedLocationIds', 'assignedTeamIds', 'teamScope',
       ]
       for (const field of adminOnlyFields) {
         if (data[field] !== undefined) {
           return NextResponse.json({ error: 'Only admins can change user roles or assignments' }, { status: 403 })
+        }
+      }
+    }
+
+    // Last-admin guard: never allow the final active ADMIN to be deactivated
+    // or demoted, or the system becomes administratively locked out.
+    if (target.role === 'ADMIN') {
+      const isDemoting = data.role !== undefined && data.role !== 'ADMIN'
+      const isDeactivating = data.isActive === false
+      if (isDemoting || isDeactivating) {
+        const otherAdmins = await prisma.user.count({
+          where: { role: 'ADMIN', isActive: true, NOT: { id } },
+        })
+        if (otherAdmins === 0) {
+          return NextResponse.json({ error: 'Cannot remove the last active admin' }, { status: 400 })
         }
       }
     }
@@ -150,7 +165,16 @@ export async function PUT(
     }
     if (data.email)    updateData.email        = data.email.toLowerCase()
     if (data.username) updateData.username     = data.username
-    if (data.password) updateData.passwordHash = await hashPassword(data.password)
+    if (data.password) {
+      updateData.passwordHash = await hashPassword(data.password)
+      // A password set by an admin is a reset — force the user to change it.
+      updateData.mustChangePassword = true
+    }
+
+    // Invalidate the target's other sessions when credentials or account state change.
+    if (data.password || data.role !== undefined || data.isActive !== undefined) {
+      updateData.sessionVersion = { increment: 1 }
+    }
 
     // Remove undefined keys
     Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k])
@@ -179,13 +203,13 @@ export async function PUT(
             data: data.assignedTeamIds.map(teamId => ({
               userId: id,
               teamId,
-              canCloseWO:        teamScopeFlags.canCloseWO ?? true,
-              canAssignWO:       teamScopeFlags.canAssignWO ?? true,
-              canEditWO:         teamScopeFlags.canEditWO ?? true,
-              canApproveRequest: teamScopeFlags.canApproveRequest ?? true,
-              canConvertRequest: teamScopeFlags.canConvertRequest ?? true,
-              canManagePM:       teamScopeFlags.canManagePM ?? true,
-              canManageAssets:   teamScopeFlags.canManageAssets ?? true,
+              canCloseWO:        teamScopeFlags.canCloseWO ?? false,
+              canAssignWO:       teamScopeFlags.canAssignWO ?? false,
+              canEditWO:         teamScopeFlags.canEditWO ?? false,
+              canApproveRequest: teamScopeFlags.canApproveRequest ?? false,
+              canConvertRequest: teamScopeFlags.canConvertRequest ?? false,
+              canManagePM:       teamScopeFlags.canManagePM ?? false,
+              canManageAssets:   teamScopeFlags.canManageAssets ?? false,
             })),
           })
         }

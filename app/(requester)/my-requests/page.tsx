@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users } from 'lucide-react'
+import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users, SearchX } from 'lucide-react'
 import Badge, { priorityVariant } from '@/components/Badge'
 import { REQUEST_STATUS_LABELS, requestStatusVariant, REQUEST_TYPE_LABELS, requestTypeVariant } from '@/lib/request-status'
 import MyRequestsFilters from '@/components/MyRequestsFilters'
@@ -23,14 +24,15 @@ export default async function MyRequestsPage({
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   const params = await searchParams
+  const hasFilters = Boolean(params.search || params.status)
 
-  const where: any = {
+  const where: Prisma.MaintenanceRequestWhereInput = {
     OR: [
       { requesterId: user.userId },
       { requesterName: user.name },
     ],
   }
-  if (params.status && VALID_STATUS.includes(params.status)) where.status = params.status
+  if (params.status && VALID_STATUS.includes(params.status)) where.status = params.status as Prisma.MaintenanceRequestWhereInput['status']
   if (params.search) {
     where.AND = [{
       OR: [
@@ -70,20 +72,32 @@ export default async function MyRequestsPage({
         </Link>
       </div>
 
-      {requests.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
-          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 font-medium">No requests yet</p>
-          <p className="text-sm text-slate-400 mt-1">Submit your first maintenance request</p>
-          <Link href="/request" className="mt-4 btn-primary text-sm inline-block">
-            Submit Request
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <MyRequestsFilters />
+      <div className="space-y-4">
+        <MyRequestsFilters />
 
-          {requests.map(req => (
+        {requests.length === 0 ? (
+          hasFilters ? (
+            <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+              <SearchX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">No matching requests</p>
+              <p className="text-sm text-slate-400 mt-1">Try adjusting your search or filters</p>
+              <Link href="/my-requests" className="mt-4 btn-secondary text-sm inline-block">
+                Clear filters
+              </Link>
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">No requests yet</p>
+              <p className="text-sm text-slate-400 mt-1">Submit your first maintenance request</p>
+              <Link href="/request" className="mt-4 btn-primary text-sm inline-block">
+                Submit Request
+              </Link>
+            </div>
+          )
+        ) : (
+          <div className="space-y-4">
+            {requests.map(req => (
             <div key={req.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-200/60 hover:shadow-sm transition-all">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -164,8 +178,9 @@ export default async function MyRequestsPage({
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
+  FileText,
 } from 'lucide-react'
 
 interface User {
@@ -42,7 +43,14 @@ interface User {
   role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
 }
 
-const navItems = [
+interface NavItem {
+  label: string
+  href: string
+  icon: React.ReactNode
+  requesterOnly?: boolean
+}
+
+const navItems: NavItem[] = [
   {
     label: 'Work Orders',
     href: '/work-orders',
@@ -77,6 +85,12 @@ const navItems = [
     label: 'Requests',
     href: '/requests',
     icon: <MessageSquare className="w-4.5 h-4.5" />,
+  },
+  {
+    label: 'My Requests',
+    href: '/my-requests',
+    icon: <FileText className="w-4.5 h-4.5" />,
+    requesterOnly: true,
   },
 ]
 
@@ -294,7 +308,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
 
         <div className="space-y-1">
           {navItems
-            .filter(item => user.role !== 'REQUESTER' || item.href === '/work-orders' || item.href === '/requests')
+            .filter(item => item.requesterOnly ? user.role === 'REQUESTER' : user.role !== 'REQUESTER')
             .map(item => {
             const active = isActive(item.href)
             return (
@@ -320,6 +334,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         </div>
 
         {/* Collapsible: Assets Folder */}
+        {user.role !== 'REQUESTER' && (
         <div className="space-y-1 mt-4">
           <button
             onClick={() => toggleGroup('assets')}
@@ -373,8 +388,10 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
             </div>
           )}
         </div>
+        )}
 
         {/* Collapsible: Library */}
+        {user.role !== 'REQUESTER' && (
         <div className="space-y-1 mt-4">
           <button
             onClick={() => toggleGroup('library')}
@@ -430,6 +447,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
             </div>
           )}
         </div>
+        )}
 
         {/* Privileged Controls for Admin / Manager */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'VIEWER') && (

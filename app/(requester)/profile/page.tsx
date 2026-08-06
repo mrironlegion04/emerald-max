@@ -42,8 +42,11 @@ export default async function UserProfilePage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-4">
-        <Link href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">
-          ← Back to dashboard
+        <Link
+          href={user.role === 'REQUESTER' ? '/my-requests' : '/dashboard'}
+          className="text-sm text-gray-400 hover:text-gray-600"
+        >
+          ← Back to {user.role === 'REQUESTER' ? 'My Requests' : 'dashboard'}
         </Link>
       </div>
 
@@ -146,7 +149,7 @@ export default async function UserProfilePage() {
         <h2 className="font-semibold text-gray-900 mb-4 text-sm">Skills & Competencies</h2>
         {dbUser.skills.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {dbUser.skills.map((us: any) => (
+            {dbUser.skills.map((us) => (
               <div key={us.id} className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

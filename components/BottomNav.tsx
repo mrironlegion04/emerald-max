@@ -2,22 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal, Plus } from 'lucide-react'
 import { motion } from 'motion/react'
 
-export default function BottomNav() {
+type Role = 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
+
+export default function BottomNav({ role }: { role?: Role }) {
   const pathname = usePathname()
 
-  const navItems = [
-    { href: '/overview', label: 'Overview', icon: LayoutDashboard },
-    { href: '/work-orders', label: 'Work Orders', icon: ClipboardList },
-    { href: '/assets', label: 'Assets', icon: Package },
-    { href: '/messages', label: 'Messages', icon: MessageCircle },
-    { href: '/more', label: 'More', icon: MoreHorizontal },
-  ]
+  const navItems =
+    role === 'REQUESTER'
+      ? [
+          { href: '/my-requests', label: 'Requests', icon: ClipboardList },
+          { href: '/request', label: 'New Request', icon: Plus },
+        ]
+      : [
+          { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+          { href: '/work-orders', label: 'Work Orders', icon: ClipboardList },
+          { href: '/assets', label: 'Assets', icon: Package },
+          { href: '/messages', label: 'Messages', icon: MessageCircle },
+          { href: '/more', label: 'More', icon: MoreHorizontal },
+        ]
 
   const isActive = (href: string) => {
     if (href === '/overview') return pathname === '/overview' || pathname === '/dashboard'
+    if (href === '/request') return pathname === '/request' || pathname?.startsWith('/request/')
     return pathname?.startsWith(href)
   }
 

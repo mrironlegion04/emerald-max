@@ -68,6 +68,9 @@ Schedule it to run at least daily. Examples:
 
   # Database backup (daily at 02:30) — see the backups section
   30 2 * * * /path/to/max/scripts/backup.sh >> /var/log/cmms-backup.log 2>&1
+
+  # Attachments bucket backup (daily at 03:00) — see the backups section
+  0 3 * * * /path/to/max/scripts/backup-attachments.sh >> /var/log/cmms-backup-attachments.log 2>&1
   ```
 
 - **Self-hosted (systemd timer)** — equivalent with a `.service` (runs `pm-cron.py --loop 30`)
@@ -149,9 +152,12 @@ file). All log lines include `ts`, `level`, and `message`; `error`-level lines g
 
 ## Backups & disaster recovery
 
-Automated PostgreSQL backup + off-site copy to MinIO/S3, plus a restore script.
+Automated PostgreSQL backup + attachments backup, each with an off-site copy to
+MinIO/S3, plus restore scripts. The DB dump and the attachments mirror are
+complementary: the database stores object keys, the files themselves live in
+MinIO `max-attachments` — back up both.
 
-### Taking a backup
+### Database backup
 
 ```bash
 ./scripts/backup.sh
@@ -173,24 +179,46 @@ Configuration (env vars, `.env` is auto-loaded):
 | `POSTGRES_CONTAINER` | `emerald-db` | Docker container running Postgres |
 
 The script prefers to run `pg_dump` inside the Postgres container so the client version
-matches the server (host `pg_dump` 16 cannot dump a Postgres 18 server). The MinIO user
-needs read/write access to the backups bucket — attach a policy scoped to `max-backups`
-if the app credential is limited to the attachments bucket.
+matches the server (host `pg_dump` 16 cannot dump a Postgres 18 server).
+
+### Attachments backup
+
+```bash
+./scripts/backup-attachments.sh
+```
+
+Mirrors the `max-attachments` bucket to `backups/attachments/` locally (an
+independent copy on the app host), then mirrors that up to
+`max-backups/attachments/`. `mc mirror` is incremental, and objects deleted
+upstream are kept locally (no `--remove`), giving a short deletion-retention
+window. Set `DISABLE_MINIO_UPLOAD=1` for a local-only mirror.
+
+The MinIO credential needs read access to `max-attachments` and read/write access
+to `max-backups`. The two policies are tracked in the monorepo and documented in
+`Docs/Minio.md`:
+`~/emerald/services/minio/policies/max-policy.json` and
+`~/emerald/services/minio/policies/max-backups-policy.json`.
 
 ### Restoring
 
 ```bash
-./scripts/restore.sh /path/to/backup.dump --yes
+./scripts/restore.sh /path/to/backup.dump --yes          # database
+./scripts/restore-attachments.sh --yes                   # attachments
 ```
 
-`--yes` skips the interactive confirmation. Restore is destructive (`pg_restore --clean`):
-it drops and recreates tables in the target database. By default the target is `DATABASE_URL`
-— override with `RESTORE_DATABASE_URL` to restore into a different database.
+`--yes` skips the interactive confirmation. The DB restore is destructive
+(`pg_restore --clean`): it drops and recreates tables in the target database. By
+default the target is `DATABASE_URL` — override with `RESTORE_DATABASE_URL` to
+restore into a different database. The attachments restore uses `mc mirror
+--overwrite` (objects uploaded after the backup are preserved). Run a
+test-restore of the attachments into a scratch bucket first — see the drill in
+`Docs/Minio.md`.
 
 ### Schedule
 
-Run `backup.sh` at least daily (see the cron/observability section below for how the
-host scheduler is wired up). Test restores periodically in a scratch database.
+Run both backups daily (see the cron/observability section below for how the
+host scheduler is wired up). Test restores periodically in a scratch database
+and scratch MinIO bucket.
 
 ## Database connection pooling
 

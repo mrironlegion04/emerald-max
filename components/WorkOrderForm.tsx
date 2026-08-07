@@ -323,6 +323,28 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     try {
       if (!form.title.trim()) { setError('Title is required'); setSaving(false); return }
       if (form.teamId && form.assignedToId) { setError('Assign to either a team or an individual, not both'); setSaving(false); return }
+      if (!isEdit) {
+        if (!form.assetId && form.selectedAssetIds.length === 0 && !form.locationId) {
+          setError('Select an asset or location for the work order')
+          setSaving(false)
+          return
+        }
+        if (selectableGroups.length > 0 && !form.domainId) {
+          setError('Please select a domain / nature for the work order')
+          setSaving(false)
+          return
+        }
+        if (selectableGroups.length > 0 && !form.issueId) {
+          setError('Please select an issue for the work order')
+          setSaving(false)
+          return
+        }
+        if (form.issueId === OTHER_ISSUE && !form.customIssue.trim()) {
+          setError('Please describe the issue')
+          setSaving(false)
+          return
+        }
+      }
 
       const detailUrl = isEdit && woId ? `/work-orders/${woId}` : '/work-orders'
       if (!isDirty) {

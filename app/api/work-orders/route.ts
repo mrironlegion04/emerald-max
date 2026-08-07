@@ -94,6 +94,31 @@ export async function POST(request: NextRequest) {
       if (data.customIssue.length === 0) data.customIssue = null
     }
 
+    // ── Asset OR Location is required ────────────────────────────────
+    const hasAsset = !!data.assetId || (data.selectedAssetIds?.length ?? 0) > 0
+    const hasLocation = !!data.locationId
+    if (!hasAsset && !hasLocation) {
+      return NextResponse.json(
+        { error: 'Select an asset or location for the work order' },
+        { status: 400 }
+      )
+    }
+
+    // ── Domain / Nature + Issue is required ──────────────────────────
+    if (!data.domainId) {
+      return NextResponse.json(
+        { error: 'Please select a domain / nature for the work order' },
+        { status: 400 }
+      )
+    }
+    const hasIssue = !!data.issueId || !!data.customIssue
+    if (!hasIssue) {
+      return NextResponse.json(
+        { error: 'Please select an issue for the work order' },
+        { status: 400 }
+      )
+    }
+
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } })
     if (!dbUser) {
       return NextResponse.json({ error: 'User session invalid. Please log in again.' }, { status: 401 })

@@ -149,7 +149,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     setForm(p => {
       const next = { ...p, assetId: id }
       const assetLoc = asset?.location?.name
-      if (id && assetLoc && (p.location === autoLocRef.current || !p.location)) {
+      if (id && assetLoc) {
         const matched = locations.find(l => l.name === assetLoc)
         next.location = matched?.path ?? assetLoc
         next.locationId = asset?.location?.id ?? ''
@@ -163,6 +163,14 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       }
       return next
     })
+  }
+
+  function handleLocationSelect(locationId: string) {
+    const loc = locations.find(l => l.id === locationId)
+    autoLocRef.current = null
+    setLocationLocked(false)
+    set('location', loc ? loc.path : '')
+    set('locationId', locationId)
   }
 
   useEffect(() => {
@@ -296,28 +304,24 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
               <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Request type</label>
-                <select value={form.requestType} onChange={e => set('requestType', e.target.value)} className="input-field">
-                  <option value="">Select type</option>
-                  <option value="REPAIR">Repair</option>
-                  <option value="MAINTENANCE">Maintenance</option>
-                  <option value="INSPECTION">Inspection</option>
-                  <option value="INSTALLATION">Installation</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field">
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="CRITICAL">Critical — urgent!</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Request type</label>
+              <select value={form.requestType} onChange={e => set('requestType', e.target.value)} className="input-field">
+                <option value="">Select type</option>
+                <option value="REPAIR">Repair</option>
+                <option value="MAINTENANCE">Maintenance</option>
+                <option value="INSPECTION">Inspection</option>
+                <option value="INSTALLATION">Installation</option>
+                <option value="OTHER">Other</option>
+              </select>
             </div>
+            {currentUser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
+                <RequestAssetPicker value={form.assetId} onChange={handleAssetChange} />
+                <p className="text-[11px] text-gray-400 mt-1">Optional — pick the asset this request is about. Location auto-fills from it.</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Domain / Nature <span className="text-red-500">*</span></label>
               <select value={form.domainId} onChange={e => handleDomainChange(e.target.value)} className="input-field" disabled={!hasIssues}>
@@ -358,49 +362,60 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               )}
               <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster. Priority is suggested from the issue severity.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                {currentUser ? (
-                  form.assetId ? (
-                    locationLocked && form.location ? (
-                      <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
-                        <span className="truncate">{form.location}</span>
-                      </div>
-                    ) : (
-                      <div className="input-field bg-gray-50 text-gray-400 cursor-not-allowed">
-                        This asset has no location assigned
-                      </div>
-                    )
-                  ) : (
-                    <div className="input-field bg-gray-50 text-gray-400 cursor-not-allowed">
-                      Select an asset above — location is taken from it
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              {currentUser ? (
+                form.assetId ? (
+                  locationLocked && form.location ? (
+                    <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
+                      <span className="truncate">{form.location}</span>
                     </div>
+                  ) : (
+                    <select value={form.locationId} onChange={e => handleLocationSelect(e.target.value)} className="input-field">
+                      <option value="">This asset has no location — choose one</option>
+                      {locations.map(l => (
+                        <option key={l.id} value={l.id}>{l.path}</option>
+                      ))}
+                    </select>
                   )
                 ) : (
-                  <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
-                )}
-                {currentUser && locationLocked && (
-                  <p className="text-[11px] text-gray-400 mt-1">Location comes from the selected asset.</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desired completion date</label>
-                <input type="date" value={form.desiredDate} onChange={e => set('desiredDate', e.target.value)} className="input-field" />
-              </div>
+                  <select value={form.locationId} onChange={e => handleLocationSelect(e.target.value)} className="input-field">
+                    <option value="">Select a location</option>
+                    {locations.map(l => (
+                      <option key={l.id} value={l.id}>{l.path}</option>
+                    ))}
+                  </select>
+                )
+              ) : (
+                <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
+              )}
+              {currentUser && locationLocked && (
+                <p className="text-[11px] text-gray-400 mt-1">Location comes from the selected asset.</p>
+              )}
+              {currentUser && !locationLocked && (
+                <p className="text-[11px] text-gray-400 mt-1">Linked location — used to route this request to the right team.</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical — urgent!</option>
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">Suggested from the issue severity — you can adjust it.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Machine down since</label>
               <input type="datetime-local" value={form.downtimeStartedAt} onChange={e => set('downtimeStartedAt', e.target.value)} className="input-field" />
               <p className="text-[11px] text-gray-400 mt-1">Optional — if the machine is down, when did it stop working? This helps the team prioritize.</p>
             </div>
-            {currentUser && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
-                <RequestAssetPicker value={form.assetId} onChange={handleAssetChange} />
-                <p className="text-[11px] text-gray-400 mt-1">Optional — pick the asset this request is about. Location auto-fills from it.</p>
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Desired completion date</label>
+              <input type="date" value={form.desiredDate} onChange={e => set('desiredDate', e.target.value)} className="input-field" />
+              <p className="text-[11px] text-gray-400 mt-1">Optional — when would you like this completed?</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Photos / attachments</label>
               <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={handleFile} />

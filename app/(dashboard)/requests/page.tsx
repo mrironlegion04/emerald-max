@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasScopeActionFlag } from '@/lib/access-control'
 import Link from 'next/link'
-import { ExternalLink, Package, MapPin, CalendarClock, Users, Building2 } from 'lucide-react'
+import { ExternalLink, Package, MapPin, CalendarClock, Users, Building2, Layers, AlertTriangle } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { priorityVariant } from '@/components/Badge'
 import RequestActions from '@/components/RequestActions'
@@ -74,6 +74,7 @@ export default async function RequestsPage({
       orderBy: { createdAt: 'desc' },
       include: {
         issue: { select: { id: true, code: true, title: true } },
+        domain: { select: { id: true, name: true } },
         team: { select: { id: true, name: true } },
         requesterTeam: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, status: true } },
@@ -166,6 +167,17 @@ export default async function RequestsPage({
                         <span className="inline-flex items-center gap-1.5">
                           <code className="text-[10px] font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{req.issue.code}</code>
                           <span className="text-xs font-semibold text-violet-700 truncate max-w-[180px]">{req.issue.title}</span>
+                        </span>
+                      )}
+                      {req.domain && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                          <Layers className="w-3.5 h-3.5 text-slate-400" /> {req.domain.name}
+                        </span>
+                      )}
+                      {req.customIssue && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-xs font-semibold text-amber-700 truncate max-w-[220px]">{req.customIssue}</span>
                         </span>
                       )}
                       {req.team && (

@@ -147,10 +147,13 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
               </div>
             ) : '—' },
             { label: 'Location', value: wo.location?.name ?? wo.asset?.location?.name ?? '—' },
-            { label: 'Assigned to', value: wo.domain ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">👥 {wo.domain.name}</span>
-            ) : wo.assignedTo?.name ? (
+            { label: 'Domain / Nature', value: wo.domain ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold">◎ {wo.domain.name}</span>
+            ) : '—' },
+            { label: 'Assigned to', value: wo.assignedTo?.name ? (
               <span className="text-xs font-bold">{wo.assignedTo.name}</span>
+            ) : wo.team?.name ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">👥 {wo.team.name}</span>
             ) : (
               <span className="text-slate-400 italic text-xs">Unassigned</span>
             )},

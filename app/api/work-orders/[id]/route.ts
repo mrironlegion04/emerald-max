@@ -85,6 +85,7 @@ const updateSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
+  domainId:            z.string().nullable().optional(),
   shift:               z.string().nullable().optional(),
   woCategoryId:        z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
@@ -301,7 +302,7 @@ export async function PUT(
       data.teamId = null
     }
 
-    // ── Auto-derive domainId from team ───────────────────────────────
+    // ── Auto-derive domainId from team (only when not chosen explicitly) ──
     let derivedDomainId: string | null = null
     if (data.teamId) {
       const teamDomain = await prisma.teamDomain.findFirst({
@@ -310,6 +311,16 @@ export async function PUT(
       })
       derivedDomainId = teamDomain?.domainId ?? null
     }
+    if (data.domainId) {
+      const domain = await prisma.maintenanceDomain.findUnique({
+        where: { id: data.domainId },
+        select: { id: true, isActive: true },
+      })
+      if (!domain || !domain.isActive) {
+        return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
+      }
+    }
+    const finalDomainId = data.domainId !== undefined ? data.domainId : (data.teamId ? derivedDomainId : undefined)
 
     // ── Normalize asset scope ─────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
@@ -410,10 +421,10 @@ export async function PUT(
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','customFields','issueId','customIssue','startDate',
-           'woCategoryId','downtimeStartedAt','downtimeEndedAt'].includes(key)
+           'woCategoryId','downtimeStartedAt','downtimeEndedAt','domainId'].includes(key)
         )
       ),
-      ...(data.teamId ? { domainId: derivedDomainId } : {}),
+      ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),
       ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
       ...extra,
       ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),

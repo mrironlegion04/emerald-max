@@ -24,6 +24,8 @@ const schema = z.object({
   requestType: z.enum(['REPAIR','MAINTENANCE','INSPECTION','INSTALLATION','OTHER']).optional(),
   assetId: z.string().optional(),
   issueId: z.string().optional(),
+  domainId: z.string().optional(),
+  customIssue: z.string().optional(),
   requesterTeamId: z.string().optional(),
   desiredDate: z.string().optional(),
   downtimeStartedAt: z.string().optional(),
@@ -79,6 +81,7 @@ export async function GET() {
     include: {
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       issue: { select: { id: true, code: true, title: true, severity: true } },
+      domain: { select: { id: true, name: true } },
       team: { select: { id: true, name: true } },
       requesterTeam: { select: { id: true, name: true } },
       workOrder: { select: { id: true, woNumber: true, status: true } },
@@ -104,9 +107,35 @@ export async function POST(req: NextRequest) {
       if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
 
-    if (data.issueId) {
-      const issue = await prisma.issue.findUnique({ where: { id: data.issueId }, select: { id: true, isActive: true } })
+    // 1 Domain → 1 Issue → optional Custom Issue (Issue = Other).
+    let domainId: string | null = null
+    const customIssue = data.customIssue?.trim() || null
+    if (customIssue) {
+      if (data.issueId) return NextResponse.json({ error: 'Pick either an issue or a custom one, not both' }, { status: 400 })
+      if (!data.domainId) return NextResponse.json({ error: 'Domain is required when describing a custom issue' }, { status: 400 })
+      const domain = await prisma.maintenanceDomain.findUnique({ where: { id: data.domainId }, select: { id: true, isActive: true } })
+      if (!domain || !domain.isActive) return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
+      domainId = data.domainId
+    } else if (data.issueId) {
+      const issue = await prisma.issue.findUnique({
+        where: { id: data.issueId },
+        select: { id: true, isGlobal: true, isActive: true, domains: { select: { domainId: true } } },
+      })
       if (!issue || !issue.isActive) return NextResponse.json({ error: 'Issue not found' }, { status: 404 })
+      if (issue.isGlobal) {
+        if (data.domainId) return NextResponse.json({ error: 'Common issues do not belong to a domain' }, { status: 400 })
+        domainId = null
+      } else {
+        if (!data.domainId) return NextResponse.json({ error: 'Domain is required for this issue' }, { status: 400 })
+        const domain = await prisma.maintenanceDomain.findUnique({ where: { id: data.domainId }, select: { id: true, isActive: true } })
+        if (!domain || !domain.isActive) return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
+        if (!issue.domains.some(d => d.domainId === data.domainId)) {
+          return NextResponse.json({ error: 'Issue does not belong to the selected domain' }, { status: 400 })
+        }
+        domainId = data.domainId
+      }
+    } else {
+      return NextResponse.json({ error: 'Please select an issue or describe a custom one' }, { status: 400 })
     }
 
     // The requester's own team is recorded (their department), never chosen from all
@@ -134,7 +163,7 @@ export async function POST(req: NextRequest) {
         location: data.location || null, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
-        issueId: data.issueId, desiredDate, requesterTeamId,
+        issueId: data.issueId, domainId, customIssue, desiredDate, requesterTeamId,
         downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         requesterId: user.userId,
         attachments: data.attachments && data.attachments.length > 0 ? {

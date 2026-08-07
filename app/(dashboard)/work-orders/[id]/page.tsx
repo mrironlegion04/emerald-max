@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Printer, Download } from 'lucide-react'
+import { Printer, Download, Layers } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
@@ -56,6 +56,7 @@ export default async function WorkOrderDetailPage({
       assets:       { include: { asset: { select: { id: true, name: true, assetCode: true } } } },
       location:     { select: { id: true, name: true, address: true } },
       assignedTo:   { select: { id: true, name: true, email: true } },
+      team:         { select: { id: true, name: true } },
       domain:       { select: { id: true, name: true } },
       createdBy:    { select: { name: true } },
       completedBy:  { select: { id: true, name: true, email: true } },
@@ -257,12 +258,17 @@ export default async function WorkOrderDetailPage({
                   </Link>
                 ) }] : []),
                 { label: 'Location',    value: wo.asset?.location?.name ?? '—' },
-                { label: 'Assigned to', value: wo.domain ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
-                    👥 {wo.domain.name}
+                { label: 'Domain / Nature', value: wo.domain ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold">
+                    <Layers className="w-3 h-3 text-slate-400" /> {wo.domain.name}
                   </span>
-                ) : wo.assignedTo?.name ? (
+                ) : '—' },
+                { label: 'Assigned to', value: wo.assignedTo?.name ? (
                   wo.assignedTo.name
+                ) : wo.team?.name ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
+                    👥 {wo.team.name}
+                  </span>
                 ) : (
                   <span className="text-slate-400 italic">Unassigned</span>
                 )},

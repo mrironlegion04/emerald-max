@@ -37,6 +37,7 @@ const woSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
+  domainId:            z.string().nullable().optional(),
   woCategoryId:        z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
 
@@ -192,6 +193,27 @@ export async function POST(request: NextRequest) {
       derivedDomainId = teamDomain?.domainId ?? null
     }
 
+    // ── 1 Domain → 1 Issue → optional Custom Issue ───────────────────
+    const woDomainId = data.domainId !== undefined ? data.domainId : derivedDomainId
+    if (data.domainId) {
+      const domain = await prisma.maintenanceDomain.findUnique({
+        where: { id: data.domainId },
+        select: { id: true, isActive: true },
+      })
+      if (!domain || !domain.isActive) {
+        return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
+      }
+    }
+    if (data.issueId && data.domainId) {
+      const issue = await prisma.issue.findUnique({
+        where: { id: data.issueId },
+        select: { id: true, isGlobal: true, domains: { select: { domainId: true } } },
+      })
+      if (issue && !issue.isGlobal && !issue.domains.some(d => d.domainId === data.domainId)) {
+        return NextResponse.json({ error: 'Issue does not belong to the selected domain' }, { status: 400 })
+      }
+    }
+
     const wo = await prisma.workOrder.create({
       data: {
         woNumber,
@@ -208,7 +230,7 @@ export async function POST(request: NextRequest) {
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,
         teamId:         data.teamId       ?? null,
-        domainId:       derivedDomainId,
+        domainId:       woDomainId,
         createdById:    user.userId,
         laborHours:     data.laborHours   ?? null,
         laborCost:      data.laborCost    ?? null,

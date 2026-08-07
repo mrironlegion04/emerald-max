@@ -92,6 +92,7 @@ export default async function EditWorkOrderPage({
     notes:           wo.notes         ?? '',
     issueId:         wo.issueId       ?? '',
     customIssue:     wo.customIssue   ?? '',
+    domainId:        wo.domainId      ?? '',
     customFields:    (wo.customFields as Record<string, any> | null) ?? null,
     woCategoryId:    wo.woCategoryId ?? '',
   }

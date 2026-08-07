@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
-import WorkOrderIssueSelector, { OTHER_ISSUE } from './WorkOrderIssueSelector'
+import { OTHER_ISSUE } from './WorkOrderIssueSelector'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import CustomFieldsPanel from './CustomFieldsPanel'
@@ -21,7 +21,7 @@ interface WOFormData {
   selectedAssetIds: string[]
   failedComponentId: string
   assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
-  notes: string; issueId: string; customIssue: string;
+  notes: string; issueId: string; customIssue: string; domainId: string;
   customFields: Record<string, any> | null
   woCategoryId: string
   downtimeStartedAt: string
@@ -77,6 +77,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     notes:          initialData?.notes          ?? '',
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
+    domainId:       initialData?.domainId       ?? '',
     customFields:   (initialData as any)?.customFields ?? null,
     woCategoryId:   (initialData as any)?.woCategoryId ?? '',
     downtimeStartedAt: (initialData as any)?.downtimeStartedAt
@@ -139,7 +140,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     if (type === 'ASSET') {
       setForm(prev => ({ ...prev, locationId: '', locationScope: 'GENERAL', selectedAssetIds: [] }))
     } else {
-      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '', failedComponentId: '' }))
+      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '', domainId: '', failedComponentId: '' }))
     }
   }
 
@@ -218,10 +219,38 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     })
   }
 
+  const selectableGroups = issueGroups.filter(g => (g.issues?.length ?? 0) > 0)
+  const selectedGroup = selectableGroups.find(g => g.id === form.domainId)
+  // Keep an existing (e.g. team-derived or previously saved) domain selectable even when it has no issues in the current asset scope.
+  const domainOptions = (() => {
+    const options = [...selectableGroups]
+    if (form.domainId && !options.some(g => g.id === form.domainId)) {
+      options.unshift({ id: form.domainId, name: 'Current domain', issues: [], isFallback: false })
+    }
+    return options
+  })()
+  const selectedGroupIssues = selectedGroup?.issues ?? []
+
+  function handleDomainChange(groupId: string) {
+    setForm(prev => {
+      const next = { ...prev, domainId: groupId, issueId: '', customIssue: '' }
+      const group = selectableGroups.find(g => g.id === groupId)
+      if (group?.issues?.length) {
+        next.issueId = group.issues[0].id
+        if (group.issues[0].severity) {
+          next.priority = group.issues[0].severity
+          lastAutoPriority.current = group.issues[0].severity
+        }
+      }
+      return next
+    })
+  }
+
   function handleIssueChange(id: string) {
     const issue = issueGroups.flatMap(g => g.issues).find(i => i.id === id)
     setForm(prev => {
       const next = { ...prev, issueId: id }
+      if (id !== OTHER_ISSUE) next.customIssue = ''
       if (issue?.severity && (prev.priority === lastAutoPriority.current || !lastAutoPriority.current)) {
         next.priority = issue.severity
         lastAutoPriority.current = issue.severity
@@ -310,6 +339,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         notes:        form.notes          || null,
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
+        domainId:     form.domainId && !selectedGroup?.isFallback ? form.domainId : null,
         customFields: form.customFields,
         woCategoryId: form.woCategoryId || null,
         downtimeStartedAt: form.type === 'BREAKDOWN' && form.downtimeStartedAt
@@ -579,22 +609,52 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
           {issueGroups.length > 0 ? (
             <>
-              <WorkOrderIssueSelector
-                groups={issueGroups}
-                value={form.issueId}
-                onChange={handleIssueChange}
-              />
-              {form.issueId === OTHER_ISSUE && (
-                <div className="mt-4">
-                  <input
-                    type="text"
-                    value={form.customIssue}
-                    onChange={e => set('customIssue', e.target.value)}
-                    placeholder="Describe the issue..."
-                    className="input-field text-xs sm:text-sm bg-white"
-                    autoFocus
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Domain / Nature</label>
+                <select
+                  value={form.domainId}
+                  onChange={e => handleDomainChange(e.target.value)}
+                  className="input-field text-xs sm:text-sm bg-white"
+                  disabled={loadingIssues}
+                >
+                  <option value="">Select the domain</option>
+                  {domainOptions.map(g => (
+                    <option key={g.id} value={g.id}>{g.isFallback ? 'Common Issues' : g.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {form.domainId && selectedGroup && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue</label>
+                    <select
+                      value={form.issueId}
+                      onChange={e => handleIssueChange(e.target.value)}
+                      className="input-field text-xs sm:text-sm bg-white"
+                    >
+                      <option value="">Select the issue</option>
+                      {selectedGroupIssues.map(i => (
+                        <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
+                      ))}
+                      <option value={OTHER_ISSUE}>Other (type manually)</option>
+                    </select>
+                  </div>
+
+                  {form.issueId === OTHER_ISSUE && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Describe the issue</label>
+                      <input
+                        type="text"
+                        value={form.customIssue}
+                        onChange={e => set('customIssue', e.target.value)}
+                        placeholder="Describe the issue..."
+                        className="input-field text-xs sm:text-sm bg-white"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </>
           ) : !loadingIssues ? (

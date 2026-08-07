@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Settings, CheckCircle, X, ImagePlus } from 'lucide-react'
 import RequestAssetPicker from '@/components/RequestAssetPicker'
-import WorkOrderIssueSelector from '@/components/WorkOrderIssueSelector'
 
 interface CurrentUser {
   name: string
@@ -28,8 +27,11 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '', requesterTeamId: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
+  issueId: '', domainId: '', customIssue: '', requesterTeamId: '',
 }
+
+const OTHER_ISSUE = '__other__'
 
 export default function PublicRequestForm({ currentUser, initialAssetId }: { currentUser: CurrentUser | null; initialAssetId?: string }) {
   const [form, setForm] = useState({
@@ -104,13 +106,31 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   }, [form.assetId])
 
   const hasIssues = issueGroups.some(g => (g.issues?.length ?? 0) > 0)
+  const selectableGroups = issueGroups.filter(g => (g.issues?.length ?? 0) > 0)
+  const selectedGroup = selectableGroups.find(g => g.id === form.domainId)
+  const selectedGroupIssues = selectedGroup?.issues ?? []
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
+
+  function handleDomainChange(groupId: string) {
+    setForm(p => {
+      const next = { ...p, domainId: groupId, issueId: '', customIssue: '' }
+      const group = selectableGroups.find(g => g.id === groupId)
+      if (group?.issues?.length) {
+        next.issueId = group.issues[0].id
+        if (group.issues[0].severity) {
+          next.priority = group.issues[0].severity
+          lastAutoPriority.current = group.issues[0].severity
+        }
+      }
+      return next
+    })
+  }
 
   function handleIssueChange(id: string) {
     const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === id)
     setForm(p => {
-      const next = { ...p, issueId: id }
+      const next = { ...p, issueId: id, customIssue: '' }
       if (issue?.severity && (p.priority === lastAutoPriority.current || !lastAutoPriority.current)) {
         next.priority = issue.severity
         lastAutoPriority.current = issue.severity
@@ -203,8 +223,18 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError(''); setSaving(true)
+    if (hasIssues && !form.domainId) {
+      setError('Please select a domain for your request')
+      setSaving(false)
+      return
+    }
     if (hasIssues && !form.issueId) {
       setError('Please select an issue for your request')
+      setSaving(false)
+      return
+    }
+    if (form.issueId === OTHER_ISSUE && !form.customIssue.trim()) {
+      setError('Please describe your issue')
       setSaving(false)
       return
     }
@@ -215,7 +245,9 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         assetId: form.assetId || undefined,
         desiredDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
-        issueId: form.issueId || undefined,
+        issueId: form.issueId === OTHER_ISSUE ? undefined : (form.issueId || undefined),
+        domainId: form.domainId && !selectedGroup?.isFallback ? form.domainId : undefined,
+        customIssue: form.issueId === OTHER_ISSUE ? form.customIssue.trim() : undefined,
         requesterTeamId: form.requesterTeamId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
@@ -292,14 +324,43 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
-              <WorkOrderIssueSelector
-                groups={issueGroups}
-                value={form.issueId}
-                onChange={handleIssueChange}
-                placeholder={issuesLoading ? 'Loading issues…' : 'Select the issue'}
-                allowCustom={false}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Domain / Nature <span className="text-red-500">*</span></label>
+              <select value={form.domainId} onChange={e => handleDomainChange(e.target.value)} className="input-field" disabled={!hasIssues}>
+                <option value="">{issuesLoading ? 'Loading…' : 'Select the domain'}</option>
+                {selectableGroups.map(g => (
+                  <option key={g.id} value={g.id}>{g.isFallback ? 'Common Issues' : g.name}</option>
+                ))}
+              </select>
+              {form.domainId && selectedGroup && (
+                <>
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
+                    <select
+                      value={form.issueId}
+                      onChange={e => handleIssueChange(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Select the issue</option>
+                      {selectedGroupIssues.map(i => (
+                        <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
+                      ))}
+                      <option value={OTHER_ISSUE}>Other (type manually)</option>
+                    </select>
+                  </div>
+                  {form.issueId === OTHER_ISSUE && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Describe the issue <span className="text-red-500">*</span></label>
+                      <textarea
+                        value={form.customIssue}
+                        onChange={e => set('customIssue', e.target.value)}
+                        className="input-field resize-none"
+                        rows={2}
+                        placeholder="e.g. Pump is vibrating badly"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster. Priority is suggested from the issue severity.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1180,7 +1180,6 @@ model ChatChannel {
   type        ChatChannelType
   description String?
   avatarText  String?
-  entityId    String?  // References teamId, workOrderId, etc., if linked
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

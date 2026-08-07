@@ -712,27 +712,10 @@ export default function MessagesPage() {
 
     // 2. Normal Database post sync
     try {
-      let workOrderId: string | undefined
-      let teamId: string | undefined
-      let receiverId: string | undefined
-
-      if (activeChannel.type === 'workorder') {
-        workOrderId = activeChannel.id.substring(3)
-      } else if (activeChannel.type === 'team') {
-        teamId = activeChannel.id.substring(5) // TEAM_xxxxx → teamId
-      } else if (activeChannel.type === 'direct') {
-        const ids = activeChannel.id.substring(7).split('_')
-        const myId = currentUser.userId || currentUser.id
-        receiverId = ids.find(id => id !== myId)
-      }
-
       const postBody = {
         content: activeMsgVal,
         channel: activeChannel.id,
         channelName: activeChannel.name,
-        workOrderId,
-        teamId,
-        receiverId,
         mediaUrl: optimisticMock.mediaUrl,
         mediaName: optimisticMock.mediaName,
         isVoice: optimisticMock.isVoice,

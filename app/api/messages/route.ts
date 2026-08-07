@@ -86,7 +86,6 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
             type: 'workorder',
             description: `Priority: ${wo.priority} | Status: ${wo.status}`,
             avatarText: '📋',
-            entityId: wo.id,
           }
         })
         return true
@@ -106,7 +105,6 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
             type: 'team',
             description: `Team workspace for ${team.name}`,
             avatarText: '🛠️',
-            entityId: team.id,
           }
         })
         return true
@@ -129,7 +127,6 @@ async function ensureChannelExists(channelId: string, currentUserId: string): Pr
               type: 'direct',
               description: `Role: ${other.role} | ${other.email}`,
               avatarText: '👤',
-              entityId: other.id,
             }
           })
           return true
@@ -230,7 +227,6 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
             type: 'team',
             description: `Team workspace for ${team.name}`,
             avatarText: '🛠️',
-            entityId: team.id,
           },
         })
       }
@@ -279,7 +275,6 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
             type: 'workorder',
             description: `Priority: ${wo.priority} | Status: ${wo.status}`,
             avatarText: '📋',
-            entityId: wo.id,
           },
         })
       }
@@ -316,7 +311,6 @@ async function ensureStaticAndDirectChannels(userId: string, role: string) {
             type: 'direct',
             description: `Role: ${other.role} | ${other.email}`,
             avatarText: '👤',
-            entityId: other.id,
           },
         })
       }
@@ -565,8 +559,6 @@ export async function POST(req: NextRequest) {
       content,
       channel: channelId,
       channelName,
-      workOrderId,
-      receiverId,
       mediaUrl,
       mediaName,
       mediaType,
@@ -654,7 +646,6 @@ export async function POST(req: NextRequest) {
           type,
           description: type === 'group' ? 'Private group conversation' : 'Discussion zone',
           avatarText: type === 'workorder' ? '📋' : type === 'team' ? '🛠️' : type === 'direct' ? '👤' : '👥',
-          entityId: workOrderId || receiverId || null,
         },
       })
     }

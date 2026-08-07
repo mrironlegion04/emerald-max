@@ -251,6 +251,21 @@ export async function PUT(
       }
     }
 
+    // Category is required before completing or closing a work order.
+    const finalStatus = data.status ?? existingWo.status
+    if (
+      (finalStatus === 'COMPLETED' || finalStatus === 'CLOSED') &&
+      (data.status !== existingWo.status || data.woCategoryId !== undefined)
+    ) {
+      const effectiveCategory = data.woCategoryId !== undefined ? data.woCategoryId : existingWo.woCategoryId
+      if (!effectiveCategory) {
+        return NextResponse.json(
+          { error: 'A work order category is required before completing or closing' },
+          { status: 422 }
+        )
+      }
+    }
+
     // Validate the status transition, mirroring the status route.
     // Skipped when the status is unchanged (idempotent re-save).
     if (data.status && data.status !== existingWo.status) {

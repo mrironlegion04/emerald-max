@@ -155,6 +155,14 @@ export async function PATCH(
       }
     }
 
+    // Category is required before completing or closing a work order.
+    if ((status === 'COMPLETED' || status === 'CLOSED') && !wo.woCategoryId) {
+      return NextResponse.json(
+        { error: 'A work order category is required before completing or closing' },
+        { status: 422 }
+      )
+    }
+
     // ===== BUILD UPDATE DATA =====
     const updateData: Record<string, unknown> = { status }
 

@@ -10,6 +10,11 @@ interface CurrentUser {
   role: string
 }
 
+interface PickedAsset {
+  id: string
+  location?: { id?: string | null; name?: string | null } | null
+}
+
 interface AttachmentUpload {
   url: string
   originalName: string
@@ -50,9 +55,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const [issuesLoading, setIssuesLoading] = useState(true)
 
   const lastAutoPriority = useRef<string | null>(null)
-  const autoLocRef = useRef<string | null>(null)
-  const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
-  const [locationLocked, setLocationLocked] = useState(false)
   const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -65,28 +67,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         const mine = Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : []
         setRequesterTeams(mine)
         if (mine.length > 0) setForm(p => ({ ...p, requesterTeamId: mine[0].id }))
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [currentUser])
-
-  useEffect(() => {
-    if (!currentUser) return
-    let active = true
-    fetch('/api/locations')
-      .then(r => (r.ok ? r.json() : []))
-      .then((nested: any[]) => {
-        if (!active) return
-        const flat: { id: string; name: string; parentId: string | null; path: string }[] = []
-        const walk = (nodes: any[], parentId: string | null, prefix: string) => {
-          for (const n of nodes) {
-            const path = prefix ? `${prefix} › ${n.name}` : n.name
-            flat.push({ id: n.id, name: n.name, parentId: parentId ?? null, path })
-            if (Array.isArray(n.children) && n.children.length > 0) walk(n.children, n.id, path)
-          }
-        }
-        walk(Array.isArray(nested) ? nested : [], null, '')
-        setLocations(flat)
       })
       .catch(() => {})
     return () => { active = false }
@@ -144,60 +124,20 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     set('priority', v)
   }
 
-  function handleAssetChange(asset: any) {
+  function handleAssetChange(asset: PickedAsset | null) {
     const id = asset?.id ?? ''
-    setForm(p => {
-      const next = { ...p, assetId: id }
-      const assetLoc = asset?.location?.name
-      if (id && assetLoc) {
-        const matched = locations.find(l => l.name === assetLoc)
-        next.location = matched?.path ?? assetLoc
-        next.locationId = asset?.location?.id ?? ''
-        autoLocRef.current = next.location
-        setLocationLocked(true)
-      } else if (!id && p.location === autoLocRef.current) {
-        next.location = ''
-        next.locationId = ''
-        autoLocRef.current = null
-        setLocationLocked(false)
-      }
-      return next
-    })
+    setForm(p => ({ ...p, assetId: id, location: id ? (asset?.location?.name ?? '') : '' }))
   }
-
-  function handleLocationSelect(locationId: string) {
-    const loc = locations.find(l => l.id === locationId)
-    autoLocRef.current = null
-    setLocationLocked(false)
-    set('location', loc ? loc.path : '')
-    set('locationId', locationId)
-  }
-
-  useEffect(() => {
-    if (!locations.length || !autoLocRef.current) return
-    const matched = locations.find(l => l.name === autoLocRef.current)
-    if (matched && matched.path !== autoLocRef.current) {
-      setForm(p => (p.location === autoLocRef.current ? { ...p, location: matched.path } : p))
-      autoLocRef.current = matched.path
-    }
-  }, [locations])
 
   useEffect(() => {
     if (!initialAssetId) return
     let active = true
     fetch('/api/assets')
       .then(r => (r.ok ? r.json() : []))
-      .then((list: { id: string; location?: { id?: string | null; name?: string | null } | null }[]) => {
+      .then((list: PickedAsset[]) => {
         if (!active) return
         const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
-        const assetLoc = asset?.location?.name
-        if (!assetLoc) return
-        setLocationLocked(true)
-        setForm(p => {
-          if (p.assetId !== initialAssetId) return p
-          autoLocRef.current = assetLoc
-          return { ...p, location: assetLoc, locationId: asset?.location?.id ?? '' }
-        })
+        if (asset) setForm(p => (p.assetId === initialAssetId ? { ...p, location: asset.location?.name ?? '' } : p))
       })
       .catch(() => {})
     return () => { active = false }
@@ -271,7 +211,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <h2 className="text-xl font-bold text-gray-900 mb-2">Request submitted!</h2>
           <p className="text-gray-500 text-sm">Your maintenance request has been received. The maintenance team will review it shortly.</p>
           <button
-            onClick={() => { setSuccess(false); setLocationLocked(false); setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
+            onClick={() => { setSuccess(false); setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
             className="mt-6 btn-secondary text-sm">Submit another request</button>
           {currentUser && (
             <Link href="/my-requests" className="mt-3 btn-primary text-sm inline-flex items-center justify-center w-full">
@@ -362,40 +302,27 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               )}
               <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster. Priority is suggested from the issue severity.</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-              {currentUser ? (
-                form.assetId ? (
-                  locationLocked && form.location ? (
-                    <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
+            {currentUser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                {form.assetId ? (
+                  form.location ? (
+                    <div className="input-field bg-gray-50 text-gray-500 flex items-center gap-2">
                       <span className="truncate">{form.location}</span>
                     </div>
                   ) : (
-                    <select value={form.locationId} onChange={e => handleLocationSelect(e.target.value)} className="input-field">
-                      <option value="">This asset has no location — choose one</option>
-                      {locations.map(l => (
-                        <option key={l.id} value={l.id}>{l.path}</option>
-                      ))}
-                    </select>
+                    <div className="input-field bg-gray-50 text-gray-400">
+                      This asset has no location assigned
+                    </div>
                   )
                 ) : (
-                  <select value={form.locationId} onChange={e => handleLocationSelect(e.target.value)} className="input-field">
-                    <option value="">Select a location</option>
-                    {locations.map(l => (
-                      <option key={l.id} value={l.id}>{l.path}</option>
-                    ))}
-                  </select>
-                )
-              ) : (
-                <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
-              )}
-              {currentUser && locationLocked && (
-                <p className="text-[11px] text-gray-400 mt-1">Location comes from the selected asset.</p>
-              )}
-              {currentUser && !locationLocked && (
-                <p className="text-[11px] text-gray-400 mt-1">Linked location — used to route this request to the right team.</p>
-              )}
-            </div>
+                  <div className="input-field bg-gray-50 text-gray-400">
+                    Select an asset to see its location
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400 mt-1">Read-only — location comes from the selected asset.</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
               <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field">

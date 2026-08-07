@@ -112,14 +112,19 @@ export async function POST(req: NextRequest) {
     // Location is structured: prefer the explicit locationId, else derive it
     // from the chosen asset. The `location` string stays for display only.
     let locationId: string | null = null
+    let locationText: string | null = data.location || null
     if (data.locationId) {
       const location = await prisma.location.findUnique({ where: { id: data.locationId }, select: { id: true } })
       if (!location) return NextResponse.json({ error: 'Location not found' }, { status: 404 })
       locationId = data.locationId
     } else if (data.assetId) {
-      const asset = await prisma.asset.findUnique({ where: { id: data.assetId }, select: { id: true, locationId: true } })
+      const asset = await prisma.asset.findUnique({
+        where: { id: data.assetId },
+        select: { id: true, locationId: true, location: { select: { name: true } } },
+      })
       if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
       locationId = asset.locationId
+      if (!locationText) locationText = asset.location?.name ?? null
     }
 
     // 1 Domain → 1 Issue → optional Custom Issue (Issue = Other).
@@ -175,7 +180,7 @@ export async function POST(req: NextRequest) {
     const request = await prisma.maintenanceRequest.create({
       data: {
         requestNumber, title: data.title, description: data.description,
-        locationText: data.location || null, locationId, requesterName: data.requesterName || user.name,
+        locationText, locationId, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
         issueId: data.issueId, domainId, customIssue, desiredDate, requesterTeamId,

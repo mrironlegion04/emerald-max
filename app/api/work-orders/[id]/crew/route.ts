@@ -33,15 +33,17 @@ async function buildCrewPayload(workOrderId: string) {
 
   const currentMemberIds = new Set((wo.team?.members ?? []).map(m => m.user.id))
 
+  // Any active user can be recorded as a participant — no plant/team restriction.
+  // Members of the WO's assigned team are flagged so the UI can recommend them first.
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' as const },
+  })
+
   return {
     team: wo.team ? { id: wo.team.id, name: wo.team.name } : null,
-    eligible: (wo.team?.members ?? []).map(m => ({
-      userId: m.user.id,
-      name: m.user.name,
-      role: m.role,
-      isActive: m.user.isActive,
-      recorded: wo.performers.some(p => p.userId === m.user.id),
-    })),
+    users: users.map(u => ({ ...u, inTeam: currentMemberIds.has(u.id) })),
     recorded: wo.performers.map(p => ({
       id: p.id,
       userId: p.userId,
@@ -104,11 +106,7 @@ export async function POST(
           select: {
             id: true,
             name: true,
-            members: {
-              include: {
-                user: { select: { id: true, name: true } },
-              },
-            },
+            members: { select: { userId: true, role: true } },
           },
         },
         performers: { select: { id: true, userId: true } },
@@ -116,25 +114,22 @@ export async function POST(
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    if (!wo.team) {
-      return NextResponse.json(
-        { error: 'Work order has no team assigned, so participants cannot be recorded' },
-        { status: 400 }
-      )
-    }
-
     const existingByUserId = new Map(
       wo.performers.filter(p => p.userId).map(p => [p.userId as string, p.id])
     )
     const existingIds = new Set(existingByUserId.keys())
 
-    // Additions must be current team members only
+    // Additions must be existing, active users — recording has no team/plant
+    // restriction, so any active user may be recorded.
     const additions = requestedIds.filter(uid => !existingIds.has(uid))
-    const currentMemberIds = new Set(wo.team.members.map(m => m.user.id))
-    const invalidAdditions = additions.filter(uid => !currentMemberIds.has(uid))
+    const validUsers = additions.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: additions } }, select: { id: true, name: true, isActive: true } })
+      : []
+    const validByName = new Map(validUsers.map(u => [u.id, u.name]))
+    const invalidAdditions = additions.filter(uid => !validUsers.some(u => u.id === uid) || !validUsers.some(u => u.id === uid && u.isActive))
     if (invalidAdditions.length > 0) {
       return NextResponse.json(
-        { error: 'You can only record participants who are members of the assigned team' },
+        { error: 'One or more users are not active or do not exist' },
         { status: 400 }
       )
     }
@@ -142,8 +137,8 @@ export async function POST(
     // Removals of already-recorded participants are always allowed (data correction)
     const removals = [...existingIds].filter(uid => !requestedIds.includes(uid))
 
-    const memberByName = new Map(
-      wo.team.members.map(m => [m.user.id, { name: m.user.name, role: m.role }])
+    const primaryMemberByUserId = new Map(
+      (wo.team?.members ?? []).map(m => [m.userId, m.role])
     )
 
     await prisma.$transaction(async tx => {
@@ -157,10 +152,10 @@ export async function POST(
           data: additions.map(uid => ({
             workOrderId: id,
             userId: uid,
-            performerName: memberByName.get(uid)?.name ?? 'Unknown',
-            teamId: wo.team!.id,
-            teamName: wo.team!.name,
-            role: memberByName.get(uid)?.role ?? 'MEMBER',
+            performerName: validByName.get(uid) ?? 'Unknown',
+            teamId: wo.team && primaryMemberByUserId.has(uid) ? wo.team.id : null,
+            teamName: wo.team && primaryMemberByUserId.has(uid) ? wo.team.name : null,
+            role: primaryMemberByUserId.get(uid) ?? null,
             addedById: user.userId,
             addedByName: user.name,
           })),
@@ -176,7 +171,7 @@ export async function POST(
       changes: {
         crew: {
           before: [...existingIds].length,
-          after: requestedIds.length,
+          after: [...new Set(requestedIds)].length,
         },
       },
       userId: user.userId,

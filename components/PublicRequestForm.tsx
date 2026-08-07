@@ -12,7 +12,7 @@ interface CurrentUser {
 
 interface PickedAsset {
   id: string
-  location?: { id?: string | null; name?: string | null } | null
+  location?: { id?: string | null; name?: string | null; path?: string | null } | null
 }
 
 interface AttachmentUpload {
@@ -126,7 +126,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   function handleAssetChange(asset: PickedAsset | null) {
     const id = asset?.id ?? ''
-    setForm(p => ({ ...p, assetId: id, location: id ? (asset?.location?.name ?? '') : '' }))
+    setForm(p => ({ ...p, assetId: id, location: id ? (asset?.location?.path ?? asset?.location?.name ?? '') : '' }))
   }
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       .then((list: PickedAsset[]) => {
         if (!active) return
         const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
-        if (asset) setForm(p => (p.assetId === initialAssetId ? { ...p, location: asset.location?.name ?? '' } : p))
+        if (asset) setForm(p => (p.assetId === initialAssetId ? { ...p, location: asset.location?.path ?? asset.location?.name ?? '' } : p))
       })
       .catch(() => {})
     return () => { active = false }

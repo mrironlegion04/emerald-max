@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         category: { select: { id: true, name: true } },
-        location: { select: { id: true, name: true } },
+        location: { select: { id: true, name: true, path: true } },
         owner: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },

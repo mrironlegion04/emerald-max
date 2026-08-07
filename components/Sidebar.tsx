@@ -291,15 +291,15 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
       <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto scrollbar-thin select-none">
         {/* Modern styled QR Scan Link */}
         <Link
-          href="/scan"
+          href={user.role === 'REQUESTER' ? '/request/scan' : '/scan'}
           onClick={onClose}
           className={clsx(
             'sidebar-link justify-center bg-blue-50/40 text-blue-600 border border-blue-200/60 hover:bg-blue-50 mb-3.5 shadow-3xs lg:hidden',
-            { '!bg-blue-600 !text-white !border-blue-700': isActive('/scan') }
+            { '!bg-blue-600 !text-white !border-blue-700': isActive(user.role === 'REQUESTER' ? '/request/scan' : '/scan') }
           )}
         >
           <QrCode className="w-4.5 h-4.5" />
-          <span className="font-bold">Scan Asset QR</span>
+          <span className="font-bold">{user.role === 'REQUESTER' ? 'Scan to Request' : 'Scan Asset QR'}</span>
         </Link>
 
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 mt-1">

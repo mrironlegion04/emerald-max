@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal, Plus } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal, Plus, ScanLine } from 'lucide-react'
 import { motion } from 'motion/react'
 
 type Role = 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
@@ -14,6 +14,7 @@ export default function BottomNav({ role }: { role?: Role }) {
     role === 'REQUESTER'
       ? [
           { href: '/my-requests', label: 'Requests', icon: ClipboardList },
+          { href: '/request/scan', label: 'Scan', icon: ScanLine },
           { href: '/request', label: 'New Request', icon: Plus },
         ]
       : [

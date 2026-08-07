@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Html5Qrcode } from 'html5-qrcode'
 
 interface QRScannerProps {
   onScanSuccess?: (result: string) => void
   onScanError?: (error: string) => void
+  requestMode?: boolean
 }
 
-export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps) {
+export default function QRScanner({ onScanSuccess, onScanError, requestMode = false }: QRScannerProps) {
   const router = useRouter()
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'pending'>('pending')
   const [isScanning, setIsScanning] = useState(true)
@@ -18,35 +20,9 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scannerInstanceRef = useRef<any>(null)
 
-  // Load html5-qrcode from CDN
+  // Initialize the scanner on mount (library bundled locally to satisfy CSP).
   useEffect(() => {
-    const loadQRScanner = async () => {
-      try {
-        // Check if html5-qrcode is already loaded
-        if (!(window as any).Html5Qrcode) {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js'
-          script.async = true
-          script.onload = () => {
-            initializeScanner()
-          }
-          script.onerror = () => {
-            setError('Failed to load QR code scanner library')
-            setCameraPermission('denied')
-            onScanError?.('Failed to load QR code library')
-          }
-          document.head.appendChild(script)
-        } else {
-          initializeScanner()
-        }
-      } catch (err) {
-        setError('Failed to initialize scanner')
-        setCameraPermission('denied')
-        onScanError?.('Failed to initialize scanner')
-      }
-    }
-
-    loadQRScanner()
+    initializeScanner()
 
     return () => {
       // Cleanup
@@ -54,12 +30,11 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
         scannerInstanceRef.current.stop().catch(() => {})
       }
     }
-  }, [onScanError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const initializeScanner = async () => {
     try {
-      const Html5Qrcode = (window as any).Html5Qrcode
-
       // Request camera permission
       try {
         await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -87,12 +62,16 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
           const assetMatch = pathname.match(/\/assets\/([a-z0-9-]+)/i)
           const partMatch = pathname.match(/\/parts\/([a-z0-9-]+)/i)
 
-          if (assetMatch) {
-            router.push(`/assets/${assetMatch[1]}`)
-          } else if (partMatch) {
+          if (pathname === '/request') {
+            router.push(`${pathname}${url.search}`)
+          } else if (assetMatch) {
+            router.push(requestMode ? `/request?assetId=${assetMatch[1]}` : `/assets/${assetMatch[1]}`)
+          } else if (partMatch && !requestMode) {
             router.push(`/parts/${partMatch[1]}`)
           } else {
-            setError('Invalid QR code. Expected asset or part link.')
+            setError(requestMode
+              ? 'Invalid QR code. Point the camera at an asset QR code.'
+              : 'Invalid QR code. Expected asset or part link.')
             setScanned(false)
             setIsScanning(true)
             scanner.resume()
@@ -196,7 +175,10 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
       {!error && isScanning && !scanned && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <p className="text-sm text-blue-900">
-            <span className="font-semibold">📸 Point your camera</span> at an asset or part QR code to scan.
+            <span className="font-semibold">📸 Point your camera</span>{' '}
+            {requestMode
+              ? 'at an asset QR code to report an issue.'
+              : 'at an asset or part QR code to scan.'}
           </p>
         </div>
       )}

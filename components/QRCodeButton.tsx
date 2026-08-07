@@ -10,6 +10,9 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
   const [showPreview, setShowPreview] = useState(false)
   const [loading,     setLoading]     = useState(false)
   const [svgContent,  setSvgContent]  = useState('')
+  const [intent,      setIntent]      = useState<'asset' | 'request'>('asset')
+
+  const intentSuffix = intent === 'request' ? 'request' : 'asset'
 
   async function loadPreview() {
     if (showPreview) {
@@ -18,7 +21,7 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
     }
     setLoading(true)
     try {
-      const res  = await fetch(`/api/assets/${assetId}/qr?raw=true`)
+      const res  = await fetch(`/api/assets/${assetId}/qr?raw=true&intent=${intent}`)
       const text = await res.text()
       setSvgContent(text)
       setShowPreview(true)
@@ -27,12 +30,21 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
     } finally { setLoading(false) }
   }
 
+  function switchIntent(next: 'asset' | 'request') {
+    setIntent(next)
+    if (!showPreview) return
+    fetch(`/api/assets/${assetId}/qr?raw=true&intent=${next}`)
+      .then(r => r.text())
+      .then(text => setSvgContent(text))
+      .catch(() => {})
+  }
+
   function downloadSVG() {
     if (!svgContent || !assetCode) return
     const blob = new Blob([svgContent], { type: 'image/svg+xml' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href = url; a.download = `qr-${assetCode}.svg`
+    a.href = url; a.download = `qr-${assetCode}-${intentSuffix}.svg`
     document.body.appendChild(a); a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
@@ -41,8 +53,8 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
   function downloadPNG() {
     if (!assetCode) return
     const a = document.createElement('a')
-    a.href     = `/api/assets/${assetId}/qr?format=png`
-    a.download = `qr-${assetCode}.png`
+    a.href     = `/api/assets/${assetId}/qr?format=png&intent=${intent}`
+    a.download = `qr-${assetCode}-${intentSuffix}.png`
     document.body.appendChild(a); a.click()
     document.body.removeChild(a)
   }
@@ -65,7 +77,7 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
 </style></head>
 <body>
   <div class="card">
-    <img src="/api/assets/${assetId}/qr" alt="QR asset label" />
+    <img src="/api/assets/${assetId}/qr?intent=${intent}" alt="QR label" />
   </div>
   <script>
     window.onload = () => {
@@ -109,7 +121,9 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 pt-6 pb-2">
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">QR Asset Label</h3>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                  {intent === 'request' ? 'QR Request Label' : 'QR Asset Label'}
+                </h3>
                 <button 
                   onClick={() => setShowPreview(false)}
                   className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
@@ -118,11 +132,37 @@ export default function QRCodeButton({ assetId, assetCode, assetName }: Props) {
                 </button>
               </div>
 
+              {/* Intent Toggle */}
+              <div className="px-6">
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-slate-100">
+                  {([
+                    { key: 'asset', label: 'Asset label' },
+                    { key: 'request', label: 'Request label' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => switchIntent(opt.key)}
+                      className={`py-2 rounded-xl text-xs font-bold transition-colors ${
+                        intent === opt.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+                  {intent === 'request'
+                    ? 'Point requesters here — scanning opens a pre-filled request form.'
+                    : 'Opens the asset detail page for staff.'}
+                </p>
+              </div>
+
               {/* QR Container */}
               <div className="p-8 pb-4">
                 <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 shadow-inner flex flex-col items-center">
                   <img
-                    src={`/api/assets/${assetId}/qr?format=png`}
+                    src={`/api/assets/${assetId}/qr?format=png&intent=${intent}`}
                     alt={`QR code for ${assetName}`}
                     className="w-full max-w-[200px]"
                   />

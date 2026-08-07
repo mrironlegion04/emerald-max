@@ -31,11 +31,12 @@ const EMPTY_FORM = {
   priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '', teamId: '',
 }
 
-export default function PublicRequestForm({ currentUser }: { currentUser: CurrentUser | null }) {
+export default function PublicRequestForm({ currentUser, initialAssetId }: { currentUser: CurrentUser | null; initialAssetId?: string }) {
   const [form, setForm] = useState({
     ...EMPTY_FORM,
     requesterName: currentUser?.name ?? '',
     requesterEmail: currentUser?.email ?? '',
+    assetId: initialAssetId ?? '',
   })
   const [attachments, setAttachments] = useState<AttachmentUpload[]>([])
   const [uploading, setUploading] = useState(false)
@@ -162,6 +163,27 @@ export default function PublicRequestForm({ currentUser }: { currentUser: Curren
       autoLocRef.current = matched.path
     }
   }, [locations])
+
+  useEffect(() => {
+    if (!initialAssetId) return
+    let active = true
+    fetch('/api/assets')
+      .then(r => (r.ok ? r.json() : []))
+      .then((list: { id: string; location?: { name?: string | null } | null }[]) => {
+        if (!active) return
+        const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
+        const assetLoc = asset?.location?.name
+        if (!assetLoc) return
+        setCustomLocation(false)
+        setForm(p => {
+          if (p.assetId !== initialAssetId) return p
+          autoLocRef.current = assetLoc
+          return { ...p, location: assetLoc }
+        })
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [initialAssetId])
 
   function handleLocationPick(value: string) {
     if (value === '__other__') {

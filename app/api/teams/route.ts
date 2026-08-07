@@ -17,14 +17,19 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const showDeleted = searchParams.get('showDeleted') === 'true'
+  const mine = searchParams.get('mine') === 'true'
 
   const where: Record<string, unknown> = showDeleted ? {} : { isDeleted: false }
 
-  // Plant-scoped users only see teams that have at least one member at their plants
-  const allowedIds = await getUserLocationIds(user.userId)
-  if (allowedIds && !showDeleted) {
-    where.members = {
-      some: { user: { userLocations: { some: { locationId: { in: allowedIds } } } } },
+  if (mine) {
+    where.members = { some: { userId: user.userId } }
+  } else {
+    // Plant-scoped users only see teams that have at least one member at their plants
+    const allowedIds = await getUserLocationIds(user.userId)
+    if (allowedIds && !showDeleted) {
+      where.members = {
+        some: { user: { userLocations: { some: { locationId: { in: allowedIds } } } } },
+      }
     }
   }
 

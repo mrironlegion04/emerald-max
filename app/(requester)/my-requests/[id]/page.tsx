@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Package, MapPin, CalendarClock, Phone, Mail, CheckCircle2,
-  Circle, Clock, FileText, AlertTriangle, Ban, Users,
+  Circle, Clock, FileText, AlertTriangle, Ban, Users, Building2,
 } from 'lucide-react'
 import Badge, { priorityVariant } from '@/components/Badge'
 import { REQUEST_STATUS_LABELS, requestStatusVariant, REQUEST_TYPE_LABELS, requestTypeVariant } from '@/lib/request-status'
@@ -36,6 +36,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     include: {
       issue: { select: { id: true, code: true, title: true, severity: true } },
       team: { select: { id: true, name: true } },
+      requesterTeam: { select: { id: true, name: true } },
       asset: { select: { id: true, name: true, assetCode: true, description: true, location: { select: { name: true } } } },
       workOrder: {
         select: {
@@ -122,6 +123,11 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
               {request.team && (
                 <p className="flex items-center gap-2 text-xs text-slate-600">
                   <Users className="w-3.5 h-3.5 text-slate-400" /> Team: {request.team.name}
+                </p>
+              )}
+              {request.requesterTeam && (
+                <p className="flex items-center gap-2 text-xs text-slate-600">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400" /> Requesting team: {request.requesterTeam.name}
                 </p>
               )}
             </div>

@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasScopeActionFlag } from '@/lib/access-control'
 import Link from 'next/link'
-import { ExternalLink, Package, MapPin, CalendarClock, Users } from 'lucide-react'
+import { ExternalLink, Package, MapPin, CalendarClock, Users, Building2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { priorityVariant } from '@/components/Badge'
 import RequestActions from '@/components/RequestActions'
@@ -75,6 +75,7 @@ export default async function RequestsPage({
       include: {
         issue: { select: { id: true, code: true, title: true } },
         team: { select: { id: true, name: true } },
+        requesterTeam: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, status: true } },
         asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       },
@@ -170,6 +171,11 @@ export default async function RequestsPage({
                       {req.team && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500">
                           <Users className="w-3.5 h-3.5 text-slate-400" /> {req.team.name}
+                        </span>
+                      )}
+                      {req.requesterTeam && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-500">
+                          <Building2 className="w-3.5 h-3.5 text-violet-400" /> {req.requesterTeam.name}
                         </span>
                       )}
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight ml-auto md:ml-0">

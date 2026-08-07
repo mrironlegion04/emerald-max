@@ -24,6 +24,7 @@ const schema = z.object({
   requestType: z.enum(['REPAIR','MAINTENANCE','INSPECTION','INSTALLATION','OTHER']).optional(),
   assetId: z.string().optional(),
   issueId: z.string().optional(),
+  requesterTeamId: z.string().optional(),
   desiredDate: z.string().optional(),
   downtimeStartedAt: z.string().optional(),
   attachments: z.array(attachmentSchema).optional(),
@@ -79,6 +80,7 @@ export async function GET() {
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
       issue: { select: { id: true, code: true, title: true, severity: true } },
       team: { select: { id: true, name: true } },
+      requesterTeam: { select: { id: true, name: true } },
       workOrder: { select: { id: true, woNumber: true, status: true } },
       attachments: true,
       reviewedBy: { select: { id: true, name: true } },
@@ -107,6 +109,22 @@ export async function POST(req: NextRequest) {
       if (!issue || !issue.isActive) return NextResponse.json({ error: 'Issue not found' }, { status: 404 })
     }
 
+    // The requester's own team is recorded (their department), never chosen from all
+    // teams. When not sent, fall back to the requester's membership automatically.
+    const requesterTeams = await prisma.teamMember.findMany({
+      where: { userId: user.userId },
+      select: { teamId: true },
+    })
+    let requesterTeamId: string | null | undefined
+    if (data.requesterTeamId) {
+      if (!requesterTeams.some(t => t.teamId === data.requesterTeamId)) {
+        return NextResponse.json({ error: 'You can only select a team you belong to' }, { status: 400 })
+      }
+      requesterTeamId = data.requesterTeamId
+    } else if (requesterTeams.length > 0) {
+      requesterTeamId = requesterTeams[0].teamId
+    }
+
     const requestNumber = await generateRequestNumber()
     const desiredDate = data.desiredDate ? new Date(data.desiredDate) : null
 
@@ -116,7 +134,7 @@ export async function POST(req: NextRequest) {
         location: data.location || null, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
-        issueId: data.issueId, desiredDate,
+        issueId: data.issueId, desiredDate, requesterTeamId,
         downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         requesterId: user.userId,
         attachments: data.attachments && data.attachments.length > 0 ? {

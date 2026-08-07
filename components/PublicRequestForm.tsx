@@ -28,7 +28,7 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '', requesterTeamId: '',
 }
 
 export default function PublicRequestForm({ currentUser, initialAssetId }: { currentUser: CurrentUser | null; initialAssetId?: string }) {
@@ -51,6 +51,22 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const autoLocRef = useRef<string | null>(null)
   const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
   const [customLocation, setCustomLocation] = useState(false)
+  const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!currentUser) return
+    let active = true
+    fetch('/api/teams?mine=true')
+      .then(r => (r.ok ? r.json() : []))
+      .then((list: { id: string; name: string }[]) => {
+        if (!active) return
+        const mine = Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : []
+        setRequesterTeams(mine)
+        if (mine.length > 0) setForm(p => ({ ...p, requesterTeamId: mine[0].id }))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [currentUser])
 
   useEffect(() => {
     if (!currentUser) return
@@ -200,6 +216,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         desiredDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId || undefined,
+        requesterTeamId: form.requesterTeamId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
       const res  = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -369,8 +386,24 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               </button>
             </div>
             {currentUser ? (
-              <div className="border-t border-gray-100 pt-4 text-sm text-gray-600">
-                Submitting as <span className="font-medium text-gray-900">{currentUser.name}</span> ({currentUser.email})
+              <div className="border-t border-gray-100 pt-4 space-y-4">
+                {requesterTeams.length > 1 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Your team / department</label>
+                    <select value={form.requesterTeamId} onChange={e => set('requesterTeamId', e.target.value)} className="input-field">
+                      {requesterTeams.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-gray-400 mt-1">Which team are you requesting on behalf of?</p>
+                  </div>
+                )}
+                <div className="text-sm text-gray-600">
+                  Submitting as <span className="font-medium text-gray-900">{currentUser.name}</span> ({currentUser.email})
+                  {form.requesterTeamId && requesterTeams.length === 1 && (
+                    <> · team: <span className="font-medium text-gray-900">{requesterTeams[0].name}</span></>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="border-t border-gray-100 pt-4">

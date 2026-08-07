@@ -228,6 +228,7 @@ model Team {
   templates   WorkOrderTemplate[]
   woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
   requests   MaintenanceRequest[] @relation("RequestTeam")
+  requesterRequests MaintenanceRequest[] @relation("RequestRequesterTeam")
 
   @@map("teams")
 }
@@ -1056,11 +1057,15 @@ model MaintenanceRequest {
   teamId String?
   team   Team?   @relation("RequestTeam", fields: [teamId], references: [id], onDelete: SetNull)
 
+  requesterTeamId String?
+  requesterTeam   Team?   @relation("RequestRequesterTeam", fields: [requesterTeamId], references: [id], onDelete: SetNull)
+
   attachments Attachment[] @relation("RequestAttachments")
 
   @@index([requesterId])
   @@index([issueId])
   @@index([teamId])
+  @@index([requesterTeamId])
   @@index([assetId])
   @@index([workOrderId])
   @@index([status])

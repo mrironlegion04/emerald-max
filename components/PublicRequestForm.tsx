@@ -12,6 +12,7 @@ interface CurrentUser {
 
 interface PickedAsset {
   id: string
+  name: string
   location?: { id?: string | null; name?: string | null; path?: string | null } | null
 }
 
@@ -55,6 +56,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const [issuesLoading, setIssuesLoading] = useState(true)
 
   const lastAutoPriority = useRef<string | null>(null)
+  const assetNameRef = useRef('')
   const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -92,6 +94,19 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
+  function domainLabel(group: { isFallback?: boolean; name: string }) {
+    return group.isFallback ? 'Common Issues' : group.name
+  }
+
+  function buildSuggestedTitle(group: { isFallback?: boolean; name: string } | undefined, middle?: string) {
+    const parts: string[] = []
+    if (group) parts.push(domainLabel(group))
+    if (middle) parts.push(middle)
+    const locator = assetNameRef.current || form.location
+    if (locator) parts.push(locator)
+    return parts.join(' — ')
+  }
+
   function handleDomainChange(groupId: string) {
     setForm(p => {
       const next = { ...p, domainId: groupId, issueId: '', customIssue: '' }
@@ -102,6 +117,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           next.priority = group.issues[0].severity
           lastAutoPriority.current = group.issues[0].severity
         }
+        if (!next.title) next.title = buildSuggestedTitle(group, group.issues[0].title)
       }
       return next
     })
@@ -109,12 +125,22 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   function handleIssueChange(id: string) {
     const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === id)
+    const middle = id === OTHER_ISSUE ? 'Other' : (issue?.title ?? '')
     setForm(p => {
       const next = { ...p, issueId: id, customIssue: '' }
       if (issue?.severity && (p.priority === lastAutoPriority.current || !lastAutoPriority.current)) {
         next.priority = issue.severity
         lastAutoPriority.current = issue.severity
       }
+      next.title = buildSuggestedTitle(selectedGroup, middle)
+      return next
+    })
+  }
+
+  function handleCustomIssueChange(v: string) {
+    setForm(p => {
+      const next = { ...p, customIssue: v }
+      next.title = buildSuggestedTitle(selectedGroup, v ? `Other: ${v}` : 'Other')
       return next
     })
   }
@@ -126,7 +152,14 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   function handleAssetChange(asset: PickedAsset | null) {
     const id = asset?.id ?? ''
-    setForm(p => ({ ...p, assetId: id, location: id ? (asset?.location?.path ?? asset?.location?.name ?? '') : '' }))
+    assetNameRef.current = asset?.name ?? ''
+    setForm(p => {
+      const next = { ...p, assetId: id, location: id ? (asset?.location?.path ?? asset?.location?.name ?? '') : '' }
+      const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === p.issueId)
+      const middle = p.issueId === OTHER_ISSUE ? (p.customIssue ? `Other: ${p.customIssue}` : 'Other') : (issue?.title ?? '')
+      next.title = buildSuggestedTitle(selectedGroup, middle)
+      return next
+    })
   }
 
   useEffect(() => {
@@ -135,9 +168,12 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     fetch('/api/assets')
       .then(r => (r.ok ? r.json() : []))
       .then((list: PickedAsset[]) => {
-        if (!active) return
+        if (active) return
         const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
-        if (asset) setForm(p => (p.assetId === initialAssetId ? { ...p, location: asset.location?.path ?? asset.location?.name ?? '' } : p))
+        if (asset) {
+          assetNameRef.current = asset.name
+          setForm(p => (p.assetId === initialAssetId ? { ...p, location: asset.location?.path ?? asset.location?.name ?? '' } : p))
+        }
       })
       .catch(() => {})
     return () => { active = false }
@@ -164,6 +200,16 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError(''); setSaving(true)
+    if (currentUser && !form.assetId) {
+      setError('Please select an asset for your request')
+      setSaving(false)
+      return
+    }
+    if (!form.requestType) {
+      setError('Please select a request type')
+      setSaving(false)
+      return
+    }
     if (hasIssues && !form.domainId) {
       setError('Please select a domain for your request')
       setSaving(false)
@@ -211,7 +257,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <h2 className="text-xl font-bold text-gray-900 mb-2">Request submitted!</h2>
           <p className="text-gray-500 text-sm">Your maintenance request has been received. The maintenance team will review it shortly.</p>
           <button
-            onClick={() => { setSuccess(false); setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
+            onClick={() => { setSuccess(false); assetNameRef.current = ''; setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
             className="mt-6 btn-secondary text-sm">Submit another request</button>
           {currentUser && (
             <Link href="/my-requests" className="mt-3 btn-primary text-sm inline-flex items-center justify-center w-full">
@@ -238,15 +284,16 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Request title <span className="text-red-500">*</span></label>
-              <input type="text" value={form.title} onChange={e => set('title', e.target.value)} className="input-field" placeholder="Brief description of the issue" required />
+              <input type="text" value={form.title} readOnly className="input-field bg-gray-50" placeholder="Auto-generated after selecting domain & issue" />
+              <p className="text-[11px] text-gray-400 mt-1">Auto-generated from your selections.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
               <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Request type</label>
-              <select value={form.requestType} onChange={e => set('requestType', e.target.value)} className="input-field">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Request type <span className="text-red-500">*</span></label>
+              <select value={form.requestType} onChange={e => set('requestType', e.target.value)} className="input-field" required>
                 <option value="">Select type</option>
                 <option value="REPAIR">Repair</option>
                 <option value="MAINTENANCE">Maintenance</option>
@@ -257,9 +304,9 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
             </div>
             {currentUser && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asset <span className="text-red-500">*</span></label>
                 <RequestAssetPicker value={form.assetId} onChange={handleAssetChange} />
-                <p className="text-[11px] text-gray-400 mt-1">Optional — pick the asset this request is about. Location auto-fills from it.</p>
+                <p className="text-[11px] text-gray-400 mt-1">Select the asset this request is about. Location auto-fills from it.</p>
               </div>
             )}
             <div>
@@ -291,7 +338,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                       <label className="block text-sm font-medium text-gray-700 mb-1">Describe the issue <span className="text-red-500">*</span></label>
                       <textarea
                         value={form.customIssue}
-                        onChange={e => set('customIssue', e.target.value)}
+                        onChange={e => handleCustomIssueChange(e.target.value)}
                         className="input-field resize-none"
                         rows={2}
                         placeholder="e.g. Pump is vibrating badly"

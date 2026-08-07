@@ -1,0 +1,3 @@
+-- No-op. This migration folder lost its SQL after being applied; it was part of a
+-- request-team refactor that was reverted in the schema. Kept empty so that
+-- `prisma migrate deploy` on a fresh database does not fail on a missing file.

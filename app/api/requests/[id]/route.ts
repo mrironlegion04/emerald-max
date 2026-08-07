@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { action, reason } = await req.json()
+  const { action, reason, teamId } = await req.json()
 
   const request = await prisma.maintenanceRequest.findUnique({ where: { id } })
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -127,6 +127,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (action === 'convert') {
     if (!(await hasScopeActionFlag(user, 'canConvertRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
+    // The converter assigns the team (requesters can no longer pick one).
+    const assignedTeamId = teamId ?? request.teamId ?? null
+    if (teamId) {
+      const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true, isActive: true, isDeleted: true } })
+      if (!team || !team.isActive || team.isDeleted) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+    }
+
     // Derive the WO type from the request type: only REPAIR requests become
     // BREAKDOWN work orders (which count toward failure metrics), everything
     // else is PREVENTIVE maintenance.
@@ -140,7 +147,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           woNumber, title: request.title, description: request.description,
           type: woType, status: 'OPEN', priority: request.priority as never,
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
-          teamId: request.teamId,
+          teamId: assignedTeamId,
           downtimeStartedAt: request.downtimeStartedAt ?? null,
           createdById: user.userId,
           requestedBy: request.requesterName || user.name,
@@ -149,7 +156,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }),
       prisma.maintenanceRequest.update({
         where: { id },
-        data: { status: 'CONVERTED', reviewedById: user.userId },
+        data: { status: 'CONVERTED', reviewedById: user.userId, teamId: assignedTeamId },
       }),
     ])
     // Link WO to request

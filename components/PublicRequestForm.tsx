@@ -28,7 +28,7 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '', teamId: '',
+  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '', issueId: '',
 }
 
 export default function PublicRequestForm({ currentUser, initialAssetId }: { currentUser: CurrentUser | null; initialAssetId?: string }) {
@@ -47,11 +47,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const [issueGroups, setIssueGroups] = useState<DomainGroup[]>([])
   const [issuesLoading, setIssuesLoading] = useState(true)
 
-  const [teams, setTeams] = useState<{ id: string; name: string }[]>([])
-  const [recommendation, setRecommendation] = useState<{
-    team: { id: string; name: string } | null
-    teams: { id: string; name: string }[]
-  } | null>(null)
   const lastAutoPriority = useRef<string | null>(null)
   const autoLocRef = useRef<string | null>(null)
   const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
@@ -91,30 +86,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       .finally(() => { if (active) setIssuesLoading(false) })
     return () => { active = false }
   }, [form.assetId])
-
-  useEffect(() => {
-    if (!currentUser) return
-    let active = true
-    fetch('/api/teams')
-      .then(r => (r.ok ? r.json() : []))
-      .then((list: any[]) => {
-        if (active) setTeams(Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : [])
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [currentUser])
-
-  useEffect(() => {
-    if (!currentUser || !form.assetId) { setRecommendation(null); return }
-    let active = true
-    fetch(`/api/recommendations?assetId=${encodeURIComponent(form.assetId)}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then((rec: { team: { id: string; name: string } | null; teams: { id: string; name: string }[] } | null) => {
-        if (active) setRecommendation(rec)
-      })
-      .catch(() => {})
-    return () => { active = false }
-  }, [currentUser, form.assetId])
 
   const hasIssues = issueGroups.some(g => (g.issues?.length ?? 0) > 0)
 
@@ -229,7 +200,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         desiredDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId || undefined,
-        teamId: form.teamId || undefined,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
       const res  = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -371,40 +341,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                 <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
                 <RequestAssetPicker value={form.assetId} onChange={handleAssetChange} />
                 <p className="text-[11px] text-gray-400 mt-1">Optional — pick the asset this request is about. Location auto-fills from it.</p>
-              </div>
-            )}
-            {currentUser && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
-                <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field">
-                  <option value="">Select a team (optional)</option>
-                  {(() => {
-                    const recommended = recommendation?.teams?.length
-                      ? recommendation.teams
-                      : (recommendation?.team ? [recommendation.team] : [])
-                    const recommendedIds = new Set(recommended.map(t => t.id))
-                    const otherTeams = teams.filter(t => !recommendedIds.has(t.id))
-                    return (
-                      <>
-                        {recommended.length > 0 && (
-                          <optgroup label="⭐ Recommended">
-                            {recommended.map(t => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                          </optgroup>
-                        )}
-                        {otherTeams.length > 0 && (
-                          <optgroup label="All teams">
-                            {otherTeams.map(t => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </>
-                    )
-                  })()}
-                </select>
-                <p className="text-[11px] text-gray-400 mt-1">Recommended teams appear at the top based on the asset&apos;s domain.</p>
               </div>
             )}
             <div>

@@ -52,7 +52,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const lastAutoPriority = useRef<string | null>(null)
   const autoLocRef = useRef<string | null>(null)
   const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
-  const [customLocation, setCustomLocation] = useState(false)
   const [locationLocked, setLocationLocked] = useState(false)
   const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
 
@@ -155,7 +154,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         next.location = matched?.path ?? assetLoc
         next.locationId = asset?.location?.id ?? ''
         autoLocRef.current = next.location
-        setCustomLocation(false)
         setLocationLocked(true)
       } else if (!id && p.location === autoLocRef.current) {
         next.location = ''
@@ -186,7 +184,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
         const assetLoc = asset?.location?.name
         if (!assetLoc) return
-        setCustomLocation(false)
         setLocationLocked(true)
         setForm(p => {
           if (p.assetId !== initialAssetId) return p
@@ -197,20 +194,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       .catch(() => {})
     return () => { active = false }
   }, [initialAssetId])
-
-  function handleLocationPick(value: string) {
-    setLocationLocked(false)
-    if (value === '__other__') {
-      setCustomLocation(true)
-      set('location', '')
-      set('locationId', '')
-      return
-    }
-    const loc = locations.find(l => l.id === value)
-    setCustomLocation(false)
-    set('location', loc?.path ?? '')
-    set('locationId', value)
-  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -379,48 +362,26 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                 {currentUser ? (
-                  form.assetId && locationLocked ? (
-                    <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
-                      <span className="truncate">{form.location || 'Auto-fills from the selected asset'}</span>
-                    </div>
-                  ) : customLocation ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={form.location}
-                        onChange={e => { autoLocRef.current = null; setLocationLocked(false); set('location', e.target.value) }}
-                        className="input-field flex-1"
-                        placeholder="Type a location..."
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCustomLocation(false)}
-                        className="btn-secondary text-xs px-3 shrink-0"
-                      >
-                        Pick
-                      </button>
-                    </div>
+                  form.assetId ? (
+                    locationLocked && form.location ? (
+                      <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
+                        <span className="truncate">{form.location}</span>
+                      </div>
+                    ) : (
+                      <div className="input-field bg-gray-50 text-gray-400 cursor-not-allowed">
+                        This asset has no location assigned
+                      </div>
+                    )
                   ) : (
-                    <select
-                      value={form.locationId}
-                      onChange={e => handleLocationPick(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">No location</option>
-                      {locations.map(l => (
-                        <option key={l.id} value={l.id}>{l.path}</option>
-                      ))}
-                      <option value="__other__">Other — type a custom location…</option>
-                    </select>
+                    <div className="input-field bg-gray-50 text-gray-400 cursor-not-allowed">
+                      Select an asset above — location is taken from it
+                    </div>
                   )
                 ) : (
                   <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
                 )}
-                {currentUser && form.location && !locations.some(l => l.path === form.location) && !customLocation && !locationLocked && (
-                  <p className="text-[11px] text-gray-400 mt-1">Selected location is free-text. Pick from the list or choose &ldquo;Other&rdquo;.</p>
-                )}
                 {currentUser && locationLocked && (
-                  <p className="text-[11px] text-gray-400 mt-1">Auto-filled from the selected asset. Change the asset to update it.</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Location comes from the selected asset.</p>
                 )}
               </div>
               <div>

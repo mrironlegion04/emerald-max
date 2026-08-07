@@ -257,7 +257,7 @@ export default async function RequestsPage({
 
                   {canReview && req.status === 'PENDING' && (
                     <div className="md:pt-1 border-t md:border-t-0 border-slate-100 pt-4 mt-1 md:mt-0">
-                      <RequestActions requestId={req.id} title={req.title} canApprove={canApproveRequest} canConvert={canConvertRequest} />
+                      <RequestActions requestId={req.id} title={req.title} canApprove={canApproveRequest} canConvert={canConvertRequest} desiredDate={req.desiredDate} />
                     </div>
                   )}
                 </div>

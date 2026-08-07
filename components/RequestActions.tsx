@@ -7,9 +7,10 @@ interface Props {
   title: string
   canApprove?: boolean
   canConvert?: boolean
+  desiredDate?: string | Date | null
 }
 
-export default function RequestActions({ requestId, title, canApprove = true, canConvert = true }: Props) {
+export default function RequestActions({ requestId, title, canApprove = true, canConvert = true, desiredDate }: Props) {
   const router  = useRouter()
   const [mode, setMode]     = useState<'idle'|'reject'|'convert'>('idle')
   const [loading, setLoading] = useState(false)
@@ -17,6 +18,12 @@ export default function RequestActions({ requestId, title, canApprove = true, ca
   const [error,   setError]   = useState('')
   const [teams, setTeams]     = useState<{ id: string; name: string }[]>([])
   const [teamId, setTeamId]   = useState('')
+  const [dueDate, setDueDate] = useState('')
+
+  // Pre-fill the WO due date from the requester's desired completion date.
+  useEffect(() => {
+    setDueDate(desiredDate ? new Date(desiredDate).toISOString().slice(0, 10) : '')
+  }, [desiredDate])
 
   useEffect(() => {
     let active = true
@@ -85,10 +92,24 @@ export default function RequestActions({ requestId, title, canApprove = true, ca
           ))}
         </select>
       </div>
+      <div>
+        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Due date</label>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={e => setDueDate(e.target.value)}
+          className="input-field text-xs sm:text-sm w-full bg-white"
+        />
+        <p className="text-[11px] text-slate-400 mt-1">
+          {desiredDate
+            ? <>Pre-filled from the requester&rsquo;s desired date (<span className="font-semibold text-slate-500">{new Date(desiredDate).toLocaleDateString()}</span>) — adjust or clear if needed.</>
+            : <>Optional deadline. Leave blank to set no due date.</>}
+        </p>
+      </div>
       {error && <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">{error}</p>}
       <div className="flex gap-2">
         <button 
-          onClick={() => doAction('convert', { teamId: teamId || undefined })} 
+          onClick={() => doAction('convert', { teamId: teamId || undefined, dueDate: dueDate || null })} 
           disabled={loading} 
           className="flex-1 text-xs font-black bg-blue-600 hover:bg-blue-700 text-white uppercase tracking-wider py-2.5 px-3 rounded-lg shadow-sm disabled:opacity-50 transition-all active:scale-95"
         >
@@ -118,7 +139,7 @@ export default function RequestActions({ requestId, title, canApprove = true, ca
       )}
       {canConvert && (
         <button 
-          onClick={() => { setTeamId(''); setMode('convert') }} 
+          onClick={() => { setTeamId(''); setDueDate(desiredDate ? new Date(desiredDate).toISOString().slice(0, 10) : ''); setMode('convert') }} 
           disabled={loading}
           className="flex-1 md:w-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-[0_2px_10px_-3px_rgba(37,99,235,0.3)] transition-all active:scale-95"
         >

@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { action, reason, teamId } = await req.json()
+  const { action, reason, teamId, dueDate } = await req.json()
 
   const request = await prisma.maintenanceRequest.findUnique({ where: { id } })
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -134,6 +134,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!team || !team.isActive || team.isDeleted) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
 
+    // Pre-fill the WO due date from the requester's desired completion date.
+    // The planner can override it (a real date) or clear it (null/'' → no deadline).
+    // startDate stays manual — only dueDate is pre-filled.
+    let woDueDate: Date | null
+    if (dueDate === undefined) {
+      woDueDate = request.desiredDate
+    } else if (!dueDate) {
+      woDueDate = null
+    } else {
+      const parsed = new Date(dueDate)
+      if (Number.isNaN(parsed.getTime())) return NextResponse.json({ error: 'Invalid due date' }, { status: 400 })
+      woDueDate = parsed
+    }
+
     // Derive the WO type from the request type: only REPAIR requests become
     // BREAKDOWN work orders (which count toward failure metrics), everything
     // else is PREVENTIVE maintenance.
@@ -149,6 +163,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
           domainId: request.domainId, customIssue: request.customIssue,
           teamId: assignedTeamId,
+          dueDate: woDueDate,
           downtimeStartedAt: request.downtimeStartedAt ?? null,
           createdById: user.userId,
           requestedBy: request.requesterName || user.name,

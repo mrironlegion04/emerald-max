@@ -26,7 +26,7 @@ interface DomainGroup {
 }
 
 const EMPTY_FORM = {
-  title: '', description: '', location: '', requesterName: '', requesterEmail: '', requesterPhone: '',
+  title: '', description: '', location: '', locationId: '', requesterName: '', requesterEmail: '', requesterPhone: '',
   priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
   issueId: '', domainId: '', customIssue: '', requesterTeamId: '',
 }
@@ -53,6 +53,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   const autoLocRef = useRef<string | null>(null)
   const [locations, setLocations] = useState<{ id: string; name: string; parentId: string | null; path: string }[]>([])
   const [customLocation, setCustomLocation] = useState(false)
+  const [locationLocked, setLocationLocked] = useState(false)
   const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
@@ -152,11 +153,15 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       if (id && assetLoc && (p.location === autoLocRef.current || !p.location)) {
         const matched = locations.find(l => l.name === assetLoc)
         next.location = matched?.path ?? assetLoc
+        next.locationId = asset?.location?.id ?? ''
         autoLocRef.current = next.location
         setCustomLocation(false)
+        setLocationLocked(true)
       } else if (!id && p.location === autoLocRef.current) {
         next.location = ''
+        next.locationId = ''
         autoLocRef.current = null
+        setLocationLocked(false)
       }
       return next
     })
@@ -176,16 +181,17 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     let active = true
     fetch('/api/assets')
       .then(r => (r.ok ? r.json() : []))
-      .then((list: { id: string; location?: { name?: string | null } | null }[]) => {
+      .then((list: { id: string; location?: { id?: string | null; name?: string | null } | null }[]) => {
         if (!active) return
         const asset = Array.isArray(list) ? list.find(a => a.id === initialAssetId) : undefined
         const assetLoc = asset?.location?.name
         if (!assetLoc) return
         setCustomLocation(false)
+        setLocationLocked(true)
         setForm(p => {
           if (p.assetId !== initialAssetId) return p
           autoLocRef.current = assetLoc
-          return { ...p, location: assetLoc }
+          return { ...p, location: assetLoc, locationId: asset?.location?.id ?? '' }
         })
       })
       .catch(() => {})
@@ -193,13 +199,17 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   }, [initialAssetId])
 
   function handleLocationPick(value: string) {
+    setLocationLocked(false)
     if (value === '__other__') {
       setCustomLocation(true)
       set('location', '')
+      set('locationId', '')
       return
     }
+    const loc = locations.find(l => l.id === value)
     setCustomLocation(false)
-    set('location', value)
+    set('location', loc?.path ?? '')
+    set('locationId', value)
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -243,6 +253,8 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         ...form,
         requestType: form.requestType || undefined,
         assetId: form.assetId || undefined,
+        location: form.location || undefined,
+        locationId: form.locationId || undefined,
         desiredDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId === OTHER_ISSUE ? undefined : (form.issueId || undefined),
@@ -268,7 +280,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <h2 className="text-xl font-bold text-gray-900 mb-2">Request submitted!</h2>
           <p className="text-gray-500 text-sm">Your maintenance request has been received. The maintenance team will review it shortly.</p>
           <button
-            onClick={() => { setSuccess(false); setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
+            onClick={() => { setSuccess(false); setLocationLocked(false); setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
             className="mt-6 btn-secondary text-sm">Submit another request</button>
           {currentUser && (
             <Link href="/my-requests" className="mt-3 btn-primary text-sm inline-flex items-center justify-center w-full">
@@ -367,12 +379,16 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                 {currentUser ? (
-                  customLocation ? (
+                  form.assetId && locationLocked ? (
+                    <div className="input-field bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
+                      <span className="truncate">{form.location || 'Auto-fills from the selected asset'}</span>
+                    </div>
+                  ) : customLocation ? (
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={form.location}
-                        onChange={e => { autoLocRef.current = null; set('location', e.target.value) }}
+                        onChange={e => { autoLocRef.current = null; setLocationLocked(false); set('location', e.target.value) }}
                         className="input-field flex-1"
                         placeholder="Type a location..."
                       />
@@ -386,13 +402,13 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                     </div>
                   ) : (
                     <select
-                      value={form.location}
+                      value={form.locationId}
                       onChange={e => handleLocationPick(e.target.value)}
                       className="input-field"
                     >
                       <option value="">No location</option>
                       {locations.map(l => (
-                        <option key={l.id} value={l.path}>{l.path}</option>
+                        <option key={l.id} value={l.id}>{l.path}</option>
                       ))}
                       <option value="__other__">Other — type a custom location…</option>
                     </select>
@@ -400,8 +416,11 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                 ) : (
                   <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className="input-field" placeholder="e.g. Building A, Room 204" />
                 )}
-                {currentUser && form.location && !locations.some(l => l.path === form.location) && !customLocation && (
+                {currentUser && form.location && !locations.some(l => l.path === form.location) && !customLocation && !locationLocked && (
                   <p className="text-[11px] text-gray-400 mt-1">Selected location is free-text. Pick from the list or choose &ldquo;Other&rdquo;.</p>
+                )}
+                {currentUser && locationLocked && (
+                  <p className="text-[11px] text-gray-400 mt-1">Auto-filled from the selected asset. Change the asset to update it.</p>
                 )}
               </div>
               <div>

@@ -17,7 +17,8 @@ const attachmentSchema = z.object({
 
 const schema = z.object({
   title: z.string().min(1), description: z.string().min(1),
-  location: z.string().optional(), requesterName: z.string().min(1).optional(),
+  location: z.string().optional(),
+  locationId: z.string().optional(), requesterName: z.string().min(1).optional(),
   requesterEmail: z.string().email().optional().or(z.literal('')),
   requesterPhone: z.string().optional(),
   priority: z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
@@ -80,6 +81,7 @@ export async function GET() {
     orderBy: { createdAt: 'desc' },
     include: {
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
+      location: { select: { id: true, name: true, path: true } },
       issue: { select: { id: true, code: true, title: true, severity: true } },
       domain: { select: { id: true, name: true } },
       team: { select: { id: true, name: true } },
@@ -102,9 +104,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You do not have permission to create requests' }, { status: 403 })
     }
 
-    if (data.assetId) {
-      const asset = await prisma.asset.findUnique({ where: { id: data.assetId }, select: { id: true } })
+    // Location is structured: prefer the explicit locationId, else derive it
+    // from the chosen asset. The `location` string stays for display only.
+    let locationId: string | null = null
+    if (data.locationId) {
+      const location = await prisma.location.findUnique({ where: { id: data.locationId }, select: { id: true } })
+      if (!location) return NextResponse.json({ error: 'Location not found' }, { status: 404 })
+      locationId = data.locationId
+    } else if (data.assetId) {
+      const asset = await prisma.asset.findUnique({ where: { id: data.assetId }, select: { id: true, locationId: true } })
       if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+      locationId = asset.locationId
     }
 
     // 1 Domain → 1 Issue → optional Custom Issue (Issue = Other).
@@ -160,7 +170,7 @@ export async function POST(req: NextRequest) {
     const request = await prisma.maintenanceRequest.create({
       data: {
         requestNumber, title: data.title, description: data.description,
-        location: data.location || null, requesterName: data.requesterName || user.name,
+        locationText: data.location || null, locationId, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
         issueId: data.issueId, domainId, customIssue, desiredDate, requesterTeamId,

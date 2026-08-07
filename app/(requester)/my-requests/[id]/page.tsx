@@ -98,9 +98,9 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
             <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-2">
-              {request.location && (
+              {request.locationText && (
                 <p className="flex items-center gap-2 text-xs text-slate-600">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> {request.location}
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> {request.locationText}
                 </p>
               )}
               {request.desiredDate && (

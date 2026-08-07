@@ -403,6 +403,7 @@ model Location {
   workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
   maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
   userLocations UserLocation[]
+  requests MaintenanceRequest[] @relation("RequestLocation")
 
   @@map("locations")
 }
@@ -1029,7 +1030,7 @@ model MaintenanceRequest {
   requestNumber   String?       @unique
   title           String
   description     String
-  location        String?
+  locationText String?
   requesterName   String
   requesterEmail  String?
   requesterPhone  String?
@@ -1051,6 +1052,9 @@ model MaintenanceRequest {
 
   assetId String?
   asset   Asset?  @relation("RequestAsset", fields: [assetId], references: [id], onDelete: SetNull)
+
+  locationId String?
+  location   Location? @relation("RequestLocation", fields: [locationId], references: [id], onDelete: SetNull)
 
   issueId String?
   issue   Issue?  @relation("RequestIssue", fields: [issueId], references: [id], onDelete: SetNull)
@@ -1074,6 +1078,7 @@ model MaintenanceRequest {
   @@index([teamId])
   @@index([requesterTeamId])
   @@index([assetId])
+  @@index([locationId])
   @@index([workOrderId])
   @@index([status])
   @@index([createdAt])

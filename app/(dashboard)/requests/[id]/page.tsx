@@ -120,9 +120,9 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {request.location && (
+            {request.locationText && (
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 flex items-center gap-2 text-xs text-slate-600">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {request.location}
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {request.locationText}
               </div>
             )}
             {request.desiredDate && (

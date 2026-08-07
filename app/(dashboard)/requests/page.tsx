@@ -60,7 +60,7 @@ export default async function RequestsPage({
       { description:    { contains: params.search, mode: 'insensitive' } },
       { requesterName:  { contains: params.search, mode: 'insensitive' } },
       { requesterEmail: { contains: params.search, mode: 'insensitive' } },
-      { location:       { contains: params.search, mode: 'insensitive' } },
+      { locationText: { contains: params.search, mode: 'insensitive' } },
       { requestNumber:  { contains: params.search, mode: 'insensitive' } },
     ]
   }
@@ -222,10 +222,10 @@ export default async function RequestsPage({
                           </span>
                         </div>
                       )}
-                      {(req.location || req.asset?.location?.name) && (
+                      {(req.locationText || req.asset?.location?.name) && (
                         <div className="flex items-center gap-2 text-xs">
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="text-slate-700 font-bold truncate">{req.location || req.asset?.location?.name}</span>
+                          <span className="text-slate-700 font-bold truncate">{req.locationText || req.asset?.location?.name}</span>
                         </div>
                       )}
                       {req.desiredDate && (

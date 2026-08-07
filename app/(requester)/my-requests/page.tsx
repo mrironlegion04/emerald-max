@@ -39,7 +39,7 @@ export default async function MyRequestsPage({
         { title: { contains: params.search, mode: 'insensitive' } },
         { description: { contains: params.search, mode: 'insensitive' } },
         { requestNumber: { contains: params.search, mode: 'insensitive' } },
-        { location: { contains: params.search, mode: 'insensitive' } },
+        { locationText: { contains: params.search, mode: 'insensitive' } },
       ],
     }]
   }
@@ -135,10 +135,10 @@ export default async function MyRequestsPage({
                         {req.asset.assetCode && <span className="text-slate-400 font-bold">({req.asset.assetCode})</span>}
                       </span>
                     )}
-                    {(req.location || req.asset?.location?.name) && (
+                    {(req.locationText || req.asset?.location?.name) && (
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
-                        {req.location || req.asset?.location?.name}
+                        {req.locationText || req.asset?.location?.name}
                       </span>
                     )}
                     {req.domain && (

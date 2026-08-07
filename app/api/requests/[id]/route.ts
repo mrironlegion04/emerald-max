@@ -18,13 +18,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (request.status !== 'PENDING') return NextResponse.json({ error: 'Request already reviewed' }, { status: 422 })
 
-  // Resolve the request's plant through its asset (requests store location as free text)
-  const requestLocationId = request.assetId
-    ? (await prisma.asset.findUnique({
-        where: { id: request.assetId },
-        select: { locationId: true },
-      }))?.locationId ?? null
-    : null
+  // Resolve the request's plant through its structured location (falling back
+  // to the asset's location for requests created before locationId existed).
+  const requestLocationId = request.locationId
+    ? request.locationId
+    : request.assetId
+      ? (await prisma.asset.findUnique({
+          where: { id: request.assetId },
+          select: { locationId: true },
+        }))?.locationId ?? null
+      : null
   const canReviewScope =
     (await canAccessTeamScope(user, request.teamId)) &&
     (await canWriteToLocations(user, [requestLocationId]))

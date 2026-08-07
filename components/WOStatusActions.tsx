@@ -69,6 +69,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [downSince, setDownSince]   = useState('')
   const [backUpAt, setBackUpAt]     = useState(() => toLocalDatetimeString(new Date()))
   const [showComplete, setShowComplete] = useState(false)
+  const [showDirectComplete, setShowDirectComplete] = useState(false)
   const [showFaceVerification, setShowFaceVerification] = useState(false)
   const [hasFaceVerification, setHasFaceVerification] = useState(false)
   const [faceVerificationSucceeded, setFaceVerificationSucceeded] = useState(false)
@@ -96,8 +97,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER'
   const canClose = userRole === 'ADMIN' || canCloseWO
-  const allAvailable = transitions[currentStatus] ?? []
-  const available = (currentStatus === 'COMPLETED' || currentStatus === 'CLOSED') && !isAdminOrManager ? [] : allAvailable
+  let available = transitions[currentStatus] ?? []
+  if ((currentStatus === 'COMPLETED' || currentStatus === 'CLOSED') && !isAdminOrManager) {
+    available = []
+  }
+  if (currentStatus === 'IN_PROGRESS' && isAdminOrManager) {
+    available = [
+      { value: 'COMPLETED', label: 'Complete now', color: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100 shadow-md font-bold' },
+      ...available.filter(t => t.value !== 'PENDING_APPROVAL'),
+    ]
+  }
 
   async function checkFaceVerification() {
     try {
@@ -115,8 +124,21 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setShowComplete(true)
       setRequestedTime(toLocalDatetimeString(new Date()))
       setRequestNotes('')
+      setStartedAtValue(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : toLocalDatetimeString(new Date()))
       setDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
       setBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
+      return
+    }
+
+    if (newStatus === 'COMPLETED' && currentStatus === 'IN_PROGRESS' && isAdminOrManager) {
+      setShowDirectComplete(true)
+      setAdjustedTime(toLocalDatetimeString(new Date()))
+      setAdjustedStartAt(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : '')
+      setAdjustedLaborHours(initialLaborHours != null ? String(initialLaborHours) : '')
+      setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
+      setAdjustedDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
+      setAdjustedBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
+      setNotes('')
       return
     }
 
@@ -208,6 +230,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           notes: notes || undefined,
           laborHours: laborHours ? parseFloat(laborHours) : undefined,
           laborCost:  laborCost  ? parseFloat(laborCost)  : undefined,
+          startedAt: startedAtValue ? new Date(startedAtValue).toISOString() : undefined,
           requestedCompletionTime: new Date(requestedTime).toISOString(),
           requestedCompletionNotes: requestNotes || undefined,
           downtimeStartedAt: downSince ? new Date(downSince).toISOString() : undefined,
@@ -223,6 +246,38 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setNotes('')
       setLaborHours('')
       setLaborCost('')
+    } catch {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Manager/admin completes directly (no approval needed)
+  const handleDirectComplete = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/work-orders/${woId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'COMPLETED',
+          completedAt: new Date(adjustedTime).toISOString(),
+          startedAt: adjustedStartAt ? new Date(adjustedStartAt).toISOString() : undefined,
+          laborHours: adjustedLaborHours ? parseFloat(adjustedLaborHours) : undefined,
+          laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
+          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
+          downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
+          notes: notes || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Failed'); return }
+      router.refresh()
+      onStatusChanged?.()
+      setShowDirectComplete(false)
+      setNotes('')
     } catch {
       setError('Network error')
     } finally {
@@ -597,6 +652,12 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
             </div>
           </div>
           <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">When did you start?</label>
+            <input type="datetime-local" value={startedAtValue}
+              onChange={e => setStartedAtValue(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+          </div>
+          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">When did you finish?</label>
             <input type="datetime-local" value={requestedTime}
               onChange={e => setRequestedTime(e.target.value)}
@@ -651,8 +712,71 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         </div>
       )}
 
+      {/* Manager/admin direct completion form */}
+      {showDirectComplete && (
+        <div className="space-y-3 p-4 bg-emerald-50/35 rounded-xl border border-emerald-100 shadow-inner-light">
+          <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Complete work order</p>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion time</label>
+            <input type="datetime-local" value={adjustedTime}
+              onChange={e => setAdjustedTime(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Start time</label>
+            <input type="datetime-local" value={adjustedStartAt}
+              onChange={e => setAdjustedStartAt(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Labor hours</label>
+              <input type="number" min="0" step="0.5" value={adjustedLaborHours}
+                onChange={e => setAdjustedLaborHours(e.target.value)}
+                placeholder="0.0" className="input-field text-xs bg-white border-slate-200" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Labor cost ($)</label>
+              <input type="number" min="0" step="0.01" value={adjustedLaborCost}
+                onChange={e => setAdjustedLaborCost(e.target.value)}
+                placeholder="0.00" className="input-field text-xs bg-white border-slate-200" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Machine down since</label>
+              <input type="datetime-local" value={adjustedDownSince}
+                onChange={e => setAdjustedDownSince(e.target.value)}
+                className="input-field text-xs bg-white border-slate-200" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Back up at</label>
+              <input type="datetime-local" value={adjustedBackUpAt}
+                onChange={e => setAdjustedBackUpAt(e.target.value)}
+                className="input-field text-xs bg-white border-slate-200" />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="What actions were taken to resolve this?"
+              className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
+          </div>
+          <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
+            <button onClick={handleDirectComplete} disabled={loading}
+              className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
+              {loading ? 'Completing...' : 'Complete'}
+            </button>
+            <button onClick={() => { setShowDirectComplete(false); setError('') }}
+              className="btn-secondary text-xs font-bold py-2 px-4 border-slate-200 flex-1">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Transition buttons */}
-      {!showComplete && !showStartWork && (
+      {!showComplete && !showStartWork && !showDirectComplete && (
         <div className="flex flex-col gap-2">
           {available.map(t => (
             <button key={t.value} onClick={() => doTransition(t.value)} disabled={loading}

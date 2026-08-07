@@ -341,7 +341,7 @@ export function isValidWOStatusTransition(
 ): boolean {
   const allowed: Record<string, string[]> = {
     OPEN: ['IN_PROGRESS', 'CANCELLED'],
-    IN_PROGRESS: ['PENDING_APPROVAL', 'ON_HOLD', 'CANCELLED'],
+    IN_PROGRESS: ['PENDING_APPROVAL', 'ON_HOLD', 'CANCELLED', 'COMPLETED'],
     ON_HOLD: ['IN_PROGRESS', 'CANCELLED'],
     PENDING_APPROVAL: ['COMPLETED', 'IN_PROGRESS'],
     COMPLETED: ['OPEN', 'CLOSED'],

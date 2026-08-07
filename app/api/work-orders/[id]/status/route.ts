@@ -200,6 +200,7 @@ export async function PATCH(
       if (requestedCompletionNotes) {
         updateData.requestedCompletionNotes = requestedCompletionNotes
       }
+      if (startedAt) updateData.startedAt = new Date(startedAt)
       if (notes) updateData.notes = notes
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost

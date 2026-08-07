@@ -13,6 +13,7 @@ describe('isValidWOStatusTransition', () => {
       ['IN_PROGRESS', 'PENDING_APPROVAL'],
       ['IN_PROGRESS', 'ON_HOLD'],
       ['IN_PROGRESS', 'CANCELLED'],
+      ['IN_PROGRESS', 'COMPLETED'], // direct completion (managers/admins bypass approval)
       ['ON_HOLD', 'IN_PROGRESS'],
       ['PENDING_APPROVAL', 'COMPLETED'],
       ['PENDING_APPROVAL', 'IN_PROGRESS'],
@@ -31,7 +32,6 @@ describe('isValidWOStatusTransition', () => {
       ['OPEN', 'COMPLETED'],
       ['OPEN', 'CLOSED'],
       ['OPEN', 'PENDING_APPROVAL'],
-      ['IN_PROGRESS', 'COMPLETED'], // must go through PENDING_APPROVAL
       ['IN_PROGRESS', 'CLOSED'],
       ['ON_HOLD', 'COMPLETED'],
       ['PENDING_APPROVAL', 'CLOSED'],

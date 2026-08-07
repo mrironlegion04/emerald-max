@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Send,
@@ -53,8 +53,7 @@ interface ChatChannel {
 interface ChatMessage {
   id: string
   content: string
-  channel: string
-  channelName: string
+  channelId: string
   senderId: string
   senderName: string
   senderRole: string
@@ -110,6 +109,10 @@ export default function MessagesPage() {
   // Base State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
   const [dbChannels, setDbChannels] = useState<ChatChannel[]>([])
+  const getChannelName = useCallback(
+    (channelId: string) => dbChannels.find(c => c.id === channelId)?.name,
+    [dbChannels]
+  )
   const [activeChannel, setActiveChannel] = useState<ChatChannel | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -562,18 +565,18 @@ export default function MessagesPage() {
             processedMsgIdsRef.current.add(m.id)
 
             // If it belongs to another channel, mark it unread!
-            if (!activeChanId || m.channel !== activeChanId) {
-              addedChannels.push(m.channel)
+            if (!activeChanId || m.channelId !== activeChanId) {
+              addedChannels.push(m.channelId)
               // Toast notification inside the app
-              displayToast(`💬 New message from ${m.senderName} inside "${m.channelName || 'Crew'}"`)
+              displayToast(`💬 New message from ${m.senderName} inside "${getChannelName(m.channelId) || 'Crew'}"`)
             }
 
             // Trigger Desktop Browser Notification
-            if (!activeChanId || m.channel !== activeChanId || document.visibilityState !== 'visible') {
+            if (!activeChanId || m.channelId !== activeChanId || document.visibilityState !== 'visible') {
               if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                 new window.Notification(`New Message from ${m.senderName}`, {
                   body: m.content || 'Sent an attachment',
-                  tag: m.channel,
+                  tag: m.channelId,
                   requireInteraction: false
                 })
               }
@@ -606,7 +609,7 @@ export default function MessagesPage() {
     }, 10000)
 
     return () => clearInterval(interval)
-  }, [currentUser?.userId, activeChannel?.id])
+  }, [currentUser?.userId, activeChannel?.id, getChannelName])
 
   // Pull thread comments whenever active parent thread changes
   useEffect(() => {
@@ -683,8 +686,7 @@ export default function MessagesPage() {
     const optimisticMock: ChatMessage = {
       id: optimisticId,
       content: activeMsgVal,
-      channel: activeChannel.id,
-      channelName: activeChannel.name,
+      channelId: activeChannel.id,
       senderId: currentUser.userId || currentUser.id,
       senderName: currentUser.name || currentUser.userId || 'User',
       senderRole: currentUser.role || 'USER',
@@ -1220,8 +1222,8 @@ export default function MessagesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content: `🛠️ [System Dispatch Log] Message was converted to Work Order ${createdWO.woNumber}: "${createdWO.title}" by ${currentUser.name || currentUser.userId || 'User'}.`,
-            channel: convertingMessage.channel,
-            channelName: convertingMessage.channelName,
+            channel: convertingMessage.channelId,
+            channelName: getChannelName(convertingMessage.channelId) || 'Crew Space',
           })
         })
 

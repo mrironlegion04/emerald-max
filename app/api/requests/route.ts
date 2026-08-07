@@ -70,7 +70,12 @@ export async function GET() {
         conditions.push({ teamId: { in: teamScope.map(s => s.teamId) } })
       }
       if (locationIds) {
-        conditions.push({ asset: { locationId: { in: locationIds } } })
+        conditions.push({
+          OR: [
+            { asset: { locationId: { in: locationIds } } },
+            { locationId: { in: locationIds } },
+          ],
+        })
       }
       where = { OR: conditions }
     }

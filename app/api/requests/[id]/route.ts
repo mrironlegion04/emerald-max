@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
-import { canAccessTeamScope, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
+import { canAccessTeamScope, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { writeAudit } from '@/lib/audit'
 import { sendRequestApproved, sendRequestRejected, sendRequestConverted } from '@/lib/email'
 import { generateWONumber } from '@/lib/wo-number'
@@ -28,9 +28,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           select: { locationId: true },
         }))?.locationId ?? null
       : null
+  // A request with no assigned team yet is in scope for any reviewer who
+  // passes the plant check — the team is only assigned at convert time.
+  const canReviewTeamScope =
+    request.teamId ? await canAccessTeamScope(user, request.teamId) : true
   const canReviewScope =
-    (await canAccessTeamScope(user, request.teamId)) &&
-    (await canWriteToLocations(user, [requestLocationId]))
+    canReviewTeamScope && (await canWriteToLocations(user, [requestLocationId]))
 
   const canApprove = await hasPermission(user, 'request:approve')
   const isOwner = request.requesterId === user.userId
@@ -135,6 +138,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (teamId) {
       const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true, isActive: true, isDeleted: true } })
       if (!team || !team.isActive || team.isDeleted) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+    }
+    // A team-scoped converter can only assign a team inside their own scope.
+    if (assignedTeamId && !(await canWriteToTeams(user, [assignedTeamId]))) {
+      return NextResponse.json({ error: 'You can only assign a team within your scope' }, { status: 403 })
     }
 
     // Pre-fill the WO due date from the requester's desired completion date.

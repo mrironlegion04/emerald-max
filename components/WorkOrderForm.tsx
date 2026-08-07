@@ -50,6 +50,10 @@ const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIV
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
 
+function selectionKey(f: WOFormData): string {
+  return `${f.assetId}|${f.selectedAssetIds.join(',')}|${f.type}|${f.issueId}|${f.customIssue}`
+}
+
 export default function WorkOrderForm({ assets, locations, users, teams = [], initialData, woId, preselectedAssetId, preselectedLocationId, meta }: Props) {
   const router = useRouter()
   const isEdit = !!woId
@@ -92,7 +96,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
-  const [isTitleDirty, setIsTitleDirty] = useState(isEdit ? true : false)
+  const lastSelectionKeyRef = useRef(selectionKey(initialForm))
 
   const [targetType, setTargetType] = useState<'ASSET' | 'LOCATION'>(
     preselectedLocationId
@@ -266,7 +270,14 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
   function generateTitle(assetIds: string[], selectedAssetIds: string[], type: string, issueId: string, customIssue: string): string {
     const allIds = [...new Set([...assetIds.filter(Boolean), ...selectedAssetIds])]
-    if (allIds.length === 0) return ''
+    if (allIds.length === 0) {
+      const suffix = issueId === OTHER_ISSUE && customIssue.trim()
+        ? customIssue.trim()
+        : issueId && issueId !== OTHER_ISSUE
+          ? issueGroups.flatMap(g => g.issues).find(i => i.id === issueId)?.title ?? null
+          : null
+      return suffix || typeLabels[type] || ''
+    }
 
     const names = allIds.map(id => assets.find(a => a.id === id)?.name).filter(Boolean) as string[]
 
@@ -290,11 +301,19 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   }
 
   useEffect(() => {
-    if (!isTitleDirty && primaryAssetId) {
-      const newTitle = generateTitle(form.assetId ? [form.assetId] : [], form.selectedAssetIds, form.type, form.issueId, form.customIssue)
-      if (newTitle && newTitle !== form.title) setForm(prev => ({ ...prev, title: newTitle }))
-    }
-  }, [primaryAssetId, form.type, form.issueId, form.customIssue, issueGroups, isTitleDirty, form.selectedAssetIds])
+    if (isEdit) return
+    const newTitle = generateTitle(form.assetId ? [form.assetId] : [], form.selectedAssetIds, form.type, form.issueId, form.customIssue)
+    if (newTitle && newTitle !== form.title) setForm(prev => ({ ...prev, title: newTitle }))
+  }, [primaryAssetId, form.type, form.issueId, form.customIssue, issueGroups, form.selectedAssetIds, isEdit])
+
+  useEffect(() => {
+    if (!isEdit) return
+    const key = selectionKey(form)
+    if (key === lastSelectionKeyRef.current) return
+    lastSelectionKeyRef.current = key
+    const newTitle = generateTitle(form.assetId ? [form.assetId] : [], form.selectedAssetIds, form.type, form.issueId, form.customIssue)
+    if (newTitle && newTitle !== form.title) setForm(prev => ({ ...prev, title: newTitle }))
+  }, [isEdit, form.assetId, form.type, form.issueId, form.customIssue, form.selectedAssetIds, issueGroups, form.title])
 
   const suggestedTitle = generateTitle(form.assetId ? [form.assetId] : [], form.selectedAssetIds, form.type, form.issueId, form.customIssue)
 
@@ -404,15 +423,11 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             <input
               type="text"
               value={form.title}
-              onChange={e => { setIsTitleDirty(true); set('title', e.target.value) }}
+              readOnly
               placeholder={suggestedTitle || 'Enter work order title...'}
-              className="input-field text-xs sm:text-sm bg-white"
+              className="input-field text-xs sm:text-sm bg-gray-50"
             />
-            {suggestedTitle && !form.title && (
-              <p className="text-[11px] text-slate-400 font-medium">
-                💡 Suggested: <button type="button" onClick={() => set('title', suggestedTitle)} className="text-blue-600 font-bold hover:underline">{suggestedTitle}</button>
-              </p>
-            )}
+            <p className="text-[11px] text-slate-400 font-medium">Auto-generated from your selections.</p>
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

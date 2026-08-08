@@ -22,17 +22,19 @@ Copy `.env.sample` to `.env` and configure:
 | `CRON_SECRET` | Bearer token protecting the PM-generation cron endpoint (>= 16 chars) |
 | `NEXT_PUBLIC_*` | Public client-side configuration |
 
-### Database migrations
+### Database schema
 
-Schema changes are managed with Prisma migrations:
+There is no committed migration history — `prisma/schema.prisma` is the single
+source of truth and the current schema is the initial production baseline.
+Sync the schema to a fresh database with:
 
 ```bash
-npx prisma migrate dev        # create + apply a migration in development
-npx prisma migrate deploy     # apply pending migrations (prod)
-npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --script
+npx prisma db push              # sync schema to the database (dev or fresh prod)
 ```
 
-`migrate diff` (with a shadow database) is the recommended way to preview the SQL a schema change will produce.
+If you later want versioned, reviewable schema changes, adopt Prisma migrations
+at that point (`npx prisma migrate dev`) and commit the generated
+`prisma/migrations` history.
 
 ## Scheduled jobs
 
@@ -104,7 +106,7 @@ docker run -p 3000:3000 \
   cmms
 ```
 
-Before first start in a new environment, run `npx prisma migrate deploy` against the database.
+Before first start in a new environment, sync the schema with `npx prisma db push` against the database.
 
 ## Security
 

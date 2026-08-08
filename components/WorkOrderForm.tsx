@@ -346,6 +346,16 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         }
       }
 
+      if (form.startDate && form.dueDate) {
+        const startDt = form.startDate + (form.startTime ? 'T' + form.startTime : 'T00:00')
+        const dueDt   = form.dueDate   + (form.dueTime   ? 'T' + form.dueTime   : 'T12:00')
+        if (new Date(dueDt).getTime() < new Date(startDt).getTime()) {
+          setError('Due date cannot be before start date')
+          setSaving(false)
+          return
+        }
+      }
+
       const detailUrl = isEdit && woId ? `/work-orders/${woId}` : '/work-orders'
       if (!isDirty) {
         router.push(detailUrl)

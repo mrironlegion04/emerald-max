@@ -124,6 +124,40 @@ export async function PATCH(
       )
     }
 
+    // Time ordering sanity checks: completion/finish must not be before start.
+    // The downtime "back up after down" rule is checked above.
+    if (status === 'COMPLETED') {
+      const startMs =
+        startedAt ? new Date(startedAt).getTime()
+        : wo.startedAt ? wo.startedAt.getTime()
+        : null
+      const completeMs =
+        completedAt ? new Date(completedAt).getTime()
+        : wo.requestedCompletionTime ? wo.requestedCompletionTime.getTime()
+        : Date.now()
+      if (startMs !== null && completeMs < startMs) {
+        return NextResponse.json(
+          { error: 'Completion time cannot be before start time' },
+          { status: 400 }
+        )
+      }
+    }
+    if (status === 'PENDING_APPROVAL') {
+      const startMs =
+        startedAt ? new Date(startedAt).getTime()
+        : wo.startedAt ? wo.startedAt.getTime()
+        : null
+      const finishMs = requestedCompletionTime
+        ? new Date(requestedCompletionTime).getTime()
+        : Date.now()
+      if (startMs !== null && finishMs < startMs) {
+        return NextResponse.json(
+          { error: 'Finish time cannot be before start time' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Required subtasks must be complete before submission/final completion.
     // Optional subtasks do not block completion.
     const hasIncompleteRequired = async () => {

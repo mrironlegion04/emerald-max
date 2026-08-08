@@ -198,6 +198,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Back up time must be after the down time' }, { status: 400 })
     }
 
+    const effStart = 'startDate' in data ? data.startDate : existingWo.startDate?.toISOString() ?? null
+    const effDue   = 'dueDate'   in data ? data.dueDate   : existingWo.dueDate?.toISOString()   ?? null
+    if (effStart && effDue && new Date(effDue).getTime() < new Date(effStart).getTime()) {
+      return NextResponse.json({ error: 'Due date cannot be before start date' }, { status: 400 })
+    }
+
     // ── Permission checks ─────────────────────────────────────────────
     if (data.status && !isManagerOrAbove(user)) {
       return NextResponse.json(

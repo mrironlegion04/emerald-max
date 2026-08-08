@@ -219,6 +219,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   }
 
   const submitForApproval = async () => {
+    if (startedAtValue && requestedTime &&
+        new Date(requestedTime).getTime() < new Date(startedAtValue).getTime()) {
+      setError('Finish time cannot be before start time')
+      return
+    }
+    if (downSince && backUpAt &&
+        new Date(backUpAt).getTime() <= new Date(downSince).getTime()) {
+      setError('Back up time must be after the down time')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -255,6 +265,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   // Manager/admin completes directly (no approval needed)
   const handleDirectComplete = async () => {
+    if (adjustedStartAt && adjustedTime &&
+        new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
+      setError('Completion time cannot be before start time')
+      return
+    }
+    if (adjustedDownSince && adjustedBackUpAt &&
+        new Date(adjustedBackUpAt).getTime() <= new Date(adjustedDownSince).getTime()) {
+      setError('Back up time must be after the down time')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -311,6 +331,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   // Manager approves with adjusted time
   const handleApproveAdjusted = async () => {
+    if (adjustedStartAt && adjustedTime &&
+        new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
+      setError('Completion time cannot be before start time')
+      return
+    }
+    if (adjustedDownSince && adjustedBackUpAt &&
+        new Date(adjustedBackUpAt).getTime() <= new Date(adjustedDownSince).getTime()) {
+      setError('Back up time must be after the down time')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -679,11 +709,17 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           </div>
           {downSince && backUpAt && (() => {
             const ms = new Date(backUpAt).getTime() - new Date(downSince).getTime()
-            const lost = ms > 0 ? (ms / 3600000).toFixed(2) : null
-            return lost !== null && (
+            if (ms <= 0) {
+              return (
+                <p className="text-[11px] font-bold text-rose-650 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-lg">
+                  Back-up time must be after down time
+                </p>
+              )
+            }
+            const lost = (ms / 3600000).toFixed(2)
+            return (
               <p className="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">
                 Estimated lost hours: {lost} {lost === '1.00' ? 'hour' : 'hours'}
-                {ms <= 0 && ' — back-up time must be after down time'}
               </p>
             )
           })()}

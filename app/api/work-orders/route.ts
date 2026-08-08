@@ -94,6 +94,15 @@ export async function POST(request: NextRequest) {
       if (data.customIssue.length === 0) data.customIssue = null
     }
 
+    // ── Scheduling sanity check: due date must not be before start date ──
+    if (data.startDate && data.dueDate &&
+        new Date(data.dueDate).getTime() < new Date(data.startDate).getTime()) {
+      return NextResponse.json(
+        { error: 'Due date cannot be before start date' },
+        { status: 400 }
+      )
+    }
+
     // ── Asset OR Location is required ────────────────────────────────
     const hasAsset = !!data.assetId || (data.selectedAssetIds?.length ?? 0) > 0
     const hasLocation = !!data.locationId

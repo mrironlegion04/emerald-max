@@ -123,6 +123,45 @@ async function handleRequest(request: NextRequest) {
 // that, state-changing requests that DO include an Origin/Referer header must come
 // from a host we trust. Requests with no Origin (curl, cron, non-browser clients)
 // are passed through to the route handlers.
+//
+// Behind a reverse proxy the Host header the container sees can differ from the
+// public hostname in the browser (nginx may forward Host: max:3000 by default).
+// Compare the Origin against the trusted hosts: the immediate request host, the
+// X-Forwarded-Host the edge proxy announces, the app's declared base URL, and any
+// explicit TRUSTED_ORIGINS entries.
+function trustedOriginHosts(request: NextRequest): Set<string> {
+  const hosts = new Set<string>()
+
+  const self = request.nextUrl.host
+  if (self) hosts.add(self.toLowerCase())
+
+  for (const raw of (request.headers.get('x-forwarded-host') ?? '').split(',')) {
+    const host = raw.trim().toLowerCase()
+    if (host) hosts.add(host)
+  }
+
+  for (const raw of (process.env.TRUSTED_ORIGINS ?? '').split(',')) {
+    const value = raw.trim()
+    if (!value) continue
+    try {
+      hosts.add(new URL(value).host.toLowerCase())
+    } catch {
+      hosts.add(value.toLowerCase())
+    }
+  }
+
+  const base = process.env.NEXT_PUBLIC_BASE_URL
+  if (base) {
+    try {
+      hosts.add(new URL(base).host.toLowerCase())
+    } catch {
+      /* ignore malformed base URL */
+    }
+  }
+
+  return hosts
+}
+
 function csrfCheck(request: NextRequest, pathname: string) {
   if (!MUTATING_METHODS.has(request.method)) return null
   if (PUBLIC_MUTATING_PREFIXES.some(p => pathname.startsWith(p))) return null
@@ -132,11 +171,11 @@ function csrfCheck(request: NextRequest, pathname: string) {
 
   let headerHost: string | null = null
   try {
-    headerHost = new URL(header).host
+    headerHost = new URL(header).host.toLowerCase()
   } catch {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
-  if (headerHost !== request.nextUrl.host) {
+  if (!trustedOriginHosts(request).has(headerHost)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   return null

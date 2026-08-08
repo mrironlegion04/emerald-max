@@ -2,7 +2,6 @@ import type { BadgeVariant } from '@/components/Badge'
 
 export const REQUEST_STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pending Review',
-  APPROVED: 'Approved',
   REJECTED: 'Rejected',
   CONVERTED: 'Converted to WO',
   CANCELLED: 'Cancelled',
@@ -11,7 +10,6 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
 export function requestStatusVariant(status: string): BadgeVariant {
   const map: Record<string, BadgeVariant> = {
     PENDING: 'yellow',
-    APPROVED: 'green',
     REJECTED: 'red',
     CONVERTED: 'blue',
     CANCELLED: 'gray',

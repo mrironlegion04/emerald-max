@@ -178,32 +178,6 @@ export async function sendOverdueDigest(opts: {
 }
 
 // Maintenance Request notifications
-export async function sendRequestApproved(opts: {
-  toEmail: string; toName: string
-  requestId: string; requestTitle: string
-  approvedBy: string
-}) {
-  if (!process.env.EMAIL_USER) return
-
-  const body = `
-    <p>Hi ${opts.toName},</p>
-    <p>Your maintenance request has been approved:</p>
-    <p style="margin:16px 0;padding:16px;background:#dbeafe;border-radius:8px;border-left:4px solid #3b82f6">
-      <strong>${opts.requestTitle}</strong>
-    </p>
-    <p><strong>Approved by:</strong> ${opts.approvedBy}</p>
-    <p>A work order will be generated to address your request.</p>
-    <a href="${BASE}/maintenance-requests/${opts.requestId}" class="btn">View request</a>
-  `
-
-  await getTransporter().sendMail({
-    from:    FROM,
-    to:      opts.toEmail,
-    subject: `[MAX] Approved: ${opts.requestTitle}`,
-    html:    html('Maintenance request approved', body),
-  })
-}
-
 export async function sendRequestRejected(opts: {
   toEmail: string; toName: string
   requestId: string; requestTitle: string

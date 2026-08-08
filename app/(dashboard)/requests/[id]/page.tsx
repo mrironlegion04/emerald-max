@@ -57,8 +57,7 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
   if (!request) notFound()
 
   const canReview = user.role === 'ADMIN' || user.role === 'MANAGER'
-  const canApproveRequest = await hasScopeActionFlag(user, 'canApproveRequest')
-  const canConvertRequest = await hasScopeActionFlag(user, 'canConvertRequest')
+  const canReviewRequest = await hasScopeActionFlag(user, 'canConvertRequest')
 
   const steps = [
     { label: 'Submitted', done: true, date: request.createdAt },
@@ -281,7 +280,7 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
           {canReview && request.status === 'PENDING' && (
             <div className="mt-6 pt-5 border-t border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Review decision</p>
-              <RequestActions requestId={request.id} title={request.title} canApprove={canApproveRequest} canConvert={canConvertRequest} desiredDate={request.desiredDate} />
+              <RequestActions requestId={request.id} canReject={canReviewRequest} canConvert={canReviewRequest} desiredDate={request.desiredDate} />
             </div>
           )}
         </div>

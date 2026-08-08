@@ -8,7 +8,6 @@ import FilterDrawer from './FilterDrawer'
 const statusOptions = [
   { value: '', label: 'All statuses' },
   { value: 'PENDING', label: 'Pending Review' },
-  { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'CONVERTED', label: 'Converted to WO' },
 ]

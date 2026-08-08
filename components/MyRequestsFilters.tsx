@@ -46,7 +46,6 @@ export default function MyRequestsFilters() {
         {[
           { value: '', label: 'All' },
           { value: 'PENDING', label: 'Pending' },
-          { value: 'APPROVED', label: 'Approved' },
           { value: 'REJECTED', label: 'Rejected' },
           { value: 'CONVERTED', label: 'Converted' },
           { value: 'CANCELLED', label: 'Cancelled' },

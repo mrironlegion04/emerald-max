@@ -22,14 +22,13 @@ interface SearchParams {
 
 const ITEMS_PER_PAGE = 25
 
-const VALID_STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'CONVERTED', 'CANCELLED']
+const VALID_STATUS = ['PENDING', 'REJECTED', 'CONVERTED', 'CANCELLED']
 const VALID_PRIORITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 const VALID_TYPE = ['REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 'OTHER']
 
 const TABS = [
   { value: '', label: 'All' },
   { value: 'PENDING', label: 'Pending' },
-  { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'CONVERTED', label: 'Converted' },
   { value: 'CANCELLED', label: 'Cancelled' },
@@ -42,8 +41,7 @@ export default async function RequestsPage({
 }) {
   const user = await getCurrentUser()
   const canReview = user?.role === 'ADMIN' || user?.role === 'MANAGER'
-  const canApproveRequest = user ? await hasScopeActionFlag(user, 'canApproveRequest') : false
-  const canConvertRequest = user ? await hasScopeActionFlag(user, 'canConvertRequest') : false
+  const canReviewRequest = user ? await hasScopeActionFlag(user, 'canConvertRequest') : false
   const params = await searchParams
 
   // Build Prisma where clause
@@ -257,7 +255,7 @@ export default async function RequestsPage({
 
                   {canReview && req.status === 'PENDING' && (
                     <div className="md:pt-1 border-t md:border-t-0 border-slate-100 pt-4 mt-1 md:mt-0">
-                      <RequestActions requestId={req.id} title={req.title} canApprove={canApproveRequest} canConvert={canConvertRequest} desiredDate={req.desiredDate} />
+                      <RequestActions requestId={req.id} canReject={canReviewRequest} canConvert={canReviewRequest} desiredDate={req.desiredDate} />
                     </div>
                   )}
                 </div>

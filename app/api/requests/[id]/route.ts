@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
-import { canAccessTeamScope, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
+import { canAccessTeamScope, canWriteToLocations, canWriteToTeams, hasScopeActionFlag, isManagerOrAbove } from '@/lib/access-control'
 import { writeAudit } from '@/lib/audit'
-import { sendRequestApproved, sendRequestRejected, sendRequestConverted } from '@/lib/email'
+import { sendRequestRejected, sendRequestConverted } from '@/lib/email'
 import { generateWONumber } from '@/lib/wo-number'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -35,11 +35,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const canReviewScope =
     canReviewTeamScope && (await canWriteToLocations(user, [requestLocationId]))
 
-  const canApprove = await hasPermission(user, 'request:approve')
   const isOwner = request.requesterId === user.userId
 
   if (action === 'cancel') {
-    if (!isOwner && !canApprove) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!isOwner && !isManagerOrAbove(user)) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
     const updated = await prisma.maintenanceRequest.update({
       where: { id },
@@ -62,42 +61,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated)
   }
 
-  if (!canApprove) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-
-  if (action === 'approve') {
-    if (!(await hasScopeActionFlag(user, 'canApproveRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-
-    const updated = await prisma.maintenanceRequest.update({
-      where: { id },
-      data: { status: 'APPROVED', reviewedById: user.userId },
-    })
-    // Send email to requester
-    if (request.requesterEmail) {
-      await sendRequestApproved({
-        toEmail: request.requesterEmail,
-        toName: request.requesterName || 'Requester',
-        requestId: id,
-        requestTitle: request.title,
-        approvedBy: user.name,
-      }).catch(console.error)
-    }
-    await writeAudit({
-      action: 'UPDATE',
-      entity: 'Request',
-      entityId: updated.id,
-      entityName: updated.title,
-      changes: {
-        status: { before: 'PENDING', after: 'APPROVED' }
-      },
-      userId: user.userId,
-      userName: user.name,
-      userEmail: user.email,
-    })
-    return NextResponse.json(updated)
-  }
-
   if (action === 'reject') {
-    if (!(await hasScopeActionFlag(user, 'canApproveRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!(await hasPermission(user, 'request:reject'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    if (!(await hasScopeActionFlag(user, 'canConvertRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
     const updated = await prisma.maintenanceRequest.update({
       where: { id },
@@ -131,6 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === 'convert') {
+    if (!(await hasPermission(user, 'request:convert'))) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     if (!(await hasScopeActionFlag(user, 'canConvertRequest')) || !canReviewScope) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
     // The converter assigns the team (requesters can no longer pick one).

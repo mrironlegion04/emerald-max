@@ -14,7 +14,7 @@ interface SearchParams {
   status?: string
 }
 
-const VALID_STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'CONVERTED', 'CANCELLED']
+const VALID_STATUS = ['PENDING', 'REJECTED', 'CONVERTED', 'CANCELLED']
 
 export default async function MyRequestsPage({
   searchParams,

@@ -78,7 +78,7 @@ const defaultTeamScope: TeamScopeFlags = {
   canCloseWO: true,
   canAssignWO: true,
   canEditWO: true,
-  canApproveRequest: true,
+  canApproveRequest: false,
   canConvertRequest: true,
   canManagePM: true,
   canManageAssets: true,
@@ -616,8 +616,7 @@ export default function UserForm({ initialData, userId, teams }: Props) {
                   ['canCloseWO', 'Close & complete work orders', 'Approve completion and close work orders'],
                   ['canAssignWO', 'Assign work orders', 'Assign work orders to technicians or teams'],
                   ['canEditWO', 'Create & edit work orders', 'Create new work orders and edit existing ones'],
-                  ['canApproveRequest', 'Approve / reject requests', 'Approve or reject maintenance requests'],
-                  ['canConvertRequest', 'Convert requests to WOs', 'Convert approved requests into work orders'],
+                  ['canConvertRequest', 'Review & convert requests', 'Convert maintenance requests into work orders or reject them'],
                   ['canManagePM', 'Manage PM schedules', 'Create, edit, and delete PM schedules'],
                   ['canManageAssets', 'Manage assets', 'Create, edit, and archive assets'],
                 ] as const).map(([flag, label, desc]) => {

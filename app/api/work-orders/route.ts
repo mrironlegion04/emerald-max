@@ -239,6 +239,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Freeze the issue title so later renames don't rewrite history ──
+    let issueSnapshot: string | null = null
+    if (data.issueId) {
+      const snapshotIssue = await prisma.issue.findUnique({
+        where: { id: data.issueId },
+        select: { title: true },
+      })
+      issueSnapshot = snapshotIssue?.title ?? null
+    }
+
     const wo = await prisma.workOrder.create({
       data: {
         woNumber,
@@ -264,6 +274,7 @@ export async function POST(request: NextRequest) {
         customFields:   data.customFields as any ?? undefined,
         issueId:        data.issueId      ?? null,
         customIssue:    data.customIssue  ?? null,
+        issueSnapshot,
         shift:          await resolveShift(),
         requestedBy,
         requestedById:  user.userId,

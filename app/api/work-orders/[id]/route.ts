@@ -337,6 +337,26 @@ export async function PUT(
     }
     const finalDomainId = data.domainId !== undefined ? data.domainId : (data.teamId ? derivedDomainId : undefined)
 
+    // ── Freeze the issue title so later renames don't rewrite history ──
+    let issueSnapshot: string | null = existingWo.issueSnapshot
+    if (data.issueId !== undefined || data.customIssue !== undefined) {
+      const effectiveCustomIssue = data.customIssue !== undefined ? data.customIssue : existingWo.customIssue
+      if (effectiveCustomIssue) {
+        issueSnapshot = null
+      } else {
+        const effectiveIssueId = data.issueId !== undefined ? data.issueId : existingWo.issueId
+        if (effectiveIssueId) {
+          const snapshotIssue = await prisma.issue.findUnique({
+            where: { id: effectiveIssueId },
+            select: { title: true },
+          })
+          issueSnapshot = snapshotIssue?.title ?? null
+        } else {
+          issueSnapshot = null
+        }
+      }
+    }
+
     // ── Normalize asset scope ─────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
       data.assetId !== undefined ? data.assetId : existingWo.assetId,
@@ -441,6 +461,7 @@ export async function PUT(
       ),
       ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),
       ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
+      ...(issueSnapshot !== undefined ? { issueSnapshot } : {}),
       ...extra,
       ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,

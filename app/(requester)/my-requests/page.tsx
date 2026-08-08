@@ -112,10 +112,10 @@ export default async function MyRequestsPage({
                     {req.requestType && (
                       <Badge label={REQUEST_TYPE_LABELS[req.requestType] ?? req.requestType} variant={requestTypeVariant(req.requestType)} />
                     )}
-                    {req.issue && (
+                    {(req.issue || req.issueSnapshot) && (
                       <span className="inline-flex items-center gap-1">
-                        <code className="text-[10px] font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{req.issue.code}</code>
-                        <span className="text-[11px] font-semibold text-violet-700 truncate max-w-[160px]">{req.issue.title}</span>
+                        <code className="text-[10px] font-bold font-mono bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{req.issue?.code}</code>
+                        <span className="text-[11px] font-semibold text-violet-700 truncate max-w-[160px]">{req.issueSnapshot ?? req.issue?.title}</span>
                       </span>
                     )}
                   </div>

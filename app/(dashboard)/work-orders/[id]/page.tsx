@@ -297,12 +297,12 @@ export default async function WorkOrderDetailPage({
                     ✓ {wo.completedBy.name}
                   </span>
                 ) : '—' },
-                ...(wo.issue || wo.customIssue ? [{
+                ...(wo.issueSnapshot || wo.issue || wo.customIssue ? [{
                   label: 'Issue',
                   value: (
                     <IssueBadge
                       code={wo.issue?.code}
-                      title={wo.issue?.title}
+                      title={wo.issueSnapshot ?? wo.issue?.title}
                       severity={wo.issue?.severity}
                       customIssue={wo.customIssue}
                       showSeverity

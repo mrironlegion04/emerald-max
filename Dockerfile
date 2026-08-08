@@ -18,6 +18,14 @@ RUN npm run db:generate
 # Copy application code
 COPY . .
 
+# Env required at build time (next build runs page-data collection)
+ARG SESSION_SECRET
+ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ENV SESSION_SECRET=$SESSION_SECRET
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
 # Build Next.js app
 RUN npm run build
 

@@ -99,14 +99,14 @@ export default function ShiftsManager() {
                   type="time"
                   value={s.startTime}
                   onChange={e => updateShift(s.id, { startTime: e.target.value })}
-                  className="input-field text-xs bg-white w-28 px-2 py-1"
+                  className="input-field text-xs bg-white w-28! px-2 py-1"
                 />
                 <span className="text-xs text-slate-400 font-bold">to</span>
                 <input
                   type="time"
                   value={s.endTime}
                   onChange={e => updateShift(s.id, { endTime: e.target.value })}
-                  className="input-field text-xs bg-white w-28 px-2 py-1"
+                  className="input-field text-xs bg-white w-28! px-2 py-1"
                 />
                 {s.startTime >= s.endTime && s.startTime !== s.endTime && (
                   <span className="text-[10px] text-amber-600 font-bold">wraps past midnight</span>

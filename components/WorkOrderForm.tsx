@@ -481,24 +481,24 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
             </select>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {inputRow('Start date', false,
-              <div className="flex gap-2">
-                <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
-                  className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
-                <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
-                  className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28" />
-              </div>
-            )}
-            {inputRow('Due date', false,
-              <div className="flex gap-2">
-                <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
-                  className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
-                <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
-                  className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28" />
-              </div>
-            )}
-          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {inputRow('Start date', false,
+            <div className="flex gap-2">
+              <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+              <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
+            </div>
+          )}
+          {inputRow('Due date', false,
+            <div className="flex gap-2">
+              <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+              <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
+            </div>
+          )}
         </div>
         {form.type === 'BREAKDOWN' && inputRow('Machine down since', false,
           <>

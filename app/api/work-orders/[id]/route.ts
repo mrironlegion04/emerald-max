@@ -337,26 +337,6 @@ export async function PUT(
     }
     const finalDomainId = data.domainId !== undefined ? data.domainId : (data.teamId ? derivedDomainId : undefined)
 
-    // ── Freeze the issue title so later renames don't rewrite history ──
-    let issueSnapshot: string | null = existingWo.issueSnapshot
-    if (data.issueId !== undefined || data.customIssue !== undefined) {
-      const effectiveCustomIssue = data.customIssue !== undefined ? data.customIssue : existingWo.customIssue
-      if (effectiveCustomIssue) {
-        issueSnapshot = null
-      } else {
-        const effectiveIssueId = data.issueId !== undefined ? data.issueId : existingWo.issueId
-        if (effectiveIssueId) {
-          const snapshotIssue = await prisma.issue.findUnique({
-            where: { id: effectiveIssueId },
-            select: { title: true },
-          })
-          issueSnapshot = snapshotIssue?.title ?? null
-        } else {
-          issueSnapshot = null
-        }
-      }
-    }
-
     // ── Normalize asset scope ─────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
       data.assetId !== undefined ? data.assetId : existingWo.assetId,
@@ -384,6 +364,83 @@ export async function PUT(
     const assetIdsChanged =
       existingAssetIds.length !== incomingAssetIds.length ||
       !existingAssetIds.every((id, i) => id === incomingAssetIds[i])
+
+    // ── Refresh master-data name snapshots only when the value is being
+    //    selected/recorded in this update. The initial names were frozen at
+    //    creation; later renames of the master data don't rewrite history.
+    const snapshotUpdates: Record<string, string | null | undefined> = {}
+
+    if (data.issueId !== undefined || data.customIssue !== undefined) {
+      const effectiveCustomIssue = data.customIssue !== undefined ? data.customIssue : existingWo.customIssue
+      if (effectiveCustomIssue) {
+        snapshotUpdates.issueTitleSnapshot = null
+      } else {
+        const effectiveIssueId = data.issueId !== undefined ? data.issueId : existingWo.issueId
+        if (effectiveIssueId) {
+          const snapshotIssue = await prisma.issue.findUnique({
+            where: { id: effectiveIssueId },
+            select: { title: true },
+          })
+          snapshotUpdates.issueTitleSnapshot = snapshotIssue?.title ?? null
+        } else {
+          snapshotUpdates.issueTitleSnapshot = null
+        }
+      }
+    }
+
+    const assetSelectionChanged = data.assetId !== undefined || data.selectedAssetIds !== undefined
+    if (assetSelectionChanged) {
+      const effectiveAssetId = normalized.assetId ?? normalized.entries[0]?.assetId ?? null
+      if (effectiveAssetId) {
+        const snapshotAsset = await prisma.asset.findUnique({
+          where: { id: effectiveAssetId },
+          select: { name: true },
+        })
+        snapshotUpdates.assetNameSnapshot = snapshotAsset?.name ?? null
+      } else {
+        snapshotUpdates.assetNameSnapshot = null
+      }
+    }
+
+    if (data.locationId !== undefined || assetSelectionChanged) {
+      if (derivedLocationId !== undefined) {
+        if (derivedLocationId) {
+          const snapshotLocation = await prisma.location.findUnique({
+            where: { id: derivedLocationId },
+            select: { name: true },
+          })
+          snapshotUpdates.locationNameSnapshot = snapshotLocation?.name ?? null
+        } else {
+          snapshotUpdates.locationNameSnapshot = null
+        }
+      }
+    }
+
+    if (data.domainId !== undefined || data.teamId !== undefined) {
+      if (finalDomainId !== undefined) {
+        if (finalDomainId) {
+          const snapshotDomain = await prisma.maintenanceDomain.findUnique({
+            where: { id: finalDomainId },
+            select: { name: true },
+          })
+          snapshotUpdates.domainNameSnapshot = snapshotDomain?.name ?? null
+        } else {
+          snapshotUpdates.domainNameSnapshot = null
+        }
+      }
+    }
+
+    if (data.woCategoryId !== undefined) {
+      if (data.woCategoryId) {
+        const snapshotCategory = await prisma.workOrderCategory.findUnique({
+          where: { id: data.woCategoryId },
+          select: { name: true },
+        })
+        snapshotUpdates.woCategoryNameSnapshot = snapshotCategory?.name ?? null
+      } else {
+        snapshotUpdates.woCategoryNameSnapshot = null
+      }
+    }
 
     // ── Failed component must be a descendant of the primary asset ───
     let failedComponentId = existingWo.failedComponentId
@@ -461,7 +518,7 @@ export async function PUT(
       ),
       ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),
       ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
-      ...(issueSnapshot !== undefined ? { issueSnapshot } : {}),
+      ...snapshotUpdates,
       ...extra,
       ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),
       dueDate: data.dueDate ? new Date(data.dueDate) : undefined,

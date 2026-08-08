@@ -249,7 +249,7 @@ export default async function WorkOrderDetailPage({
                   </div>
                 ) : wo.asset ? (
                   <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-850 hover:underline text-xs font-bold">
-                    {wo.asset.name}
+                    {wo.assetNameSnapshot ?? wo.asset.name}
                   </Link>
                 ) : '—' },
                 ...(wo.failedComponent ? [{ label: 'Failed component', value: (
@@ -257,10 +257,10 @@ export default async function WorkOrderDetailPage({
                     {wo.failedComponent.name}
                   </Link>
                 ) }] : []),
-                { label: 'Location',    value: wo.asset?.location?.name ?? '—' },
-                { label: 'Domain / Nature', value: wo.domain ? (
+                { label: 'Location',    value: wo.locationNameSnapshot ?? wo.location?.name ?? wo.asset?.location?.name ?? '—' },
+                { label: 'Domain / Nature', value: (wo.domainNameSnapshot ?? wo.domain?.name) ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold">
-                    <Layers className="w-3 h-3 text-slate-400" /> {wo.domain.name}
+                    <Layers className="w-3 h-3 text-slate-400" /> {wo.domainNameSnapshot ?? wo.domain?.name}
                   </span>
                 ) : '—' },
                 { label: 'Assigned to', value: wo.assignedTo?.name ? (
@@ -273,7 +273,7 @@ export default async function WorkOrderDetailPage({
                   <span className="text-slate-400 italic">Unassigned</span>
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
-                ...(wo.woCategory ? [{ label: 'Category', value: wo.woCategory.name }] : []),
+                ...(wo.woCategoryNameSnapshot || wo.woCategory ? [{ label: 'Category', value: wo.woCategoryNameSnapshot ?? wo.woCategory?.name }] : []),
                 ...(wo.requestedBy ? [{
                   label: 'Requested by',
                   value: wo.requestedById && user?.role === 'ADMIN' ? (
@@ -297,12 +297,12 @@ export default async function WorkOrderDetailPage({
                     ✓ {wo.completedBy.name}
                   </span>
                 ) : '—' },
-                ...(wo.issueSnapshot || wo.issue || wo.customIssue ? [{
+                ...(wo.issueTitleSnapshot || wo.issue || wo.customIssue ? [{
                   label: 'Issue',
                   value: (
                     <IssueBadge
                       code={wo.issue?.code}
-                      title={wo.issueSnapshot ?? wo.issue?.title}
+                      title={wo.issueTitleSnapshot ?? wo.issue?.title}
                       severity={wo.issue?.severity}
                       customIssue={wo.customIssue}
                       showSeverity

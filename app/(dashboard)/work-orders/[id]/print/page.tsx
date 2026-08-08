@@ -89,10 +89,10 @@ export default async function WorkOrderPrintPage({
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Asset Information</h3>
           {wo.asset ? (
             <div className="space-y-1 text-sm">
-              <p><strong>Name:</strong> {wo.asset.name}</p>
+              <p><strong>Name:</strong> {wo.assetNameSnapshot ?? wo.asset.name}</p>
               <p><strong>Code:</strong> {wo.asset.assetCode}</p>
               {wo.asset.serialNumber && <p><strong>Serial:</strong> {wo.asset.serialNumber}</p>}
-              {wo.asset.location && <p><strong>Location:</strong> {wo.asset.location.name}</p>}
+              {(wo.locationNameSnapshot ?? wo.asset.location) && <p><strong>Location:</strong> {wo.locationNameSnapshot ?? wo.asset.location?.name}</p>}
             </div>
           ) : (
             <p className="text-sm text-gray-500">No asset assigned</p>
@@ -101,8 +101,10 @@ export default async function WorkOrderPrintPage({
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Assignment</h3>
           <div className="space-y-1 text-sm">
-            {wo.domain && <p><strong>Domain:</strong> {wo.domain.name}</p>}
-            {wo.woCategory && <p><strong>Category:</strong> {wo.woCategory.name}</p>}
+            {wo.domainNameSnapshot && <p><strong>Domain:</strong> {wo.domainNameSnapshot}</p>}
+            {!wo.domainNameSnapshot && wo.domain && <p><strong>Domain:</strong> {wo.domain.name}</p>}
+            {wo.woCategoryNameSnapshot && <p><strong>Category:</strong> {wo.woCategoryNameSnapshot}</p>}
+            {!wo.woCategoryNameSnapshot && wo.woCategory && <p><strong>Category:</strong> {wo.woCategory.name}</p>}
             {wo.assignedTo && <p><strong>Assigned to:</strong> {wo.assignedTo.name}</p>}
             {!wo.domain && !wo.assignedTo && <p className="text-gray-500">Unassigned</p>}
             {wo.requestedBy && <p><strong>Requested by:</strong> {wo.requestedBy}</p>}

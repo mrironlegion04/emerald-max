@@ -239,15 +239,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Freeze the issue title so later renames don't rewrite history ──
-    let issueSnapshot: string | null = null
-    if (data.issueId) {
-      const snapshotIssue = await prisma.issue.findUnique({
-        where: { id: data.issueId },
-        select: { title: true },
-      })
-      issueSnapshot = snapshotIssue?.title ?? null
-    }
+    // ── Freeze master-data names so later renames don't rewrite history ──
+    // Snapshot = name at the time the value is selected/recorded (creation here).
+    const primaryAssetId = normalized.assetId ?? normalized.entries[0]?.assetId ?? null
+
+    const [snapshotAsset, snapshotLocation, snapshotDomain, snapshotCategory, snapshotIssue] =
+      await Promise.all([
+        primaryAssetId ? prisma.asset.findUnique({ where: { id: primaryAssetId }, select: { name: true } }) : null,
+        locationId    ? prisma.location.findUnique({ where: { id: locationId }, select: { name: true } }) : null,
+        woDomainId    ? prisma.maintenanceDomain.findUnique({ where: { id: woDomainId }, select: { name: true } }) : null,
+        data.woCategoryId ? prisma.workOrderCategory.findUnique({ where: { id: data.woCategoryId }, select: { name: true } }) : null,
+        data.issueId  ? prisma.issue.findUnique({ where: { id: data.issueId }, select: { title: true } }) : null,
+      ])
+
+    const assetNameSnapshot      = snapshotAsset?.name ?? null
+    const locationNameSnapshot   = snapshotLocation?.name ?? null
+    const domainNameSnapshot     = snapshotDomain?.name ?? null
+    const woCategoryNameSnapshot = snapshotCategory?.name ?? null
+    const issueTitleSnapshot     = snapshotIssue?.title ?? null
 
     const wo = await prisma.workOrder.create({
       data: {
@@ -274,7 +283,11 @@ export async function POST(request: NextRequest) {
         customFields:   data.customFields as any ?? undefined,
         issueId:        data.issueId      ?? null,
         customIssue:    data.customIssue  ?? null,
-        issueSnapshot,
+        issueTitleSnapshot,
+        assetNameSnapshot,
+        locationNameSnapshot,
+        domainNameSnapshot,
+        woCategoryNameSnapshot,
         shift:          await resolveShift(),
         requestedBy,
         requestedById:  user.userId,

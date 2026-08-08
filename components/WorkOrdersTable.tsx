@@ -15,6 +15,8 @@ interface WorkOrder {
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
   domain: { id: string; name: string } | null
+  assetNameSnapshot: string | null
+  domainNameSnapshot: string | null
   priority: string
   status: string
   createdBy: { name: string } | null
@@ -179,16 +181,16 @@ export default function WorkOrdersTable({
                     <td className="px-4 py-3.5">
                       {wo.asset ? (
                         <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-bold text-xs">
-                          {wo.asset.name}
+                          {wo.assetNameSnapshot ?? wo.asset.name}
                         </Link>
                       ) : (
                         <span className="text-slate-400 font-normal select-none">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      {wo.domain ? (
+                      {(wo.domainNameSnapshot ?? wo.domain) ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50/80 text-purple-700 border border-purple-100 rounded-full text-xs font-bold leading-none select-none">
-                          👥 {wo.domain.name}
+                          👥 {wo.domainNameSnapshot ?? wo.domain?.name}
                         </span>
                       ) : wo.assignedTo?.name ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 border border-blue-100/40 rounded-full text-xs font-bold leading-none select-none">
@@ -333,7 +335,7 @@ export default function WorkOrdersTable({
                         href={`/assets/${wo.asset.id}`} 
                         className="text-blue-600 font-extrabold hover:underline truncate"
                       >
-                        {wo.asset.name}
+                        {wo.assetNameSnapshot ?? wo.asset.name}
                       </Link>
                     ) : (
                       <span className="text-slate-400 font-medium">—</span>
@@ -343,9 +345,9 @@ export default function WorkOrdersTable({
                   {/* Assigned to */}
                   <div className="flex flex-col gap-1 min-w-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee</span>
-                    {wo.domain ? (
-                      <span className="text-purple-700 font-bold truncate" title={`Domain: ${wo.domain.name}`}>
-                        👥 {wo.domain.name}
+                    {(wo.domainNameSnapshot ?? wo.domain) ? (
+                      <span className="text-purple-700 font-bold truncate" title={`Domain: ${wo.domainNameSnapshot ?? wo.domain?.name}`}>
+                        👥 {wo.domainNameSnapshot ?? wo.domain?.name}
                       </span>
                     ) : wo.assignedTo?.name ? (
                       <span className="text-blue-700 font-bold truncate">

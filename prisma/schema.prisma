@@ -653,7 +653,11 @@ model WorkOrder {
   issueId      String?
   issue        Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
   customIssue  String?   // free-text when user picks "Other"
-  issueSnapshot String?  // frozen issue title at creation so renames don't rewrite history
+  issueTitleSnapshot String?  // frozen issue title at selection so renames don't rewrite history
+  domainNameSnapshot  String?  // frozen domain name at selection
+  woCategoryNameSnapshot String? // frozen WO category name at selection
+  assetNameSnapshot   String?  // frozen primary asset name at selection
+  locationNameSnapshot String? // frozen location name at selection
 
   maintenanceScheduleId String?
   maintenanceSchedule   MaintenanceSchedule? @relation("PMScheduleWorkOrders", fields: [maintenanceScheduleId], references: [id])
@@ -1064,7 +1068,7 @@ model MaintenanceRequest {
   domain   MaintenanceDomain? @relation("RequestDomain", fields: [domainId], references: [id], onDelete: SetNull)
 
   customIssue String?
-  issueSnapshot String?  // frozen issue title at creation so renames don't rewrite history
+  issueTitleSnapshot String?  // frozen issue title at selection so renames don't rewrite history
 
   teamId String?
   team   Team?   @relation("RequestTeam", fields: [teamId], references: [id], onDelete: SetNull)

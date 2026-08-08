@@ -45,7 +45,7 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
           id: true, woNumber: true, status: true,
           issue: { select: { code: true, title: true, severity: true } },
           customIssue: true,
-          issueSnapshot: true,
+          issueTitleSnapshot: true,
         },
       },
       attachments: { orderBy: { createdAt: 'desc' } },
@@ -146,12 +146,12 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
             </div>
           </div>
 
-          {(request.issue || request.issueSnapshot) && (
+          {(request.issue || request.issueTitleSnapshot) && (
             <div className="mt-4 bg-slate-50 rounded-xl border border-slate-200 p-4">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Issue</p>
               <IssueBadge
                 code={request.issue?.code}
-                title={request.issueSnapshot ?? request.issue?.title}
+                title={request.issueTitleSnapshot ?? request.issue?.title}
                 severity={request.issue?.severity}
                 showSeverity
               />
@@ -202,12 +202,12 @@ export default async function StaffRequestDetailPage({ params }: { params: Promi
                   {request.workOrder.woNumber}
                   <span className="ml-2 font-medium text-blue-500">— {WO_STATUS_LABELS[request.workOrder.status] ?? request.workOrder.status}</span>
                 </p>
-                {!request.issue && (request.workOrder.issueSnapshot || request.workOrder.issue || request.workOrder.customIssue) && (
+                {!request.issue && (request.workOrder.issueTitleSnapshot || request.workOrder.issue || request.workOrder.customIssue) && (
                   <p className="mt-2 flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Issue</span>
                     <IssueBadge
                       code={request.workOrder.issue?.code}
-                      title={request.workOrder.issueSnapshot ?? request.workOrder.issue?.title}
+                      title={request.workOrder.issueTitleSnapshot ?? request.workOrder.issue?.title}
                       severity={request.workOrder.issue?.severity}
                       customIssue={request.workOrder.customIssue}
                       showSeverity

@@ -171,7 +171,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           woNumber, title: request.title, description: request.description,
           type: woType, status: 'OPEN', priority: request.priority as never,
           assetId: request.assetId, locationId: requestLocationId, issueId: request.issueId,
-          domainId: request.domainId, customIssue: request.customIssue, issueSnapshot: request.issueSnapshot,
+          domainId: request.domainId, customIssue: request.customIssue, issueTitleSnapshot: request.issueTitleSnapshot,
           teamId: assignedTeamId,
           dueDate: woDueDate,
           downtimeStartedAt: request.downtimeStartedAt ?? null,

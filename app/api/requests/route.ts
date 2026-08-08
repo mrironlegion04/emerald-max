@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     // 1 Domain → 1 Issue → optional Custom Issue (Issue = Other).
     let domainId: string | null = null
-    let issueSnapshot: string | null = null
+    let issueTitleSnapshot: string | null = null
     const customIssue = data.customIssue?.trim() || null
     if (customIssue) {
       if (data.issueId) return NextResponse.json({ error: 'Pick either an issue or a custom one, not both' }, { status: 400 })
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         }
         domainId = data.domainId
       }
-      issueSnapshot = issue.title
+      issueTitleSnapshot = issue.title
     } else {
       return NextResponse.json({ error: 'Please select an issue or describe a custom one' }, { status: 400 })
     }
@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
         locationText, locationId, requesterName: data.requesterName || user.name,
         requesterEmail: data.requesterEmail || user.email, requesterPhone: data.requesterPhone || null,
         priority: data.priority, requestType: data.requestType, assetId: data.assetId,
-        issueId: data.issueId, domainId, customIssue, issueSnapshot, desiredDate, requesterTeamId,
+        issueId: data.issueId, domainId, customIssue, issueTitleSnapshot, desiredDate, requesterTeamId,
         downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         requesterId: user.userId,
         attachments: data.attachments && data.attachments.length > 0 ? {

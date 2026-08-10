@@ -36,7 +36,7 @@ export default function LoginPage() {
         router.push('/profile?forcePasswordChange=1')
         return
       }
-      router.push(role === 'REQUESTER' ? '/my-requests' : '/work-orders')
+      router.push(role === 'REQUESTER' ? '/my-work-orders' : '/work-orders')
       router.refresh()
     } catch {
       setError('Something went wrong. Please try again.')

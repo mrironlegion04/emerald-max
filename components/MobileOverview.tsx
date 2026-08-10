@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle, Clock, CheckCircle, QrCode, MessageCircle,
-  ChevronRight, Shield, Bell, Users,
+  ChevronRight, Shield, Users,
 } from 'lucide-react'
 import Badge, { priorityVariant } from './Badge'
 
@@ -94,7 +94,6 @@ export default function MobileOverview({ userName }: { userName: string }) {
           { label: 'Scan', icon: QrCode, href: '/scan', color: 'bg-slate-900 text-white' },
           { label: 'Due Today', icon: Clock, href: '/work-orders?dueDateFrom=' + new Date().toISOString().split('T')[0] + '&dueDateTo=' + new Date().toISOString().split('T')[0], color: 'bg-blue-50 text-blue-600' },
           { label: 'Messages', icon: MessageCircle, href: '/messages', color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Requests', icon: Bell, href: '/requests', color: 'bg-amber-50 text-amber-600' },
         ].map(s => (
           <Link key={s.label} href={s.href}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${s.color} flex-shrink-0`}>
@@ -124,7 +123,7 @@ export default function MobileOverview({ userName }: { userName: string }) {
           <p className="text-xl font-bold text-red-600">{data.WOStats.overdue}</p>
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Overdue</p>
         </Link>
-        <Link href="/requests" className="bg-white rounded-xl border border-slate-200/80 p-3.5 active:scale-[0.98] transition-transform">
+        <Link href="/work-orders?status=PENDING_APPROVAL" className="bg-white rounded-xl border border-slate-200/80 p-3.5 active:scale-[0.98] transition-transform">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
               <Shield className="w-3.5 h-3.5 text-amber-500" />

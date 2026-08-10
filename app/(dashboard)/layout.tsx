@@ -10,9 +10,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  // REQUESTERs get a requests-only experience, not the full dashboard
+  // REQUESTERs get a work-order view, not the full dashboard
   if (user.role === 'REQUESTER') {
-    redirect('/my-requests')
+    redirect('/my-work-orders')
   }
 
   return (

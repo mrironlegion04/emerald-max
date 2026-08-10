@@ -91,9 +91,9 @@ export async function GET() {
       orderBy: { dueDate: 'asc' },
       take: 10,
     }),
-    // Pending requests
-    prisma.maintenanceRequest.count({
-      where: { status: 'PENDING' },
+    // Pending approval work orders
+    prisma.workOrder.count({
+      where: { AND: visAnd, status: 'PENDING_APPROVAL' },
     }),
     // Completed in last 7 days (assigned to user or their team)
     prisma.workOrder.findMany({

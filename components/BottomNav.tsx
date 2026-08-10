@@ -13,9 +13,9 @@ export default function BottomNav({ role }: { role?: Role }) {
   const navItems =
     role === 'REQUESTER'
       ? [
-          { href: '/my-requests', label: 'Requests', icon: ClipboardList },
+          { href: '/my-work-orders', label: 'Work Orders', icon: ClipboardList },
           { href: '/request/scan', label: 'Scan', icon: ScanLine },
-          { href: '/request', label: 'New Request', icon: Plus },
+          { href: '/request', label: 'New WO', icon: Plus },
         ]
       : [
           { href: '/overview', label: 'Overview', icon: LayoutDashboard },

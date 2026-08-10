@@ -34,7 +34,7 @@ interface DomainGroup {
 const EMPTY_FORM = {
   title: '', description: '', location: '', locationId: '', requesterName: '', requesterEmail: '', requesterPhone: '',
   priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
-  issueId: '', domainId: '', customIssue: '', requesterTeamId: '',
+  issueId: '', domainId: '', customIssue: '', teamId: '',
 }
 
 const OTHER_ISSUE = '__other__'
@@ -57,18 +57,18 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
   const lastAutoPriority = useRef<string | null>(null)
   const assetNameRef = useRef('')
-  const [requesterTeams, setRequesterTeams] = useState<{ id: string; name: string }[]>([])
+  const [assignTeams, setAssignTeams] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     if (!currentUser) return
     let active = true
-    fetch('/api/teams?mine=true')
+    fetch('/api/teams')
       .then(r => (r.ok ? r.json() : []))
       .then((list: { id: string; name: string }[]) => {
         if (!active) return
-        const mine = Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : []
-        setRequesterTeams(mine)
-        if (mine.length > 0) setForm(p => ({ ...p, requesterTeamId: mine[0].id }))
+        const teams = Array.isArray(list) ? list.map(t => ({ id: t.id, name: t.name })) : []
+        setAssignTeams(teams)
+        if (teams.length > 0) setForm(p => ({ ...p, teamId: p.teamId || teams[0].id }))
       })
       .catch(() => {})
     return () => { active = false }
@@ -225,22 +225,28 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       setSaving(false)
       return
     }
+    if (!form.teamId) {
+      setError('Please select the maintenance team for this work order')
+      setSaving(false)
+      return
+    }
     try {
       const payload = {
-        ...form,
-        requestType: form.requestType || undefined,
+        title: form.title,
+        description: form.description,
+        type: form.requestType === 'REPAIR' ? 'BREAKDOWN' : 'PREVENTIVE',
+        priority: form.priority,
+        status: 'OPEN',
         assetId: form.assetId || undefined,
-        location: form.location || undefined,
-        locationId: form.locationId || undefined,
-        desiredDate: form.desiredDate || undefined,
+        dueDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId === OTHER_ISSUE ? undefined : (form.issueId || undefined),
         domainId: form.domainId && !selectedGroup?.isFallback ? form.domainId : undefined,
         customIssue: form.issueId === OTHER_ISSUE ? form.customIssue.trim() : undefined,
-        requesterTeamId: form.requesterTeamId || undefined,
+        teamId: form.teamId,
         attachments: attachments.length > 0 ? attachments : undefined,
       }
-      const res  = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const res  = await fetch('/api/work-orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Failed to submit'); return }
       setSuccess(true)
@@ -254,14 +260,14 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-7 h-7 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Request submitted!</h2>
-          <p className="text-gray-500 text-sm">Your maintenance request has been received. The maintenance team will review it shortly.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Work order created!</h2>
+          <p className="text-gray-500 text-sm">Your work order has been created and assigned to the selected maintenance team. Track its progress from My Work Orders.</p>
           <button
             onClick={() => { setSuccess(false); assetNameRef.current = ''; setForm({ ...EMPTY_FORM, requesterName: currentUser?.name ?? '', requesterEmail: currentUser?.email ?? '' }); setAttachments([]) }}
             className="mt-6 btn-secondary text-sm">Submit another request</button>
           {currentUser && (
-            <Link href="/my-requests" className="mt-3 btn-primary text-sm inline-flex items-center justify-center w-full">
-              View My Requests
+            <Link href="/my-work-orders" className="mt-3 btn-primary text-sm inline-flex items-center justify-center w-full">
+              View My Work Orders
             </Link>
           )}
         </div>
@@ -276,7 +282,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3">
             <Settings className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Maintenance Request</h1>
+          <h1 className="text-2xl font-bold text-gray-900">New Work Order</h1>
           <p className="text-gray-500 text-sm mt-1">Report an issue or request maintenance work</p>
         </div>
 
@@ -415,24 +421,20 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                 <ImagePlus className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Add photo or file'}
               </button>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Maintenance team <span className="text-red-500">*</span></label>
+              <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field">
+                <option value="">Select the team</option>
+                {assignTeams.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">The maintenance team that will handle this work order.</p>
+            </div>
             {currentUser ? (
               <div className="border-t border-gray-100 pt-4 space-y-4">
-                {requesterTeams.length > 1 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Your team / department</label>
-                    <select value={form.requesterTeamId} onChange={e => set('requesterTeamId', e.target.value)} className="input-field">
-                      {requesterTeams.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
-                    <p className="text-[11px] text-gray-400 mt-1">Which team are you requesting on behalf of?</p>
-                  </div>
-                )}
                 <div className="text-sm text-gray-600">
                   Submitting as <span className="font-medium text-gray-900">{currentUser.name}</span> ({currentUser.email})
-                  {form.requesterTeamId && requesterTeams.length === 1 && (
-                    <> · team: <span className="font-medium text-gray-900">{requesterTeams[0].name}</span></>
-                  )}
                 </div>
               </div>
             ) : (
@@ -458,7 +460,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
             )}
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>}
             <button type="submit" disabled={saving || uploading} className="btn-primary w-full py-3 text-base">
-              {saving ? 'Submitting...' : 'Submit request'}
+              {saving ? 'Submitting...' : 'Submit work order'}
             </button>
           </form>
         </div>

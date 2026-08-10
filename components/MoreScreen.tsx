@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import {
-  Gauge, Calendar, Box, MessageSquare, QrCode, BarChart3,
+  Gauge, Calendar, Box, QrCode, BarChart3,
   Upload, Settings, Shield, Users, FileText, MapPin,
   ChevronRight,
 } from 'lucide-react'
@@ -18,7 +18,6 @@ const sections = [
       { label: 'Preventive Maintenance', href: '/preventive-maintenance', icon: Calendar, color: 'text-blue-600 bg-blue-50' },
       { label: 'Meters', href: '/meters', icon: Gauge, color: 'text-purple-600 bg-purple-50' },
       { label: 'Inventory', href: '/inventory', icon: Box, color: 'text-amber-600 bg-amber-50' },
-      { label: 'Requests', href: '/requests', icon: MessageSquare, color: 'text-emerald-600 bg-emerald-50' },
       { label: 'Scan Code', href: '/scan', icon: QrCode, color: 'text-slate-600 bg-slate-100' },
     ],
   },

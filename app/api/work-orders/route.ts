@@ -40,6 +40,12 @@ const woSchema = z.object({
   domainId:            z.string().nullable().optional(),
   woCategoryId:        z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
+  attachments:         z.array(z.object({
+    url: z.string().min(1),
+    originalName: z.string().min(1),
+    mimeType: z.string().optional(),
+    size: z.number().optional(),
+  })).optional(),
 
 }).refine(
   data => !(data.issueId && data.customIssue),
@@ -82,7 +88,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You do not have permission to create work orders' }, { status: 403 })
     }
 
-    if (!(await hasScopeActionFlag(user, 'canEditWO'))) {
+    const isRequester = user.role === 'REQUESTER'
+
+    if (!isRequester && !(await hasScopeActionFlag(user, 'canEditWO'))) {
       return NextResponse.json({ error: 'Your scope does not allow creating work orders' }, { status: 403 })
     }
 
@@ -113,13 +121,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── Domain / Nature + Issue is required ──────────────────────────
-    if (!data.domainId) {
-      return NextResponse.json(
-        { error: 'Please select a domain / nature for the work order' },
-        { status: 400 }
-      )
-    }
+    // ── Issue is required; domain derives from the assigned team ────
     const hasIssue = !!data.issueId || !!data.customIssue
     if (!hasIssue) {
       return NextResponse.json(
@@ -190,18 +192,28 @@ export async function POST(request: NextRequest) {
       locationId = primaryAsset?.locationId ?? null
     }
 
-    // ── Plant scope enforcement ───────────────────────────────────────
-    const inScope =
-      (await canWriteToLocations(user, [locationId])) &&
-      (await canWriteToAssets(user, normalized.entries.map(e => e.assetId))) &&
-      (await canAssignUsers(user, [data.assignedToId])) &&
-      (await canAssignTeams(user, [data.teamId])) &&
-      (await canWriteToTeams(user, [data.teamId]))
-    if (!inScope) {
-      return NextResponse.json(
-        { error: 'You do not have access to the selected location, asset, or assignee' },
-        { status: 403 }
-      )
+    // ── Plant scope enforcement (requester-created WOs bypass this) ─
+    if (!isRequester) {
+      const inScope =
+        (await canWriteToLocations(user, [locationId])) &&
+        (await canWriteToAssets(user, normalized.entries.map(e => e.assetId))) &&
+        (await canAssignUsers(user, [data.assignedToId])) &&
+        (await canAssignTeams(user, [data.teamId])) &&
+        (await canWriteToTeams(user, [data.teamId]))
+      if (!inScope) {
+        return NextResponse.json(
+          { error: 'You do not have access to the selected location, asset, or assignee' },
+          { status: 403 }
+        )
+      }
+    } else if (data.teamId) {
+      const team = await prisma.team.findUnique({
+        where: { id: data.teamId },
+        select: { id: true, isActive: true, isDeleted: true },
+      })
+      if (!team || !team.isActive || team.isDeleted) {
+        return NextResponse.json({ error: 'Team not found' }, { status: 400 })
+      }
     }
 
     // ── Validate work order category ───────────────────────────────────
@@ -322,6 +334,22 @@ export async function POST(request: NextRequest) {
     if (normalized.entries.length > 0) {
       await syncWorkOrderAssets(wo.id, normalized.entries)
     }
+
+    // ── Persist attachments linked to the new work order ─────────────
+    if (data.attachments && data.attachments.length > 0) {
+      await prisma.attachment.createMany({
+        data: data.attachments.map(a => ({
+          filename: a.url.split('/').pop() ?? 'attachment',
+          originalName: a.originalName,
+          mimeType: a.mimeType ?? 'application/octet-stream',
+          size: a.size ?? 0,
+          url: a.url,
+          uploadedById: user.userId,
+          workOrderId: wo.id,
+        })),
+      })
+    }
+
     await writeAudit({
       action: 'CREATE', entity: 'Work Order',
       entityId: wo.id, entityName: wo.title,

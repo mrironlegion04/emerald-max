@@ -8,9 +8,6 @@ export const ALL_PERMISSIONS = [
   'wo:create', 'wo:read', 'wo:edit', 'wo:delete', 'wo:assign',
   'wo:change_status', 'wo:complete', 'wo:cancel',
 
-  // Work Requests
-  'request:create', 'request:read', 'request:reject', 'request:convert',
-
   // Assets
   'asset:create', 'asset:read', 'asset:edit', 'asset:delete', 'asset:change_status',
 
@@ -79,10 +76,6 @@ export const PERMISSION_GROUPS: Record<string, { label: string; permissions: Per
   workorders: {
     label: 'Work Orders',
     permissions: ['wo:create', 'wo:read', 'wo:edit', 'wo:delete', 'wo:assign', 'wo:change_status', 'wo:complete', 'wo:cancel'],
-  },
-  requests: {
-    label: 'Work Requests',
-    permissions: ['request:create', 'request:read', 'request:reject', 'request:convert'],
   },
   assets: {
     label: 'Assets',
@@ -162,7 +155,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   MANAGER: [
     'wo:create', 'wo:read', 'wo:edit', 'wo:assign', 'wo:change_status',
     'wo:complete', 'wo:cancel',
-    'request:create', 'request:read', 'request:reject', 'request:convert',
     'asset:create', 'asset:read', 'asset:edit', 'asset:change_status',
     'location:create', 'location:read', 'location:edit',
     'part:create', 'part:read', 'part:edit',
@@ -181,7 +173,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   TECHNICIAN: [
     'wo:read', 'wo:complete',
-    'request:create', 'request:read',
     'asset:read',
     'location:read',
     'part:read',
@@ -194,7 +185,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 
   REQUESTER: [
-    'request:create', 'request:read',
+    'wo:create', 'wo:read',
     'asset:read',
     'location:read',
     'issue:read',
@@ -203,7 +194,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   VIEWER: [
     'wo:read',
-    'request:read',
     'asset:read',
     'location:read',
     'part:read',

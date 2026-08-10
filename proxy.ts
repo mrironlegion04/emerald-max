@@ -46,7 +46,7 @@ const STAFF_ONLY_PATHS = [
 
 // Routes only REQUESTER can access
 const REQUESTER_ONLY_PATHS = [
-  '/my-requests',
+  '/my-work-orders',
 ]
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -96,11 +96,11 @@ async function handleRequest(request: NextRequest) {
 
   const role = session.role
 
-  // REQUESTER trying to access staff-only routes → redirect to their requests list
+  // REQUESTER trying to access staff-only routes → redirect to their work orders
   if (role === 'REQUESTER') {
     const isStaffPath = STAFF_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
     if (isStaffPath) {
-      return NextResponse.redirect(new URL('/my-requests', request.url))
+      return NextResponse.redirect(new URL('/my-work-orders', request.url))
     }
   }
 

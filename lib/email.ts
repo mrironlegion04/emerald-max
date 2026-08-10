@@ -177,61 +177,6 @@ export async function sendOverdueDigest(opts: {
   })
 }
 
-// Maintenance Request notifications
-export async function sendRequestRejected(opts: {
-  toEmail: string; toName: string
-  requestId: string; requestTitle: string
-  rejectionReason?: string
-  rejectedBy: string
-}) {
-  if (!process.env.EMAIL_USER) return
-
-  const body = `
-    <p>Hi ${opts.toName},</p>
-    <p>Your maintenance request has been rejected:</p>
-    <p style="margin:16px 0;padding:16px;background:#fee2e2;border-radius:8px;border-left:4px solid #ef4444">
-      <strong>${opts.requestTitle}</strong>
-    </p>
-    ${opts.rejectionReason ? `<p><strong>Reason:</strong> ${opts.rejectionReason}</p>` : ''}
-    <p><strong>Rejected by:</strong> ${opts.rejectedBy}</p>
-    <a href="${BASE}/maintenance-requests/${opts.requestId}" class="btn">View request</a>
-  `
-
-  await getTransporter().sendMail({
-    from:    FROM,
-    to:      opts.toEmail,
-    subject: `[MAX] Rejected: ${opts.requestTitle}`,
-    html:    html('Maintenance request rejected', body),
-  })
-}
-
-export async function sendRequestConverted(opts: {
-  toEmail: string; toName: string
-  requestId: string; requestTitle: string
-  woNumber: string; woId: string
-  convertedBy: string
-}) {
-  if (!process.env.EMAIL_USER) return
-
-  const body = `
-    <p>Hi ${opts.toName},</p>
-    <p>Your maintenance request has been converted to a work order:</p>
-    <p style="margin:16px 0;padding:16px;background:#d1fae5;border-radius:8px;border-left:4px solid #10b981">
-      <strong>${opts.requestTitle}</strong><br>
-      <span style="font-size:12px;color:#6b7280">Work Order: ${opts.woNumber}</span>
-    </p>
-    <p><strong>Converted by:</strong> ${opts.convertedBy}</p>
-    <a href="${BASE}/work-orders/${opts.woId}" class="btn">View work order</a>
-  `
-
-  await getTransporter().sendMail({
-    from:    FROM,
-    to:      opts.toEmail,
-    subject: `[MAX] Converted: ${opts.requestTitle} — ${opts.woNumber}`,
-    html:    html('Maintenance request converted', body),
-  })
-}
-
 /**
  * Generic email sender for any message
  */

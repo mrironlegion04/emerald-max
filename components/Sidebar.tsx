@@ -11,7 +11,6 @@ import {
   MapPin,
   ClipboardList,
   Calendar,
-  MessageSquare,
   MessageCircle,
   BarChart3,
   Upload,
@@ -82,13 +81,8 @@ const navItems: NavItem[] = [
     icon: <Box className="w-4.5 h-4.5" />,
   },
   {
-    label: 'Requests',
-    href: '/requests',
-    icon: <MessageSquare className="w-4.5 h-4.5" />,
-  },
-  {
-    label: 'My Requests',
-    href: '/my-requests',
+    label: 'My Work Orders',
+    href: '/my-work-orders',
     icon: <FileText className="w-4.5 h-4.5" />,
     requesterOnly: true,
   },

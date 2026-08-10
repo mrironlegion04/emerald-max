@@ -85,21 +85,6 @@ enum PMFrequency {
   YEARLY
 }
 
-enum RequestStatus {
-  PENDING
-  REJECTED
-  CONVERTED
-  CANCELLED
-}
-
-enum RequestType {
-  REPAIR
-  MAINTENANCE
-  INSPECTION
-  INSTALLATION
-  OTHER
-}
-
 enum PMTriggerType {
   TIME
   METER
@@ -148,15 +133,6 @@ enum CompletionType {
   MANAGER_OVERRIDE
 }
 
-enum RequestPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-
-
 enum NotificationType {
   WORK_ORDER_ASSIGNED
   WORK_ORDER_COMPLETED
@@ -164,7 +140,6 @@ enum NotificationType {
   PM_GENERATED
   STOCK_LOW
   CHAT
-  REQUEST
 }
 
 enum Criticality {
@@ -226,8 +201,6 @@ model Team {
   pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
   templates   WorkOrderTemplate[]
   woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
-  requests   MaintenanceRequest[] @relation("RequestTeam")
-  requesterRequests MaintenanceRequest[] @relation("RequestRequesterTeam")
 
   @@map("teams")
 }
@@ -320,8 +293,6 @@ model User {
   createdWorkOrders     WorkOrder[]             @relation("CreatedBy")
   requestedWorkOrders   WorkOrder[]             @relation("WORequestedBy")
   completedWorkOrders   WorkOrder[]             @relation("WOCompletedBy")
-  reviewedRequests      MaintenanceRequest[]    @relation("RequestReviewer")
-  submittedRequests     MaintenanceRequest[]    @relation("RequestRequester")
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
   assignedSubtasks      Subtask[]               @relation("SubtaskAssignedTo")
@@ -402,7 +373,6 @@ model Location {
   workOrders WorkOrder[] @relation("WorkOrdersAtLocation")
   maintenanceSchedules MaintenanceSchedule[] @relation("PMSchedulesAtLocation")
   userLocations UserLocation[]
-  requests MaintenanceRequest[] @relation("RequestLocation")
 
   @@map("locations")
 }
@@ -519,7 +489,6 @@ model Asset {
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
   assetParts           AssetPart[]           @relation("AssetToAssetPart")
-  requests             MaintenanceRequest[]  @relation("RequestAsset")
 
   // Soft-delete (archive) support
   isDeleted  Boolean   @default(false)
@@ -677,7 +646,6 @@ model WorkOrder {
   partsUsed     WorkOrderPart[]
   comments      WorkOrderComment[]
   subtasks      Subtask[]
-requests      MaintenanceRequest[]
   attachments         Attachment[]        @relation("WOAttachments")
   assets        WorkOrderAsset[]
   statusHistory WorkOrderStatusHistory[]
@@ -732,7 +700,6 @@ model MaintenanceDomain {
   assetLinks         AssetDomain[]
   assignedSubtasks   Subtask[]          @relation("SubtasksAssignedToDomain")
   defaultCategories  AssetCategory[]    @relation("CategoryDefaultDomain")
-  requests           MaintenanceRequest[] @relation("RequestDomain")
 
   @@map("maintenance_domains")
 }
@@ -750,7 +717,6 @@ model Issue {
 
   domains    IssueDomain[]
   workOrders WorkOrder[]
-  requests   MaintenanceRequest[] @relation("RequestIssue")
 
   @@index([isActive, isGlobal, sortOrder])
   @@map("issues")
@@ -1029,67 +995,6 @@ model Subtask {
 
 // ── Part 7 new models ────────────────────────────────────────────────────────
 
-model MaintenanceRequest {
-  id              String        @id @default(cuid())
-  requestNumber   String?       @unique
-  title           String
-  description     String
-  locationText String?
-  requesterName   String
-  requesterEmail  String?
-  requesterPhone  String?
-  priority        RequestPriority @default(MEDIUM)
-  requestType     RequestType?
-  desiredDate     DateTime?
-  downtimeStartedAt DateTime? // when the machine/equipment went down, recorded at request time
-  status          RequestStatus @default(PENDING)
-  rejectionReason String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  requesterId  String?
-  requester    User?    @relation("RequestRequester", fields: [requesterId], references: [id], onDelete: SetNull)
-  reviewedById String?
-  reviewedBy   User?    @relation("RequestReviewer", fields: [reviewedById], references: [id])
-  workOrderId  String?
-  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
-
-  assetId String?
-  asset   Asset?  @relation("RequestAsset", fields: [assetId], references: [id], onDelete: SetNull)
-
-  locationId String?
-  location   Location? @relation("RequestLocation", fields: [locationId], references: [id], onDelete: SetNull)
-
-  issueId String?
-  issue   Issue?  @relation("RequestIssue", fields: [issueId], references: [id], onDelete: SetNull)
-
-  domainId String?
-  domain   MaintenanceDomain? @relation("RequestDomain", fields: [domainId], references: [id], onDelete: SetNull)
-
-  customIssue String?
-  issueTitleSnapshot String?  // frozen issue title at selection so renames don't rewrite history
-
-  teamId String?
-  team   Team?   @relation("RequestTeam", fields: [teamId], references: [id], onDelete: SetNull)
-
-  requesterTeamId String?
-  requesterTeam   Team?   @relation("RequestRequesterTeam", fields: [requesterTeamId], references: [id], onDelete: SetNull)
-
-  attachments Attachment[] @relation("RequestAttachments")
-
-  @@index([requesterId])
-  @@index([issueId])
-  @@index([domainId])
-  @@index([teamId])
-  @@index([requesterTeamId])
-  @@index([assetId])
-  @@index([locationId])
-  @@index([workOrderId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("maintenance_requests")
-}
-
 model Attachment {
   id           String    @id @default(cuid())
   filename     String
@@ -1111,16 +1016,12 @@ model Attachment {
   partId String?
   part   Part?   @relation("PartAttachments", fields: [partId], references: [id], onDelete: Cascade)
 
-  requestId String?
-  request   MaintenanceRequest? @relation("RequestAttachments", fields: [requestId], references: [id], onDelete: Cascade)
-
   commentId String?
   comment   WorkOrderComment? @relation("CommentAttachments", fields: [commentId], references: [id], onDelete: Cascade)
 
   @@index([workOrderId])
   @@index([assetId])
   @@index([partId])
-  @@index([requestId])
   @@index([commentId])
   @@map("attachments")
 }

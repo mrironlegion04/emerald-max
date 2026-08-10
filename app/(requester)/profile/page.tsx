@@ -43,10 +43,10 @@ export default async function UserProfilePage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-4">
         <Link
-          href={user.role === 'REQUESTER' ? '/my-requests' : '/dashboard'}
+          href={user.role === 'REQUESTER' ? '/my-work-orders' : '/dashboard'}
           className="text-sm text-gray-400 hover:text-gray-600"
         >
-          ← Back to {user.role === 'REQUESTER' ? 'My Requests' : 'dashboard'}
+          ← Back to {user.role === 'REQUESTER' ? 'My Work Orders' : 'dashboard'}
         </Link>
       </div>
 

@@ -356,85 +356,60 @@ async function main() {
 
   // ── Issue System ──────────────────────────────────────────────────────────────
   const issueSeed = async () => {
-    const domains = await Promise.all([
-      prisma.maintenanceDomain.upsert({
-        where: { name: 'Electrical' },
-        update: { description: 'Electrical systems, panels, and components' },
-        create: { name: 'Electrical', description: 'Electrical systems, panels, and components' },
-      }),
-      prisma.maintenanceDomain.upsert({
-        where: { name: 'Mechanical' },
-        update: { description: 'Mechanical systems, rotating equipment, and drives' },
-        create: { name: 'Mechanical', description: 'Mechanical systems, rotating equipment, and drives' },
-      }),
-      prisma.maintenanceDomain.upsert({
-        where: { name: 'HVAC' },
-        update: { description: 'Heating, ventilation, and air conditioning' },
-        create: { name: 'HVAC', description: 'Heating, ventilation, and air conditioning' },
-      }),
-      prisma.maintenanceDomain.upsert({
-        where: { name: 'Plumbing' },
-        update: { description: 'Plumbing fixtures, pipes, and drainage' },
-        create: { name: 'Plumbing', description: 'Plumbing fixtures, pipes, and drainage' },
-      }),
-      prisma.maintenanceDomain.upsert({
-        where: { name: 'Structural' },
-        update: { description: 'Building structures, roofing, and civil works' },
-        create: { name: 'Structural', description: 'Building structures, roofing, and civil works' },
-      }),
-    ])
+    // Issues are categorized by AssetCategory (the same taxonomy used for
+    // assets). Category-driven resolution walks the asset's category chain, so
+    // issues linked to a parent category apply to its children too. Global
+    // issues are offered as the "Common Issues" fallback.
+    const categoryByCode: Record<string, string> = {
+      ELE: catElectrical.id,
+      MEC: catMechanical.id,
+      HVAC: catHVAC.id,
+      PLB: catPlumbing.id,
+    }
 
-    // Representative issues per domain (5-7 each, ordered by priority)
-    const issueData: { code: string; title: string; severity: string; domainName: string; sortOrder: number }[] = [
+    // Representative issues per category (5-7 each, ordered by priority).
+    // Global (COM-*) issues are un-scoped and used as the Common Issues fallback.
+    const issueData: { code: string; title: string; severity: string; categoryCode: string; isGlobal: boolean; sortOrder: number }[] = [
       // Electrical
-      { code: 'ELE-001', title: 'Power Failure',             severity: 'CRITICAL', domainName: 'Electrical', sortOrder: 1 },
-      { code: 'ELE-002', title: 'Breaker Tripped',           severity: 'HIGH',     domainName: 'Electrical', sortOrder: 2 },
-      { code: 'ELE-003', title: 'Motor Overload',            severity: 'HIGH',     domainName: 'Electrical', sortOrder: 3 },
-      { code: 'ELE-004', title: 'Wiring Fault',              severity: 'MEDIUM',   domainName: 'Electrical', sortOrder: 4 },
-      { code: 'ELE-005', title: 'Lighting Failure',          severity: 'LOW',      domainName: 'Electrical', sortOrder: 5 },
-      { code: 'ELE-006', title: 'Panel Corrosion',           severity: 'MEDIUM',   domainName: 'Electrical', sortOrder: 6 },
+      { code: 'ELE-001', title: 'Power Failure',             severity: 'CRITICAL', categoryCode: 'ELE', isGlobal: false, sortOrder: 1 },
+      { code: 'ELE-002', title: 'Breaker Tripped',           severity: 'HIGH',     categoryCode: 'ELE', isGlobal: false, sortOrder: 2 },
+      { code: 'ELE-003', title: 'Motor Overload',            severity: 'HIGH',     categoryCode: 'ELE', isGlobal: false, sortOrder: 3 },
+      { code: 'ELE-004', title: 'Wiring Fault',              severity: 'MEDIUM',   categoryCode: 'ELE', isGlobal: false, sortOrder: 4 },
+      { code: 'ELE-005', title: 'Lighting Failure',          severity: 'LOW',      categoryCode: 'ELE', isGlobal: false, sortOrder: 5 },
+      { code: 'ELE-006', title: 'Panel Corrosion',           severity: 'MEDIUM',   categoryCode: 'ELE', isGlobal: false, sortOrder: 6 },
 
       // Mechanical
-      { code: 'MEC-001', title: 'Bearing Failure',           severity: 'HIGH',     domainName: 'Mechanical', sortOrder: 1 },
-      { code: 'MEC-002', title: 'Shaft Misalignment',        severity: 'HIGH',     domainName: 'Mechanical', sortOrder: 2 },
-      { code: 'MEC-003', title: 'Oil Leak',                  severity: 'MEDIUM',   domainName: 'Mechanical', sortOrder: 3 },
-      { code: 'MEC-004', title: 'Belt Wear',                 severity: 'MEDIUM',   domainName: 'Mechanical', sortOrder: 4 },
-      { code: 'MEC-005', title: 'Vibration Excessive',       severity: 'MEDIUM',   domainName: 'Mechanical', sortOrder: 5 },
-      { code: 'MEC-006', title: 'Coupling Damage',           severity: 'MEDIUM',   domainName: 'Mechanical', sortOrder: 6 },
-      { code: 'MEC-007', title: 'Seal Failure',              severity: 'HIGH',     domainName: 'Mechanical', sortOrder: 7 },
+      { code: 'MEC-001', title: 'Bearing Failure',           severity: 'HIGH',     categoryCode: 'MEC', isGlobal: false, sortOrder: 1 },
+      { code: 'MEC-002', title: 'Shaft Misalignment',        severity: 'HIGH',     categoryCode: 'MEC', isGlobal: false, sortOrder: 2 },
+      { code: 'MEC-003', title: 'Oil Leak',                  severity: 'MEDIUM',   categoryCode: 'MEC', isGlobal: false, sortOrder: 3 },
+      { code: 'MEC-004', title: 'Belt Wear',                 severity: 'MEDIUM',   categoryCode: 'MEC', isGlobal: false, sortOrder: 4 },
+      { code: 'MEC-005', title: 'Vibration Excessive',       severity: 'MEDIUM',   categoryCode: 'MEC', isGlobal: false, sortOrder: 5 },
+      { code: 'MEC-006', title: 'Coupling Damage',           severity: 'MEDIUM',   categoryCode: 'MEC', isGlobal: false, sortOrder: 6 },
+      { code: 'MEC-007', title: 'Seal Failure',              severity: 'HIGH',     categoryCode: 'MEC', isGlobal: false, sortOrder: 7 },
 
       // HVAC
-      { code: 'HVAC-001', title: 'Compressor Failure',       severity: 'CRITICAL', domainName: 'HVAC', sortOrder: 1 },
-      { code: 'HVAC-002', title: 'Refrigerant Leak',         severity: 'HIGH',     domainName: 'HVAC', sortOrder: 2 },
-      { code: 'HVAC-003', title: 'Fan Motor Fault',          severity: 'MEDIUM',   domainName: 'HVAC', sortOrder: 3 },
-      { code: 'HVAC-004', title: 'Filter Clogged',           severity: 'LOW',      domainName: 'HVAC', sortOrder: 4 },
-      { code: 'HVAC-005', title: 'Thermostat Malfunction',   severity: 'MEDIUM',   domainName: 'HVAC', sortOrder: 5 },
-      { code: 'HVAC-006', title: 'Condenser Coil Dirty',     severity: 'LOW',      domainName: 'HVAC', sortOrder: 6 },
+      { code: 'HVAC-001', title: 'Compressor Failure',       severity: 'CRITICAL', categoryCode: 'HVAC', isGlobal: false, sortOrder: 1 },
+      { code: 'HVAC-002', title: 'Refrigerant Leak',         severity: 'HIGH',     categoryCode: 'HVAC', isGlobal: false, sortOrder: 2 },
+      { code: 'HVAC-003', title: 'Fan Motor Fault',          severity: 'MEDIUM',   categoryCode: 'HVAC', isGlobal: false, sortOrder: 3 },
+      { code: 'HVAC-004', title: 'Filter Clogged',           severity: 'LOW',      categoryCode: 'HVAC', isGlobal: false, sortOrder: 4 },
+      { code: 'HVAC-005', title: 'Thermostat Malfunction',   severity: 'MEDIUM',   categoryCode: 'HVAC', isGlobal: false, sortOrder: 5 },
+      { code: 'HVAC-006', title: 'Condenser Coil Dirty',     severity: 'LOW',      categoryCode: 'HVAC', isGlobal: false, sortOrder: 6 },
 
       // Plumbing
-      { code: 'PLB-001', title: 'Pipe Burst',                severity: 'CRITICAL', domainName: 'Plumbing', sortOrder: 1 },
-      { code: 'PLB-002', title: 'Fixture Leak',              severity: 'MEDIUM',   domainName: 'Plumbing', sortOrder: 2 },
-      { code: 'PLB-003', title: 'Drain Clog',                severity: 'MEDIUM',   domainName: 'Plumbing', sortOrder: 3 },
-      { code: 'PLB-004', title: 'Water Pressure Low',        severity: 'MEDIUM',   domainName: 'Plumbing', sortOrder: 4 },
-      { code: 'PLB-005', title: 'Toilet Not Flushing',       severity: 'LOW',      domainName: 'Plumbing', sortOrder: 5 },
-
-      // Structural
-      { code: 'STR-001', title: 'Roof Leak',                 severity: 'HIGH',     domainName: 'Structural', sortOrder: 1 },
-      { code: 'STR-002', title: 'Crack in Wall',             severity: 'MEDIUM',   domainName: 'Structural', sortOrder: 2 },
-      { code: 'STR-003', title: 'Door Malfunction',          severity: 'LOW',      domainName: 'Structural', sortOrder: 3 },
-      { code: 'STR-004', title: 'Floor Damage',              severity: 'MEDIUM',   domainName: 'Structural', sortOrder: 4 },
+      { code: 'PLB-001', title: 'Pipe Burst',                severity: 'CRITICAL', categoryCode: 'PLB', isGlobal: false, sortOrder: 1 },
+      { code: 'PLB-002', title: 'Fixture Leak',              severity: 'MEDIUM',   categoryCode: 'PLB', isGlobal: false, sortOrder: 2 },
+      { code: 'PLB-003', title: 'Drain Clog',                severity: 'MEDIUM',   categoryCode: 'PLB', isGlobal: false, sortOrder: 3 },
+      { code: 'PLB-004', title: 'Water Pressure Low',        severity: 'MEDIUM',   categoryCode: 'PLB', isGlobal: false, sortOrder: 4 },
+      { code: 'PLB-005', title: 'Toilet Not Flushing',       severity: 'LOW',      categoryCode: 'PLB', isGlobal: false, sortOrder: 5 },
 
       // Common / Global fallback issues
-      { code: 'COM-001', title: 'General Inspection Needed', severity: 'LOW',      domainName: 'Common', sortOrder: 1 },
-      { code: 'COM-002', title: 'Scheduled Maintenance',     severity: 'LOW',      domainName: 'Common', sortOrder: 2 },
-      { code: 'COM-003', title: 'Operator Report — Not Specified', severity: 'MEDIUM', domainName: 'Common', sortOrder: 3 },
+      { code: 'COM-001', title: 'General Inspection Needed', severity: 'LOW',      categoryCode: 'COM', isGlobal: true, sortOrder: 1 },
+      { code: 'COM-002', title: 'Scheduled Maintenance',     severity: 'LOW',      categoryCode: 'COM', isGlobal: true, sortOrder: 2 },
+      { code: 'COM-003', title: 'Operator Report — Not Specified', severity: 'MEDIUM', categoryCode: 'COM', isGlobal: true, sortOrder: 3 },
     ]
 
     let created = 0; let skipped = 0
     for (const item of issueData) {
-      const domain = domains.find(d => d.name === item.domainName)
-      const isGlobal = item.domainName === 'Common'
-      if (!isGlobal && !domain) continue
       try {
         await prisma.issue.upsert({
           where: { code: item.code },
@@ -442,17 +417,22 @@ async function main() {
             title: item.title,
             severity: item.severity as any,
             sortOrder: item.sortOrder,
-            isGlobal,
+            isGlobal: item.isGlobal,
             isActive: true,
-            ...(isGlobal && { domains: { deleteMany: {} } }),
+            ...(item.isGlobal ? { categories: { deleteMany: {} } } : {
+              categories: {
+                deleteMany: {},
+                create: [{ categoryId: categoryByCode[item.categoryCode] }],
+              },
+            }),
           },
           create: {
             code: item.code,
             title: item.title,
             severity: item.severity as any,
             sortOrder: item.sortOrder,
-            isGlobal,
-            ...(isGlobal ? {} : { domains: { create: { domainId: domain!.id } } }),
+            isGlobal: item.isGlobal,
+            ...(item.isGlobal ? {} : { categories: { create: [{ categoryId: categoryByCode[item.categoryCode] }] } }),
           },
         })
         created++

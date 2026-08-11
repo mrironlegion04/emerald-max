@@ -23,17 +23,21 @@ export default async function IssuesPage({
   const page = Math.max(1, parseInt(params.page ?? '1', 10))
   const skip = (page - 1) * ITEMS_PER_PAGE
 
-  const [issues, domains, totalCount] = await Promise.all([
+  const [issues, categories, totalCount] = await Promise.all([
     prisma.issue.findMany({
       orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
       include: {
+        categories: { include: { category: true } },
         domains: { include: { domain: true } },
         _count: { select: { workOrders: true } },
       },
       skip,
       take: ITEMS_PER_PAGE,
     }),
-    prisma.maintenanceDomain.findMany({ orderBy: { name: 'asc' } }),
+    prisma.assetCategory.findMany({
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { issues: true } } },
+    }),
     prisma.issue.count(),
   ])
 
@@ -44,9 +48,9 @@ export default async function IssuesPage({
     <div className="p-6 max-w-4xl mx-auto">
       <PageHeader
         title="Issues"
-        subtitle={`Manage the issue library. Each issue belongs to one or more maintenance domains. · ${totalCount} total · ${issues.length} showing`}
+        subtitle={`Manage the issue library. Each issue is linked to one or more asset categories. · ${totalCount} total · ${issues.length} showing`}
       />
-      <IssueManager key={page} initialIssues={issues} domains={domains} />
+      <IssueManager key={page} initialIssues={issues} categories={categories} />
 
       {/* Pagination controls */}
       {totalPages > 1 && (

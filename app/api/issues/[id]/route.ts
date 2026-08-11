@@ -5,13 +5,14 @@ import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 const updateSchema = z.object({
-  code:      z.string().min(1).optional(),
-  title:     z.string().min(1).optional(),
-  domainIds: z.array(z.string()).optional(),
-  severity:  z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
-  isActive:  z.boolean().optional(),
-  isGlobal:  z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
+  code:       z.string().min(1).optional(),
+  title:      z.string().min(1).optional(),
+  domainIds:  z.array(z.string()).optional(),
+  categoryIds: z.array(z.string()).optional(),
+  severity:   z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  isActive:   z.boolean().optional(),
+  isGlobal:   z.boolean().optional(),
+  sortOrder:  z.number().int().optional(),
 })
 
 export async function PUT(
@@ -24,18 +25,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
-    const { code, title, domainIds, severity, isActive, isGlobal, sortOrder } = updateSchema.parse(await request.json())
+    const { code, title, domainIds, categoryIds, severity, isActive, isGlobal, sortOrder } = updateSchema.parse(await request.json())
 
     const issue = await prisma.issue.update({
       where: { id },
       data: {
-        ...(code      !== undefined && { code }),
-        ...(title     !== undefined && { title }),
-        ...(severity  !== undefined && { severity }),
-        ...(isActive  !== undefined && { isActive }),
-        ...(isGlobal  !== undefined && { isGlobal }),
-        ...(sortOrder !== undefined && { sortOrder }),
-        // Replace domain links atomically
+        ...(code       !== undefined && { code }),
+        ...(title      !== undefined && { title }),
+        ...(severity   !== undefined && { severity }),
+        ...(isActive   !== undefined && { isActive }),
+        ...(isGlobal   !== undefined && { isGlobal }),
+        ...(sortOrder  !== undefined && { sortOrder }),
+        // Replace category links atomically
+        ...(categoryIds !== undefined && {
+          categories: {
+            deleteMany: {},
+            ...(categoryIds.length > 0 ? { create: categoryIds.map(categoryId => ({ categoryId })) } : {}),
+          },
+        }),
+        // Historical domain links — kept for backward compatibility only
         ...(domainIds !== undefined && {
           domains: {
             deleteMany: {},
@@ -45,6 +53,7 @@ export async function PUT(
       },
       include: {
         domains: { include: { domain: true } },
+        categories: { include: { category: true } },
         _count:  { select: { workOrders: true } },
       },
     })

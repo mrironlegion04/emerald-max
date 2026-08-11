@@ -403,6 +403,7 @@ model AssetCategory {
   pmSchedules MaintenanceSchedule[] @relation("PMCategoryAssigned")
   workOrders WorkOrder[] @relation("WOCategory")
   templates  WorkOrderTemplate[]
+  issues   IssueCategory[]
 
   defaultDomainId String?
   defaultDomain   MaintenanceDomain? @relation("CategoryDefaultDomain", fields: [defaultDomainId], references: [id], onDelete: SetNull)
@@ -716,10 +717,23 @@ model Issue {
   updatedAt DateTime      @updatedAt
 
   domains    IssueDomain[]
+  categories IssueCategory[]
   workOrders WorkOrder[]
 
   @@index([isActive, isGlobal, sortOrder])
   @@map("issues")
+}
+
+model IssueCategory {
+  issueId    String
+  categoryId String
+
+  issue    Issue         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  category AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, categoryId])
+  @@index([categoryId])
+  @@map("issue_categories")
 }
 
 model IssueDomain {

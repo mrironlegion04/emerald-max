@@ -34,7 +34,7 @@ interface DomainGroup {
 const EMPTY_FORM = {
   title: '', description: '', location: '', locationId: '', requesterName: '', requesterEmail: '', requesterPhone: '',
   priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
-  issueId: '', domainId: '', customIssue: '', teamId: '',
+  issueId: '', customIssue: '', teamId: '',
 }
 
 const OTHER_ISSUE = '__other__'
@@ -87,10 +87,11 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     return () => { active = false }
   }, [form.assetId])
 
-  const hasIssues = issueGroups.some(g => (g.issues?.length ?? 0) > 0)
-  const selectableGroups = issueGroups.filter(g => (g.issues?.length ?? 0) > 0)
-  const selectedGroup = selectableGroups.find(g => g.id === form.domainId)
-  const selectedGroupIssues = selectedGroup?.issues ?? []
+  // Category-driven resolution returns a single group (the asset's category
+  // issues, or the Common Issues fallback when the category has no links).
+  const activeGroup = issueGroups.find(g => (g.issues?.length ?? 0) > 0)
+  const hasIssues = !!activeGroup
+  const selectedGroupIssues = activeGroup?.issues ?? []
 
   function set(f: string, v: string) { setForm(p => ({ ...p, [f]: v })) }
 
@@ -107,22 +108,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
     return parts.join(' — ')
   }
 
-  function handleDomainChange(groupId: string) {
-    setForm(p => {
-      const next = { ...p, domainId: groupId, issueId: '', customIssue: '' }
-      const group = selectableGroups.find(g => g.id === groupId)
-      if (group?.issues?.length) {
-        next.issueId = group.issues[0].id
-        if (group.issues[0].severity) {
-          next.priority = group.issues[0].severity
-          lastAutoPriority.current = group.issues[0].severity
-        }
-        if (!next.title) next.title = buildSuggestedTitle(group, group.issues[0].title)
-      }
-      return next
-    })
-  }
-
   function handleIssueChange(id: string) {
     const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === id)
     const middle = id === OTHER_ISSUE ? 'Other' : (issue?.title ?? '')
@@ -132,7 +117,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         next.priority = issue.severity
         lastAutoPriority.current = issue.severity
       }
-      next.title = buildSuggestedTitle(selectedGroup, middle)
+      next.title = buildSuggestedTitle(activeGroup, middle)
       return next
     })
   }
@@ -140,7 +125,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
   function handleCustomIssueChange(v: string) {
     setForm(p => {
       const next = { ...p, customIssue: v }
-      next.title = buildSuggestedTitle(selectedGroup, v ? `Other: ${v}` : 'Other')
+      next.title = buildSuggestedTitle(activeGroup, v ? `Other: ${v}` : 'Other')
       return next
     })
   }
@@ -157,7 +142,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       const next = { ...p, assetId: id, location: id ? (asset?.location?.path ?? asset?.location?.name ?? '') : '' }
       const issue = issueGroups.flatMap(g => g.issues ?? []).find(i => i.id === p.issueId)
       const middle = p.issueId === OTHER_ISSUE ? (p.customIssue ? `Other: ${p.customIssue}` : 'Other') : (issue?.title ?? '')
-      next.title = buildSuggestedTitle(selectedGroup, middle)
+      next.title = buildSuggestedTitle(activeGroup, middle)
       return next
     })
   }
@@ -210,11 +195,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       setSaving(false)
       return
     }
-    if (hasIssues && !form.domainId) {
-      setError('Please select a domain for your request')
-      setSaving(false)
-      return
-    }
     if (hasIssues && !form.issueId) {
       setError('Please select an issue for your request')
       setSaving(false)
@@ -241,7 +221,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
         dueDate: form.desiredDate || undefined,
         downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : undefined,
         issueId: form.issueId === OTHER_ISSUE ? undefined : (form.issueId || undefined),
-        domainId: form.domainId && !selectedGroup?.isFallback ? form.domainId : undefined,
         customIssue: form.issueId === OTHER_ISSUE ? form.customIssue.trim() : undefined,
         teamId: form.teamId,
         attachments: attachments.length > 0 ? attachments : undefined,
@@ -290,7 +269,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Request title <span className="text-red-500">*</span></label>
-              <input type="text" value={form.title} readOnly className="input-field bg-gray-50" placeholder="Auto-generated after selecting domain & issue" />
+              <input type="text" value={form.title} readOnly className="input-field bg-gray-50" placeholder="Auto-generated after selecting the issue" />
               <p className="text-[11px] text-gray-400 mt-1">Auto-generated from your selections.</p>
             </div>
             <div>
@@ -316,44 +295,37 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Domain / Nature <span className="text-red-500">*</span></label>
-              <select value={form.domainId} onChange={e => handleDomainChange(e.target.value)} className="input-field" disabled={!hasIssues}>
-                <option value="">{issuesLoading ? 'Loading…' : 'Select the domain'}</option>
-                {selectableGroups.map(g => (
-                  <option key={g.id} value={g.id}>{g.isFallback ? 'Common Issues' : g.name}</option>
-                ))}
-              </select>
-              {form.domainId && selectedGroup && (
-                <>
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
-                    <select
-                      value={form.issueId}
-                      onChange={e => handleIssueChange(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select the issue</option>
-                      {selectedGroupIssues.map(i => (
-                        <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
-                      ))}
-                      <option value={OTHER_ISSUE}>Other (type manually)</option>
-                    </select>
-                  </div>
-                  {form.issueId === OTHER_ISSUE && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Describe the issue <span className="text-red-500">*</span></label>
-                      <textarea
-                        value={form.customIssue}
-                        onChange={e => handleCustomIssueChange(e.target.value)}
-                        className="input-field resize-none"
-                        rows={2}
-                        placeholder="e.g. Pump is vibrating badly"
-                      />
-                    </div>
-                  )}
-                </>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
+              {activeGroup && (
+                <div className="mb-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">
+                  {domainLabel(activeGroup)}
+                </div>
               )}
-              <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? This helps the maintenance team triage faster. Priority is suggested from the issue severity.</p>
+              <select
+                value={form.issueId}
+                onChange={e => handleIssueChange(e.target.value)}
+                className="input-field"
+                disabled={!hasIssues}
+              >
+                <option value="">{issuesLoading ? 'Loading…' : hasIssues ? 'Select the issue' : 'No issues configured'}</option>
+                {selectedGroupIssues.map(i => (
+                  <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
+                ))}
+                <option value={OTHER_ISSUE}>Other (type manually)</option>
+              </select>
+              {form.issueId === OTHER_ISSUE && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Describe the issue <span className="text-red-500">*</span></label>
+                  <textarea
+                    value={form.customIssue}
+                    onChange={e => handleCustomIssueChange(e.target.value)}
+                    className="input-field resize-none"
+                    rows={2}
+                    placeholder="e.g. Pump is vibrating badly"
+                  />
+                </div>
+              )}
+              <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? Issues are suggested from the asset's category. Priority is suggested from the issue severity.</p>
             </div>
             {currentUser && (
               <div>

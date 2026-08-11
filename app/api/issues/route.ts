@@ -6,13 +6,14 @@ import { IssueService } from '@/lib/services/issue-service'
 import { z } from 'zod'
 
 const createSchema = z.object({
-  code:      z.string().optional().default(''),
-  title:     z.string().min(1, 'Title is required'),
-  domainIds: z.array(z.string()),
-  severity:  z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
-  isGlobal:  z.boolean().optional().default(false),
-}).refine((data) => data.domainIds.length > 0 || data.isGlobal, {
-  message: 'Select at least one domain, or mark as a global issue',
+  code:       z.string().optional().default(''),
+  title:      z.string().min(1, 'Title is required'),
+  domainIds:  z.array(z.string()).optional().default([]),
+  categoryIds: z.array(z.string()).optional().default([]),
+  severity:   z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
+  isGlobal:   z.boolean().optional().default(false),
+}).refine((data) => data.categoryIds.length > 0 || data.isGlobal, {
+  message: 'Select at least one category, or mark as a global issue',
 })
 
 export async function GET(request: NextRequest) {
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
         orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
         include: {
           domains: { include: { domain: true } },
+          categories: { include: { category: true } },
           _count:  { select: { workOrders: true } },
         },
       })
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const body = await request.json()
-    let { code, title, domainIds, severity, isGlobal } = createSchema.parse(body)
+    let { code, title, domainIds, categoryIds, severity, isGlobal } = createSchema.parse(body)
 
     if (!code || code.trim() === '') {
       const count = await prisma.issue.count()
@@ -102,13 +104,19 @@ export async function POST(request: NextRequest) {
         severity,
         isGlobal,
         ...(isGlobal ? {} : {
+          categories: {
+            create: categoryIds.map(categoryId => ({ categoryId })),
+          },
+        }),
+        ...(domainIds.length > 0 ? {
           domains: {
             create: domainIds.map(domainId => ({ domainId })),
           },
-        }),
+        } : {}),
       },
       include: {
         domains: { include: { domain: true } },
+        categories: { include: { category: true } },
         _count:  { select: { workOrders: true } },
       },
     })

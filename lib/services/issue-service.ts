@@ -20,24 +20,66 @@ interface GetIssuesOptions {
 }
 
 /**
- * Resolve the domains for an asset.
- * Domains come from the asset's own many-to-many links; assets without
- * domains have none (caller falls back to global issues).
+ * Resolve the category chain for an asset (its category + every ancestor up to
+ * the root). Category-driven issue resolution uses this whole chain so issues
+ * linked to a parent category (e.g. "Utilities") apply to child categories
+ * (e.g. "Utilities → Boiler").
  */
-export async function resolveDomainsForAsset(assetId: string): Promise<string[]> {
+export async function resolveCategoryChainForAsset(assetId: string): Promise<string[]> {
   const asset = await prisma.asset.findUnique({
     where: { id: assetId },
-    select: {
-      domains: {
-        where: { domain: { isActive: true } },
-        select: { domainId: true },
-      },
+    select: { categoryId: true },
+  })
+  return resolveCategoryChain(asset?.categoryId ?? null)
+}
+
+/**
+ * Resolve the category chain for a single category id, walking `parentId` up to
+ * the root. Returns an empty array when no category is given.
+ */
+export async function resolveCategoryChain(categoryId: string | null | undefined): Promise<string[]> {
+  if (!categoryId) return []
+
+  const allCategories = await prisma.assetCategory.findMany({
+    select: { id: true, parentId: true },
+  })
+  const byId = new Map(allCategories.map(c => [c.id, c]))
+
+  const chain: string[] = []
+  let current: string | null = categoryId
+  const seen = new Set<string>()
+  while (current && !seen.has(current)) {
+    seen.add(current)
+    chain.push(current)
+    current = byId.get(current)?.parentId ?? null
+  }
+  return chain
+}
+
+/**
+ * Build the "Common Issues" fallback group from active global issues.
+ */
+async function getCommonIssuesGroup(options?: GetIssuesOptions): Promise<IssueGroup> {
+  const issues = await prisma.issue.findMany({
+    where: {
+      isActive: true,
+      isGlobal: true,
+      ...(await buildIssueQuery(options)),
     },
+    orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
   })
 
-  if (!asset) return []
-
-  return asset.domains.map(d => d.domainId)
+  return {
+    id: '__global__',
+    name: 'Common Issues',
+    isFallback: true,
+    issues: issues.map(i => ({
+      id: i.id,
+      code: i.code,
+      title: i.title,
+      severity: i.severity,
+    })),
+  }
 }
 
 async function buildIssueQuery(options?: GetIssuesOptions) {
@@ -52,147 +94,121 @@ async function buildIssueQuery(options?: GetIssuesOptions) {
 }
 
 /**
- * Build every active domain's issue group, plus a trailing "Common Issues"
- * (global) group. Domains whose id is in `recommendedIds` are returned first
- * and flagged so the UI can mark them as recommended for the selected asset.
- * Domains with no active issues are omitted.
+ * Resolve active issues linked to any category in the chain. Deduplicated and
+ * ordered by the issue's sortOrder then title.
  */
-async function getAllDomainGroups(
-  recommendedIds: Set<string> = new Set(),
+async function getIssuesForCategoryChain(
+  categoryIds: string[],
   options?: GetIssuesOptions
-): Promise<IssueGroup[]> {
-  const [domains, globalIssues] = await Promise.all([
-    prisma.maintenanceDomain.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-      include: {
-        issues: {
-          where: { issue: { isActive: true, ...(await buildIssueQuery(options)) } },
-          include: { issue: true },
-          orderBy: { issue: { sortOrder: 'asc' } },
-        },
-      },
-    }),
-    prisma.issue.findMany({
-      where: {
-        isActive: true,
-        isGlobal: true,
-        ...(await buildIssueQuery(options)),
-      },
-      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-    }),
-  ])
+): Promise<IssueItem[]> {
+  if (categoryIds.length === 0) return []
 
-  const toGroup = (domain: (typeof domains)[number], recommended: boolean): IssueGroup => ({
-    id: domain.id,
-    name: domain.name,
-    recommended,
-    issues: domain.issues.map(l => ({
-      id: l.issue.id,
-      code: l.issue.code,
-      title: l.issue.title,
-      severity: l.issue.severity,
-    })),
+  const links = await prisma.issueCategory.findMany({
+    where: {
+      categoryId: { in: categoryIds },
+      issue: { isActive: true, ...(await buildIssueQuery(options)) },
+    },
+    include: { issue: true },
   })
 
-  const withIssues = domains.filter(d => d.issues.length > 0)
-
-  const groups: IssueGroup[] = [
-    ...withIssues.filter(d => recommendedIds.has(d.id)).map(d => toGroup(d, true)),
-    ...withIssues.filter(d => !recommendedIds.has(d.id)).map(d => toGroup(d, false)),
-  ]
-
-  if (globalIssues.length > 0) {
-    groups.push({
-      id: '__global__',
-      name: 'Common Issues',
-      isFallback: true,
-      issues: globalIssues.map(i => ({
-        id: i.id,
-        code: i.code,
-        title: i.title,
-        severity: i.severity,
-      })),
+  const seen = new Set<string>()
+  const items: IssueItem[] = []
+  for (const link of links) {
+    if (seen.has(link.issueId)) continue
+    seen.add(link.issueId)
+    items.push({
+      id: link.issue.id,
+      code: link.issue.code,
+      title: link.issue.title,
+      severity: link.issue.severity,
     })
   }
+  items.sort((a, b) => a.title.localeCompare(b.title))
+  return items
+}
 
-  return groups
+/**
+ * Resolve the leaf category name (used as the picker group label).
+ */
+async function getCategoryName(categoryId: string | null | undefined): Promise<string | null> {
+  if (!categoryId) return null
+  const category = await prisma.assetCategory.findUnique({
+    where: { id: categoryId },
+    select: { name: true },
+  })
+  return category?.name ?? null
+}
+
+async function resolveGroupForChain(
+  categoryIds: string[],
+  leafCategoryId: string | null | undefined,
+  options?: GetIssuesOptions
+): Promise<IssueGroup[]> {
+  const issues = await getIssuesForCategoryChain(categoryIds, options)
+  if (issues.length === 0) {
+    return [await getCommonIssuesGroup(options)]
+  }
+  const name = (await getCategoryName(leafCategoryId)) ?? 'Category Issues'
+  return [{ id: leafCategoryId ?? categoryIds[0], name, issues }]
 }
 
 export const IssueService = {
 
   /**
-   * Issues for a category-scoped context. Categories are classification only
-   * (no domain links), so all domains are offered without any recommendation.
-   * Kept for the /api/issues?categoryId= contract (the WO form passes '').
+   * Issues for a category-scoped context (WO form when no asset is selected).
+   * Resolves issues from the category chain; falls back to Common Issues when
+   * the category has no linked issues (unknown/empty category → Common Issues).
    */
   async getIssuesForCategory(
-    _categoryId: string | null | undefined,
+    categoryId: string | null | undefined,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
-    return getAllDomainGroups(new Set(), options)
+    const chain = await resolveCategoryChain(categoryId)
+    return resolveGroupForChain(chain, categoryId, options)
   },
 
   /**
-   * Resolve available issues for a given asset.
-   * Returns every active domain's issues, with the asset's own linked domains
-   * flagged as recommended and listed first, followed by all other domains
-   * and finally common (global) issues.
+   * Resolve available issues for a given asset, based on the asset's category
+   * chain (its category plus ancestors). Falls back to global Common Issues
+   * when the chain has no linked issues or the asset has no category.
    */
   async getIssuesForAsset(
     assetId: string,
     options?: GetIssuesOptions
   ): Promise<IssueGroup[]> {
-    const domainIds = await resolveDomainsForAsset(assetId)
-    return getAllDomainGroups(new Set(domainIds), options)
+    const chain = await resolveCategoryChainForAsset(assetId)
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { categoryId: true },
+    })
+    return resolveGroupForChain(chain, asset?.categoryId, options)
   },
 
   /**
-   * Fallback: return global active issues when the asset has no domains.
+   * Fallback: return the global Common Issues group (used when there is no
+   * category scope at all).
    */
   async getFallbackIssues(options?: GetIssuesOptions): Promise<IssueGroup[]> {
-    const issues = await prisma.issue.findMany({
-      where: {
-        isActive: true,
-        isGlobal: true,
-        ...(await buildIssueQuery(options)),
-      },
-      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-    })
-
-    return [{
-      id: '__global__',
-      name: 'Common Issues',
-      isFallback: true,
-      issues: issues.map(i => ({
-        id: i.id,
-        code: i.code,
-        title: i.title,
-        severity: i.severity,
-      })),
-    }]
+    return [await getCommonIssuesGroup(options)]
   },
 
   /**
-   * All active issues grouped by domain, plus a "Common Issues" (global) group.
-   * Used by the requester request form where there is no asset category scope.
-   * When `recommendedAssetId` is provided, that asset's linked domains are
-   * flagged as recommended and shown first.
+   * Requester form contract (`scope=request`). When `recommendedAssetId` is
+   * provided, resolves issues from that asset's category chain; otherwise
+   * returns the global Common Issues group.
    */
   async getAllIssues(
     options?: GetIssuesOptions & { recommendedAssetId?: string }
   ): Promise<IssueGroup[]> {
-    const recommendedIds = new Set<string>()
     if (options?.recommendedAssetId) {
-      const ids = await resolveDomainsForAsset(options.recommendedAssetId)
-      ids.forEach(id => recommendedIds.add(id))
+      return this.getIssuesForAsset(options.recommendedAssetId, options)
     }
-    return getAllDomainGroups(recommendedIds, options)
+    return [await getCommonIssuesGroup(options)]
   },
 
   /**
-   * Validate that an issue is available for the given asset.
-   * Returns valid=true if the issue is in the resolved set.
+   * Validate that an issue is available for the given asset: the issue must be
+   * global OR linked to a category inside the asset's category chain.
    * This is a soft check — it does not block, it just reports.
    */
   async validateIssueForAsset(
@@ -201,37 +217,23 @@ export const IssueService = {
   ): Promise<{ valid: boolean }> {
     if (!assetId) return { valid: true }
 
-    const domainIds = await resolveDomainsForAsset(assetId)
-    if (domainIds.length === 0) {
-      const issue = await prisma.issue.findFirst({
-        where: { id: issueId, isActive: true, isGlobal: true },
-      })
-      return { valid: !!issue }
-    }
-
-    // Domains exist but have no active issues → fall back to global check
-    const activeIssueCount = await prisma.issueDomain.count({
-      where: {
-        domainId: { in: domainIds },
-        issue: { isActive: true },
-      },
-    })
-    if (activeIssueCount === 0) {
-      const issue = await prisma.issue.findFirst({
-        where: { id: issueId, isActive: true, isGlobal: true },
-      })
-      return { valid: !!issue }
-    }
-
-    const link = await prisma.issueDomain.findFirst({
-      where: {
-        issueId,
-        domainId: { in: domainIds },
-        issue: { isActive: true },
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      select: {
+        id: true,
+        isActive: true,
+        isGlobal: true,
+        categories: { select: { categoryId: true } },
       },
     })
 
-    return { valid: !!link }
+    if (!issue || !issue.isActive) return { valid: false }
+    if (issue.isGlobal) return { valid: true }
+
+    const chain = await resolveCategoryChainForAsset(assetId)
+    if (chain.length === 0) return { valid: false }
+
+    return { valid: issue.categories.some(c => chain.includes(c.categoryId)) }
   },
 
   /**
@@ -241,16 +243,14 @@ export const IssueService = {
     const [
       totalIssues,
       activeIssues,
-      totalDomains,
-      activeDomains,
-      issueDomainCounts,
+      totalCategories,
+      issueCategoryCounts,
       woLinkedIssues,
     ] = await Promise.all([
       prisma.issue.count(),
       prisma.issue.count({ where: { isActive: true } }),
-      prisma.maintenanceDomain.count(),
-      prisma.maintenanceDomain.count({ where: { isActive: true } }),
-      prisma.maintenanceDomain.findMany({
+      prisma.assetCategory.count(),
+      prisma.assetCategory.findMany({
         select: { id: true, name: true, _count: { select: { issues: true } } },
         orderBy: { name: 'asc' },
       }),
@@ -262,8 +262,8 @@ export const IssueService = {
       }),
     ])
 
-    const domainsWithIssues = issueDomainCounts.filter(d => d._count.issues > 0)
-    const domainsWithoutIssues = issueDomainCounts.filter(d => d._count.issues === 0)
+    const categoriesWithIssues = issueCategoryCounts.filter(c => c._count.issues > 0)
+    const categoriesWithoutIssues = issueCategoryCounts.filter(c => c._count.issues === 0)
     const globalIssues = await prisma.issue.count({ where: { isGlobal: true, isActive: true } })
     const inactiveIssues = await prisma.issue.count({ where: { isActive: false } })
     const issuesUnused = await prisma.issue.count({
@@ -278,11 +278,10 @@ export const IssueService = {
         globalIssues,
         issuesUnusedInWorkOrders: issuesUnused,
       },
-      domains: {
-        total: totalDomains,
-        active: activeDomains,
-        withIssues: domainsWithIssues.length,
-        withoutIssues: domainsWithoutIssues.map(d => ({ id: d.id, name: d.name })),
+      categories: {
+        total: totalCategories,
+        withIssues: categoriesWithIssues.length,
+        withoutIssues: categoriesWithoutIssues.map(c => ({ id: c.id, name: c.name })),
       },
       mostUsedIssues: woLinkedIssues.map(i => ({
         id: i.id,

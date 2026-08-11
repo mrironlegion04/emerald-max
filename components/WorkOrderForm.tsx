@@ -21,7 +21,7 @@ interface WOFormData {
   selectedAssetIds: string[]
   failedComponentId: string
   assignedToId: string; teamId: string; laborHours: string; laborCost: string; partsCost: string
-  notes: string; issueId: string; customIssue: string; domainId: string;
+  notes: string; issueId: string; customIssue: string;
   customFields: Record<string, any> | null
   woCategoryId: string
   downtimeStartedAt: string
@@ -81,7 +81,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     notes:          initialData?.notes          ?? '',
     issueId:        initialData?.customIssue    ? OTHER_ISSUE : (initialData?.issueId ?? ''),
     customIssue:    initialData?.customIssue    ?? '',
-    domainId:       initialData?.domainId       ?? '',
     customFields:   (initialData as any)?.customFields ?? null,
     woCategoryId:   (initialData as any)?.woCategoryId ?? '',
     downtimeStartedAt: (initialData as any)?.downtimeStartedAt
@@ -144,7 +143,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     if (type === 'ASSET') {
       setForm(prev => ({ ...prev, locationId: '', locationScope: 'GENERAL', selectedAssetIds: [] }))
     } else {
-      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '', domainId: '', failedComponentId: '' }))
+      setForm(prev => ({ ...prev, assetId: '', issueId: '', customIssue: '', failedComponentId: '' }))
     }
   }
 
@@ -223,32 +222,10 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     })
   }
 
-  const selectableGroups = issueGroups.filter(g => (g.issues?.length ?? 0) > 0)
-  const selectedGroup = selectableGroups.find(g => g.id === form.domainId)
-  // Keep an existing (e.g. team-derived or previously saved) domain selectable even when it has no issues in the current asset scope.
-  const domainOptions = (() => {
-    const options = [...selectableGroups]
-    if (form.domainId && !options.some(g => g.id === form.domainId)) {
-      options.unshift({ id: form.domainId, name: 'Current domain', issues: [], isFallback: false })
-    }
-    return options
-  })()
-  const selectedGroupIssues = selectedGroup?.issues ?? []
-
-  function handleDomainChange(groupId: string) {
-    setForm(prev => {
-      const next = { ...prev, domainId: groupId, issueId: '', customIssue: '' }
-      const group = selectableGroups.find(g => g.id === groupId)
-      if (group?.issues?.length) {
-        next.issueId = group.issues[0].id
-        if (group.issues[0].severity) {
-          next.priority = group.issues[0].severity
-          lastAutoPriority.current = group.issues[0].severity
-        }
-      }
-      return next
-    })
-  }
+  // Category-driven resolution returns a single group (the asset's category
+  // issues, or the Common Issues fallback when the category has no links).
+  const activeGroup = issueGroups.find(g => (g.issues?.length ?? 0) > 0)
+  const selectedGroupIssues = activeGroup?.issues ?? []
 
   function handleIssueChange(id: string) {
     const issue = issueGroups.flatMap(g => g.issues).find(i => i.id === id)
@@ -329,12 +306,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
           setSaving(false)
           return
         }
-        if (selectableGroups.length > 0 && !form.domainId) {
-          setError('Please select a domain / nature for the work order')
-          setSaving(false)
-          return
-        }
-        if (selectableGroups.length > 0 && !form.issueId) {
+        if (activeGroup && !form.issueId) {
           setError('Please select an issue for the work order')
           setSaving(false)
           return
@@ -390,7 +362,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         notes:        form.notes          || null,
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
-        domainId:     form.domainId && !selectedGroup?.isFallback ? form.domainId : null,
         customFields: form.customFields,
         woCategoryId: form.woCategoryId || null,
         downtimeStartedAt: form.type === 'BREAKDOWN' && form.downtimeStartedAt
@@ -656,52 +627,39 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
           {issueGroups.length > 0 ? (
             <>
+              {activeGroup && (
+                <div className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">
+                  {activeGroup.isFallback ? 'Common Issues' : activeGroup.name}
+                </div>
+              )}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Domain / Nature</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue</label>
                 <select
-                  value={form.domainId}
-                  onChange={e => handleDomainChange(e.target.value)}
+                  value={form.issueId}
+                  onChange={e => handleIssueChange(e.target.value)}
                   className="input-field text-xs sm:text-sm bg-white"
-                  disabled={loadingIssues}
+                  disabled={loadingIssues || !activeGroup}
                 >
-                  <option value="">Select the domain</option>
-                  {domainOptions.map(g => (
-                    <option key={g.id} value={g.id}>{g.isFallback ? 'Common Issues' : g.name}</option>
+                  <option value="">{loadingIssues ? 'Loading…' : activeGroup ? 'Select the issue' : 'No issues configured'}</option>
+                  {selectedGroupIssues.map(i => (
+                    <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
                   ))}
+                  <option value={OTHER_ISSUE}>Other (type manually)</option>
                 </select>
               </div>
 
-              {form.domainId && selectedGroup && (
-                <>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue</label>
-                    <select
-                      value={form.issueId}
-                      onChange={e => handleIssueChange(e.target.value)}
-                      className="input-field text-xs sm:text-sm bg-white"
-                    >
-                      <option value="">Select the issue</option>
-                      {selectedGroupIssues.map(i => (
-                        <option key={i.id} value={i.id}>{i.title} ({i.code})</option>
-                      ))}
-                      <option value={OTHER_ISSUE}>Other (type manually)</option>
-                    </select>
-                  </div>
-
-                  {form.issueId === OTHER_ISSUE && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Describe the issue</label>
-                      <input
-                        type="text"
-                        value={form.customIssue}
-                        onChange={e => set('customIssue', e.target.value)}
-                        placeholder="Describe the issue..."
-                        className="input-field text-xs sm:text-sm bg-white"
-                        autoFocus
-                      />
-                    </div>
-                  )}
-                </>
+              {form.issueId === OTHER_ISSUE && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Describe the issue</label>
+                  <input
+                    type="text"
+                    value={form.customIssue}
+                    onChange={e => set('customIssue', e.target.value)}
+                    placeholder="Describe the issue..."
+                    className="input-field text-xs sm:text-sm bg-white"
+                    autoFocus
+                  />
+                </div>
               )}
             </>
           ) : !loadingIssues ? (

@@ -1,19 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, AlertCircle, X, Check, Tag, Search, Globe, EyeOff, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle, X, Check, Search, Tag, Globe, EyeOff, LayoutGrid } from 'lucide-react'
 
-interface Domain { id: string; name: string; description?: string | null }
+interface Category { id: string; name: string; parentId?: string | null; _count?: { issues: number } }
+interface IssueCategoryLink { category: Category }
 interface Issue {
   id: string; code: string; title: string
   severity?: string
   isActive?: boolean
   isGlobal?: boolean
   sortOrder?: number
-  domains: { domain: Domain }[]
+  categories?: IssueCategoryLink[]
   _count?: { workOrders: number }
 }
-interface Props { initialIssues: Issue[]; domains: Domain[] }
+interface Props { initialIssues: Issue[]; categories: Category[] }
 
 const severityStyles: Record<string, string> = {
   CRITICAL: 'bg-red-50 text-red-700 border-red-200/60',
@@ -22,42 +23,47 @@ const severityStyles: Record<string, string> = {
   LOW:      'bg-slate-100 text-slate-700 border-slate-200/50',
 }
 
-export default function IssueManager({ initialIssues, domains }: Props) {
+export default function IssueManager({ initialIssues, categories }: Props) {
   const [issues, setIssues] = useState<Issue[]>(initialIssues)
   const [search, setSearch] = useState('')
-  const [filterDomainId, setFilterDomainId] = useState('')
+  const [filterCategoryId, setFilterCategoryId] = useState('')
   const [filterLoading, setFilterLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formCode, setFormCode] = useState('')
   const [formTitle, setFormTitle] = useState('')
-  const [formDomainIds, setFormDomainIds] = useState<string[]>([])
+  const [formCategoryIds, setFormCategoryIds] = useState<string[]>([])
   const [formSeverity, setFormSeverity] = useState('MEDIUM')
   const [formIsGlobal, setFormIsGlobal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
 
-  // Fetch from API when search or domain filter changes
+  const isGlobalFilterActive = filterCategoryId === '__global__'
+
+  // Fetch from API when search or global filter changes; category filtering
+  // happens client-side since the picker endpoints own the categoryId param.
   useEffect(() => {
-    if (!search.trim() && !filterDomainId) {
+    if (!search.trim() && !filterCategoryId && !isGlobalFilterActive) {
       setIssues(initialIssues)
       return
     }
     setFilterLoading(true)
     const params = new URLSearchParams()
     if (search.trim()) params.set('search', search.trim())
-    if (filterDomainId === '__global__') {
-      params.set('isGlobal', 'true')
-    } else if (filterDomainId) {
-      params.set('domainId', filterDomainId)
-    }
+    if (isGlobalFilterActive) params.set('isGlobal', 'true')
     fetch(`/api/issues?${params}`)
       .then(r => r.json())
-      .then((data: Issue[]) => setIssues(data))
+      .then((data: Issue[]) => {
+        let list = Array.isArray(data) ? data : []
+        if (filterCategoryId) {
+          list = list.filter(i => i.categories?.some(c => c.category.id === filterCategoryId))
+        }
+        setIssues(list)
+      })
       .catch(() => {})
       .finally(() => setFilterLoading(false))
-  }, [search, filterDomainId, initialIssues])
+  }, [search, filterCategoryId, isGlobalFilterActive, initialIssues])
 
   function generateNextCode() {
     let maxNum = 0
@@ -72,48 +78,48 @@ export default function IssueManager({ initialIssues, domains }: Props) {
     return `ISS-${String(nextNum).padStart(3, '0')}`
   }
 
-  function openAdd() { 
+  function openAdd() {
     setEditingId(null)
     setFormCode(generateNextCode())
     setFormTitle('')
-    setFormDomainIds([])
+    setFormCategoryIds([])
     setFormSeverity('MEDIUM')
     setFormIsGlobal(false)
     setError('')
-    setShowForm(true) 
+    setShowForm(true)
   }
-  
-  function openEdit(i: Issue) { 
+
+  function openEdit(i: Issue) {
     setEditingId(i.id)
     setFormCode(i.code)
     setFormTitle(i.title)
-    setFormDomainIds(i.domains.map(d => d.domain.id))
+    setFormCategoryIds(i.categories?.map(c => c.category.id) ?? [])
     setFormSeverity(i.severity ?? 'MEDIUM')
     setFormIsGlobal(i.isGlobal ?? false)
     setError('')
-    setShowForm(true) 
+    setShowForm(true)
   }
-  
-  function cancel() { 
+
+  function cancel() {
     setShowForm(false)
     setEditingId(null)
     setFormCode('')
     setFormTitle('')
-    setFormDomainIds([])
+    setFormCategoryIds([])
     setFormSeverity('MEDIUM')
     setFormIsGlobal(false)
-    setError('') 
+    setError('')
   }
-  
-  function toggleDomain(id: string) { 
-    setFormDomainIds(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]) 
+
+  function toggleCategory(id: string) {
+    setFormCategoryIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (formDomainIds.length === 0 && !formIsGlobal) { 
-      setError('Select at least one domain or mark this issue as Global')
-      return 
+    if (formCategoryIds.length === 0 && !formIsGlobal) {
+      setError('Select at least one category or mark this issue as Global')
+      return
     }
     setLoading(true)
     setError('')
@@ -122,12 +128,12 @@ export default function IssueManager({ initialIssues, domains }: Props) {
       const res = await fetch(isEdit ? `/api/issues/${editingId}` : '/api/issues', {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          code: formCode.trim(), 
-          title: formTitle.trim(), 
-          domainIds: formDomainIds, 
-          severity: formSeverity, 
-          isGlobal: formIsGlobal 
+        body: JSON.stringify({
+          code: formCode.trim(),
+          title: formTitle.trim(),
+          categoryIds: formCategoryIds,
+          severity: formSeverity,
+          isGlobal: formIsGlobal,
         }),
       })
       const data = await res.json()
@@ -177,14 +183,14 @@ export default function IssueManager({ initialIssues, domains }: Props) {
 
         {/* Dropdown Filters and Action Button */}
         <div className="flex flex-wrap items-center gap-3">
-          <select 
-            value={filterDomainId} 
-            onChange={e => setFilterDomainId(e.target.value)} 
+          <select
+            value={filterCategoryId}
+            onChange={e => setFilterCategoryId(e.target.value)}
             className="input-field text-sm w-full sm:w-48 bg-white"
           >
-            <option value="">All Domains</option>
+            <option value="">All Categories</option>
             <option value="__global__">🌐 Global Issues Only</option>
-            {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
 
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200/50 flex-shrink-0">
@@ -204,7 +210,7 @@ export default function IssueManager({ initialIssues, domains }: Props) {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-[100] flex justify-end animate-in fade-in duration-200">
           {/* Backdrop Click */}
           <div className="absolute inset-0" onClick={cancel} />
-          
+
           <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
             <form onSubmit={handleSubmit} className="flex flex-col h-full">
               {/* Header */}
@@ -215,9 +221,9 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                     {editingId ? 'Edit Troubleshooting Issue' : 'Create Troubleshooting Issue'}
                   </h3>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={cancel} 
+                <button
+                  type="button"
+                  onClick={cancel}
                   className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -236,22 +242,22 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Code <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
-                      value={formCode} 
-                      onChange={e => setFormCode(e.target.value)} 
-                      className="input-field font-mono font-semibold" 
-                      placeholder="e.g., HYD-001" 
-                      required 
-                      autoFocus 
+                    <input
+                      type="text"
+                      value={formCode}
+                      onChange={e => setFormCode(e.target.value)}
+                      className="input-field font-mono font-semibold"
+                      placeholder="e.g., HYD-001"
+                      required
+                      autoFocus
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Severity Level</label>
-                    <select 
-                      value={formSeverity} 
-                      onChange={e => setFormSeverity(e.target.value)} 
+                    <select
+                      value={formSeverity}
+                      onChange={e => setFormSeverity(e.target.value)}
                       className="input-field bg-white"
                     >
                       <option value="LOW">Low Status</option>
@@ -261,30 +267,18 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue Title <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
-                      value={formTitle} 
-                      onChange={e => setFormTitle(e.target.value)} 
-                      className="input-field" 
-                      placeholder="e.g., Oil leakage around lower master cylinder valves" 
-                      required 
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Applicable Maintenance Domains <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Applicable Categories <span className="text-red-500">*</span></label>
                       <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input 
-                          type="checkbox" 
-                          checked={formIsGlobal} 
+                        <input
+                          type="checkbox"
+                          checked={formIsGlobal}
                           onChange={e => {
                             setFormIsGlobal(e.target.checked)
-                            if (e.target.checked) setFormDomainIds([])
-                          }} 
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20" 
+                            if (e.target.checked) setFormCategoryIds([])
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
                         />
                         <span className="text-xs font-semibold text-slate-600">Mark as Global Issue</span>
                       </label>
@@ -292,24 +286,24 @@ export default function IssueManager({ initialIssues, domains }: Props) {
 
                     {!formIsGlobal ? (
                       <div className="bg-white border border-slate-200 rounded-xl p-3 max-h-40 overflow-y-auto">
-                        {domains.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic">No domains configured. Register domains first under Domain Settings.</p>
+                        {categories.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No asset categories configured. Add categories under Assets &gt; Categories.</p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
-                            {domains.map(d => {
-                              const active = formDomainIds.includes(d.id)
+                            {categories.map(c => {
+                              const active = formCategoryIds.includes(c.id)
                               return (
-                                <button 
-                                  key={d.id} 
-                                  type="button" 
-                                  onClick={() => toggleDomain(d.id)}
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => toggleCategory(c.id)}
                                   className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
-                                    active 
-                                      ? 'bg-blue-600 border-blue-600 text-white shadow-3xs' 
+                                    active
+                                      ? 'bg-blue-600 border-blue-600 text-white shadow-3xs'
                                       : 'bg-white border-slate-250 text-slate-700 hover:border-slate-400 hover:bg-slate-50'
                                   }`}
                                 >
-                                  {d.name}
+                                  {c.name}
                                 </button>
                               )
                             })}
@@ -319,9 +313,21 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                     ) : (
                       <div className="bg-slate-100/50 rounded-xl p-3 text-xs text-slate-500 flex items-center gap-2 border border-slate-200/50">
                         <Globe className="w-4 h-4 text-slate-400" />
-                        <span>Global issues represent un-scoped malfunctions and will bypass category restrictions.</span>
+                        <span>Global issues represent un-scoped malfunctions and are offered as Common Issues fallback.</span>
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue Title <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={formTitle}
+                      onChange={e => setFormTitle(e.target.value)}
+                      className="input-field"
+                      placeholder="e.g., Oil leakage around lower master cylinder valves"
+                      required
+                    />
                   </div>
                 </div>
               </div>
@@ -352,14 +358,14 @@ export default function IssueManager({ initialIssues, domains }: Props) {
           <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
             <LayoutGrid className="w-6 h-6 text-blue-600" />
           </div>
-          <p className="text-slate-700 font-bold text-base">{search || filterDomainId ? 'No matching issues on this filter' : 'Fault library is empty'}</p>
+          <p className="text-slate-700 font-bold text-base">{search || filterCategoryId ? 'No matching issues on this filter' : 'Fault library is empty'}</p>
           <p className="text-slate-400 text-sm mt-1 max-w-sm mx-auto">
-            {search || filterDomainId 
-              ? 'Try modifying your search query or setting the Domain filter to "All Domains".' 
+            {search || filterCategoryId
+              ? 'Try modifying your search query or setting the Category filter to "All Categories".'
               : 'Add general issues (like leaks, electrical short, structural crack) that technicians can reference instantly.'}
           </p>
-          {(search || filterDomainId) && (
-            <button onClick={() => { setSearch(''); setFilterDomainId('') }} className="btn-secondary py-1.5 px-3.5 text-xs font-bold mt-4 transition-all">
+          {(search || filterCategoryId) && (
+            <button onClick={() => { setSearch(''); setFilterCategoryId('') }} className="btn-secondary py-1.5 px-3.5 text-xs font-bold mt-4 transition-all">
               Clear Filters
             </button>
           )}
@@ -370,13 +376,13 @@ export default function IssueManager({ initialIssues, domains }: Props) {
             {issues.map(issue => (
               <div key={issue.id} className="relative transition-colors duration-150">
                 <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 hover:bg-slate-50/70 ${!issue.isActive ? 'bg-slate-50/30' : ''} group`}>
-                  
+
                   {/* Issue Info */}
                   <div className="flex items-start gap-3.5 min-w-0 flex-1">
                     <code className="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 flex-shrink-0 self-start mt-0.5 select-all">
                       {issue.code}
                     </code>
-                    
+
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-bold text-sm text-slate-800 tracking-tight leading-snug">{issue.title}</span>
@@ -392,7 +398,7 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                         )}
                       </div>
 
-                      {/* Display Associated Domains */}
+                      {/* Display Associated Categories */}
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5 md:mt-2">
                         {issue.severity && (
                           <span className={`inline-flex items-center px-2 py-0.5 border text-[10px] font-bold tracking-wider uppercase rounded ${severityStyles[issue.severity] || 'bg-slate-150 text-slate-600 border-slate-200'}`}>
@@ -400,13 +406,13 @@ export default function IssueManager({ initialIssues, domains }: Props) {
                           </span>
                         )}
 
-                        {issue.domains.map(d => (
-                          <span key={d.domain.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/60 font-sans">
-                            {d.domain.name}
+                        {issue.categories?.map(c => (
+                          <span key={c.category.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/60 font-sans">
+                            {c.category.name}
                           </span>
                         ))}
 
-                        {issue.domains.length === 0 && !issue.isGlobal && (
+                        {(issue.categories?.length ?? 0) === 0 && !issue.isGlobal && (
                           <span className="inline-flex items-center text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50 italic">
                             Unassigned
                           </span>

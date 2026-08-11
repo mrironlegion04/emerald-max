@@ -305,7 +305,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                 value={form.issueId}
                 onChange={e => handleIssueChange(e.target.value)}
                 className="input-field"
-                disabled={!hasIssues}
+                disabled={issuesLoading}
               >
                 <option value="">{issuesLoading ? 'Loading…' : hasIssues ? 'Select the issue' : 'No issues configured'}</option>
                 {selectedGroupIssues.map(i => (

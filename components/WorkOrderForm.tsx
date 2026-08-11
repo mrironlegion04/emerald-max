@@ -638,7 +638,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
                   value={form.issueId}
                   onChange={e => handleIssueChange(e.target.value)}
                   className="input-field text-xs sm:text-sm bg-white"
-                  disabled={loadingIssues || !activeGroup}
+                  disabled={loadingIssues}
                 >
                   <option value="">{loadingIssues ? 'Loading…' : activeGroup ? 'Select the issue' : 'No issues configured'}</option>
                   {selectedGroupIssues.map(i => (

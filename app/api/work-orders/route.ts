@@ -355,7 +355,8 @@ export async function POST(request: NextRequest) {
       })
       const assignee = await prisma.user.findUnique({ where: { id: data.assignedToId } })
       if (assignee) {
-        await sendWOAssigned({
+        // Fire-and-forget: don't block the response on SMTP latency.
+        sendWOAssigned({
           toEmail: assignee.email, toName: assignee.name,
           woNumber: wo.woNumber, woTitle: wo.title, woId: wo.id,
           priority: wo.priority, dueDate: wo.dueDate?.toISOString() ?? null,
@@ -369,23 +370,24 @@ export async function POST(request: NextRequest) {
         where: { teamId: data.teamId },
         include: { user: true },
       })
-      for (const member of teamMembers) {
+      await Promise.all(teamMembers.map(async (member) => {
         // Plant isolation: only notify team members whose scope covers this work order
         const memberScope = await getUserLocationIds(member.user.id)
-        if (memberScope && (!wo.locationId || !memberScope.includes(wo.locationId))) continue
+        if (memberScope && (!wo.locationId || !memberScope.includes(wo.locationId))) return
         await createNotification({
           userId: member.user.id,
           title: `WO ${wo.woNumber} Assigned to Your Team`,
           message: wo.title, type: 'WORK_ORDER_ASSIGNED',
           entityId: wo.id, href: `/work-orders/${wo.id}`,
         }).catch(console.error)
-        await sendWOAssigned({
+        // Fire-and-forget: emails must not delay the response.
+        sendWOAssigned({
           toEmail: member.user.email, toName: member.user.name,
           woNumber: wo.woNumber, woTitle: wo.title, woId: wo.id,
           priority: wo.priority, dueDate: wo.dueDate?.toISOString() ?? null,
           assetName: null,
         }).catch(console.error)
-      }
+      }))
     }
 
     return NextResponse.json(wo, { status: 201 })

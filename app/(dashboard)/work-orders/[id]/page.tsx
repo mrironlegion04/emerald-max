@@ -175,6 +175,7 @@ export default async function WorkOrderDetailPage({
               initialLaborCost={wo.laborCost != null ? Number(wo.laborCost) : null}
               initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}
               initialDowntimeEndedAt={wo.downtimeEndedAt?.toISOString() ?? null}
+              initialCategoryId={wo.woCategoryId}
             />
             <SkipPMButton
               woId={wo.id}

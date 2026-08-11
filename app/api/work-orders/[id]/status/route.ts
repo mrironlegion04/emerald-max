@@ -28,6 +28,7 @@ const statusSchema = z.object({
   requestedCompletionNotes: z.string().optional(),
   downtimeStartedAt: z.string().optional(),
   downtimeEndedAt:   z.string().optional(),
+  woCategoryId:      z.string().nullable().optional(),
 })
 
 export async function PATCH(
@@ -43,7 +44,7 @@ export async function PATCH(
     const parsed = statusSchema.parse(body)
     let { status, notes, laborHours, laborCost, startedAt, completedAt,
           requestedCompletionTime, requestedCompletionNotes,
-          downtimeStartedAt, downtimeEndedAt } = parsed
+          downtimeStartedAt, downtimeEndedAt, woCategoryId } = parsed
 
     // Downtime window sanity check: "back up at" must come after "down since"
     if (downtimeStartedAt && downtimeEndedAt &&
@@ -189,8 +190,24 @@ export async function PATCH(
       }
     }
 
-    // Category is required before completing or closing a work order.
-    if ((status === 'COMPLETED' || status === 'CLOSED') && !wo.woCategoryId) {
+    // A work order category is required before completing or closing. Let the
+    // user supply one here so they don't have to leave the page and edit first.
+    let resolvedCategoryId: string | null = wo.woCategoryId
+    if (woCategoryId !== undefined) {
+      if (woCategoryId) {
+        const category = await prisma.workOrderCategory.findUnique({
+          where: { id: woCategoryId },
+          select: { id: true, isActive: true },
+        })
+        if (!category || !category.isActive) {
+          return NextResponse.json({ error: 'Work order category not found' }, { status: 400 })
+        }
+        resolvedCategoryId = woCategoryId
+      } else {
+        resolvedCategoryId = null
+      }
+    }
+    if ((status === 'COMPLETED' || status === 'CLOSED') && !resolvedCategoryId) {
       return NextResponse.json(
         { error: 'A work order category is required before completing or closing' },
         { status: 422 }
@@ -199,6 +216,9 @@ export async function PATCH(
 
     // ===== BUILD UPDATE DATA =====
     const updateData: Record<string, unknown> = { status }
+    if (woCategoryId !== undefined && resolvedCategoryId) {
+      updateData.woCategoryId = resolvedCategoryId
+    }
 
     // Reopen: COMPLETED → OPEN — clear completion/timestamp fields, preserve history
     if (status === 'OPEN' && wo.status === 'COMPLETED') {

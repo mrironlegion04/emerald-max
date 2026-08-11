@@ -126,6 +126,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           initialLaborCost={wo.laborCost ?? null}
           initialDowntimeStartedAt={wo.downtimeStartedAt ?? null}
           initialDowntimeEndedAt={wo.downtimeEndedAt ?? null}
+          initialCategoryId={wo.woCategoryId ?? null}
           onStatusChanged={() => setReloadKey(k => k + 1)}
         />
       </div>

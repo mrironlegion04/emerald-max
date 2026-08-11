@@ -28,7 +28,6 @@ export default async function IssuesPage({
       orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
       include: {
         categories: { include: { category: true } },
-        domains: { include: { domain: true } },
         _count: { select: { workOrders: true } },
       },
       skip,

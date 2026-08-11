@@ -8,7 +8,7 @@ interface Domain {
   name: string
   description?: string | null
   isActive?: boolean
-  _count?: { issues: number; categories: number }
+  _count?: { categories: number }
 }
 
 interface Props {
@@ -214,7 +214,7 @@ export default function DomainsManager({ initialDomains }: Props) {
                       onChange={e => setFormDescription(e.target.value)}
                       className="input-field resize-none min-h-[100px]"
                       rows={3}
-                      placeholder="Detailed scope or purpose of issues listed under this domain..."
+                      placeholder="Detailed scope or purpose of this domain..."
                     />
                   </div>
                 </div>
@@ -286,16 +286,6 @@ export default function DomainsManager({ initialDomains }: Props) {
                   {/* Badges / Metrics Column */}
                   <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
                     <div className="flex items-center gap-1.5">
-                      {(d._count?.issues ?? 0) > 0 ? (
-                        <span className="inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-100 font-semibold px-2.5 py-1 rounded-full text-xs">
-                          {d._count!.issues} issue{d._count!.issues !== 1 ? 's' : ''}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center bg-slate-100 text-slate-400 font-medium px-2 py-1 rounded-full text-xs border border-slate-200/40">
-                          0 issues
-                        </span>
-                      )}
-
                       {(d._count?.categories ?? 0) > 0 && (
                         <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 font-semibold px-2.5 py-1 rounded-full text-xs">
                           {d._count!.categories} cat{d._count!.categories !== 1 ? 's' : ''}

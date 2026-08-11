@@ -28,7 +28,6 @@ export async function PUT(
         ...(description !== undefined && { description }),
         ...(isActive    !== undefined && { isActive }),
       },
-      include: { _count: { select: { issues: true } } },
     })
     return NextResponse.json(domain)
   } catch (error) {
@@ -47,13 +46,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
-    const issueCount = await prisma.issueDomain.count({ where: { domainId: id } })
-    if (issueCount > 0) {
-      return NextResponse.json(
-        { error: `Cannot delete — ${issueCount} issue(s) are linked to this domain.` },
-        { status: 409 }
-      )
-    }
     await prisma.maintenanceDomain.delete({ where: { id } })
     return NextResponse.json({ ok: true })
   } catch (error) {

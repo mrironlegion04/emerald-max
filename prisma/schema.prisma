@@ -695,7 +695,6 @@ model MaintenanceDomain {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  issues             IssueDomain[]
   teams              TeamDomain[]
   workOrders         WorkOrder[]        @relation("WorkOrderDomain")
   assetLinks         AssetDomain[]
@@ -716,7 +715,6 @@ model Issue {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  domains    IssueDomain[]
   categories IssueCategory[]
   workOrders WorkOrder[]
 
@@ -734,17 +732,6 @@ model IssueCategory {
   @@id([issueId, categoryId])
   @@index([categoryId])
   @@map("issue_categories")
-}
-
-model IssueDomain {
-  issueId  String
-  domainId String
-
-  issue  Issue             @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  domain MaintenanceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
-
-  @@id([issueId, domainId])
-  @@map("issue_domains")
 }
 
 model Part {

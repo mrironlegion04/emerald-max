@@ -26,7 +26,6 @@ export default async function DomainsPage({
   const [domains, totalCount] = await Promise.all([
     prisma.maintenanceDomain.findMany({
       orderBy: { name: 'asc' },
-      include: { _count: { select: { issues: true } } },
       skip,
       take: ITEMS_PER_PAGE,
     }).then((domains: any) => domains.map((d: any) => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true }))),
@@ -40,7 +39,7 @@ export default async function DomainsPage({
     <div className="p-6 max-w-3xl mx-auto">
       <PageHeader
         title="Maintenance Domains"
-        subtitle={`Define domains like Hydraulic, Electrical, Mechanical. Issues are grouped by domain. · ${totalCount} total · ${domains.length} showing`}
+        subtitle={`Define domains like Hydraulic, Electrical, Mechanical. Domains scope assets, teams, and work orders. · ${totalCount} total · ${domains.length} showing`}
       />
       <DomainsManager key={page} initialDomains={domains} />
 

@@ -7,7 +7,6 @@ import { z } from 'zod'
 const updateSchema = z.object({
   code:       z.string().min(1).optional(),
   title:      z.string().min(1).optional(),
-  domainIds:  z.array(z.string()).optional(),
   categoryIds: z.array(z.string()).optional(),
   severity:   z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   isActive:   z.boolean().optional(),
@@ -25,7 +24,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const { id } = await params
-    const { code, title, domainIds, categoryIds, severity, isActive, isGlobal, sortOrder } = updateSchema.parse(await request.json())
+    const { code, title, categoryIds, severity, isActive, isGlobal, sortOrder } = updateSchema.parse(await request.json())
 
     const issue = await prisma.issue.update({
       where: { id },
@@ -43,16 +42,8 @@ export async function PUT(
             ...(categoryIds.length > 0 ? { create: categoryIds.map(categoryId => ({ categoryId })) } : {}),
           },
         }),
-        // Historical domain links — kept for backward compatibility only
-        ...(domainIds !== undefined && {
-          domains: {
-            deleteMany: {},
-            ...(domainIds.length > 0 ? { create: domainIds.map(domainId => ({ domainId })) } : {}),
-          },
-        }),
       },
       include: {
-        domains: { include: { domain: true } },
         categories: { include: { category: true } },
         _count:  { select: { workOrders: true } },
       },

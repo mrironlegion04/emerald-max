@@ -8,7 +8,6 @@ import { z } from 'zod'
 const createSchema = z.object({
   code:       z.string().optional().default(''),
   title:      z.string().min(1, 'Title is required'),
-  domainIds:  z.array(z.string()).optional().default([]),
   categoryIds: z.array(z.string()).optional().default([]),
   severity:   z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
   isGlobal:   z.boolean().optional().default(false),
@@ -22,7 +21,6 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get('categoryId')
     const assetId    = searchParams.get('assetId')
     const search     = searchParams.get('search')?.trim()
-    const domainId   = searchParams.get('domainId')?.trim()
     const isGlobal   = searchParams.get('isGlobal')?.trim()
     const scope      = searchParams.get('scope')?.trim()
 
@@ -30,8 +28,8 @@ export async function GET(request: NextRequest) {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Requester form contract: all domain groups + common issues, with the
-    // asset's own linked domains flagged as recommended when an asset is given.
+    // Requester form contract: all category groups + common issues, with the
+    // asset's own category chain issues flagged as recommended when an asset is given.
     if (scope === 'request') {
       const groups = await IssueService.getAllIssues({ search, recommendedAssetId: assetId || undefined })
       return NextResponse.json(groups)
@@ -46,9 +44,6 @@ export async function GET(request: NextRequest) {
           { code:  { contains: search, mode: 'insensitive' } },
         ]
       }
-      if (domainId) {
-        where.domains = { some: { domainId } }
-      }
       if (isGlobal === 'true') {
         where.isGlobal = true
       }
@@ -57,7 +52,6 @@ export async function GET(request: NextRequest) {
         where,
         orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
         include: {
-          domains: { include: { domain: true } },
           categories: { include: { category: true } },
           _count:  { select: { workOrders: true } },
         },
@@ -65,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(issues)
     }
 
-    // Issue picker for WO form — asset-driven (asset domains → category → global).
+    // Issue picker for WO form — asset-driven (asset category chain → global).
     if (assetId) {
       const groups = await IssueService.getIssuesForAsset(assetId, { search })
       return NextResponse.json(groups)
@@ -88,7 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
     const body = await request.json()
-    let { code, title, domainIds, categoryIds, severity, isGlobal } = createSchema.parse(body)
+    let { code, title, categoryIds, severity, isGlobal } = createSchema.parse(body)
 
     if (!code || code.trim() === '') {
       const count = await prisma.issue.count()
@@ -108,14 +102,8 @@ export async function POST(request: NextRequest) {
             create: categoryIds.map(categoryId => ({ categoryId })),
           },
         }),
-        ...(domainIds.length > 0 ? {
-          domains: {
-            create: domainIds.map(domainId => ({ domainId })),
-          },
-        } : {}),
       },
       include: {
-        domains: { include: { domain: true } },
         categories: { include: { category: true } },
         _count:  { select: { workOrders: true } },
       },

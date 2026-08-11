@@ -250,15 +250,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
       }
     }
-    if (data.issueId && data.domainId) {
-      const issue = await prisma.issue.findUnique({
-        where: { id: data.issueId },
-        select: { id: true, isGlobal: true, domains: { select: { domainId: true } } },
-      })
-      if (issue && !issue.isGlobal && !issue.domains.some(d => d.domainId === data.domainId)) {
-        return NextResponse.json({ error: 'Issue does not belong to the selected domain' }, { status: 400 })
-      }
-    }
 
     // ── Freeze master-data names so later renames don't rewrite history ──
     // Snapshot = name at the time the value is selected/recorded (creation here).

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyPasswordTimingSafe } from '@/lib/auth'
 import { getSession } from '@/lib/session'
-import { checkRateLimit, clientIp } from '@/lib/rate-limit'
+import { checkRateLimit, resetRateLimit, clientIp } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
     session.isLoggedIn = true
     session.sessionVersion = user.sessionVersion
     await session.save()
+
+    // Fresh start: clear any earlier failed-attempt buckets for this user/IP.
+    resetRateLimit(accountKey)
+    resetRateLimit(ipKey)
 
     return NextResponse.json({
       success: true,

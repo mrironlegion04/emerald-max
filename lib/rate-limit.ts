@@ -45,6 +45,14 @@ export function checkRateLimit(
   return { ok: true, remaining: limit - bucket.count, retryAfterSeconds: 0 }
 }
 
+/**
+ * Clear a rate-limit bucket (e.g. after a successful login so a legit user
+ * starts fresh instead of carrying over earlier failed attempts).
+ */
+export function resetRateLimit(key: string): void {
+  buckets.delete(key)
+}
+
 export function clientIp(request: Request): string {
   const fwd = request.headers.get('x-forwarded-for')
   if (fwd) return fwd.split(',')[0].trim()

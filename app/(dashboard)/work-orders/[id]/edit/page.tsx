@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import WorkOrderForm from '@/components/WorkOrderForm'
+import RepairSessionsPanel from '@/components/RepairSessionsPanel'
 
 export default async function EditWorkOrderPage({
   params,
@@ -121,46 +122,27 @@ export default async function EditWorkOrderPage({
         }}
       />
 
-      {(wo.repairSessions as any[]).length > 0 && (
+      {wo.repairSessions.length > 0 && (
         <div className="mt-6 premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
-          <h2 className="font-bold text-slate-700 text-sm tracking-tight mb-4 pb-2 border-b border-slate-100">
-            Repair Sessions
-            <span className="ml-2 text-slate-400 font-normal">({(wo.repairSessions as any[]).length})</span>
-          </h2>
-          <div className="space-y-2">
-            {(wo.repairSessions as any[]).map((session: any) => (
-              <div key={session.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-full px-2 py-0.5">
-                    #{session.sessionNo}
-                  </span>
-                  <div className="text-xs text-slate-700">
-                    <span className="font-medium">
-                      {new Date(session.startedAt).toLocaleDateString()}{' '}
-                      {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {session.completedAt && (
-                      <>
-                        <span className="text-slate-400 mx-1">&rarr;</span>
-                        <span className="font-medium">
-                          {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </>
-                    )}
-                    {!session.completedAt && (
-                      <span className="text-amber-600 ml-1 font-semibold">in progress</span>
-                    )}
-                    {session.startedBy && (
-                      <span className="text-slate-400 ml-2">by {session.startedBy.name}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-xs text-slate-500">
-                  {session.durationMinutes != null && `${session.durationMinutes} min`}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <h2 className="font-bold text-slate-700 text-sm tracking-tight">
+              Repair Sessions
+              <span className="ml-2 text-slate-400 font-normal">({wo.repairSessions.length})</span>
+            </h2>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Editable — fix wrong entries or remove accidental sessions</span>
           </div>
+          <RepairSessionsPanel
+            woId={id}
+            sessions={wo.repairSessions.map(session => ({
+              id: session.id,
+              sessionNo: session.sessionNo,
+              startedAt: session.startedAt,
+              completedAt: session.completedAt,
+              durationMinutes: session.durationMinutes,
+              startedBy: session.startedBy,
+              completedBy: session.completedBy,
+            }))}
+          />
         </div>
       )}
     </div>

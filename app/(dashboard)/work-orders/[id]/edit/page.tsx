@@ -95,6 +95,7 @@ export default async function EditWorkOrderPage({
     domainId:        wo.domainId      ?? '',
     customFields:    (wo.customFields as Record<string, any> | null) ?? null,
     woCategoryId:    wo.woCategoryId ?? '',
+    downtimeStartedAt: wo.downtimeStartedAt ? new Date(wo.downtimeStartedAt).toISOString() : '',
   }
 
   return (

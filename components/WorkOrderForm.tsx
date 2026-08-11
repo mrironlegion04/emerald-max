@@ -58,6 +58,13 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
   const router = useRouter()
   const isEdit = !!woId
 
+  const toLocalInput = (v: string | Date) => {
+    const d = new Date(v)
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   const buildInitialForm = () => ({
     title:          initialData?.title          ?? '',
     description:    initialData?.description    ?? '',
@@ -364,9 +371,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
         customFields: form.customFields,
         woCategoryId: form.woCategoryId || null,
-        downtimeStartedAt: form.type === 'BREAKDOWN' && form.downtimeStartedAt
-          ? new Date(form.downtimeStartedAt).toISOString()
-          : null,
+        ...(form.downtimeStartedAt !== initialForm.downtimeStartedAt
+          ? { downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : null }
+          : {}),
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'
@@ -379,12 +386,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     finally  { setSaving(false) }
   }
 
-  const toLocalInput = (v: string | Date) => {
-    const d = new Date(v)
-    if (isNaN(d.getTime())) return ''
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  }
 
   const inputRow = (label: string, required = false, children: React.ReactNode) => (
     <div>

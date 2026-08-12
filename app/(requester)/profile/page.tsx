@@ -8,7 +8,7 @@ import ChangePasswordForm from '@/components/ChangePasswordForm'
 import { Mail, Phone, Briefcase, Calendar } from 'lucide-react'
 
 function fmt(date: Date | string) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+  return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
 }
 
 export default async function UserProfilePage() {

@@ -19,7 +19,7 @@ const ENTITIES = ['','Asset','WorkOrder','Part','User','MaintenanceSchedule','Lo
 const ACTIONS  = ['','CREATE','UPDATE','DELETE','STATUS_CHANGE','LOGIN']
 
 function fmt(date: string) {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-IN', {
     month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit',
   }).format(new Date(date))
 }

@@ -21,7 +21,7 @@ function fmtSize(bytes: number) {
   if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`
   return `${(bytes/(1024*1024)).toFixed(1)} MB`
 }
-function fmt(d: string | Date) { return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d instanceof Date ? d : new Date(d)) }
+function fmt(d: string | Date) { return new Intl.DateTimeFormat('en-IN',{month:'short',day:'numeric',year:'numeric'}).format(d instanceof Date ? d : new Date(d)) }
 
 export default function AttachmentsPanel({ attachments, entityType, entityId, canEdit }: Props) {
   const router   = useRouter()

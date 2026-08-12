@@ -230,7 +230,7 @@ export default function MeterReadingPanel({ assetId, meterUnit = '', currentMete
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-IN', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

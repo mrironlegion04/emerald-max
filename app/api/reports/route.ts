@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const monthBuckets = Array.from({ length: months }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1)
       return {
-        label: d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        label: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
         start: new Date(d.getFullYear(), d.getMonth(), 1),
         end:   new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59),
       }

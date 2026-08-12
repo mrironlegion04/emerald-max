@@ -1067,7 +1067,7 @@ export default function TeamsAndUsersManager() {
                     filteredUsers.map(u => {
                       const initials = u.name ? u.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
                       const roleBadgeColor = u.role === 'ADMIN' ? 'purple' : u.role === 'MANAGER' ? 'blue' : u.role === 'VIEWER' ? 'gray' : 'green'
-                      const joinedDate = new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      const joinedDate = new Date(u.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
 
                       return (
                         <tr key={u.id} className="hover:bg-slate-50/40 transition-colors">

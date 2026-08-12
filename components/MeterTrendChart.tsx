@@ -17,7 +17,7 @@ interface Props {
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
 }
 
 export default function MeterTrendChart({ readings, unit }: Props) {

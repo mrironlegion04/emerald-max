@@ -4,7 +4,7 @@
 
 export function fmt(date: Date | string | null): string {
   if (!date) return '—'
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-IN', {
     month: 'short', day: 'numeric', year: 'numeric'
   }).format(new Date(date))
 }
@@ -18,7 +18,7 @@ export function fmtCurrency(value: number | null): string {
 
 export function fmtDateTime(date: Date | string | null): string {
   if (!date) return '—'
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-IN', {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit'
   }).format(new Date(date))

@@ -19,7 +19,7 @@ function toCSV(headers: string[], rows: unknown[][]): string {
 
 function fmt(date: Date | string | null) {
   if (!date) return ''
-  return new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric' }).format(new Date(date))
+  return new Intl.DateTimeFormat('en-IN', { month:'short', day:'numeric', year:'numeric' }).format(new Date(date))
 }
 
 export async function GET(request: NextRequest) {

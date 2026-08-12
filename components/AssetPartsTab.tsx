@@ -55,7 +55,7 @@ function fmtCurrency(v: number) {
 
 function fmtDate(d: Date | string | null) {
   if (!d) return '—'
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
+  return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
 }
 
 const woStatusLabels = WO_STATUS_LABELS

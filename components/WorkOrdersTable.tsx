@@ -50,7 +50,7 @@ export default function WorkOrdersTable({
   const formatDate = (date: Date | string | null): string => {
     if (!date) return 'No due date'
     const d = typeof date === 'string' ? new Date(date) : date
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
+    return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
   }
 
   const toggleSelect = (id: string) => {

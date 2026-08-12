@@ -75,7 +75,7 @@ function addDays(d: Date, n: number): Date {
 }
 
 function formatMonthDay(d: Date): string {
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 const MAX_VISIBLE_MONTH = 3
@@ -290,7 +290,7 @@ export default function CalendarView() {
                   return (
                     <div key={dk} className={`py-2.5 text-center ${overdueDay ? 'bg-red-50/40' : isToday ? 'bg-blue-50/40' : 'bg-slate-50/20'}`}>
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        {d.toLocaleDateString('en-US', { weekday: 'short' })}
+                        {d.toLocaleDateString('en-IN', { weekday: 'short' })}
                       </div>
                       <div className={`text-sm font-bold mt-0.5 w-7 h-7 mx-auto flex items-center justify-center rounded-full ${
                         isToday ? 'bg-blue-600 text-white' : 'text-slate-800'
@@ -341,7 +341,7 @@ export default function CalendarView() {
           <div className="hidden lg:flex w-72 flex-shrink-0 bg-white rounded-2xl border border-slate-200/80 p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02),_0_5px_15px_0_rgba(0,0,0,0.01)] flex-col max-h-[36rem]">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(selected + 'T12:00:00'))}
+                {new Intl.DateTimeFormat('en-IN', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(selected + 'T12:00:00'))}
               </h3>
               <button onClick={() => setSelected(null)} className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="w-3.5 h-3.5" />
@@ -373,7 +373,7 @@ function WOItem({ ev, compact, showDetails }: { ev: CalEvent; compact?: boolean;
     ev.title,
     `${STATUS_LABEL[ev.status] ?? ev.status}${overdue ? ' (Overdue)' : ''}`,
     ev.assignee ? `Assigned: ${ev.assignee}` : 'Unassigned',
-    ev.dueDate ? `Due: ${new Date(ev.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
+    ev.dueDate ? `Due: ${new Date(ev.dueDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
   ].filter(Boolean).join(' · ')
 
   if (compact) {

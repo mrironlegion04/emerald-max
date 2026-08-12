@@ -67,11 +67,11 @@ export async function GET(
     const fmtCurrency = (v: number | null) => v != null ? `$${v.toFixed(2)}` : '$0.00'
     const fmtDate = (d: Date | string | null) => {
       if (!d) return '—'
-      return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      return new Date(d).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
     }
     const fmtDateTime = (d: Date | string | null) => {
       if (!d) return '—'
-      return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+      return new Date(d).toLocaleString('en-IN', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     }
 
     const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)

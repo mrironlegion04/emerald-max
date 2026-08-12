@@ -12,7 +12,7 @@ import IssueBadge from '@/components/IssueBadge'
 
 function fmtDate(d: Date | string | null | undefined) {
   if (!d) return null
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
+  return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
 }
 
 export default async function MyWorkOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {

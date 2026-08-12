@@ -56,7 +56,7 @@ export default function MaintenanceCharts({
   }))
 
   const trendData = weeklyTrend.map(row => ({
-    week: new Date(row.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    week: new Date(row.week).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
     Created: row.created,
     Completed: row.completed,
   }))

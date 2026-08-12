@@ -56,7 +56,7 @@ function toLocalDatetimeString(d: Date) {
 
 function fmtDateTime(iso: string | null) {
   if (!iso) return '—'
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-IN', {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit',
   }).format(new Date(iso))

@@ -80,6 +80,9 @@ export default async function WorkOrderDetailPage({
   const canUploadAttachment = user ? (await canUploadWOAttachment(user, wo.id)).allowed : false
   const canComplete = user ? (await canCompleteWorkOrder(user, wo.id)).allowed : false
   const canCloseWO = user ? await hasScopeActionFlag(user, 'canCloseWO') : false
+  const lastHoldAt = (wo.repairSessions ?? [])
+    .filter((s: { completedAt: Date | null }) => s.completedAt)
+    .at(-1)?.completedAt ?? null
 
   const allParts = await prisma.part.findMany({ where: { isDeleted: false }, orderBy: { name: 'asc' } })
   const allowedIds = user ? await getUserLocationIds(user.userId) : null
@@ -171,6 +174,7 @@ export default async function WorkOrderDetailPage({
               requestedCompletionTime={wo.requestedCompletionTime?.toISOString() ?? null}
               requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
               initialStartAt={wo.startedAt?.toISOString() ?? null}
+              initialHoldAt={lastHoldAt ? (lastHoldAt as Date).toISOString() : null}
               initialLaborHours={wo.laborHours}
               initialLaborCost={wo.laborCost != null ? Number(wo.laborCost) : null}
               initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}

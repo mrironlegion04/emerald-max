@@ -14,6 +14,7 @@ interface Props {
   requestedCompletionTime: string | null
   requestedCompletionNotes: string | null
   initialStartAt?: string | null
+  initialHoldAt?: string | null
   initialLaborHours?: number | null
   initialLaborCost?: number | null
   initialDowntimeStartedAt?: string | null
@@ -61,7 +62,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialCategoryId = null, initialNotes = null, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialHoldAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialCategoryId = null, initialNotes = null, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -113,6 +114,11 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   // Start work form state
   const [showStartWork, setShowStartWork] = useState(false)
   const [startedAtValue, setStartedAtValue] = useState(() => toLocalDatetimeString(new Date()))
+  const [isResuming, setIsResuming] = useState(false)
+
+  // Hold form state
+  const [showHold, setShowHold] = useState(false)
+  const [holdAtValue, setHoldAtValue] = useState(() => toLocalDatetimeString(new Date()))
 
   // Unlock form state (admin-only)
   const [showUnlock, setShowUnlock] = useState(false)
@@ -180,9 +186,16 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     }
 
     if (newStatus === 'IN_PROGRESS') {
+      setIsResuming(currentStatus === 'ON_HOLD')
       setShowStartWork(true)
       setStartedAtValue(toLocalDatetimeString(new Date()))
       setDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
+      return
+    }
+
+    if (newStatus === 'ON_HOLD') {
+      setShowHold(true)
+      setHoldAtValue(toLocalDatetimeString(new Date()))
       return
     }
 
@@ -221,6 +234,15 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   }
 
   async function confirmStartWork() {
+    const resumeAtMs = new Date(startedAtValue).getTime()
+    if (isResuming && initialHoldAt && resumeAtMs < new Date(initialHoldAt).getTime()) {
+      setError('Resume time cannot be before the hold time')
+      return
+    }
+    if (isResuming && initialStartAt && resumeAtMs < new Date(initialStartAt).getTime()) {
+      setError('Resume time cannot be before the original start time')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -238,6 +260,30 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       router.refresh()
       onStatusChanged?.()
       setShowStartWork(false)
+    } catch {
+      setError('Network error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function confirmHold() {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/work-orders/${woId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'ON_HOLD',
+          heldAt: new Date(holdAtValue).toISOString(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Failed'); return }
+      router.refresh()
+      onStatusChanged?.()
+      setShowHold(false)
     } catch {
       setError('Network error')
     } finally {
@@ -679,12 +725,42 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         />
       )}
 
+      {/* Hold form */}
+      {showHold && (
+        <div className="space-y-3 p-4 bg-amber-50/35 rounded-xl border border-amber-100 shadow-inner-light">
+          <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">When did you stop working?</p>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Hold date & time</label>
+            <input type="datetime-local" value={holdAtValue}
+              onChange={e => setHoldAtValue(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+            <p className="text-[10px] text-slate-400 font-medium mt-1">
+              When work was paused. This stops the repair timer.
+            </p>
+          </div>
+          <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
+            <button onClick={confirmHold} disabled={loading}
+              className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
+              {loading ? 'Holding...' : 'Confirm hold'}
+            </button>
+            <button onClick={() => setShowHold(false)}
+              className="btn-secondary text-xs font-bold py-2 px-4 border-slate-200 flex-1">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Start work form */}
       {showStartWork && (
         <div className="space-y-3 p-4 bg-emerald-50/35 rounded-xl border border-emerald-100 shadow-inner-light">
-          <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">When did you start working?</p>
+          <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+            {isResuming ? 'When did you resume working?' : 'When did you start working?'}
+          </p>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Start date & time</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+              {isResuming ? 'Resume date & time' : 'Start date & time'}
+            </label>
             <input type="datetime-local" value={startedAtValue}
               onChange={e => setStartedAtValue(e.target.value)}
               className="input-field text-xs bg-white border-slate-200" />
@@ -701,7 +777,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
             <button onClick={confirmStartWork} disabled={loading}
               className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
-              {loading ? 'Starting...' : 'Confirm start'}
+              {loading ? (isResuming ? 'Resuming...' : 'Starting...') : isResuming ? 'Confirm resume' : 'Confirm start'}
             </button>
             <button onClick={() => setShowStartWork(false)}
               className="btn-secondary text-xs font-bold py-2 px-4 border-slate-200 flex-1">
@@ -862,7 +938,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       )}
 
       {/* Transition buttons */}
-      {!showComplete && !showStartWork && !showDirectComplete && (
+      {!showComplete && !showStartWork && !showDirectComplete && !showHold && (
         <div className="flex flex-col gap-2">
           {available.map(t => (
             <button key={t.value} onClick={() => doTransition(t.value)} disabled={loading}

@@ -122,6 +122,7 @@ export async function GET(
         attachments: { include: { uploadedBy: { select: { name: true } } } },
         statusHistory: { include: { changedBy: { select: { name: true } } }, orderBy: { createdAt: 'desc' as const } },
         performers: { include: { user: { select: { id: true, name: true, isActive: true } } }, orderBy: { createdAt: 'asc' as const } },
+        repairSessions: { orderBy: { sessionNo: 'asc' as const } },
       },
     })
     if (!wo) return NextResponse.json({ error: 'Not found' }, { status: 404 })

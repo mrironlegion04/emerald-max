@@ -82,6 +82,9 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
   const totalCost = (wo.laborCost ?? 0) + (wo.partsCost ?? 0)
   const viewer = wo.viewer ?? {}
   const canEdit = viewer.canEdit ?? false
+  const lastHoldAt = (wo.repairSessions ?? [])
+    .filter((s: { completedAt: string | null }) => s.completedAt)
+    .at(-1)?.completedAt ?? null
   const canComplete = viewer.canComplete ?? false
   const canUploadAttachment = viewer.canUploadAttachment ?? false
 
@@ -122,6 +125,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           requestedCompletionTime={wo.requestedCompletionTime ?? null}
           requestedCompletionNotes={wo.requestedCompletionNotes ?? null}
           initialStartAt={wo.startedAt ?? null}
+          initialHoldAt={lastHoldAt}
           initialLaborHours={wo.laborHours ?? null}
           initialLaborCost={wo.laborCost ?? null}
           initialDowntimeStartedAt={wo.downtimeStartedAt ?? null}

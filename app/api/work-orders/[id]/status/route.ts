@@ -28,6 +28,7 @@ const statusSchema = z.object({
   requestedCompletionNotes: z.string().optional(),
   downtimeStartedAt: z.string().optional(),
   downtimeEndedAt:   z.string().optional(),
+  heldAt:            z.string().optional(),
   woCategoryId:      z.string().nullable().optional(),
 })
 
@@ -45,6 +46,7 @@ export async function PATCH(
     let { status, notes, laborHours, laborCost, startedAt, completedAt,
           requestedCompletionTime, requestedCompletionNotes,
           downtimeStartedAt, downtimeEndedAt, woCategoryId } = parsed
+    const heldAt = parsed.heldAt
 
     // Downtime window sanity check: "back up at" must come after "down since"
     if (downtimeStartedAt && downtimeEndedAt &&
@@ -357,6 +359,68 @@ export async function PATCH(
           workOrderId: id,
           sessionNo: existingSessions + 1,
           startedAt: sessionStartedAt,
+          startedById: user.userId,
+        },
+      })
+    }
+
+    // Hold: close the current session so held time isn't counted as repair time
+    if (status === 'ON_HOLD' && wo.status === 'IN_PROGRESS') {
+      const currentSession = await prisma.repairSession.findFirst({
+        where: { workOrderId: id, completedAt: null },
+        orderBy: { sessionNo: 'desc' },
+      })
+      if (currentSession) {
+        const holdTime = heldAt ? new Date(heldAt) : new Date()
+        if (holdTime.getTime() < currentSession.startedAt.getTime()) {
+          return NextResponse.json(
+            { error: 'Hold time cannot be before the session started' },
+            { status: 400 }
+          )
+        }
+        const durationMinutes = Math.floor(
+          (holdTime.getTime() - currentSession.startedAt.getTime()) / (1000 * 60)
+        )
+        await prisma.repairSession.update({
+          where: { id: currentSession.id },
+          data: {
+            completedAt: holdTime,
+            completedById: user.userId,
+            durationMinutes,
+          },
+        })
+      }
+    }
+
+    // Resume: reopen a fresh session so post-hold work is tracked separately
+    if (status === 'IN_PROGRESS' && wo.status === 'ON_HOLD') {
+      const existingSessions = await prisma.repairSession.count({ where: { workOrderId: id } })
+      const resumedAt = startedAt ? new Date(startedAt) : new Date()
+
+      // Resume time must not be before the original start or before the hold time,
+      // otherwise the resumed session would have a negative/overlapping duration.
+      const prevSession = await prisma.repairSession.findFirst({
+        where: { workOrderId: id, completedAt: { not: null } },
+        orderBy: { sessionNo: 'desc' },
+      })
+      if (wo.startedAt && resumedAt.getTime() < wo.startedAt.getTime()) {
+        return NextResponse.json(
+          { error: 'Resume time cannot be before the original start time' },
+          { status: 400 }
+        )
+      }
+      if (prevSession?.completedAt && resumedAt.getTime() < prevSession.completedAt.getTime()) {
+        return NextResponse.json(
+          { error: 'Resume time cannot be before the hold time' },
+          { status: 400 }
+        )
+      }
+
+      await prisma.repairSession.create({
+        data: {
+          workOrderId: id,
+          sessionNo: existingSessions + 1,
+          startedAt: resumedAt,
           startedById: user.userId,
         },
       })

@@ -645,6 +645,21 @@ export async function canWriteToAssets(
 }
 
 /**
+ * Check that a user can attach/manage files on an asset.
+ * ADMIN always allowed; anyone else needs the `asset:edit` permission
+ * and write access to the asset's location scope.
+ */
+export async function canUploadAssetAttachment(
+  user: User,
+  assetId: string | null | undefined,
+): Promise<boolean> {
+  if (user.role === 'ADMIN') return true
+  if (!assetId) return false
+  if (!(await hasPermission(user, 'asset:edit'))) return false
+  return canWriteToAssets(user, [assetId])
+}
+
+/**
  * Check that every provided user (assignee/owner) belongs to the write scope,
  * i.e. has a plant assignment inside the scope.
  */

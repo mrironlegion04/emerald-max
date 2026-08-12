@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { unlink } from 'fs/promises'
 import path from 'path'
 import { deleteFile } from '@/lib/minio'
-import { canEditWorkOrder, canUploadWOAttachment, canWriteToAssets } from '@/lib/access-control'
+import { canUploadAssetAttachment, canUploadWOAttachment } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 
 /**
@@ -50,7 +50,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: access.reason ?? 'Forbidden' }, { status: 403 })
       }
     } else if (attachment.assetId) {
-      if (!(await canWriteToAssets(user, [attachment.assetId]))) {
+      if (!(await canUploadAssetAttachment(user, attachment.assetId))) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     } else if (attachment.partId) {

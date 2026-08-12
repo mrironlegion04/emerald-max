@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
-import { canEditWorkOrder, canUploadWOAttachment, canWriteToAssets } from '@/lib/access-control'
+import { canEditWorkOrder, canUploadAssetAttachment, canUploadWOAttachment } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import {
   uploadFile,
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: access.reason ?? 'Forbidden' }, { status: 403 })
       }
     } else if (entityType === 'asset') {
-      if (!(await canWriteToAssets(user, [entityId]))) {
+      if (!(await canUploadAssetAttachment(user, entityId))) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     } else if (entityType === 'part') {

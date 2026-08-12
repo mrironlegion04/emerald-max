@@ -17,7 +17,7 @@ import AssetTabs from '@/components/AssetTabs'
 import MeterListPanel from '@/components/MeterListPanel'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
 import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
-import { canViewAsset, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
+import { canUploadAssetAttachment, canViewAsset, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 
 function formatDate(date: Date | string | null) {
@@ -96,6 +96,7 @@ export default async function AssetDetailPage({
 
   const canEdit = user ? await canWriteToAssets(user, [asset.id]) : false
   const canManageAssets = user ? await hasScopeActionFlag(user, 'canManageAssets') : false
+  const canManageAttachments = user ? await canUploadAssetAttachment(user, asset.id) : false
   const canCreateAsset = canManageAssets && (user ? await hasPermission(user, 'asset:create') : false)
   const canEditAsset = canManageAssets && (user ? await hasPermission(user, 'asset:edit') : false)
   const canEditWO = user ? (await hasScopeActionFlag(user, 'canEditWO')) && (await hasPermission(user, 'wo:create')) : false
@@ -474,7 +475,7 @@ export default async function AssetDetailPage({
               }))}
               entityType="asset"
               entityId={asset.id}
-              canEdit={canEdit}
+              canEdit={canManageAttachments}
             />
 
             <div className="bg-white rounded-xl border border-gray-200">
@@ -608,7 +609,7 @@ export default async function AssetDetailPage({
             }))}
             entityType="asset"
             entityId={asset.id}
-            canEdit={canEdit}
+            canEdit={canManageAttachments}
           />
         </div>
       )}

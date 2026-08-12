@@ -173,6 +173,21 @@ export async function PATCH(
       }
     }
 
+    // Completion notes ("Final Actions") are mandatory on submission and on
+    // direct completion. A manager approving an already-submitted WO
+    // (PENDING_APPROVAL → COMPLETED) reuses the tech's notes already on the
+    // WO. An explicitly blank notes field must fail — never fall back to the
+    // previously saved notes.
+    if (status === 'PENDING_APPROVAL' ||
+        (status === 'COMPLETED' && wo.status !== 'PENDING_APPROVAL')) {
+      if (!notes || !notes.trim()) {
+        return NextResponse.json(
+          { error: 'Completion notes are required' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Required subtasks must be complete before submission/final completion.
     // Optional subtasks do not block completion.
     const hasIncompleteRequired = async () => {

@@ -312,6 +312,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   }
 
   const submitForApproval = async () => {
+    if (!notes.trim()) {
+      setError('Final Actions notes are required before submitting')
+      return
+    }
     if (startedAtValue && requestedTime &&
         new Date(requestedTime).getTime() < new Date(startedAtValue).getTime()) {
       setError('Finish time cannot be before start time')
@@ -362,6 +366,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   // Manager/admin completes directly (no approval needed)
   const handleDirectComplete = async () => {
+    if (!notes.trim()) {
+      setError('Final Actions notes are required before completing')
+      return
+    }
     if (adjustedStartAt && adjustedTime &&
         new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
       setError('Completion time cannot be before start time')

@@ -323,6 +323,11 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
           setSaving(false)
           return
         }
+        if (form.type === 'BREAKDOWN' && !form.downtimeStartedAt) {
+          setError('Down time is required for breakdown work orders')
+          setSaving(false)
+          return
+        }
       }
 
       if (form.startDate && form.dueDate) {

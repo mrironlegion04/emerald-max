@@ -130,6 +130,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ── Breakdowns must record when the machine went down ───────────
+    if (data.type === 'BREAKDOWN' && !data.downtimeStartedAt) {
+      return NextResponse.json(
+        { error: 'Down time is required for breakdown work orders' },
+        { status: 400 }
+      )
+    }
+
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } })
     if (!dbUser) {
       return NextResponse.json({ error: 'User session invalid. Please log in again.' }, { status: 401 })

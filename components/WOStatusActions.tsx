@@ -19,6 +19,7 @@ interface Props {
   initialDowntimeStartedAt?: string | null
   initialDowntimeEndedAt?: string | null
   initialCategoryId?: string | null
+  initialNotes?: string | null
   onStatusChanged?: () => void
 }
 
@@ -60,11 +61,11 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialCategoryId = null, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialCategoryId = null, initialNotes = null, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const [notes, setNotes]       = useState('')
+  const [notes, setNotes]       = useState(initialNotes ?? '')
   const [laborHours, setLaborHours] = useState('')
   const [laborCost, setLaborCost]   = useState('')
   const [downSince, setDownSince]   = useState('')
@@ -159,6 +160,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setShowComplete(true)
       setRequestedTime(toLocalDatetimeString(new Date()))
       setRequestNotes('')
+      setNotes(initialNotes ?? '')
       setStartedAtValue(initialStartAt ? toLocalDatetimeString(new Date(initialStartAt)) : toLocalDatetimeString(new Date()))
       setDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
       setBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
@@ -173,7 +175,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setAdjustedLaborCost(initialLaborCost != null ? String(initialLaborCost) : '')
       setAdjustedDownSince(initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
       setAdjustedBackUpAt(initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : toLocalDatetimeString(new Date()))
-      setNotes('')
+      setNotes(initialNotes ?? '')
       return
     }
 
@@ -596,13 +598,13 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
             ) : (
               <div className="space-y-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
                 {categoryField}
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completion time</label>
-                <input type="datetime-local" value={adjustedTime}
-                  onChange={e => setAdjustedTime(e.target.value)}
-                  className="input-field text-xs bg-white border-slate-200 w-full" />
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Start time</label>
                 <input type="datetime-local" value={adjustedStartAt}
                   onChange={e => setAdjustedStartAt(e.target.value)}
+                  className="input-field text-xs bg-white border-slate-200 w-full" />
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completion time</label>
+                <input type="datetime-local" value={adjustedTime}
+                  onChange={e => setAdjustedTime(e.target.value)}
                   className="input-field text-xs bg-white border-slate-200 w-full" />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -777,7 +779,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion Notes</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Actions</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
@@ -801,15 +803,15 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Complete work order</p>
           {categoryField}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion time</label>
-            <input type="datetime-local" value={adjustedTime}
-              onChange={e => setAdjustedTime(e.target.value)}
-              className="input-field text-xs bg-white border-slate-200" />
-          </div>
-          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Start time</label>
             <input type="datetime-local" value={adjustedStartAt}
               onChange={e => setAdjustedStartAt(e.target.value)}
+              className="input-field text-xs bg-white border-slate-200" />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion time</label>
+            <input type="datetime-local" value={adjustedTime}
+              onChange={e => setAdjustedTime(e.target.value)}
               className="input-field text-xs bg-white border-slate-200" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -841,7 +843,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Completion Notes</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Actions</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />

@@ -189,7 +189,7 @@ export default async function WorkOrderPrintPage({
       {/* Notes */}
       {wo.notes && (
         <div className="mb-8 pb-8 border-b border-gray-300">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Technician Notes</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Final Actions</h3>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{wo.notes}</p>
         </div>
       )}

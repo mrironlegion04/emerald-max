@@ -618,7 +618,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                       placeholder="0.00" className="input-field text-xs bg-white border-slate-200 w-full" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Machine down since</label>
                     <input type="datetime-local" value={adjustedDownSince}
@@ -740,7 +740,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               onChange={e => setRequestedTime(e.target.value)}
               className="input-field text-xs bg-white border-slate-200" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Machine down since</label>
               <input type="datetime-local" value={downSince}
@@ -826,7 +826,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                 placeholder="0.00" className="input-field text-xs bg-white border-slate-200" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Machine down since</label>
               <input type="datetime-local" value={adjustedDownSince}

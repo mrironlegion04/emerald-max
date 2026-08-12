@@ -235,6 +235,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   async function confirmStartWork() {
     const resumeAtMs = new Date(startedAtValue).getTime()
+    if (isResuming && resumeAtMs > Date.now()) {
+      setError('Resume time cannot be in the future')
+      return
+    }
     if (isResuming && initialHoldAt && resumeAtMs < new Date(initialHoldAt).getTime()) {
       setError('Resume time cannot be before the hold time')
       return
@@ -268,6 +272,11 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   }
 
   async function confirmHold() {
+    const holdAtMs = new Date(holdAtValue).getTime()
+    if (holdAtMs > Date.now()) {
+      setError('Hold time cannot be in the future')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -306,6 +315,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     if (startedAtValue && requestedTime &&
         new Date(requestedTime).getTime() < new Date(startedAtValue).getTime()) {
       setError('Finish time cannot be before start time')
+      return
+    }
+    if (downSince && !backUpAt) {
+      setError('Back up time is required when a down time is recorded')
       return
     }
     if (downSince && backUpAt &&
@@ -352,6 +365,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     if (adjustedStartAt && adjustedTime &&
         new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
       setError('Completion time cannot be before start time')
+      return
+    }
+    if (adjustedDownSince && !adjustedBackUpAt) {
+      setError('Back up time is required when a down time is recorded')
       return
     }
     if (adjustedDownSince && adjustedBackUpAt &&
@@ -420,6 +437,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
     if (adjustedStartAt && adjustedTime &&
         new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
       setError('Completion time cannot be before start time')
+      return
+    }
+    if (adjustedDownSince && !adjustedBackUpAt) {
+      setError('Back up time is required when a down time is recorded')
       return
     }
     if (adjustedDownSince && adjustedBackUpAt &&

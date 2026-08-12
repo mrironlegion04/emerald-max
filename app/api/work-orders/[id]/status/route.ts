@@ -129,8 +129,7 @@ export async function PATCH(
 
     // Time ordering sanity checks: completion/finish must not be before start.
     // The downtime "back up after down" rule is checked above.
-    if (status === 'COMPLETED') {
-      const startMs =
+    if (status === 'COMPLETED') {      const startMs =
         startedAt ? new Date(startedAt).getTime()
         : wo.startedAt ? wo.startedAt.getTime()
         : null
@@ -156,6 +155,19 @@ export async function PATCH(
       if (startMs !== null && finishMs < startMs) {
         return NextResponse.json(
           { error: 'Finish time cannot be before start time' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // If downtime was recorded (down since), a back-up time is mandatory on completion.
+    // Consider downtime supplied in this request OR already recorded on the WO.
+    if (status === 'COMPLETED' || status === 'PENDING_APPROVAL') {
+      const effectiveDown = downtimeStartedAt ?? wo.downtimeStartedAt
+      const effectiveUp = downtimeEndedAt ?? wo.downtimeEndedAt
+      if (effectiveDown && !effectiveUp) {
+        return NextResponse.json(
+          { error: 'Back up time is required when a down time is recorded' },
           { status: 400 }
         )
       }
@@ -372,6 +384,12 @@ export async function PATCH(
       })
       if (currentSession) {
         const holdTime = heldAt ? new Date(heldAt) : new Date()
+        if (holdTime.getTime() > Date.now()) {
+          return NextResponse.json(
+            { error: 'Hold time cannot be in the future' },
+            { status: 400 }
+          )
+        }
         if (holdTime.getTime() < currentSession.startedAt.getTime()) {
           return NextResponse.json(
             { error: 'Hold time cannot be before the session started' },
@@ -406,6 +424,12 @@ export async function PATCH(
       if (wo.startedAt && resumedAt.getTime() < wo.startedAt.getTime()) {
         return NextResponse.json(
           { error: 'Resume time cannot be before the original start time' },
+          { status: 400 }
+        )
+      }
+      if (resumedAt.getTime() > Date.now()) {
+        return NextResponse.json(
+          { error: 'Resume time cannot be in the future' },
           { status: 400 }
         )
       }

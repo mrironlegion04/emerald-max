@@ -106,6 +106,11 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
+  const [pendingField, setPendingField] = useState<{
+    name: string
+    type: 'text' | 'number' | 'date' | 'checkbox'
+    value: string | number | boolean
+  } | null>(null)
   const lastSelectionKeyRef = useRef(selectionKey(initialForm))
 
   const [targetType, setTargetType] = useState<'ASSET' | 'LOCATION'>(
@@ -341,7 +346,13 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       }
 
       const detailUrl = isEdit && woId ? `/work-orders/${woId}` : '/work-orders'
-      if (!isDirty) {
+      // Include an attribute typed but not yet "Add"-ed, so it isn't lost on save.
+      const hasPendingField = !!pendingField?.name.trim()
+      const customFields = hasPendingField
+        ? { ...(form.customFields ?? {}), [pendingField!.name.trim()]: pendingField!.value }
+        : form.customFields
+
+      if (!isDirty && !hasPendingField) {
         router.push(detailUrl)
         router.refresh()
         return
@@ -376,7 +387,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         notes:        form.notes          || null,
         issueId:      form.issueId === OTHER_ISSUE ? null : (form.issueId || null),
         customIssue:  form.issueId === OTHER_ISSUE ? (form.customIssue || null) : null,
-        customFields: form.customFields,
+        customFields: customFields,
         woCategoryId: form.woCategoryId || null,
         ...(form.downtimeStartedAt !== initialForm.downtimeStartedAt
           ? { downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : null }
@@ -757,6 +768,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         <CustomFieldsPanel
           fields={form.customFields}
           onChange={fields => set('customFields', fields)}
+          onPendingChange={setPendingField}
         />
       </div>
 

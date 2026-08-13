@@ -5,8 +5,9 @@ vi.mock('next/headers', () => ({
   cookies: () => ({ get: () => undefined }),
 }))
 
-const pmWO = { maintenanceScheduleId: 'schedule-1' }
-const normalWO = { maintenanceScheduleId: null }
+const pmWO = { maintenanceScheduleId: 'schedule-1', woCategoryId: 'cat-1' }
+const pmWONoCategory = { maintenanceScheduleId: 'schedule-1', woCategoryId: null }
+const normalWO = { maintenanceScheduleId: null, woCategoryId: null }
 
 describe('canChangePMGeneratedWOFields', () => {
   it('allows any edit on a non-PM work order', () => {
@@ -47,6 +48,11 @@ describe('canChangePMGeneratedWOFields', () => {
 
   it('allows switching to another category on a PM work order', () => {
     expect(canChangePMGeneratedWOFields(pmWO, { woCategoryId: 'cat-2' })).toEqual({ allowed: true })
+  })
+
+  it('allows an empty category when the PM work order never had one (no-op)', () => {
+    expect(canChangePMGeneratedWOFields(pmWONoCategory, { woCategoryId: null })).toEqual({ allowed: true })
+    expect(canChangePMGeneratedWOFields(pmWONoCategory, { woCategoryId: '' })).toEqual({ allowed: true })
   })
 
   it('allows leaving the category untouched on a PM work order', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface CustomField {
   name: string
@@ -8,9 +8,16 @@ interface CustomField {
   type: 'text' | 'number' | 'date' | 'checkbox'
 }
 
+interface PendingField {
+  name: string
+  type: 'text' | 'number' | 'date' | 'checkbox'
+  value: string | number | boolean
+}
+
 interface Props {
   fields: Record<string, any> | null | undefined
   onChange: (fields: Record<string, any> | null) => void
+  onPendingChange?: (pending: PendingField) => void
 }
 
 const FIELD_TYPES = [
@@ -20,7 +27,16 @@ const FIELD_TYPES = [
   { value: 'checkbox', label: 'Yes/No' },
 ]
 
-export default function CustomFieldsPanel({ fields, onChange }: Props) {
+function commitValue(type: 'text' | 'number' | 'date' | 'checkbox', raw: string): string | number | boolean {
+  if (type === 'number') {
+    const num = Number(raw)
+    return raw === '' || isNaN(num) ? 0 : num
+  }
+  if (type === 'checkbox') return false
+  return raw
+}
+
+export default function CustomFieldsPanel({ fields, onChange, onPendingChange }: Props) {
   const [fieldList, setFieldList] = useState<CustomField[]>(
     fields ? Object.entries(fields).map(([name, value]) => ({
       name,
@@ -32,6 +48,12 @@ export default function CustomFieldsPanel({ fields, onChange }: Props) {
   const [newFieldName, setNewFieldName] = useState('')
   const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'date' | 'checkbox'>('text')
   const [newFieldValue, setNewFieldValue] = useState('')
+
+  // Report the not-yet-added attribute so the parent can include it on save
+  // even if the user never clicked "Add attribute".
+  useEffect(() => {
+    onPendingChange?.({ name: newFieldName, type: newFieldType, value: commitValue(newFieldType, newFieldValue) })
+  }, [newFieldName, newFieldType, newFieldValue, onPendingChange])
 
   function updateField(index: number, key: 'name' | 'value' | 'type', val: any) {
     const updated = [...fieldList]
@@ -66,7 +88,7 @@ export default function CustomFieldsPanel({ fields, onChange }: Props) {
 
     const updated = [...fieldList, {
       name: newFieldName,
-      value: newFieldType === 'number' ? 0 : newFieldType === 'checkbox' ? false : newFieldValue,
+      value: commitValue(newFieldType, newFieldValue),
       type: newFieldType,
     }]
     setFieldList(updated)

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Calendar, Tag, ChevronRight } from 'lucide-react'
 import BulkWOActions from './BulkWOActions'
 import Badge, { workOrderStatusVariant, priorityVariant } from './Badge'
-import { isOverdueByDate, todayLocal } from '@/lib/date-format'
+import { isOverdueByDate, todayUTC, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface WorkOrder {
   id: string
@@ -47,11 +47,10 @@ export default function WorkOrdersTable({
     return <Badge label={statusLabels[status] || status} variant={workOrderStatusVariant(status)} />
   }
 
-  // Handle both Date and string dueDate
+  // Handle both Date and string dueDate (date-only fields render in UTC)
   const formatDate = (date: Date | string | null): string => {
     if (!date) return 'No due date'
-    const d = typeof date === 'string' ? new Date(date) : date
-    return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
+    return fmtDateOnly(utcDateOnly(date))
   }
 
   const toggleSelect = (id: string) => {
@@ -145,7 +144,7 @@ export default function WorkOrdersTable({
               workOrders.map(wo => {
                 const overdue =
                   wo.dueDate &&
-                  isOverdueByDate(wo.dueDate, todayLocal()) &&
+                  isOverdueByDate(wo.dueDate, todayUTC()) &&
                   !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
                 return (
@@ -265,7 +264,7 @@ export default function WorkOrdersTable({
           workOrders.map(wo => {
             const overdue =
               wo.dueDate &&
-              isOverdueByDate(wo.dueDate, todayLocal()) &&
+              isOverdueByDate(wo.dueDate, todayUTC()) &&
               !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
             const isSelected = selectedIds.includes(wo.id)

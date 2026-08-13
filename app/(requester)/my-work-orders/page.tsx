@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users, SearchX, Layers, AlertTriangle } from 'lucide-react'
 import Badge, { priorityVariant, workOrderStatusVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
-import { utcDateOnly } from '@/lib/date-format'
+import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface SearchParams {
   search?: string
@@ -170,7 +170,7 @@ export default async function MyWorkOrdersPage({
                     )}
                     {wo.dueDate && (
                       <span className="inline-flex items-center gap-1">
-                        <CalendarClock className="w-3.5 h-3.5" /> Due {utcDateOnly(wo.dueDate) ?? '—'}
+                        <CalendarClock className="w-3.5 h-3.5" /> Due {fmtDateOnly(utcDateOnly(wo.dueDate))}
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1">

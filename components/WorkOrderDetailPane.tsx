@@ -12,8 +12,8 @@ import WOHistoryPanel from './WOHistoryPanel'
 import SubtasksPanel from './SubtasksPanel'
 import AttachmentsPanel from './AttachmentsPanel'
 import WorkOrderCrewPanel from './WorkOrderCrewPanel'
-import { fmtCurrency, fmt, fmtDateTime } from '@/lib/utils'
-import { isOverdueByDate, todayLocal, fmtScheduledTime } from '@/lib/date-format'
+import { fmtCurrency, fmtDateTime } from '@/lib/utils'
+import { isOverdueByDate, todayUTC, fmtScheduledTime, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface Props {
   woId?: string
@@ -73,7 +73,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
     )
   }
 
-  const isOverdue = wo.dueDate && isOverdueByDate(wo.dueDate, todayLocal()) && !['COMPLETED', 'CANCELLED'].includes(wo.status)
+  const isOverdue = wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED', 'CANCELLED'].includes(wo.status)
   const dueTimeLabel = wo.dueTime ? fmtScheduledTime(wo.dueTime) : null
   const startTimeLabel = wo.startTime ? fmtScheduledTime(wo.startTime) : null
   const lostHours = wo.downtimeStartedAt && wo.downtimeEndedAt
@@ -169,13 +169,13 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
             { label: 'Created by', value: wo.createdBy?.name ?? '—' },
             { label: 'Start date', value: wo.startDate ? (
               <span className="text-xs">
-                {fmt(wo.startDate)}
+                {fmtDateOnly(utcDateOnly(wo.startDate))}
                 {startTimeLabel && <span className="text-slate-400 font-medium"> · Scheduled {startTimeLabel}</span>}
               </span>
             ) : '—' },
             { label: 'Due date', value: (
               <span className={isOverdue ? 'text-rose-600 font-bold text-xs' : 'text-xs'}>
-                {isOverdue ? '⚠ ' : ''}{fmt(wo.dueDate)}
+                {isOverdue ? '⚠ ' : ''}{fmtDateOnly(utcDateOnly(wo.dueDate))}
                 {dueTimeLabel && <span className="text-slate-400 font-medium"> · Scheduled {dueTimeLabel}</span>}
               </span>
             )},

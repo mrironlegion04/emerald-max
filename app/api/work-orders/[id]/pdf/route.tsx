@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { canViewWorkOrder } from '@/lib/access-control'
+import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from '@react-pdf/renderer'
 
 const styles = StyleSheet.create({
@@ -67,7 +68,7 @@ export async function GET(
     const fmtCurrency = (v: number | null) => v != null ? `$${v.toFixed(2)}` : '$0.00'
     const fmtDate = (d: Date | string | null) => {
       if (!d) return '—'
-      return new Date(d).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+      return fmtDateOnly(utcDateOnly(d))
     }
     const fmtDateTime = (d: Date | string | null) => {
       if (!d) return '—'

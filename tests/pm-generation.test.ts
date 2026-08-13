@@ -10,8 +10,8 @@ vi.mock('@/lib/db', () => ({
 }))
 
 const ymd = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate()
+  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    d.getUTCDate()
   ).padStart(2, '0')}`
 
 describe('advanceDate', () => {

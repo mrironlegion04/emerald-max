@@ -10,7 +10,7 @@ import {
 import Badge from './Badge'
 import WorkOrderDetailPane from './WorkOrderDetailPane'
 import { WO_STATUS_LABELS, WO_STATUS_VARIANTS } from '@/lib/work-order-status'
-import { isOverdueByDate, todayLocal, utcDateOnly, dateOnlyToUtcMidnight } from '@/lib/date-format'
+import { isOverdueByDate, todayUTC, utcDateOnly, dateOnlyToUtcMidnight, fmtDateOnly } from '@/lib/date-format'
 
 export interface WOListItem {
   id: string
@@ -53,7 +53,7 @@ function getUrgencyBucket(dueDate: Date | string | null): 'overdue' | 'today' | 
   if (!dueDate) return 'none'
   const ymd = utcDateOnly(dueDate)
   if (!ymd) return 'none'
-  const today = todayLocal()
+  const today = todayUTC()
   if (ymd < today) return 'overdue'
   if (ymd === today) return 'today'
   const weekEnd = dateOnlyToUtcMidnight(today)!
@@ -64,7 +64,7 @@ function getUrgencyBucket(dueDate: Date | string | null): 'overdue' | 'today' | 
 
 function fmtDate(date: Date | string | null) {
   if (!date) return 'No due date'
-  return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+  return fmtDateOnly(utcDateOnly(date))
 }
 
 type Tab = 'todo' | 'done'
@@ -219,7 +219,7 @@ export default function WorkOrderPanelView({ grouped, userRole = 'TECHNICIAN', u
   const visibleWOs = activeTab === 'todo' ? getVisibleWOs() : grouped.done
 
   const overdueCount = visibleWOs.filter(
-    wo => wo.dueDate && isOverdueByDate(wo.dueDate, todayLocal()) && !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
+    wo => wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
   ).length
 
   return (

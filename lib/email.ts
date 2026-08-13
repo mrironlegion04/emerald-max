@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { fmt } from '@/lib/utils'
+import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 // ── Transporter ──────────────────────────────────────────────────────────────
 // Uses env vars. For local dev, set EMAIL_HOST=smtp.gmail.com or use Mailtrap.
@@ -68,7 +68,7 @@ export async function sendWOAssigned(opts: {
       <span style="font-size:12px;color:#6b7280">
         ${opts.woNumber}
         ${opts.assetName ? ` · ${opts.assetName}` : ''}
-        ${opts.dueDate ? ` · Due ${fmt(opts.dueDate)}` : ''}
+        ${opts.dueDate ? ` · Due ${fmtDateOnly(utcDateOnly(opts.dueDate))}` : ''}
       </span><br>
       <span class="chip">${opts.priority}</span>
     </p>

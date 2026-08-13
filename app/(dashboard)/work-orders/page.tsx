@@ -10,7 +10,7 @@ import AdvancedWOFilters from '@/components/AdvancedWOFilters'
 import WorkOrderViewShell from '@/components/WorkOrderViewShell'
 import { WO_STATUS_LABELS, ACTIVE_STATUSES, DONE_STATUSES } from '@/lib/work-order-status'
 import { woToClient } from '@/lib/client-safe'
-import { dateOnlyToUtcMidnight, endOfUtcDay, isOverdueByDate, todayUTC } from '@/lib/date-format'
+import { dateOnlyToUtcMidnight, endOfUtcDay, isOverdueByDate, todayUTC, startOfUtcDay } from '@/lib/date-format'
 
 interface SearchParams {
   search?:      string
@@ -115,8 +115,8 @@ async function getWorkOrders(
   }
   if (filters.createdFrom || filters.createdTo) {
     where.createdAt = {
-      ...(filters.createdFrom ? { gte: new Date(filters.createdFrom) } : {}),
-      ...(filters.createdTo   ? { lte: new Date(filters.createdTo) }   : {}),
+      ...(filters.createdFrom ? { gte: startOfUtcDay(filters.createdFrom) } : {}),
+      ...(filters.createdTo   ? { lte: endOfUtcDay(filters.createdTo) }   : {}),
     }
   }
 

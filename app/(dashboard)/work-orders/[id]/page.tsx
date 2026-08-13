@@ -16,8 +16,8 @@ import SkipPMButton from '@/components/SkipPMButton'
 import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
 import IssueBadge from '@/components/IssueBadge'
 import { canEditWorkOrder, canUploadWOAttachment, canViewWorkOrder, canCompleteWorkOrder, hasScopeActionFlag, getUserLocationIds } from '@/lib/access-control'
-import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
-import { isOverdueByDate, todayUTC, fmtScheduledTime } from '@/lib/date-format'
+import { fmtCurrency, fmtDateTime } from '@/lib/utils'
+import { isOverdueByDate, todayUTC, fmtScheduledTime, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 const statusLabels = WO_STATUS_LABELS
 const typeLabels: Record<string,string> = {
@@ -293,13 +293,13 @@ export default async function WorkOrderDetailPage({
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
                 { label: 'Start date',  value: wo.startDate ? (
                   <span>
-                    {fmt(wo.startDate)}
+                    {fmtDateOnly(utcDateOnly(wo.startDate))}
                     {wo.startTime && <span className="text-slate-400 font-medium"> · {fmtScheduledTime(wo.startTime)}</span>}
                   </span>
                 ) : '—' },
                 { label: 'Due date',    value: (
                   <span className={isOverdue ? 'text-rose-650 font-bold' : ''}>
-                    {isOverdue ? '⚠ ' : ''}{fmt(wo.dueDate)}
+                    {isOverdue ? '⚠ ' : ''}{fmtDateOnly(utcDateOnly(wo.dueDate))}
                     {wo.dueTime && <span className="text-slate-400 font-medium"> · {fmtScheduledTime(wo.dueTime)}</span>}
                   </span>
                 )},

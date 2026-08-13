@@ -18,18 +18,6 @@ export function utcDateOnly(date: Date | string | null | undefined): string | nu
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
 }
 
-export function localDateOnly(date: Date | string | null | undefined): string | null {
-  if (!date) return null
-  const d = new Date(date)
-  if (Number.isNaN(d.getTime())) return null
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-export function todayLocal(): string {
-  const now = new Date()
-  return localDateOnly(now)!
-}
-
 export function todayUTC(): string {
   const now = new Date()
   return utcDateOnly(now)!
@@ -56,7 +44,9 @@ export function extractTimeOnly(date: Date | string | null | undefined): string 
 
 export function fmtDateOnly(ymd: string | null | undefined): string {
   if (!ymd) return '—'
-  return new Intl.DateTimeFormat('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }).format(dateOnlyToUtcMidnight(ymd)!)
+  const dt = dateOnlyToUtcMidnight(ymd)
+  if (!dt) return '—'
+  return new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(dt)
 }
 
 export function fmtScheduledTime(hhmm: string | null | undefined): string | null {
@@ -65,11 +55,6 @@ export function fmtScheduledTime(hhmm: string | null | undefined): string | null
   const ampm = h >= 12 ? 'PM' : 'AM'
   const hour12 = h % 12 === 0 ? 12 : h % 12
   return m === 0 ? `${hour12} ${ampm}` : `${hour12}:${pad(m)} ${ampm}`
-}
-
-export function startOfLocalDay(date: Date | string): Date {
-  const d = new Date(date)
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
 export function startOfUtcDay(date: Date | string): Date {

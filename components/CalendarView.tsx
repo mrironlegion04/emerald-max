@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { isOverdueByDate, todayLocal, fmtScheduledTime } from '@/lib/date-format'
+import { isOverdueByDate, todayUTC, fmtScheduledTime, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface CalEvent {
   id: string; type: 'wo' | 'pm'; title: string; subtitle: string
@@ -39,7 +39,7 @@ function isOverdue(ev: CalEvent): boolean {
   if (ev.type === 'pm') return false
   if (!ev.dueDate) return false
   if (ev.status === 'COMPLETED' || ev.status === 'CANCELLED') return false
-  return isOverdueByDate(ev.dueDate, todayLocal())
+  return isOverdueByDate(ev.dueDate, todayUTC())
 }
 
 function sortEvents(events: CalEvent[]): CalEvent[] {
@@ -375,7 +375,7 @@ function WOItem({ ev, compact, showDetails }: { ev: CalEvent; compact?: boolean;
     ev.title,
     `${STATUS_LABEL[ev.status] ?? ev.status}${overdue ? ' (Overdue)' : ''}`,
     ev.assignee ? `Assigned: ${ev.assignee}` : 'Unassigned',
-    ev.dueDate ? `Due: ${new Date(ev.dueDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}${ev.dueTime ? ` · ${fmtScheduledTime(ev.dueTime)}` : ''}` : null,
+    ev.dueDate ? `Due: ${fmtDateOnly(utcDateOnly(ev.dueDate))}${ev.dueTime ? ` · ${fmtScheduledTime(ev.dueTime)}` : ''}` : null,
   ].filter(Boolean).join(' · ')
 
   if (compact) {

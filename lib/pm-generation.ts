@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { generateWONumber } from '@/lib/wo-number'
+import { extractTimeOnly } from '@/lib/date-format'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -282,19 +283,24 @@ export async function generateWOsForSchedule(
 
     // Precompute per-batch due dates (stepwise so recurrence rules apply per step)
     const batchDates: Date[] = []
+    const batchTimes: (string | null)[] = []
     {
       let due = new Date(schedule.nextDueDate)
       for (let b = 0; b < horizon; b++) {
         if (schedule.triggerType === 'METER') {
-          batchDates.push(new Date())
+          batchDates.push(toUtcMidnight(new Date()))
+          batchTimes.push(null)
         } else if (schedule.triggerType === 'EVENT') {
           // Condition-triggered: never auto-advances — reuse the current due date
-          batchDates.push(new Date(due))
+          batchDates.push(toUtcMidnight(new Date(due)))
+          batchTimes.push(null)
         } else if (b === 0) {
-          batchDates.push(new Date(due))
+          batchDates.push(toUtcMidnight(new Date(due)))
+          batchTimes.push(schedule.frequency === 'HOURLY' ? extractTimeOnly(due) : null)
         } else {
           due = advanceDate(due, schedule.frequency, schedule.interval, recurrence)
-          batchDates.push(new Date(due))
+          batchDates.push(toUtcMidnight(new Date(due)))
+          batchTimes.push(schedule.frequency === 'HOURLY' ? extractTimeOnly(due) : null)
         }
       }
     }
@@ -357,6 +363,7 @@ export async function generateWOsForSchedule(
 
             // Due date for this batch (precomputed)
             const dueDate = batchDates[batch]
+            const dueTime = batchTimes[batch]
 
           // Calculate start date from offset
           const startDate = (schedule.startDateOffset ?? 0) > 0
@@ -380,6 +387,7 @@ export async function generateWOsForSchedule(
               status: 'OPEN',
               priority: schedule.woPriority ?? 'MEDIUM',
               dueDate,
+              ...(dueTime ? { dueTime } : {}),
               ...(startDate ? { startDate } : {}),
               assetId: asset ? asset.id : null,
               locationId: schedule.locationId,

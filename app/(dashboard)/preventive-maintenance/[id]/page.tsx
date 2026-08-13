@@ -11,6 +11,7 @@ import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
 import { fmt, daysUntil } from '@/lib/utils'
+import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 import { getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 
@@ -369,7 +370,7 @@ export default async function PMDetailPage({
                       <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                       <p className="text-xs text-gray-400">
                         {wo.woNumber}{wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
-                        {wo.dueDate ? ` · Due ${fmt(wo.dueDate)}` : ''}
+                        {wo.dueDate ? ` · Due ${fmtDateOnly(utcDateOnly(wo.dueDate))}` : ''}
                         {wo.nestedLabel ? ` · ${wo.nestedLabel}` : ''}
                       </p>
                     </div>

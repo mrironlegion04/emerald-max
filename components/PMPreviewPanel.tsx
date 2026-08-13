@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Calendar, ChevronDown, ChevronUp } from 'lucide-react'
 import Badge from '@/components/Badge'
-import { fmt } from '@/lib/utils'
+import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface PreviewWO {
   dueDate: string
@@ -81,7 +81,7 @@ export default function PMPreviewPanel({ scheduleId }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                 <p className="text-xs text-gray-400">
-                  Due {fmt(wo.dueDate)}
+                  Due {fmtDateOnly(utcDateOnly(wo.dueDate))}
                   {wo.nestedLabel && ` · ${wo.nestedLabel}`}
                 </p>
               </div>

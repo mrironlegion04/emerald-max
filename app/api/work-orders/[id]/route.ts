@@ -11,6 +11,7 @@ import { deleteFile } from '@/lib/minio'
 import {
   canEditWorkOrder,
   canReassignWorkOrder,
+  canRequesterEditOwnRequest,
   getCompletionType,
   canCompleteWorkOrder,
   canUploadWOAttachment,
@@ -179,18 +180,38 @@ export async function PUT(
     })
     if (!existingWo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const editAccess = await canEditWorkOrder(user, id)
-    if (!editAccess.allowed) {
-      return NextResponse.json({ error: editAccess.reason }, { status: 403 })
-    }
+    // Requesters may edit their own request only while it is still OPEN. The
+    // edit is limited to request fields (see REQUESTER_EDITABLE_FIELDS below).
+    const isRequesterOwnEdit = await canRequesterEditOwnRequest(user, existingWo)
 
-    // Managers with team-scope rows need the canEditWO flag to edit work orders
-    if (!(await hasScopeActionFlag(user, 'canEditWO'))) {
-      return NextResponse.json({ error: 'Your scope does not allow editing work orders' }, { status: 403 })
+    if (!isRequesterOwnEdit) {
+      const editAccess = await canEditWorkOrder(user, id)
+      if (!editAccess.allowed) {
+        return NextResponse.json({ error: editAccess.reason }, { status: 403 })
+      }
+
+      // Managers with team-scope rows need the canEditWO flag to edit work orders
+      if (!(await hasScopeActionFlag(user, 'canEditWO'))) {
+        return NextResponse.json({ error: 'Your scope does not allow editing work orders' }, { status: 403 })
+      }
     }
 
     const body = await request.json()
     const data = updateSchema.parse(body)
+
+    // Requesters may only change a limited set of request fields.
+    if (isRequesterOwnEdit) {
+      const REQUESTER_EDITABLE_FIELDS = [
+        'title', 'description', 'priority', 'dueDate', 'assetId', 'issueId', 'customIssue', 'teamId',
+      ]
+      const disallowed = Object.keys(body).filter(k => !REQUESTER_EDITABLE_FIELDS.includes(k))
+      if (disallowed.length > 0) {
+        return NextResponse.json(
+          { error: `Requesters can only edit: ${REQUESTER_EDITABLE_FIELDS.join(', ')}` },
+          { status: 403 }
+        )
+      }
+    }
 
     if (data.startTime && !isValidTime(data.startTime)) {
       return NextResponse.json({ error: 'Start time must be in HH:mm format' }, { status: 400 })
@@ -235,7 +256,7 @@ export async function PUT(
       }
     }
 
-    if ((data.assignedToId || data.teamId) && !isManagerOrAbove(user)) {
+    if ((data.assignedToId || data.teamId) && !isManagerOrAbove(user) && !isRequesterOwnEdit) {
       return NextResponse.json(
         { error: 'Only admin/manager can reassign work order' },
         { status: 403 }
@@ -305,7 +326,7 @@ export async function PUT(
     }
 
     // Block edits on CLOSED work orders
-    if (existingWo.status === 'CLOSED' && !isManagerOrAbove(user)) {
+    if (existingWo.status === 'CLOSED' && !isManagerOrAbove(user) && !isRequesterOwnEdit) {
       return NextResponse.json(
         { error: 'Closed work orders cannot be edited' },
         { status: 403 }

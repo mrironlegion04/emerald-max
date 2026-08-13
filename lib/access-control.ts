@@ -313,6 +313,20 @@ export async function canEditWorkOrder(
 }
 
 /**
+ * Requesters may edit or cancel their own work order only while it is still
+ * OPEN (not yet started). Ownership is by `requestedById` (fallback
+ * `createdById`). Everything else keeps the normal permission gates.
+ */
+export function canRequesterEditOwnRequest(
+  user: User,
+  wo: { status: string; requestedById: string | null; createdById: string | null }
+): boolean {
+  if (user.role !== 'REQUESTER') return false
+  if (wo.status !== 'OPEN') return false
+  return wo.requestedById === user.userId || wo.createdById === user.userId
+}
+
+/**
  * Determine completion type based on user role and assignment
  */
 export function getCompletionType(

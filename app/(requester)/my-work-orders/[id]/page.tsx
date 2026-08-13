@@ -3,12 +3,13 @@ import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Package, MapPin, CalendarClock,
+  ArrowLeft, Package, MapPin, CalendarClock, PenSquare,
   Circle, Clock, FileText, AlertTriangle, Users, Building2, Layers,
 } from 'lucide-react'
 import Badge, { priorityVariant, workOrderStatusVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import IssueBadge from '@/components/IssueBadge'
+import CancelRequesterRequestButton from '@/components/CancelRequesterRequestButton'
 import { fmtDateOnly, utcDateOnly } from '@/lib/date-format'
 
 function fmtDate(d: Date | string | null | undefined) {
@@ -58,6 +59,16 @@ export default async function MyWorkOrderDetailPage({ params }: { params: Promis
           </div>
           <h1 className="text-xl font-bold text-slate-900">{wo.title}</h1>
           <p className="text-sm text-slate-500 mt-2 leading-relaxed whitespace-pre-wrap">{wo.description}</p>
+
+          {wo.status === 'OPEN' && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+              <Link href={`/my-work-orders/${wo.id}/edit`} className="btn-primary text-xs font-bold py-2 px-4">
+                <PenSquare className="w-3.5 h-3.5" /> Edit request
+              </Link>
+              <CancelRequesterRequestButton woId={wo.id} />
+              <p className="text-[11px] text-slate-400">You can edit or cancel your request while it is still open and work has not started.</p>
+            </div>
+          )}
         </div>
 
         <div className="p-5 sm:p-6">

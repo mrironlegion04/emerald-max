@@ -68,9 +68,9 @@ export async function PATCH(
     }
 
     // Only users who can edit the WO (wo:edit + location/team scope) OR the
-    // assigned technician/team may mutate its status. This blocks mere viewers
-    // (e.g. a requester who created the WO) from cancelling / starting / holding
-    // work orders they don't own.
+    // assigned technician/team may mutate its status. A requester is allowed
+    // only one action: cancelling their own request while it is still OPEN
+    // (before work has started).
     const editAccess = await canEditWorkOrder(user, id)
     let isAssignedTech = wo.assignedToId === user.userId
     if (!isAssignedTech && wo.teamId) {
@@ -79,7 +79,12 @@ export async function PATCH(
       })
       isAssignedTech = !!membership
     }
-    if (!editAccess.allowed && !isAssignedTech) {
+    const isRequesterOwnCancel =
+      user.role === 'REQUESTER' &&
+      wo.status === 'OPEN' &&
+      status === 'CANCELLED' &&
+      (wo.requestedById === user.userId || wo.createdById === user.userId)
+    if (!editAccess.allowed && !isAssignedTech && !isRequesterOwnCancel) {
       return NextResponse.json(
         { error: editAccess.reason ?? 'You do not have permission to update this work order' },
         { status: 403 }

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks } from 'lucide-react'
+import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
+import { parseCSV } from '@/lib/csv'
 
 interface SimpleMeter {
   id: string
@@ -309,6 +310,65 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
       next[target] = tmp
       return next
     })
+  }
+
+  // CSV bulk-import into the task template (appends to existing tasks)
+  const taskCsvInputRef = useRef<HTMLInputElement>(null)
+  const [importMsg, setImportMsg] = useState('')
+
+  function downloadTaskCsvSample() {
+    const csv = [
+      'title,assigned_to,required',
+      'Check belt tension,,required',
+      'Lubricate bearings,,optional',
+      'Replace worn seals,Ankit Mehta,required',
+    ].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'pm-task-template.csv'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  function handleTaskCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const records = parseCSV(String(reader.result ?? ''))
+      if (records.length === 0) { setImportMsg('No rows found in the CSV. Check the file and try again.'); return }
+      let skipped = 0
+      let unmatched = 0
+      const mapped: PMTask[] = []
+      for (const row of records) {
+        const title = (row.title ?? '').trim()
+        if (!title) { skipped++; continue }
+        const assigneeRaw = (row.assigned_to ?? row.assignee ?? '').trim()
+        let assignedToId = ''
+        if (assigneeRaw) {
+          const target = assigneeRaw.toLowerCase()
+          const byEmail = users.find(u => u.email.toLowerCase() === target)
+          const match = byEmail ?? users.find(u => u.name.toLowerCase() === target)
+          if (match) assignedToId = match.id
+          else unmatched++
+        }
+        mapped.push({
+          title,
+          assignedToId,
+          required: /^(yes|true|1|required)$/i.test((row.required ?? '').trim()),
+        })
+      }
+      if (mapped.length === 0) { setImportMsg('No usable rows found (all titles were empty). Nothing added.'); return }
+      setTasks(prev => [...prev, ...mapped])
+      setImportMsg(
+        `Imported ${mapped.length} task${mapped.length === 1 ? '' : 's'}` +
+        (skipped ? `, skipped ${skipped} empty row${skipped === 1 ? '' : 's'}` : '') +
+        (unmatched ? `, ${unmatched} assignee${unmatched === 1 ? '' : 's'} not found (left unassigned)` : '') + '.'
+      )
+    }
+    reader.readAsText(file)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -966,14 +1026,37 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={addTask}
-          className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"
-        >
-          <Plus className="w-4 h-4" />
-          Add task
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={addTask}
+            className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"
+          >
+            <Plus className="w-4 h-4" />
+            Add task
+          </button>
+          <button
+            type="button"
+            onClick={() => taskCsvInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800"
+          >
+            <Upload className="w-4 h-4" />
+            Upload CSV
+          </button>
+          <button
+            type="button"
+            onClick={downloadTaskCsvSample}
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
+          >
+            <Download className="w-4 h-4" />
+            Sample CSV
+          </button>
+          <input ref={taskCsvInputRef} type="file" accept=".csv" className="hidden" onChange={handleTaskCsvFile} />
+        </div>
+        <p className="text-xs text-gray-400">
+          CSV columns: title, assigned_to (name or email), required (yes/no). Imported tasks are appended to this template.
+        </p>
+        {importMsg && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">{importMsg}</p>}
       </div>
 
       {/* Nested PM */}

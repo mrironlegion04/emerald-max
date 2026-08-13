@@ -14,6 +14,7 @@ import {
 import { generateWONumber } from '@/lib/wo-number'
 import { resolveShift } from '@/lib/shift'
 import { isDescendantOf } from '@/lib/asset-hierarchy'
+import { dateOnlyToUtcMidnight, isValidTime, utcDateOnly } from '@/lib/date-format'
 
 const woSchema = z.object({
   title:               z.string().min(1, 'Title is required'),
@@ -23,6 +24,8 @@ const woSchema = z.object({
   status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CANCELLED']).default('OPEN'),
   dueDate:             z.string().nullable().optional(),
   startDate:           z.string().nullable().optional(),
+  dueTime:             z.string().nullable().optional(),
+  startTime:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
   failedComponentId:   z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
@@ -102,9 +105,16 @@ export async function POST(request: NextRequest) {
       if (data.customIssue.length === 0) data.customIssue = null
     }
 
+    if (data.startTime && !isValidTime(data.startTime)) {
+      return NextResponse.json({ error: 'Start time must be in HH:mm format' }, { status: 400 })
+    }
+    if (data.dueTime && !isValidTime(data.dueTime)) {
+      return NextResponse.json({ error: 'Due time must be in HH:mm format' }, { status: 400 })
+    }
+
     // ── Scheduling sanity check: due date must not be before start date ──
     if (data.startDate && data.dueDate &&
-        new Date(data.dueDate).getTime() < new Date(data.startDate).getTime()) {
+        utcDateOnly(data.dueDate)! < utcDateOnly(data.startDate)!) {
       return NextResponse.json(
         { error: 'Due date cannot be before start date' },
         { status: 400 }
@@ -286,8 +296,10 @@ export async function POST(request: NextRequest) {
         type:           data.type,
         priority:       data.priority,
         status:         data.status,
-        dueDate:        data.dueDate      ? new Date(data.dueDate) : null,
-        startDate:      data.startDate    ? new Date(data.startDate) : null,
+        dueDate:        dateOnlyToUtcMidnight(data.dueDate),
+        startDate:      dateOnlyToUtcMidnight(data.startDate),
+        dueTime:        data.dueTime   ? data.dueTime   : null,
+        startTime:      data.startTime ? data.startTime : null,
         assetId:        normalized.assetId,
         failedComponentId,
         locationId:     locationId,

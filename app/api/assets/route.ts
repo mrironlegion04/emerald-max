@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
 import { buildLocationFilter, canAssignUsers, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 
 const assetSchema = z.object({
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
         serialNumber: data.serialNumber ?? null,
         model:        data.model        ?? null,
         manufacturer: data.manufacturer ?? null,
-        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
+        purchaseDate: dateOnlyToUtcMidnight(data.purchaseDate),
         purchaseCost: data.purchaseCost ?? null,
         categoryId:   data.categoryId   ?? null,
         locationId:   data.locationId   ?? null,

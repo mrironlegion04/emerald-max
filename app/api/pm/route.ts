@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { computeNextDueDate } from '@/lib/pm-generation'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     // Recurrence-aware start: snap nextDueDate to the first conformant date
     const recurrenceRule = data.recurrenceRule ?? null
-    let nextDueDate = new Date(data.nextDueDate)
+    let nextDueDate = dateOnlyToUtcMidnight(data.nextDueDate)!
     if (data.recurrenceRule && data.frequency === 'MONTHLY') {
       nextDueDate = computeNextDueDate(nextDueDate, data.frequency, data.interval, data.recurrenceRule)
     }
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
         nextDueDate:         nextDueDate,
         recurrenceRule:      recurrenceRule === null ? Prisma.JsonNull as unknown as Prisma.InputJsonValue : recurrenceRule,
         occurrenceLimit:     data.occurrenceLimit ?? null,
-        endDate:             data.endDate ? new Date(data.endDate) : null,
+        endDate:             data.endDate ? dateOnlyToUtcMidnight(data.endDate) : null,
         externalId:          data.externalId ?? null,
         assetId:             finalAssetId,
         assets:              assetIds.length > 0

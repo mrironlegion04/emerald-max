@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
+import { startOfUtcDay } from '@/lib/date-format'
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
   ])
 
   const overdueWOs = await prisma.workOrder.count({
-    where: woWhere({ status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED'] }, dueDate: { lt: now } }),
+    where: woWhere({ status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED'] }, dueDate: { lt: startOfUtcDay(now) } }),
   })
 
   const totalActive = openWOs + inProgressWOs + onHoldWOs + completedWOs + closedWOs + cancelledWOs

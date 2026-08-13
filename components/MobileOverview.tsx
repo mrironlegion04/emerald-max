@@ -7,6 +7,7 @@ import {
   ChevronRight, Shield, Users,
 } from 'lucide-react'
 import Badge, { priorityVariant } from './Badge'
+import { todayUTC } from '@/lib/date-format'
 
 interface WO {
   id: string; woNumber: string; title: string; priority: string; status: string
@@ -92,7 +93,7 @@ export default function MobileOverview({ userName }: { userName: string }) {
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {[
           { label: 'Scan', icon: QrCode, href: '/scan', color: 'bg-slate-900 text-white' },
-          { label: 'Due Today', icon: Clock, href: '/work-orders?dueDateFrom=' + new Date().toISOString().split('T')[0] + '&dueDateTo=' + new Date().toISOString().split('T')[0], color: 'bg-blue-50 text-blue-600' },
+          { label: 'Due Today', icon: Clock, href: '/work-orders?dueDateFrom=' + todayUTC() + '&dueDateTo=' + todayUTC(), color: 'bg-blue-50 text-blue-600' },
           { label: 'Messages', icon: MessageCircle, href: '/messages', color: 'bg-emerald-50 text-emerald-600' },
         ].map(s => (
           <Link key={s.label} href={s.href}

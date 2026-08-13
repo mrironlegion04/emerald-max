@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
 import { checkCircularReference } from '@/lib/asset-hierarchy'
 import { canAssignUsers, canViewAsset, canWriteToAssets, canWriteToLocations, hasScopeActionFlag } from '@/lib/access-control'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -26,6 +27,8 @@ const updateSchema = z.object({
   ownerId:      z.string().nullable().optional(),
   domainIds:    z.array(z.string()).optional(),
   customFields: z.any().nullable().optional(),
+  warrantyExpiry: z.string().nullable().optional(),
+  warrantyNotes:  z.string().nullable().optional(),
 })
 
 export async function GET(
@@ -152,7 +155,9 @@ export async function PUT(
       data: {
         ...data,
         domainIds: undefined,
-        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : undefined,
+        purchaseDate: data.purchaseDate !== undefined ? dateOnlyToUtcMidnight(data.purchaseDate) : undefined,
+        warrantyExpiry: data.warrantyExpiry !== undefined ? dateOnlyToUtcMidnight(data.warrantyExpiry) : undefined,
+        warrantyNotes: data.warrantyNotes !== undefined ? (data.warrantyNotes || null) : undefined,
         ...(data.domainIds !== undefined
           ? { domains: { deleteMany: {}, create: data.domainIds.map(domainId => ({ domainId })) } }
           : {}),

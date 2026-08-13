@@ -17,6 +17,7 @@ import WorkOrderCrewPanel from '@/components/WorkOrderCrewPanel'
 import IssueBadge from '@/components/IssueBadge'
 import { canEditWorkOrder, canUploadWOAttachment, canViewWorkOrder, canCompleteWorkOrder, hasScopeActionFlag, getUserLocationIds } from '@/lib/access-control'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
+import { isOverdueByDate, todayUTC, fmtScheduledTime } from '@/lib/date-format'
 
 const statusLabels = WO_STATUS_LABELS
 const typeLabels: Record<string,string> = {
@@ -108,7 +109,7 @@ export default async function WorkOrderDetailPage({
   })
 
   const isOverdue =
-    wo.dueDate && new Date(wo.dueDate) < new Date() &&
+    wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) &&
     !['COMPLETED','CANCELLED'].includes(wo.status)
 
   const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)
@@ -290,10 +291,16 @@ export default async function WorkOrderDetailPage({
                 }] : []),
                 ...(wo.shift ? [{ label: 'Shift', value: SHIFT_LABELS[wo.shift] ?? wo.shift }] : []),
                 { label: 'Created',     value: fmtDateTime(wo.createdAt) },
-                { label: 'Start date',  value: fmtDateTime(wo.startDate) },
+                { label: 'Start date',  value: wo.startDate ? (
+                  <span>
+                    {fmt(wo.startDate)}
+                    {wo.startTime && <span className="text-slate-400 font-medium"> · {fmtScheduledTime(wo.startTime)}</span>}
+                  </span>
+                ) : '—' },
                 { label: 'Due date',    value: (
                   <span className={isOverdue ? 'text-rose-650 font-bold' : ''}>
-                    {isOverdue ? '⚠ ' : ''}{fmtDateTime(wo.dueDate)}
+                    {isOverdue ? '⚠ ' : ''}{fmt(wo.dueDate)}
+                    {wo.dueTime && <span className="text-slate-400 font-medium"> · {fmtScheduledTime(wo.dueTime)}</span>}
                   </span>
                 )},
                 { label: 'Started',     value: fmtDateTime(wo.startedAt) },

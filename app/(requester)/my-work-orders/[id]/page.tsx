@@ -9,6 +9,7 @@ import {
 import Badge, { priorityVariant, workOrderStatusVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import IssueBadge from '@/components/IssueBadge'
+import { fmtDateOnly, utcDateOnly } from '@/lib/date-format'
 
 function fmtDate(d: Date | string | null | undefined) {
   if (!d) return null
@@ -83,7 +84,7 @@ export default async function MyWorkOrderDetailPage({ params }: { params: Promis
               )}
               {wo.dueDate && (
                 <p className="flex items-center gap-2 text-xs text-slate-600">
-                  <CalendarClock className="w-3.5 h-3.5 text-slate-400" /> Due by {fmtDate(wo.dueDate)}
+                  <CalendarClock className="w-3.5 h-3.5 text-slate-400" /> Due by {wo.dueDate ? fmtDateOnly(utcDateOnly(wo.dueDate)) : '—'}
                 </p>
               )}
               {wo.downtimeStartedAt && (

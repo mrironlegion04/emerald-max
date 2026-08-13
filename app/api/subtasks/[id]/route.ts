@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { canCompleteSubtask, canEditWorkOrder, canCompleteWorkOrder, canViewWorkOrder, getCompletionType, isAdmin, isManagerOrAbove, canAssignUsers, canAssignTeams } from '@/lib/access-control'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 
 const updateSubtaskSchema = z.object({
@@ -161,7 +162,7 @@ export async function PUT(
     if (data.status !== undefined) updateData.status = data.status
     if (data.priority !== undefined) updateData.priority = data.priority
     if (data.dueDate !== undefined) {
-      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
+      updateData.dueDate = dateOnlyToUtcMidnight(data.dueDate)
     }
     if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId
     if (data.assignedTeamId !== undefined) {

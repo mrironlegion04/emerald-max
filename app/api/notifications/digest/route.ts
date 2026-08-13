@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { sendOverdueDigest } from '@/lib/email'
 import { getUserLocationIds } from '@/lib/access-control'
 import { getCronSecret } from '@/lib/env'
+import { startOfUtcDay } from '@/lib/date-format'
 
 // This route is meant to be called by a cron job or manually.
 // Protect with a secret token so it can't be called by anyone.
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const now      = new Date()
     const overdueWOs = await prisma.workOrder.findMany({
-      where: { status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: now } },
+      where: { status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: startOfUtcDay(now) } },
       include: {
         asset:      { select: { name: true } },
         assignedTo: { select: { name: true } },
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
         woNumber:   w.woNumber,
         title:      w.title,
         daysOverdue: w.dueDate
-          ? Math.ceil((now.getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.round((startOfUtcDay(now).getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
           : 0,
         assignedTo: w.assignedTo?.name ?? null,
       }))

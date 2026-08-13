@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Calendar, Tag, ChevronRight } from 'lucide-react'
 import BulkWOActions from './BulkWOActions'
 import Badge, { workOrderStatusVariant, priorityVariant } from './Badge'
+import { isOverdueByDate, todayLocal } from '@/lib/date-format'
 
 interface WorkOrder {
   id: string
@@ -144,7 +145,7 @@ export default function WorkOrdersTable({
               workOrders.map(wo => {
                 const overdue =
                   wo.dueDate &&
-                  new Date(wo.dueDate) < new Date() &&
+                  isOverdueByDate(wo.dueDate, todayLocal()) &&
                   !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
                 return (
@@ -264,7 +265,7 @@ export default function WorkOrdersTable({
           workOrders.map(wo => {
             const overdue =
               wo.dueDate &&
-              new Date(wo.dueDate) < new Date() &&
+              isOverdueByDate(wo.dueDate, todayLocal()) &&
               !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
 
             const isSelected = selectedIds.includes(wo.id)

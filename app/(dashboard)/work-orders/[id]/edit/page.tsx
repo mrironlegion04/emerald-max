@@ -6,6 +6,7 @@ import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import WorkOrderForm from '@/components/WorkOrderForm'
 import RepairSessionsPanel from '@/components/RepairSessionsPanel'
+import { utcDateOnly } from '@/lib/date-format'
 
 export default async function EditWorkOrderPage({
   params,
@@ -76,10 +77,10 @@ export default async function EditWorkOrderPage({
     type:            wo.type,
     priority:        wo.priority,
     status:          wo.status,
-    startDate:       wo.startDate ? new Date(wo.startDate).toISOString().split('T')[0] : '',
-    startTime:       wo.startDate ? new Date(wo.startDate).toTimeString().slice(0, 5) : '',
-    dueDate:         wo.dueDate ? new Date(wo.dueDate).toISOString().split('T')[0] : '',
-    dueTime:         wo.dueDate ? new Date(wo.dueDate).toTimeString().slice(0, 5) : '',
+    startDate:       wo.startDate ? utcDateOnly(wo.startDate) ?? '' : '',
+    startTime:       wo.startTime ?? '',
+    dueDate:         wo.dueDate ? utcDateOnly(wo.dueDate) ?? '' : '',
+    dueTime:         wo.dueTime ?? '',
     assetId:         wo.assetId       ?? '',
     failedComponentId: wo.failedComponentId ?? '',
     locationId:      wo.locationId    ?? '',

@@ -2,11 +2,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { isOverdueByDate, todayLocal, fmtScheduledTime } from '@/lib/date-format'
 
 interface CalEvent {
   id: string; type: 'wo' | 'pm'; title: string; subtitle: string
   date: string; status: string; priority: string; woType: string; href: string
   woNumber: string | null; assignee: string | null; dueDate: string | null
+  dueTime: string | null; startTime: string | null
 }
 
 type ViewMode = 'month' | 'week'
@@ -37,7 +39,7 @@ function isOverdue(ev: CalEvent): boolean {
   if (ev.type === 'pm') return false
   if (!ev.dueDate) return false
   if (ev.status === 'COMPLETED' || ev.status === 'CANCELLED') return false
-  return new Date(ev.dueDate) < new Date()
+  return isOverdueByDate(ev.dueDate, todayLocal())
 }
 
 function sortEvents(events: CalEvent[]): CalEvent[] {
@@ -373,7 +375,7 @@ function WOItem({ ev, compact, showDetails }: { ev: CalEvent; compact?: boolean;
     ev.title,
     `${STATUS_LABEL[ev.status] ?? ev.status}${overdue ? ' (Overdue)' : ''}`,
     ev.assignee ? `Assigned: ${ev.assignee}` : 'Unassigned',
-    ev.dueDate ? `Due: ${new Date(ev.dueDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}` : null,
+    ev.dueDate ? `Due: ${new Date(ev.dueDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}${ev.dueTime ? ` · ${fmtScheduledTime(ev.dueTime)}` : ''}` : null,
   ].filter(Boolean).join(' · ')
 
   if (compact) {
@@ -409,6 +411,7 @@ function WOItem({ ev, compact, showDetails }: { ev: CalEvent; compact?: boolean;
                 <span className={`w-1 h-1 rounded-full ${prioColor}`} />
               </div>
               {ev.assignee && <p className="text-[9px] text-slate-400 font-medium mt-0.5">→ {ev.assignee}</p>}
+              {ev.dueTime && <p className="text-[9px] text-slate-500 font-bold mt-0.5">Scheduled {fmtScheduledTime(ev.dueTime)}</p>}
             </>
           )}
         </div>

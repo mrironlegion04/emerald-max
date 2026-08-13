@@ -576,6 +576,8 @@ model WorkOrder {
   priority    WorkOrderPriority @default(MEDIUM)
   dueDate     DateTime?
   startDate   DateTime?
+  dueTime     String?   // "HH:mm" scheduled time for dueDate (informational, never drives overdue)
+  startTime   String?   // "HH:mm" scheduled time for startDate (informational)
   startedAt   DateTime?
   respondedAt DateTime?
   completedAt DateTime?

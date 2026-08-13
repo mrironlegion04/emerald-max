@@ -330,14 +330,10 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         }
       }
 
-      if (form.startDate && form.dueDate) {
-        const startDt = form.startDate + (form.startTime ? 'T' + form.startTime : 'T00:00')
-        const dueDt   = form.dueDate   + (form.dueTime   ? 'T' + form.dueTime   : 'T12:00')
-        if (new Date(dueDt).getTime() < new Date(startDt).getTime()) {
-          setError('Due date cannot be before start date')
-          setSaving(false)
-          return
-        }
+      if (form.startDate && form.dueDate && form.dueDate < form.startDate) {
+        setError('Due date cannot be before start date')
+        setSaving(false)
+        return
       }
 
       const detailUrl = isEdit && woId ? `/work-orders/${woId}` : '/work-orders'
@@ -359,8 +355,10 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         type:         form.type,
         priority:     form.priority,
         status:       form.status,
-        startDate:    form.startDate ? (form.startDate + (form.startTime ? 'T' + form.startTime : 'T00:00')) : null,
-        dueDate:      form.dueDate ? (form.dueDate + (form.dueTime ? 'T' + form.dueTime : 'T12:00')) : null,
+        startDate:    form.startDate || null,
+        dueDate:      form.dueDate || null,
+        startTime:    form.startTime || null,
+        dueTime:      form.dueTime || null,
         assetId:      form.assetId        || null,
         failedComponentId: form.failedComponentId || null,
         locationId:   form.locationId     || null,
@@ -495,6 +493,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             </div>
           )}
         </div>
+        <p className="text-[11px] text-slate-400 font-medium -mt-3">
+          Times are optional and only tell the technician when to work — due status is based on the calendar date only.
+        </p>
         {form.type === 'BREAKDOWN' && inputRow('Machine down since', false,
           <>
             <input

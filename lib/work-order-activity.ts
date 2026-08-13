@@ -1,5 +1,6 @@
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import { fmtDateTime } from '@/lib/utils'
+import { fmtDateOnly, utcDateOnly } from '@/lib/date-format'
 
 export interface ActivityEvent {
   id: string
@@ -61,7 +62,11 @@ function formatValue(key: string, value: unknown, names: Map<string, string>, te
   if (key === 'status') return WO_STATUS_LABELS[str] ?? str
   if (key === 'priority') return PRIORITY_LABELS[str] ?? str
   if (key === 'type') return TYPE_LABELS[str] ?? str
-  if (['dueDate', 'startDate', 'startedAt', 'completedAt', 'respondedAt', 'createdAt'].includes(key)) {
+  if (['dueDate', 'startDate'].includes(key)) {
+    const ymd = utcDateOnly(str)
+    return ymd ? fmtDateOnly(ymd) : '—'
+  }
+  if (['startedAt', 'completedAt', 'respondedAt', 'createdAt'].includes(key)) {
     const d = new Date(str)
     return isNaN(d.getTime()) ? str : fmtDateTime(d)
   }

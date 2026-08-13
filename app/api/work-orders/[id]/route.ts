@@ -25,6 +25,7 @@ import {
   isValidWOStatusTransition,
 } from '@/lib/access-control'
 import { isDescendantOf } from '@/lib/asset-hierarchy'
+import { dateOnlyToUtcMidnight, isValidTime } from '@/lib/date-format'
 import { updateAssetMetrics, updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
 import {
@@ -71,6 +72,8 @@ const updateSchema = z.object({
   status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CLOSED','CANCELLED']).optional(),
   dueDate:             z.string().nullable().optional(),
   startDate:           z.string().nullable().optional(),
+  dueTime:             z.string().nullable().optional(),
+  startTime:           z.string().nullable().optional(),
   assetId:             z.string().nullable().optional(),
   failedComponentId:   z.string().nullable().optional(),
   locationId:          z.string().nullable().optional(),
@@ -188,6 +191,13 @@ export async function PUT(
 
     const body = await request.json()
     const data = updateSchema.parse(body)
+
+    if (data.startTime && !isValidTime(data.startTime)) {
+      return NextResponse.json({ error: 'Start time must be in HH:mm format' }, { status: 400 })
+    }
+    if (data.dueTime && !isValidTime(data.dueTime)) {
+      return NextResponse.json({ error: 'Due time must be in HH:mm format' }, { status: 400 })
+    }
 
     if (data.customIssue) {
       data.customIssue = data.customIssue.trim()
@@ -528,8 +538,10 @@ export async function PUT(
       ...snapshotUpdates,
       ...extra,
       ...(!isAdmin(user) ? {} : data.shift !== undefined ? { shift: data.shift } : {}),
-      dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      dueDate: data.dueDate !== undefined ? dateOnlyToUtcMidnight(data.dueDate) : undefined,
+      startDate: data.startDate !== undefined ? dateOnlyToUtcMidnight(data.startDate) : undefined,
+      dueTime: data.dueTime !== undefined ? (data.dueTime || null) : undefined,
+      startTime: data.startTime !== undefined ? (data.startTime || null) : undefined,
       downtimeStartedAt: data.downtimeStartedAt !== undefined
         ? (data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null)
         : undefined,

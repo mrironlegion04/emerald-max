@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { computeNextDueDate, type RecurrenceRule } from '@/lib/pm-generation'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -185,7 +186,7 @@ export async function PUT(
       : ((existing.recurrenceRule ?? null) as unknown as RecurrenceRule | null)
     const effectiveFrequency = data.frequency ?? existing.frequency
     const effectiveInterval = data.interval ?? existing.interval
-    let nextDueDate = data.nextDueDate ? new Date(data.nextDueDate) : existing.nextDueDate
+    let nextDueDate = data.nextDueDate ? dateOnlyToUtcMidnight(data.nextDueDate)! : existing.nextDueDate
     if (recurrenceRule && effectiveFrequency === 'MONTHLY') {
       nextDueDate = computeNextDueDate(nextDueDate, effectiveFrequency, effectiveInterval, recurrenceRule)
     }
@@ -227,7 +228,7 @@ export async function PUT(
             ? data.occurrenceLimit
             : undefined,
           endDate:             data.endDate !== undefined
-            ? (data.endDate ? new Date(data.endDate) : null)
+            ? (data.endDate ? dateOnlyToUtcMidnight(data.endDate) : null)
             : undefined,
           externalId:          data.externalId !== undefined
             ? data.externalId

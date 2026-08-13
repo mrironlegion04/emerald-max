@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
+import { startOfUtcDay } from '@/lib/date-format'
 
 export async function GET(request: NextRequest) {
   try {
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     // ── Overdue WOs ───────────────────────────────────────────────────────────
     const overdueWOs = await prisma.workOrder.findMany({
-      where: woWhere({ status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: now } }),
+      where: woWhere({ status: { in: ['OPEN','IN_PROGRESS'] }, dueDate: { lt: startOfUtcDay(now) } }),
       include: {
         asset:      { select: { name: true } },
         assignedTo: { select: { name: true } },
@@ -155,7 +156,7 @@ export async function GET(request: NextRequest) {
         dueDate: w.dueDate, assetName: w.asset?.name ?? null,
         assignedTo: w.assignedTo?.name ?? null,
         daysOverdue: w.dueDate
-          ? Math.ceil((now.getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.round((startOfUtcDay(now).getTime() - new Date(w.dueDate).getTime()) / (1000 * 60 * 60 * 24))
           : 0,
       })),
       lowStockParts: [],

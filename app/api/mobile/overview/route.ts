@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter, getUserLocationIds } from '@/lib/access-control'
+import { startOfUtcDay } from '@/lib/date-format'
 
 export async function GET() {
   const user = await getCurrentUser()
@@ -81,7 +82,7 @@ export async function GET() {
       where: {
         AND: visAnd,
         status: { in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD'] },
-        dueDate: { lt: now },
+        dueDate: { lt: startOfUtcDay(now) },
         OR: myOrTeam,
       },
       select: {

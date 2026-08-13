@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, Circle, AlertCircle, Trash2, Plus, Edit2, X } from 'lucide-react'
 import { fmt, fmtCurrency } from '@/lib/utils'
+import { isOverdueByDate, todayLocal } from '@/lib/date-format'
 
 interface Subtask {
   id: string
@@ -420,7 +421,7 @@ export default function SubtasksPanel({
           {subtasks.map(subtask => {
             const isOverdue =
               subtask.dueDate &&
-              new Date(subtask.dueDate) < new Date() &&
+              isOverdueByDate(subtask.dueDate, todayLocal()) &&
               subtask.status !== 'COMPLETED'
 
             return (

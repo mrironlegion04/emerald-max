@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { hasPermission } from '@/lib/permissions'
 import { buildWOVisibilityFilter, getUserLocationIds } from '@/lib/access-control'
+import { isOverdueByDate, todayUTC, utcDateOnly } from '@/lib/date-format'
 
 export async function GET(
   req: NextRequest,
@@ -105,7 +106,7 @@ export async function GET(
         wo.asset?.name || '—',
         wo.assignedTo?.name || '—',
         new Date(wo.createdAt).toLocaleDateString(),
-        wo.dueDate ? new Date(wo.dueDate).toLocaleDateString() : '—',
+        wo.dueDate ? utcDateOnly(wo.dueDate) ?? '—' : '—',
         wo.completedAt ? new Date(wo.completedAt).toLocaleDateString() : '—',
         wo.laborCost || 0,
         wo.partsCost || 0,
@@ -192,13 +193,13 @@ export async function GET(
       assetName: wo.asset?.name || '—',
       dueDate: wo.dueDate,
       createdAt: wo.createdAt,
-      isOverdue: wo.dueDate && wo.dueDate < now && !['COMPLETED', 'CLOSED'].includes(wo.status),
+      isOverdue: isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED', 'CLOSED'].includes(wo.status),
     }))
 
     const completed = workOrders.filter(wo => wo.status === 'COMPLETED').length
     const closed = workOrders.filter(wo => wo.status === 'CLOSED').length
     const open = workOrders.filter(wo => wo.status === 'OPEN').length
-    const overdue = workOrders.filter(wo => wo.dueDate && wo.dueDate < now && !['COMPLETED', 'CLOSED'].includes(wo.status)).length
+    const overdue = workOrders.filter(wo => isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED', 'CLOSED'].includes(wo.status)).length
 
     const totals = {
       total: workOrders.length,

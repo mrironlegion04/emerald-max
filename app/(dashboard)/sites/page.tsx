@@ -5,6 +5,7 @@ import Link from 'next/link'
 import PageHeader from '@/components/PageHeader'
 import Badge from '@/components/Badge'
 import { Layers, ClipboardList, AlertTriangle, AlertCircle, DollarSign } from 'lucide-react'
+import { isOverdueByDate, todayUTC } from '@/lib/date-format'
 
 function fmtc(v: number) { return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(v) }
 
@@ -51,12 +52,12 @@ export default async function SitesPage() {
 
   const buildSiteStats = (assets: any) => {
     const allWOs = assets.flatMap((a: any) => a.workOrders)
-    const now    = new Date()
+    const today = todayUTC()
     return {
       assetCount:     assets.length,
       activeAssets:   assets.filter((a: any) => a.status === 'ACTIVE').length,
       openWOs:        allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status)).length,
-      overdueWOs:     allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status) && w.dueDate && new Date(w.dueDate) < now).length,
+      overdueWOs:     allWOs.filter((w: any) => ['OPEN','IN_PROGRESS'].includes(w.status) && w.dueDate && isOverdueByDate(w.dueDate, today)).length,
       criticalWOs:    allWOs.filter((w: any) => w.priority === 'CRITICAL' && ['OPEN','IN_PROGRESS'].includes(w.status)).length,
       completedWOs:   allWOs.filter((w: any) => w.status === 'COMPLETED').length,
       totalCost:      allWOs.filter((w: any) => w.status === 'COMPLETED').reduce((s: number, w: any) => s + Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0), 0),

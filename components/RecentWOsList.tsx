@@ -3,6 +3,7 @@
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { WO_STATUS_PILL } from '@/lib/work-order-status'
+import { fmtDateOnly, utcDateOnly } from '@/lib/date-format'
 
 interface WorkOrder {
   id: string
@@ -63,7 +64,7 @@ export default function RecentWOsList({ workOrders, locationId }: Props) {
               </p>
               <p className="text-xs text-gray-600 mt-1 truncate">
                 {wo.assetName}
-                {wo.dueDate && ` · Due ${new Date(wo.dueDate).toLocaleDateString()}`}
+                {wo.dueDate && ` · Due ${fmtDateOnly(utcDateOnly(wo.dueDate))}`}
               </p>
             </div>
 

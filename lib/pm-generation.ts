@@ -36,21 +36,21 @@ export type RecurrenceRule =
   | { type: 'DAY_OF_MONTH'; dayOfMonth: number }
 
 function nthWeekdayDate(year: number, month: number, dayOfWeek: number, occurrence: number): Date {
-  const lastDayNum = new Date(year, month + 1, 0).getDate()
+  const lastDayNum = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
   if (occurrence === -1) {
-    const lastDow = new Date(year, month, lastDayNum).getDay()
-    return new Date(year, month, lastDayNum - ((lastDow - dayOfWeek + 7) % 7))
+    const lastDow = new Date(Date.UTC(year, month, lastDayNum)).getUTCDay()
+    return new Date(Date.UTC(year, month, lastDayNum - ((lastDow - dayOfWeek + 7) % 7)))
   }
-  const firstDow = new Date(year, month, 1).getDay()
+  const firstDow = new Date(Date.UTC(year, month, 1)).getUTCDay()
   let day = 1 + ((dayOfWeek - firstDow + 7) % 7) + (occurrence - 1) * 7
   if (day > lastDayNum) day -= 7 // 5th weekday doesn't exist → use the last one
-  return new Date(year, month, day)
+  return new Date(Date.UTC(year, month, day))
 }
 
 function dayOfMonthDate(year: number, month: number, dayOfMonth: number): Date {
-  const lastDayNum = new Date(year, month + 1, 0).getDate()
+  const lastDayNum = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
   const day = dayOfMonth === -1 ? lastDayNum : Math.min(dayOfMonth, lastDayNum)
-  return new Date(year, month, day)
+  return new Date(Date.UTC(year, month, day))
 }
 
 function dateForRule(year: number, month: number, rule: RecurrenceRule): Date {
@@ -62,10 +62,10 @@ function dateForRule(year: number, month: number, rule: RecurrenceRule): Date {
 
 // First recurrence-conformant date on or after `date` (monthly rules only)
 export function snapToRecurrence(date: Date, rule: RecurrenceRule): Date {
-  const candidate = dateForRule(date.getFullYear(), date.getMonth(), rule)
+  const candidate = dateForRule(date.getUTCFullYear(), date.getUTCMonth(), rule)
   if (candidate.getTime() >= date.getTime()) return candidate
-  const targetMonth = date.getMonth() + 1
-  const year = date.getFullYear() + Math.floor(targetMonth / 12)
+  const targetMonth = date.getUTCMonth() + 1
+  const year = date.getUTCFullYear() + Math.floor(targetMonth / 12)
   const monthInYear = ((targetMonth % 12) + 12) % 12
   return dateForRule(year, monthInYear, rule)
 }
@@ -84,7 +84,11 @@ export function computeNextDueDate(
   return startDate
 }
 
-// ── Date Utilities (with month-overflow fix) ────────────────────────────
+// ── Date Utilities (UTC-day arithmetic, with month-overflow fix) ──────────
+
+function toUtcMidnight(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
 
 export function advanceDate(
   current: Date,
@@ -98,43 +102,37 @@ export function advanceDate(
       next.setTime(next.getTime() + interval * 3600000)
       break
     case 'DAILY':
-      next.setDate(next.getDate() + interval)
+      next.setUTCDate(next.getUTCDate() + interval)
       break
     case 'WEEKLY':
-      next.setDate(next.getDate() + interval * 7)
+      next.setUTCDate(next.getUTCDate() + interval * 7)
       break
     case 'MONTHLY':
       if (recurrenceRule) {
-        const targetMonth = next.getMonth() + interval
-        const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
+        const targetMonth = next.getUTCMonth() + interval
+        const targetYear = next.getUTCFullYear() + Math.floor(targetMonth / 12)
         const monthInYear = ((targetMonth % 12) + 12) % 12
         return dateForRule(targetYear, monthInYear, recurrenceRule)
       }
       {
-        const targetMonth = next.getMonth() + interval
-        const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
+        const targetMonth = next.getUTCMonth() + interval
+        const targetYear = next.getUTCFullYear() + Math.floor(targetMonth / 12)
         const monthInYear = ((targetMonth % 12) + 12) % 12
-        const lastDay = new Date(targetYear, monthInYear + 1, 0).getDate()
-        next.setDate(Math.min(next.getDate(), lastDay))
-        next.setMonth(monthInYear)
-        next.setFullYear(targetYear)
+        const lastDay = new Date(Date.UTC(targetYear, monthInYear + 1, 0)).getUTCDate()
+        return new Date(Date.UTC(targetYear, monthInYear, Math.min(next.getUTCDate(), lastDay)))
       }
-      break
     case 'QUARTERLY': {
-      const targetMonth = next.getMonth() + interval * 3
-      const targetYear = next.getFullYear() + Math.floor(targetMonth / 12)
+      const targetMonth = next.getUTCMonth() + interval * 3
+      const targetYear = next.getUTCFullYear() + Math.floor(targetMonth / 12)
       const monthInYear = ((targetMonth % 12) + 12) % 12
-      const lastDay = new Date(targetYear, monthInYear + 1, 0).getDate()
-      next.setDate(Math.min(next.getDate(), lastDay))
-      next.setMonth(monthInYear)
-      next.setFullYear(targetYear)
-      break
+      const lastDay = new Date(Date.UTC(targetYear, monthInYear + 1, 0)).getUTCDate()
+      return new Date(Date.UTC(targetYear, monthInYear, Math.min(next.getUTCDate(), lastDay)))
     }
     case 'YEARLY':
-      next.setFullYear(next.getFullYear() + interval)
+      next.setUTCFullYear(next.getUTCFullYear() + interval)
       break
     default:
-      next.setMonth(next.getMonth() + interval)
+      next.setUTCMonth(next.getUTCMonth() + interval)
   }
   return next
 }
@@ -496,7 +494,7 @@ export async function handleWOCompletion(workOrderId: string) {
   // Reschedule from completion date
   const completedAt = new Date()
   const recurrence = (schedule.recurrenceRule ?? null) as RecurrenceRule | null
-  const nextDue = advanceDate(completedAt, schedule.frequency, schedule.interval, recurrence)
+  const nextDue = toUtcMidnight(advanceDate(completedAt, schedule.frequency, schedule.interval, recurrence))
 
   const pastEnd = schedule.endDate != null
     && nextDue > new Date(schedule.endDate)

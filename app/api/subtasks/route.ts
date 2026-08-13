@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { canViewWorkOrder, canEditWorkOrder, canCompleteWorkOrder, canAssignUsers, canAssignTeams } from '@/lib/access-control'
+import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 
 const subtaskSchema = z.object({
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
         description: data.description ?? null,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        dueDate: dateOnlyToUtcMidnight(data.dueDate),
         workOrderId: data.workOrderId,
         assignedToId: data.assignedToId ?? null,
         assignedTeamId: data.assignedTeamId ?? null,

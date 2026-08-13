@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
+import { endOfUtcDay, dateOnlyToUtcMidnight, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return ''
@@ -80,14 +81,14 @@ export async function GET(request: NextRequest) {
 
       if (dueDateFrom || dueDateTo) {
         where.dueDate = {
-          ...(dueDateFrom ? { gte: new Date(dueDateFrom) } : {}),
-          ...(dueDateTo   ? { lte: new Date(dueDateTo) }   : {}),
+          ...(dueDateFrom ? { gte: dateOnlyToUtcMidnight(dueDateFrom) ?? new Date(dueDateFrom) } : {}),
+          ...(dueDateTo   ? { lte: endOfUtcDay(dueDateTo) }   : {}),
         }
       }
       if (createdFrom || createdTo) {
         where.createdAt = {
           ...(createdFrom ? { gte: new Date(createdFrom) } : {}),
-          ...(createdTo   ? { lte: new Date(createdTo) }   : {}),
+          ...(createdTo   ? { lte: endOfUtcDay(createdTo) } : {}),
         }
       }
 
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
         w.woNumber, w.title, w.type, w.status, w.priority,
         w.asset?.name ?? '', w.asset?.assetCode ?? '',
         w.assignedTo?.name ?? '', w.domain?.name ?? '', w.createdBy?.name ?? '',
-        fmt(w.dueDate), fmt(w.startedAt), fmt(w.completedAt),
+        fmtDateOnly(utcDateOnly(w.dueDate)), fmt(w.startedAt), fmt(w.completedAt),
         w.laborHours ?? '', w.laborCost ?? '', w.partsCost ?? '',
         ((Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0))) || '',
         fmt(w.createdAt),

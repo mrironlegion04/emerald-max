@@ -5,6 +5,7 @@ import PrintButton from '@/components/PrintButton'
 import { fmt, fmtCurrency, fmtDateTime } from '@/lib/utils'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import { canViewWorkOrder } from '@/lib/access-control'
+import { isOverdueByDate, todayUTC, fmtScheduledTime } from '@/lib/date-format'
 
 const typeLabels: Record<string, string> = {
   BREAKDOWN: 'Breakdown', PREVENTIVE: 'Preventive', PREDICTIVE: 'Predictive',
@@ -42,7 +43,7 @@ export default async function WorkOrderPrintPage({
 
   const totalCost = Number(wo.laborCost ?? 0) + Number(wo.partsCost ?? 0)
   const isOverdue =
-    wo.dueDate && new Date(wo.dueDate) < new Date() &&
+    wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) &&
     !['COMPLETED', 'CANCELLED'].includes(wo.status)
 
   return (
@@ -119,13 +120,14 @@ export default async function WorkOrderPrintPage({
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Dates</h3>
           <div className="space-y-1 text-sm">
             <p><strong>Created:</strong> {fmtDateTime(wo.createdAt)}</p>
-            {wo.startDate && <p><strong>Start date:</strong> {fmtDateTime(wo.startDate)}</p>}
+            {wo.startDate && <p><strong>Start date:</strong> {fmt(wo.startDate)}{wo.startTime && ` · ${fmtScheduledTime(wo.startTime)}`}</p>}
             {wo.startedAt && <p><strong>Started:</strong> {fmtDateTime(wo.startedAt)}</p>}
             {wo.respondedAt && <p><strong>Responded:</strong> {fmtDateTime(wo.respondedAt)}</p>}
             {wo.completedAt && <p><strong>Completed:</strong> {fmtDateTime(wo.completedAt)}</p>}
             {wo.dueDate && (
               <p className={isOverdue ? 'text-red-600 font-bold' : ''}>
                 <strong>Due:</strong> {fmt(wo.dueDate)}
+                {wo.dueTime && ` · ${fmtScheduledTime(wo.dueTime)}`}
                 {isOverdue && ' (OVERDUE)'}
               </p>
             )}

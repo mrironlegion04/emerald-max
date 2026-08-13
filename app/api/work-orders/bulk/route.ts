@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { hasPermission } from '@/lib/permissions'
 import { buildWOVisibilityFilter, hasScopeActionFlag, canAssignUsers, isValidWOStatusTransition } from '@/lib/access-control'
 import { z } from 'zod'
+import { utcDateOnly } from '@/lib/date-format'
 
 const bulkSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one work order required'),
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
         wo.status,
         wo.priority,
         wo.assignedTo?.name || wo.domain?.name || '',
-        wo.dueDate ? new Date(wo.dueDate).toLocaleDateString() : '',
+        wo.dueDate ? utcDateOnly(wo.dueDate) ?? '' : '',
         new Date(wo.createdAt).toLocaleDateString(),
       ])
 

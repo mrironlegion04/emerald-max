@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
+import { dateOnlyToUtcMidnight, endOfUtcDay } from '@/lib/date-format'
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser()
@@ -19,13 +20,13 @@ export async function GET(req: NextRequest) {
   const endDateParam = searchParams.get('endDate')
 
   if (startDateParam && endDateParam) {
-    start = new Date(startDateParam + 'T00:00:00')
-    end = new Date(endDateParam + 'T23:59:59')
+    start = dateOnlyToUtcMidnight(startDateParam) ?? new Date()
+    end = endOfUtcDay(endDateParam)
   } else {
     const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
     const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
-    start = new Date(year, month - 1, 1)
-    end = new Date(year, month, 0, 23, 59, 59)
+    start = new Date(Date.UTC(year, month - 1, 1))
+    end = new Date(Date.UTC(year, month, 1) - 1)
   }
 
   const [workOrders, pmSchedules] = await Promise.all([
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true, woNumber: true, title: true, status: true, priority: true, type: true,
-        dueDate: true, startedAt: true, completedAt: true, createdAt: true,
+        dueDate: true, dueTime: true, startTime: true, startedAt: true, completedAt: true, createdAt: true,
         asset:      { select: { name: true } },
         assignedTo: { select: { name: true } },
       },
@@ -70,6 +71,8 @@ export async function GET(req: NextRequest) {
       woNumber: wo.woNumber,
       assignee: wo.assignedTo?.name ?? null,
       dueDate:  wo.dueDate,
+      dueTime:  wo.dueTime ?? null,
+      startTime: wo.startTime ?? null,
       href:     `/work-orders/${wo.id}`,
     })),
     ...pmSchedules.map((pm: any) => ({
@@ -84,6 +87,8 @@ export async function GET(req: NextRequest) {
       woNumber: null,
       assignee: null,
       dueDate:  pm.nextDueDate,
+      dueTime:  null,
+      startTime: null,
       href:     `/preventive-maintenance/${pm.id}`,
     })),
   ]

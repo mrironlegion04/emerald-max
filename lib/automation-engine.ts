@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { isOverdueByDate, todayUTC } from '@/lib/date-format'
 
 interface Condition {
   field: string
@@ -89,7 +90,7 @@ function getFieldValue(field: string, context: TriggerContext): any {
     case 'assetStatus': return wo.asset?.status
     case 'assetCategory': return wo.asset?.category?.name
     case 'assetLocation': return wo.asset?.location?.name
-    case 'isOverdue': return wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED', 'CANCELLED'].includes(wo.status)
+    case 'isOverdue': return wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED', 'CANCELLED'].includes(wo.status)
     case 'isPmGenerated': return !!wo.maintenanceScheduleId
     default: return undefined
   }

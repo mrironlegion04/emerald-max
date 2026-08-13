@@ -10,6 +10,7 @@ import AdvancedWOFilters from '@/components/AdvancedWOFilters'
 import WorkOrderViewShell from '@/components/WorkOrderViewShell'
 import { WO_STATUS_LABELS, ACTIVE_STATUSES, DONE_STATUSES } from '@/lib/work-order-status'
 import { woToClient } from '@/lib/client-safe'
+import { dateOnlyToUtcMidnight, endOfUtcDay, isOverdueByDate, todayUTC } from '@/lib/date-format'
 
 interface SearchParams {
   search?:      string
@@ -83,7 +84,7 @@ async function getWorkOrders(
   }
 
   if (filters.overdue === 'true') {
-    where.dueDate = { lt: new Date() }
+    where.dueDate = { lt: dateOnlyToUtcMidnight(todayUTC()) }
     where.status  = { notIn: ['COMPLETED', 'CANCELLED'] }
   }
 
@@ -108,8 +109,8 @@ async function getWorkOrders(
 
   if (filters.dueDateFrom || filters.dueDateTo) {
     where.dueDate = {
-      ...(filters.dueDateFrom ? { gte: new Date(filters.dueDateFrom) } : {}),
-      ...(filters.dueDateTo   ? { lte: new Date(filters.dueDateTo) }   : {}),
+      ...(filters.dueDateFrom ? { gte: dateOnlyToUtcMidnight(filters.dueDateFrom) } : {}),
+      ...(filters.dueDateTo   ? { lte: endOfUtcDay(filters.dueDateTo) } : {}),
     }
   }
   if (filters.createdFrom || filters.createdTo) {
@@ -159,7 +160,7 @@ async function getWorkOrders(
 async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null, locationScopeIds: string[] | null) {
   const woSelect = {
     id: true, woNumber: true, title: true, type: true, status: true,
-    priority: true, dueDate: true, createdAt: true,
+    priority: true, dueDate: true, dueTime: true, startTime: true, createdAt: true,
     asset: { select: { id: true, name: true, assetCode: true } },
     assignedTo: { select: { id: true, name: true } },
     domain: { select: { id: true, name: true } },
@@ -270,7 +271,7 @@ export default async function WorkOrdersPage({
   })() : null
 
   const overdueCount = workOrders.filter(
-    (wo: any) => wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED','CANCELLED'].includes(wo.status)
+    (wo: any) => wo.dueDate && isOverdueByDate(wo.dueDate, todayUTC()) && !['COMPLETED','CANCELLED'].includes(wo.status)
   ).length
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)

@@ -10,6 +10,7 @@ import {
 import Badge from './Badge'
 import WorkOrderDetailPane from './WorkOrderDetailPane'
 import { WO_STATUS_LABELS, WO_STATUS_VARIANTS } from '@/lib/work-order-status'
+import { isOverdueByDate, todayLocal, utcDateOnly, dateOnlyToUtcMidnight } from '@/lib/date-format'
 
 export interface WOListItem {
   id: string
@@ -19,6 +20,8 @@ export interface WOListItem {
   status: string
   priority: string
   dueDate: Date | string | null
+  dueTime: string | null
+  startTime: string | null
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
   domain: { id: string; name: string } | null
@@ -48,14 +51,14 @@ const priorityVariant = (p: string): 'red' | 'orange' | 'yellow' | 'blue' | 'gra
 
 function getUrgencyBucket(dueDate: Date | string | null): 'overdue' | 'today' | 'thisWeek' | 'later' | 'none' {
   if (!dueDate) return 'none'
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7)
-  const d = new Date(dueDate)
-  const norm = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  if (norm < today) return 'overdue'
-  if (norm.getTime() === today.getTime()) return 'today'
-  if (norm <= weekEnd) return 'thisWeek'
+  const ymd = utcDateOnly(dueDate)
+  if (!ymd) return 'none'
+  const today = todayLocal()
+  if (ymd < today) return 'overdue'
+  if (ymd === today) return 'today'
+  const weekEnd = dateOnlyToUtcMidnight(today)!
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7)
+  if (ymd <= utcDateOnly(weekEnd)!) return 'thisWeek'
   return 'later'
 }
 
@@ -216,7 +219,7 @@ export default function WorkOrderPanelView({ grouped, userRole = 'TECHNICIAN', u
   const visibleWOs = activeTab === 'todo' ? getVisibleWOs() : grouped.done
 
   const overdueCount = visibleWOs.filter(
-    wo => wo.dueDate && new Date(wo.dueDate) < new Date() && !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
+    wo => wo.dueDate && isOverdueByDate(wo.dueDate, todayLocal()) && !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(wo.status)
   ).length
 
   return (

@@ -7,6 +7,7 @@ import { generateWONumber } from '@/lib/wo-number'
 import { canAssignUsers, canWriteToAssets, canWriteToLocations } from '@/lib/access-control'
 import { parseCSV, parseCSVExact } from '@/lib/csv'
 import { hashPassword } from '@/lib/auth'
+import { dateOnlyToUtcMidnight, utcDateOnly } from '@/lib/date-format'
 import { randomBytes } from 'crypto'
 
 const VALID_CRITICALITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
@@ -724,7 +725,7 @@ export async function POST(request: NextRequest) {
               type: woType as never,
               priority: priority as never,
               status: status as never,
-              dueDate: row.due_date ? new Date(row.due_date) : null,
+              dueDate: row.due_date ? dateOnlyToUtcMidnight(utcDateOnly(row.due_date)) : null,
               assignedToId,
               assetId,
               categoryId,

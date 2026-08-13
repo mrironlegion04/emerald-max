@@ -24,6 +24,7 @@ interface WOFormData {
   notes: string; issueId: string; customIssue: string;
   customFields: Record<string, any> | null
   woCategoryId: string
+  maintenanceScheduleId: string
   downtimeStartedAt: string
 }
 
@@ -90,6 +91,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     customIssue:    initialData?.customIssue    ?? '',
     customFields:   (initialData as any)?.customFields ?? null,
     woCategoryId:   (initialData as any)?.woCategoryId ?? '',
+    maintenanceScheduleId: initialData?.maintenanceScheduleId ?? '',
     downtimeStartedAt: (initialData as any)?.downtimeStartedAt
       ? toLocalInput((initialData as any).downtimeStartedAt)
       : '',
@@ -97,6 +99,8 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
 
   const [initialForm] = useState<WOFormData>(buildInitialForm)
   const [form, setForm] = useState<WOFormData>(initialForm)
+
+  const isPMGenerated = !!initialForm.maintenanceScheduleId
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm)
 
@@ -439,9 +443,14 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {inputRow('Type', false,
-            <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-              {typeOptions.map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}
-            </select>
+            <div className="space-y-1">
+              <select value={form.type} onChange={e => set('type', e.target.value)} disabled={isPMGenerated} className="input-field text-xs sm:text-sm bg-white disabled:bg-gray-50 disabled:text-slate-400">
+                {typeOptions.map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}
+              </select>
+              {isPMGenerated && (
+                <p className="text-[11px] text-slate-400 font-medium">Managed by the PM schedule — cannot be changed.</p>
+              )}
+            </div>
           )}
           {inputRow('Priority', false,
             <>
@@ -455,7 +464,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
           )}
           {inputRow('Category', false,
             <select value={form.woCategoryId} onChange={e => set('woCategoryId', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-              <option value="">None</option>
+              {!isPMGenerated && <option value="">None</option>}
               {woCategories.filter(c => c.isActive || c.id === form.woCategoryId).map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

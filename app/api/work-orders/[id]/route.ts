@@ -12,6 +12,7 @@ import {
   canEditWorkOrder,
   canReassignWorkOrder,
   canRequesterEditOwnRequest,
+  canChangePMGeneratedWOFields,
   getCompletionType,
   canCompleteWorkOrder,
   canUploadWOAttachment,
@@ -211,6 +212,14 @@ export async function PUT(
           { status: 403 }
         )
       }
+    }
+
+    // PM-generated work orders: type is fixed to PREVENTIVE and the category
+    // can be switched but never cleared. Enforced from the stored schedule link,
+    // never from the request body.
+    const pmGuard = canChangePMGeneratedWOFields(existingWo, data)
+    if (!pmGuard.allowed) {
+      return NextResponse.json({ error: pmGuard.reason }, { status: 403 })
     }
 
     if (data.startTime && !isValidTime(data.startTime)) {

@@ -47,7 +47,6 @@ interface Props {
 
 const typeOptions     = ['BREAKDOWN','PREVENTIVE','PREDICTIVE']
 const priorityOptions = ['LOW','MEDIUM','HIGH','CRITICAL']
-const statusOptions   = Object.keys(WO_STATUS_LABELS).filter(s => !['PENDING_APPROVAL','CLOSED','COMPLETED'].includes(s))
 const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive' }
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
@@ -375,7 +374,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         description:  form.description    || null,
         type:         form.type,
         priority:     form.priority,
-        status:       form.status,
         startDate:    form.startDate || null,
         dueDate:      form.dueDate || null,
         startTime:    form.startTime || null,
@@ -481,19 +479,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               </select>
               {lastAutoPriority.current && (
                 <p className="text-[11px] text-emerald-700 font-semibold mt-1">Auto-set from issue severity</p>
-              )}
-            </>
-          )}
-          {isEdit && inputRow('Status', false,
-            <>
-              <select value={form.status} onChange={e => set('status', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-                {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
-                {form.status === 'COMPLETED' && <option value="COMPLETED" disabled>Completed</option>}
-              </select>
-              {form.status === 'IN_PROGRESS' && (
-                <p className="text-[11px] text-slate-400 font-medium">
-                  Complete from the work order page to record completion time, labor &amp; downtime.
-                </p>
               )}
             </>
           )}

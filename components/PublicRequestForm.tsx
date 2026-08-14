@@ -33,7 +33,7 @@ interface DomainGroup {
 
 const EMPTY_FORM = {
   title: '', description: '', location: '', locationId: '', requesterName: '', requesterEmail: '', requesterPhone: '',
-  priority: 'MEDIUM', requestType: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
+  priority: 'MEDIUM', type: '', assetId: '', desiredDate: '', downtimeStartedAt: '',
   issueId: '', customIssue: '', teamId: '',
 }
 
@@ -190,8 +190,8 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       setSaving(false)
       return
     }
-    if (!form.requestType) {
-      setError('Please select a request type')
+    if (!form.type) {
+      setError('Please select a work order type')
       setSaving(false)
       return
     }
@@ -214,7 +214,7 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
       const payload = {
         title: form.title,
         description: form.description,
-        type: form.requestType === 'REPAIR' ? 'BREAKDOWN' : 'PREVENTIVE',
+        type: form.type,
         priority: form.priority,
         status: 'OPEN',
         assetId: form.assetId || undefined,
@@ -277,14 +277,12 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Request type <span className="text-red-500">*</span></label>
-              <select value={form.requestType} onChange={e => set('requestType', e.target.value)} className="input-field" required>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Work order type <span className="text-red-500">*</span></label>
+              <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field" required>
                 <option value="">Select type</option>
-                <option value="REPAIR">Repair</option>
-                <option value="MAINTENANCE">Maintenance</option>
-                <option value="INSPECTION">Inspection</option>
-                <option value="INSTALLATION">Installation</option>
-                <option value="OTHER">Other</option>
+                <option value="BREAKDOWN">Breakdown</option>
+                <option value="PREVENTIVE">Preventive</option>
+                <option value="PREDICTIVE">Predictive</option>
               </select>
             </div>
             {currentUser && (

@@ -22,11 +22,9 @@ const priorityOptions = [
 
 const typeOptions = [
   { value: '', label: 'All types' },
-  { value: 'REPAIR', label: 'Repair' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'INSPECTION', label: 'Inspection' },
-  { value: 'INSTALLATION', label: 'Installation' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'BREAKDOWN', label: 'Breakdown' },
+  { value: 'PREVENTIVE', label: 'Preventive' },
+  { value: 'PREDICTIVE', label: 'Predictive' },
 ]
 
 export default function RequestFilters() {
@@ -51,14 +49,14 @@ export default function RequestFilters() {
     [router, pathname, searchParams]
   )
 
-  const filterKeys = ['status', 'priority', 'requestType']
+  const filterKeys = ['status', 'priority', 'type']
   const activeCount = filterKeys.filter(k => !!searchParams.get(k)).length
 
   const hasFilters =
     searchParams.get('search') ||
     searchParams.get('status') ||
     searchParams.get('priority') ||
-    searchParams.get('requestType')
+    searchParams.get('type')
 
   const handleClearAll = () => {
     router.push(pathname)
@@ -95,8 +93,8 @@ export default function RequestFilters() {
       <div id="drawer-filter-type" className="space-y-1.5">
         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Request type</label>
         <select
-          value={searchParams.get('requestType') ?? ''}
-          onChange={e => updateFilter('requestType', e.target.value)}
+          value={searchParams.get('type') ?? ''}
+          onChange={e => updateFilter('type', e.target.value)}
           className="input-field w-full text-sm bg-white"
         >
           {typeOptions.map(o => (
@@ -170,8 +168,8 @@ export default function RequestFilters() {
             ))}
           </select>
           <select
-            value={searchParams.get('requestType') ?? ''}
-            onChange={e => updateFilter('requestType', e.target.value)}
+            value={searchParams.get('type') ?? ''}
+            onChange={e => updateFilter('type', e.target.value)}
             className="input-field w-40 text-sm bg-white"
           >
             {typeOptions.map(o => (
@@ -237,8 +235,8 @@ export default function RequestFilters() {
         </select>
 
         <select
-          value={searchParams.get('requestType') ?? ''}
-          onChange={e => updateFilter('requestType', e.target.value)}
+          value={searchParams.get('type') ?? ''}
+          onChange={e => updateFilter('type', e.target.value)}
           className="input-field w-auto text-sm bg-white cursor-pointer"
         >
           {typeOptions.map(o => (

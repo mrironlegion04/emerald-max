@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, AlertCircle, Users, UserCheck, UserX, Plus, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Loader2, AlertCircle, Users, UserCheck, UserX, Trash2, Search, X } from 'lucide-react'
 
 interface RecordedPerformer {
   id: string
@@ -30,11 +30,23 @@ interface Props {
 const roleLabel: Record<string, string> = { LEAD: 'Lead', MEMBER: 'Member' }
 
 export default function WorkOrderCrewPanel({ woId, canEdit = false, onChanged }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [data, setData] = useState<CrewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [pickUser, setPickUser] = useState('')
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const [justAdded, setJustAdded] = useState(false)
+
+  useEffect(() => {
+    if (!saving && justAdded) {
+      inputRef.current?.focus()
+      setOpen(true)
+      setJustAdded(false)
+    }
+  }, [saving, justAdded])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -58,6 +70,11 @@ export default function WorkOrderCrewPanel({ woId, canEdit = false, onChanged }:
     .filter(u => !recordedIds.has(u.id))
     .sort((a, b) => (b.inTeam ? 1 : 0) - (a.inTeam ? 1 : 0) || a.name.localeCompare(b.name))
 
+  const query = search.trim().toLowerCase()
+  const filteredUsers = query
+    ? availableUsers.filter(u => u.name.toLowerCase().includes(query))
+    : availableUsers
+
   async function commit(userIds: string[]) {
     setSaving(true)
     try {
@@ -72,7 +89,10 @@ export default function WorkOrderCrewPanel({ woId, canEdit = false, onChanged }:
       }
       const updated: CrewData = await res.json()
       setData(updated)
-      setPickUser('')
+      setSearch('')
+      setOpen(true)
+      setHighlight(0)
+      setJustAdded(true)
       onChanged?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update crew')
@@ -81,9 +101,29 @@ export default function WorkOrderCrewPanel({ woId, canEdit = false, onChanged }:
     }
   }
 
-  const addUser = () => pickUser && commit([...recordedIds, pickUser])
+  const addUser = (userId: string) => commit([...recordedIds, userId])
   const removeUser = (userId: string) =>
     commit([...recordedIds].filter(uid => uid !== userId))
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setOpen(true)
+      setHighlight(h => Math.min(h + 1, filteredUsers.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlight(h => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter') {
+      const user = filteredUsers[highlight]
+      if (user) {
+        e.preventDefault()
+        addUser(user.id)
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+      setSearch('')
+    }
+  }
 
   const recordedCount = data?.recorded.length ?? 0
 
@@ -175,32 +215,66 @@ export default function WorkOrderCrewPanel({ woId, canEdit = false, onChanged }:
             )}
           </div>
 
-          {/* Add participant — any active user, no team/plant restriction */}
+          {/* Add participant — searchable, any active user, no team/plant restriction */}
           {canEdit && (
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <select
-                value={pickUser}
-                onChange={e => setPickUser(e.target.value)}
-                disabled={saving || availableUsers.length === 0}
-                className="flex-1 text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              >
-                <option value="">
-                  {availableUsers.length === 0 ? 'No members available' : 'Add a participant…'}
-                </option>
-                {availableUsers.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.inTeam ? `${u.name} — ${data.team?.name ?? 'assigned team'}` : u.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={addUser}
-                disabled={saving || !pickUser}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg px-3 py-2 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                Add
-              </button>
+            <div className="pt-2 border-t border-slate-100">
+              <div className="relative">
+                <div className="flex items-center gap-1.5">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={search}
+                      placeholder={availableUsers.length === 0 ? 'No members available' : 'Search & add participant…'}
+                      onChange={e => { setSearch(e.target.value); setOpen(true); setHighlight(0) }}
+                      onFocus={() => setOpen(true)}
+                      onBlur={() => setOpen(false)}
+                      onKeyDown={handleKeyDown}
+                      disabled={saving || availableUsers.length === 0}
+                      className="w-full text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg py-1.5 pl-8 pr-2 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearch(''); setOpen(false); setHighlight(0) }}
+                      disabled={saving}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {open && filteredUsers.length > 0 && (
+                  <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+                    {filteredUsers.map((u, i) => (
+                      <li
+                        key={u.id}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => addUser(u.id)}
+                        className={`flex items-center justify-between gap-2 px-3 py-1.5 cursor-pointer text-xs transition-colors ${
+                          i === highlight ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="font-semibold truncate">{u.name}</span>
+                        {u.inTeam && data?.team && (
+                          <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5 shrink-0">
+                            {data.team.name}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {open && query && filteredUsers.length === 0 && (
+                  <p className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg px-3 py-2 text-xs text-slate-400">
+                    No members found
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -179,7 +179,7 @@ export async function PATCH(
       }
     }
 
-    // Completion notes ("Final Actions") are mandatory on submission and on
+    // Completion notes ("Final Action") are mandatory on submission and on
     // direct completion. A manager approving an already-submitted WO
     // (PENDING_APPROVAL → COMPLETED) reuses the tech's notes already on the
     // WO. An explicitly blank notes field must fail — never fall back to the

@@ -781,7 +781,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             <input type="number" min="0" step="0.01" value={form.partsCost} onChange={e => set('partsCost', e.target.value)} className="input-field text-xs bg-white" placeholder="0.00" />
           )}
         </div>
-        {inputRow('Final Actions', false,
+        {inputRow('Final Action', false,
           <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
             className="input-field text-xs sm:text-sm resize-none" rows={3} placeholder="Any notes about the work performed..." />
         )}

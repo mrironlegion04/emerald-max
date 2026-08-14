@@ -293,7 +293,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   const submitForApproval = async () => {
     if (!notes.trim()) {
-      setError('Final Actions notes are required before submitting')
+      setError('Final Action notes are required before submitting')
       return
     }
     if (!resolution) {
@@ -352,7 +352,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   // Manager/admin completes directly (no approval needed)
   const handleDirectComplete = async () => {
     if (!notes.trim()) {
-      setError('Final Actions notes are required before completing')
+      setError('Final Action notes are required before completing')
       return
     }
     if (!resolution) {
@@ -870,7 +870,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Actions</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Action</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
@@ -934,7 +934,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Actions</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Action</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />

@@ -249,7 +249,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
       {/* Notes */}
       {wo.notes && (
         <div className="premium-card p-4 border border-slate-200/50 shadow-sm bg-white">
-          <h3 className="font-bold text-slate-700 text-xs tracking-tight mb-2">Final Actions</h3>
+          <h3 className="font-bold text-slate-700 text-xs tracking-tight mb-2">Final Action</h3>
           <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{wo.notes}</p>
         </div>
       )}

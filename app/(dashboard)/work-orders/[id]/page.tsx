@@ -420,7 +420,7 @@ export default async function WorkOrderDetailPage({
           {/* Notes */}
           {wo.notes && (
             <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">
-              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-2 pb-2 border-b border-slate-100">Final Actions</h2>
+              <h2 className="font-bold text-slate-805 text-sm tracking-tight mb-2 pb-2 border-b border-slate-100">Final Action</h2>
               <p className="text-xs text-slate-650 leading-relaxed whitespace-pre-wrap">{wo.notes}</p>
             </div>
           )}

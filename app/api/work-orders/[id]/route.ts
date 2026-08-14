@@ -93,7 +93,6 @@ const updateSchema = z.object({
   customIssue:         z.string().nullable().optional(),
   domainId:            z.string().nullable().optional(),
   shift:               z.string().nullable().optional(),
-  woCategoryId:        z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
   downtimeEndedAt:     z.string().nullable().optional(),
 }).refine(
@@ -215,9 +214,8 @@ export async function PUT(
       }
     }
 
-    // PM-generated work orders: type is fixed to PREVENTIVE and the category
-    // can be switched but never cleared. Enforced from the stored schedule link,
-    // never from the request body.
+    // PM-generated work orders: type is fixed to PREVENTIVE. Enforced from the
+    // stored schedule link, never from the request body.
     const pmGuard = canChangePMGeneratedWOFields(existingWo, data)
     if (!pmGuard.allowed) {
       return NextResponse.json({ error: pmGuard.reason }, { status: 403 })
@@ -303,21 +301,6 @@ export async function PUT(
       if (incompleteRequired > 0) {
         return NextResponse.json(
           { error: `Cannot complete: ${incompleteRequired} required subtask(s) still incomplete` },
-          { status: 422 }
-        )
-      }
-    }
-
-    // Category is required before completing or closing a work order.
-    const finalStatus = data.status ?? existingWo.status
-    if (
-      (finalStatus === 'COMPLETED' || finalStatus === 'CLOSED') &&
-      (data.status !== existingWo.status || data.woCategoryId !== undefined)
-    ) {
-      const effectiveCategory = data.woCategoryId !== undefined ? data.woCategoryId : existingWo.woCategoryId
-      if (!effectiveCategory) {
-        return NextResponse.json(
-          { error: 'A work order category is required before completing or closing' },
           { status: 422 }
         )
       }
@@ -487,18 +470,6 @@ export async function PUT(
       }
     }
 
-    if (data.woCategoryId !== undefined) {
-      if (data.woCategoryId) {
-        const snapshotCategory = await prisma.workOrderCategory.findUnique({
-          where: { id: data.woCategoryId },
-          select: { name: true },
-        })
-        snapshotUpdates.woCategoryNameSnapshot = snapshotCategory?.name ?? null
-      } else {
-        snapshotUpdates.woCategoryNameSnapshot = null
-      }
-    }
-
     // ── Failed component must be a descendant of the primary asset ───
     let failedComponentId = existingWo.failedComponentId
     if (data.failedComponentId !== undefined) {
@@ -552,17 +523,6 @@ export async function PUT(
     // ── Sync WorkOrderAsset rows ──────────────────────────────────────
     await syncWorkOrderAssets(id, normalized.entries)
 
-    // ── Validate work order category ───────────────────────────────────
-    if (data.woCategoryId) {
-      const category = await prisma.workOrderCategory.findUnique({
-        where: { id: data.woCategoryId },
-        select: { id: true, isActive: true },
-      })
-      if (!category || !category.isActive) {
-        return NextResponse.json({ error: 'Work order category not found' }, { status: 400 })
-      }
-    }
-
     // ── Update the WorkOrder record ───────────────────────────────────
     const updateData = {
       ...Object.fromEntries(
@@ -570,7 +530,7 @@ export async function PUT(
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','customFields','issueId','customIssue','startDate',
-           'woCategoryId','downtimeStartedAt','downtimeEndedAt','domainId'].includes(key)
+           'downtimeStartedAt','downtimeEndedAt','domainId'].includes(key)
         )
       ),
       ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),

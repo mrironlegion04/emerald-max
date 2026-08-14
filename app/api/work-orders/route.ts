@@ -41,7 +41,6 @@ const woSchema = z.object({
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
   domainId:            z.string().nullable().optional(),
-  woCategoryId:        z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
   attachments:         z.array(z.object({
     url: z.string().min(1),
@@ -234,17 +233,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Validate work order category ───────────────────────────────────
-    if (data.woCategoryId) {
-      const category = await prisma.workOrderCategory.findUnique({
-        where: { id: data.woCategoryId },
-        select: { id: true, isActive: true },
-      })
-      if (!category || !category.isActive) {
-        return NextResponse.json({ error: 'Work order category not found' }, { status: 400 })
-      }
-    }
-
     const woNumber = await generateWONumber()
 
     // ── Auto-derive domainId from team ───────────────────────────────
@@ -273,19 +261,17 @@ export async function POST(request: NextRequest) {
     // Snapshot = name at the time the value is selected/recorded (creation here).
     const primaryAssetId = normalized.assetId ?? normalized.entries[0]?.assetId ?? null
 
-    const [snapshotAsset, snapshotLocation, snapshotDomain, snapshotCategory, snapshotIssue] =
+    const [snapshotAsset, snapshotLocation, snapshotDomain, snapshotIssue] =
       await Promise.all([
         primaryAssetId ? prisma.asset.findUnique({ where: { id: primaryAssetId }, select: { name: true } }) : null,
         locationId    ? prisma.location.findUnique({ where: { id: locationId }, select: { name: true } }) : null,
         woDomainId    ? prisma.maintenanceDomain.findUnique({ where: { id: woDomainId }, select: { name: true } }) : null,
-        data.woCategoryId ? prisma.workOrderCategory.findUnique({ where: { id: data.woCategoryId }, select: { name: true } }) : null,
         data.issueId  ? prisma.issue.findUnique({ where: { id: data.issueId }, select: { title: true } }) : null,
       ])
 
     const assetNameSnapshot      = snapshotAsset?.name ?? null
     const locationNameSnapshot   = snapshotLocation?.name ?? null
     const domainNameSnapshot     = snapshotDomain?.name ?? null
-    const woCategoryNameSnapshot = snapshotCategory?.name ?? null
     const issueTitleSnapshot     = snapshotIssue?.title ?? null
 
     const wo = await prisma.workOrder.create({
@@ -319,11 +305,9 @@ export async function POST(request: NextRequest) {
         assetNameSnapshot,
         locationNameSnapshot,
         domainNameSnapshot,
-        woCategoryNameSnapshot,
         shift:          await resolveShift(),
         requestedBy,
         requestedById:  user.userId,
-        woCategoryId:   data.woCategoryId ?? null,
         downtimeStartedAt: data.downtimeStartedAt ? new Date(data.downtimeStartedAt) : null,
         startedAt:      data.status === 'IN_PROGRESS' ? new Date() : null,
         completedAt:    data.status === 'COMPLETED'   ? new Date() : null,

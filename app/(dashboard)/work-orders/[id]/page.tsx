@@ -61,7 +61,6 @@ export default async function WorkOrderDetailPage({
       domain:       { select: { id: true, name: true } },
       createdBy:    { select: { name: true } },
       completedBy:  { select: { id: true, name: true, email: true } },
-      woCategory:   { select: { id: true, name: true } },
       issue:        true,
       partsUsed:    { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       subtasks:     { include: { assignedTo: { select: { id: true, name: true, email: true } }, assignedDomain: { select: { id: true, name: true } }, assignedTeam: { select: { id: true, name: true } }, completedBy: { select: { id: true, name: true, email: true } }, createdBy: { select: { id: true, name: true } } }, orderBy: { createdAt: 'desc' } },
@@ -180,7 +179,6 @@ export default async function WorkOrderDetailPage({
               initialLaborCost={wo.laborCost != null ? Number(wo.laborCost) : null}
               initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}
               initialDowntimeEndedAt={wo.downtimeEndedAt?.toISOString() ?? null}
-              initialCategoryId={wo.woCategoryId}
               initialNotes={wo.notes ?? null}
             />
             <SkipPMButton
@@ -280,7 +278,6 @@ export default async function WorkOrderDetailPage({
                   <span className="text-slate-400 italic">Unassigned</span>
                 )},
                 { label: 'Created by',  value: wo.createdBy?.name ?? (wo.createdById === 'system' ? 'System' : '—') },
-                ...(wo.woCategoryNameSnapshot || wo.woCategory ? [{ label: 'Category', value: wo.woCategoryNameSnapshot ?? wo.woCategory?.name }] : []),
                 ...(wo.requestedBy ? [{
                   label: 'Requested by',
                   value: wo.requestedById && user?.role === 'ADMIN' ? (

@@ -19,7 +19,6 @@ interface Props {
   initialLaborCost?: number | null
   initialDowntimeStartedAt?: string | null
   initialDowntimeEndedAt?: string | null
-  initialCategoryId?: string | null
   initialNotes?: string | null
   onStatusChanged?: () => void
 }
@@ -62,7 +61,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialHoldAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialCategoryId = null, initialNotes = null, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialHoldAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialNotes = null, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -76,40 +75,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [showFaceVerification, setShowFaceVerification] = useState(false)
   const [hasFaceVerification, setHasFaceVerification] = useState(false)
   const [faceVerificationSucceeded, setFaceVerificationSucceeded] = useState(false)
-
-  // Work order category — required before completing/closing, picked inline here
-  const [woCategoryId, setWoCategoryId] = useState(initialCategoryId ?? '')
-  const [categories, setCategories] = useState<{ id: string; name: string; isActive: boolean }[]>([])
-
-  useEffect(() => {
-    fetch('/api/wo-categories')
-      .then(r => r.json())
-      .then((data: any[]) => setCategories(Array.isArray(data) ? data : []))
-      .catch(() => {})
-  }, [])
-
-  const categoryField = (
-    <div>
-      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Work order category</label>
-      <select value={woCategoryId} onChange={e => setWoCategoryId(e.target.value)}
-        className="input-field text-xs bg-white border-slate-200 w-full">
-        <option value="">Select a category...</option>
-        {categories.filter(c => c.isActive || c.id === woCategoryId).map(c => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
-    </div>
-  )
-
-  const missingCategoryBlock = !initialCategoryId && (
-    <div className="space-y-2 p-3 bg-amber-50/40 rounded-xl border border-amber-100">
-      <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Work order category required</p>
-      <p className="text-[11px] text-slate-500 font-medium">
-        Set a category below to complete or close this work order.
-      </p>
-      {categoryField}
-    </div>
-  )
 
   // Start work form state
   const [showStartWork, setShowStartWork] = useState(false)
@@ -216,7 +181,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           notes: notes || undefined,
           laborHours: laborHours ? parseFloat(laborHours) : undefined,
           laborCost:  laborCost  ? parseFloat(laborCost)  : undefined,
-          woCategoryId: woCategoryId || undefined,
         }),
       })
       const data = await res.json()
@@ -399,7 +363,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
           downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
           notes: notes || undefined,
-          woCategoryId: woCategoryId || undefined,
         }),
       })
       const data = await res.json()
@@ -426,7 +389,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         body: JSON.stringify({
           status: 'COMPLETED',
           completedAt: requestedCompletionTime || undefined,
-          woCategoryId: woCategoryId || undefined,
         }),
       })
       const data = await res.json()
@@ -470,7 +432,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
           downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
           downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
-          woCategoryId: woCategoryId || undefined,
         }),
       })
       const data = await res.json()
@@ -522,7 +483,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         body: JSON.stringify({
           status: 'COMPLETED',
           notes: unlockReason,
-          woCategoryId: woCategoryId || undefined,
         }),
       })
       const data = await res.json()
@@ -546,8 +506,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <CheckCircle className="w-4 h-4 text-emerald-500" />
           Work Order Closed — Verified &amp; Finalized
         </div>
-
-        {missingCategoryBlock}
 
         {showUnlock && isAdminOrManager && (
           <div className="space-y-3 p-4 bg-amber-50/35 rounded-xl border border-amber-100 shadow-inner-light">
@@ -590,7 +548,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           <CheckCircle className="w-4 h-4 text-amber-500" />
           Awaiting Closure — Manager verification required
         </div>
-        {missingCategoryBlock}
         {isAdminOrManager && canClose && (
           <div className="flex flex-col gap-2">
             <button onClick={() => doTransition('CLOSED')} disabled={loading}
@@ -637,8 +594,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           )}
         </div>
 
-        {missingCategoryBlock}
-
         {/* Manager actions */}
         {isAdminOrManager && (
           <div className="space-y-2">
@@ -672,7 +627,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               </>
             ) : (
               <div className="space-y-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                {categoryField}
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Start time</label>
                 <input type="datetime-local" value={adjustedStartAt}
                   onChange={e => setAdjustedStartAt(e.target.value)}
@@ -820,7 +774,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       {showComplete && (
         <div className="space-y-3 p-4 bg-blue-50/35 rounded-xl border border-blue-100 shadow-inner-light">
           <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Submit for approval</p>
-          {categoryField}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Labor hours</label>
@@ -906,7 +859,6 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       {showDirectComplete && (
         <div className="space-y-3 p-4 bg-emerald-50/35 rounded-xl border border-emerald-100 shadow-inner-light">
           <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Complete work order</p>
-          {categoryField}
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Start time</label>
             <input type="datetime-local" value={adjustedStartAt}

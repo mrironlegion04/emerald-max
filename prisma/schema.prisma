@@ -411,20 +411,6 @@ model AssetCategory {
   @@map("asset_categories")
 }
 
-model WorkOrderCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workOrders WorkOrder[] @relation("WorkOrderWOCategory")
-
-  @@index([isActive, sortOrder])
-  @@map("work_order_categories")
-}
-
 model AssetType {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -626,7 +612,6 @@ model WorkOrder {
   customIssue  String?   // free-text when user picks "Other"
   issueTitleSnapshot String?  // frozen issue title at selection so renames don't rewrite history
   domainNameSnapshot  String?  // frozen domain name at selection
-  woCategoryNameSnapshot String? // frozen WO category name at selection
   assetNameSnapshot   String?  // frozen primary asset name at selection
   locationNameSnapshot String? // frozen location name at selection
 
@@ -635,9 +620,6 @@ model WorkOrder {
 
   categoryId String?
   category   AssetCategory? @relation("WOCategory", fields: [categoryId], references: [id], onDelete: SetNull)
-
-  woCategoryId String?
-  woCategory   WorkOrderCategory? @relation("WorkOrderWOCategory", fields: [woCategoryId], references: [id], onDelete: SetNull)
 
   // Nested PM tracking
   nestedLevel   Int?     // Index in the nestedConfig array (0 = base)
@@ -667,7 +649,6 @@ model WorkOrder {
   @@index([createdAt])
   @@index([maintenanceScheduleId])
   @@index([categoryId])
-  @@index([woCategoryId])
   @@map("work_orders")
 }
 

@@ -99,7 +99,6 @@ export async function GET(request: NextRequest) {
           assignedTo:   { select: { name: true, email: true } },
           createdBy:    { select: { name: true } },
           domain:       { select: { name: true } },
-          woCategory:   { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
       })
@@ -109,7 +108,7 @@ export async function GET(request: NextRequest) {
         'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
-        'Shift','Requested By','WO Category','Lost Hours',
+        'Shift','Requested By','Lost Hours',
       ]
       const rows = wos.map(w => [
         w.woNumber, w.title, w.type, w.status, w.priority,
@@ -121,7 +120,6 @@ export async function GET(request: NextRequest) {
         fmt(w.createdAt),
         w.shift ?? '',
         w.requestedBy ?? '',
-        w.woCategory?.name ?? '',
         w.downtimeStartedAt && w.downtimeEndedAt
           ? (Math.round(((new Date(w.downtimeEndedAt).getTime() - new Date(w.downtimeStartedAt).getTime()) / 3600000) * 100) / 100).toFixed(2)
           : '',

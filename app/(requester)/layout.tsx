@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/lib/session'
-import Sidebar from '@/components/Sidebar'
+import SidebarShell from '@/components/SidebarShell'
 import BottomNav from '@/components/BottomNav'
 import MobileHeader from '@/components/MobileHeader'
 import NotificationBell from '@/components/NotificationBell'
@@ -16,9 +16,7 @@ export default async function RequesterLayout({ children }: { children: React.Re
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Sidebar - fixed and visible on large screens */}
-      <div className="hidden lg:flex lg:w-64 flex-shrink-0">
-        <Sidebar user={user} />
-      </div>
+      <SidebarShell user={user} />
 
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Mobile Header (hidden on desktop, handles hamburger, drawer, notifications) */}

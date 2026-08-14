@@ -33,6 +33,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   FileText,
+  ChevronLeft,
 } from 'lucide-react'
 
 interface User {
@@ -41,6 +42,8 @@ interface User {
   email: string
   role: 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
 }
+
+export type { User }
 
 interface NavItem {
   label: string
@@ -218,11 +221,27 @@ const roleColors: Record<string, string> = {
   VIEWER: 'bg-slate-50 border-slate-100 text-slate-600',
 }
 
-export default function Sidebar({ user, onClose, isMobile }: { user: User; onClose?: () => void; isMobile?: boolean }) {
+export default function Sidebar({ user, onClose, isMobile, collapsed = false, onToggleCollapsed, onExpand }: {
+  user: User
+  onClose?: () => void
+  isMobile?: boolean
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
+  onExpand?: () => void
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+
+  const handleGroupClick = (groupKey: string) => {
+    if (collapsed) {
+      onExpand?.()
+      setOpenGroups(prev => ({ ...prev, [groupKey]: true }))
+    } else {
+      toggleGroup(groupKey)
+    }
+  }
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const isAssetsActive = pathname.startsWith('/assets') || pathname.startsWith('/asset-explorer')
@@ -260,15 +279,33 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
   return (
     <aside className="w-full h-full bg-white border-r border-slate-200 flex flex-col flex-shrink-0 shadow-xs">
       {/* Brand Header */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-linear-to-b from-slate-50/20 to-white">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/30">
-            <Cog className="w-5 h-5 text-white animate-spin-slow" />
-          </div>
-          <div>
-            <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maintenance System</p>
-          </div>
+      <div className={`flex items-center py-5 border-b border-slate-100 bg-linear-to-b from-slate-50/20 to-white ${collapsed ? 'justify-center px-2' : 'justify-between px-6'}`}>
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-2.5' : 'gap-3'}`}>
+          {!isMobile && onToggleCollapsed ? (
+            <button
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="group relative w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/30 cursor-pointer transition-all duration-200 hover:ring-4 hover:ring-blue-200 hover:shadow-[0_4px_14px_rgba(37,99,235,0.4)] active:scale-90"
+            >
+              <Cog className="w-5 h-5 text-white transition-transform duration-300 ease-out group-hover:rotate-90" />
+              <span className="pointer-events-none absolute -bottom-1 -right-1 z-10 flex items-center justify-center w-4 h-4 rounded-full bg-slate-900 text-white shadow-md opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-150">
+                {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+              </span>
+              <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 whitespace-nowrap rounded-md bg-slate-900 text-white text-[11px] font-semibold px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-lg">
+                {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              </span>
+            </button>
+          ) : (
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/30">
+              <Cog className="w-5 h-5 text-white" />
+            </div>
+          )}
+          {!collapsed && (
+            <div>
+              <p className="font-extrabold text-slate-900 text-sm tracking-wider leading-none font-sans">EMERALD</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Maintenance System</p>
+            </div>
+          )}
         </div>
         {isMobile && onClose && (
           <button
@@ -282,7 +319,7 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
       </div>
 
       {/* Navigation list */}
-      <nav className="flex-1 px-4 py-4 space-y-0.5 overflow-y-auto scrollbar-thin select-none">
+      <nav className={`flex-1 py-4 space-y-0.5 overflow-y-auto scrollbar-thin select-none ${collapsed ? 'px-0' : 'px-4'}`}>
         {/* Modern styled QR Scan Link */}
         <Link
           href={user.role === 'REQUESTER' ? '/request/scan' : '/scan'}
@@ -293,12 +330,14 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           )}
         >
           <QrCode className="w-4.5 h-4.5" />
-          <span className="font-bold">{user.role === 'REQUESTER' ? 'Scan to Request' : 'Scan Asset QR'}</span>
+          {!collapsed && <span className="font-bold">{user.role === 'REQUESTER' ? 'Scan to Request' : 'Scan Asset QR'}</span>}
         </Link>
 
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 mt-1">
-          Menu
-        </p>
+        {!collapsed && (
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 mt-1">
+            Menu
+          </p>
+        )}
 
         <div className="space-y-1">
           {navItems
@@ -317,10 +356,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                 <Link
                   href={item.href}
                   onClick={onClose}
-                  className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
+                  title={collapsed ? item.label : undefined}
+                  className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active }, collapsed && 'justify-center')}
                 >
                   <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                  <span className="truncate">{item.label}</span>
+                  {!collapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               </div>
             )
@@ -331,9 +371,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         {user.role !== 'REQUESTER' && (
         <div className="space-y-1 mt-4">
           <button
-            onClick={() => toggleGroup('assets')}
+            onClick={() => handleGroupClick('assets')}
+            title={collapsed ? 'Assets Folder' : undefined}
             className={clsx(
               'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              collapsed && 'justify-center',
               { 'text-blue-600 bg-blue-50/20': isAssetsActive && !openGroups.assets }
             )}
           >
@@ -341,18 +383,20 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
               <span className={clsx('transition-colors', isAssetsActive ? 'text-blue-600' : 'text-slate-400')}>
                 <Building2 className="w-4.5 h-4.5" />
               </span>
-              <span>Assets Folder</span>
+              {!collapsed && <span>Assets Folder</span>}
             </div>
-            <span>
-              {openGroups.assets ? (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              )}
-            </span>
+            {!collapsed && (
+              <span>
+                {openGroups.assets ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                )}
+              </span>
+            )}
           </button>
 
-          {openGroups.assets && (
+          {openGroups.assets && !collapsed && (
             <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
               {assetGroupItems.map(item => {
                 const active = isActive(item.href)
@@ -388,9 +432,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         {user.role !== 'REQUESTER' && (
         <div className="space-y-1 mt-4">
           <button
-            onClick={() => toggleGroup('library')}
+            onClick={() => handleGroupClick('library')}
+            title={collapsed ? 'Library' : undefined}
             className={clsx(
               'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+              collapsed && 'justify-center',
               { 'text-blue-600 bg-blue-50/20': isLibraryActive && !openGroups.library }
             )}
           >
@@ -398,18 +444,20 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
               <span className={clsx('transition-colors', isLibraryActive ? 'text-blue-600' : 'text-slate-400')}>
                 <ClipboardCheck className="w-4.5 h-4.5" />
               </span>
-              <span>Library</span>
+              {!collapsed && <span>Library</span>}
             </div>
-            <span>
-              {openGroups.library ? (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              )}
-            </span>
+            {!collapsed && (
+              <span>
+                {openGroups.library ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                )}
+              </span>
+            )}
           </button>
 
-          {openGroups.library && (
+          {openGroups.library && !collapsed && (
             <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
               {libraryGroupItems
                 .filter(item => !item.adminOnly || user.role === 'ADMIN')
@@ -446,9 +494,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
         {/* Privileged Controls for Admin / Manager */}
         {(user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'VIEWER') && (
           <>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
-              Privileged controls
-            </p>
+            {!collapsed && (
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">
+                Privileged controls
+              </p>
+            )}
             <div className="space-y-1.5">
               {/* Direct Link: Teams / Users */}
               {managerItems
@@ -467,10 +517,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                     <Link
                       href={item.href}
                       onClick={onClose}
-                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
+                      title={collapsed ? item.label : undefined}
+                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active }, collapsed && 'justify-center')}
                     >
                       <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                      <span>{item.label}</span>
+                      {!collapsed && <span>{item.label}</span>}
                     </Link>
                   </div>
                 )
@@ -491,10 +542,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                     <Link
                       href={item.href}
                       onClick={onClose}
-                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active })}
+                      title={collapsed ? item.label : undefined}
+                      className={clsx('sidebar-link group', { 'active !bg-blue-50/70': active }, collapsed && 'justify-center')}
                     >
                       <span className={clsx('transition-colors', active ? 'text-blue-600 font-semibold' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                      <span>{item.label}</span>
+                      {!collapsed && <span>{item.label}</span>}
                     </Link>
                   </div>
                 )
@@ -503,9 +555,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
               {/* Collapsible: Reports */}
               <div className="space-y-1">
                 <button
-                  onClick={() => toggleGroup('reports')}
+                  onClick={() => handleGroupClick('reports')}
+                  title={collapsed ? 'Reports' : undefined}
                   className={clsx(
                     'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                    collapsed && 'justify-center',
                     { 'text-blue-600 bg-blue-50/20': isReportsActive && !openGroups.reports }
                   )}
                 >
@@ -513,18 +567,20 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                     <span className={clsx('transition-colors', isReportsActive ? 'text-blue-600' : 'text-slate-400')}>
                       <BarChart3 className="w-4.5 h-4.5" />
                     </span>
-                    <span>Reports</span>
+                    {!collapsed && <span>Reports</span>}
                   </div>
-                  <span>
-                    {openGroups.reports ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    )}
-                  </span>
+                  {!collapsed && (
+                    <span>
+                      {openGroups.reports ? (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </span>
+                  )}
                 </button>
 
-                {openGroups.reports && (
+                {openGroups.reports && !collapsed && (
                   <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative">
                     {reportGroupItems
                       .filter(item => !item.adminOnly || user.role === 'ADMIN')
@@ -560,9 +616,11 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
               {/* Collapsible: Settings */}
               <div className="space-y-1">
                 <button
-                  onClick={() => toggleGroup('settings')}
+                  onClick={() => handleGroupClick('settings')}
+                  title={collapsed ? 'Settings' : undefined}
                   className={clsx(
                     'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-50 text-slate-705 cursor-pointer select-none',
+                    collapsed && 'justify-center',
                     { 'text-blue-600 bg-blue-50/20': isSettingsActive && !openGroups.settings }
                   )}
                 >
@@ -570,18 +628,20 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
                     <span className={clsx('transition-colors', isSettingsActive ? 'text-blue-600' : 'text-slate-400')}>
                       <Settings className="w-4.5 h-4.5" />
                     </span>
-                    <span>Settings</span>
+                    {!collapsed && <span>Settings</span>}
                   </div>
-                  <span>
-                    {openGroups.settings ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    )}
-                  </span>
+                  {!collapsed && (
+                    <span>
+                      {openGroups.settings ? (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      )}
+                    </span>
+                  )}
                 </button>
 
-                {openGroups.settings && (
+                {openGroups.settings && !collapsed && (
                   <div className="ml-4 pl-3.5 border-l border-slate-105 flex flex-col gap-0.5 mt-0.5 relative font-mono">
                     {enterpriseSettingsItems
                       .filter(item => {
@@ -675,27 +735,33 @@ export default function Sidebar({ user, onClose, isMobile }: { user: User; onClo
           )}
         </AnimatePresence>
 
-        {/* User profile item acting as trigger button */}
-        <button
-          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-          className={clsx(
-            "w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all duration-200 ease-in-out cursor-pointer hover:bg-slate-100/80 active:scale-[0.99] relative z-40",
-            { "bg-slate-100": isUserMenuOpen }
-          )}
-        >
-          <div className="w-9.5 h-9.5 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center flex-shrink-0 font-bold border border-blue-200 shadow-3xs text-sm">
-            {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 truncate leading-tight">{user.name}</p>
-            <div className="mt-1 flex items-center gap-1.5">
-              <span className={clsx('px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded-md border uppercase leading-none', roleColors[user.role])}>
-                {user.role}
-              </span>
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'gap-1'}`}>
+          {/* User profile item acting as trigger button */}
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            title={collapsed ? user.name : undefined}
+            className={clsx(
+              "flex items-center p-2 rounded-xl text-left transition-all duration-200 ease-in-out cursor-pointer hover:bg-slate-100/80 active:scale-[0.99] relative z-40",
+              collapsed ? 'justify-center' : 'flex-1 gap-3',
+              { "bg-slate-100": isUserMenuOpen }
+            )}
+          >
+            <div className="w-9.5 h-9.5 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center flex-shrink-0 font-bold border border-blue-200 shadow-3xs text-sm">
+              {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
-          </div>
-          <MoreHorizontal className="w-4.5 h-4.5 text-slate-400 flex-shrink-0 mr-1" />
-        </button>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-800 truncate leading-tight">{user.name}</p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className={clsx('px-1.5 py-0.5 text-[9px] font-bold tracking-wider rounded-md border uppercase leading-none', roleColors[user.role])}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+            )}
+            {!collapsed && <MoreHorizontal className="w-4.5 h-4.5 text-slate-400 flex-shrink-0 mr-1" />}
+          </button>
+        </div>
       </div>
     </aside>
   )

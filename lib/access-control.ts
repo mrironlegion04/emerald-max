@@ -350,6 +350,37 @@ export function canChangePMGeneratedWOFields(
 }
 
 /**
+ * Validate downtime edits against the merged state (request wins, stored value
+ * falls back). The edit form only sends a downtime field when it changed, so
+ * checks must never assume a missing field means "empty".
+ */
+export function validateDowntimeEdit(params: {
+  existingDowntimeStartedAt: string | null
+  existingDowntimeEndedAt: string | null
+  currentType: string
+  type?: string
+  downtimeStartedAt?: string | null
+  downtimeEndedAt?: string | null
+}): string | null {
+  const touching = params.downtimeStartedAt !== undefined || params.downtimeEndedAt !== undefined
+  const effStarted = params.downtimeStartedAt !== undefined ? params.downtimeStartedAt : params.existingDowntimeStartedAt
+  const effEnded = params.downtimeEndedAt !== undefined ? params.downtimeEndedAt : params.existingDowntimeEndedAt
+  const finalType = params.type ?? params.currentType
+
+  if (touching && effStarted && effEnded &&
+      new Date(effEnded).getTime() <= new Date(effStarted).getTime()) {
+    return 'Back up time must be after the down time'
+  }
+  if (touching && effEnded && !effStarted) {
+    return 'Machine down since is required when a back up time is recorded'
+  }
+  if ((params.type !== undefined || touching) && finalType === 'BREAKDOWN' && !effStarted) {
+    return 'Down time is required for breakdown work orders'
+  }
+  return null
+}
+
+/**
  * Determine completion type based on user role and assignment
  */
 export function getCompletionType(

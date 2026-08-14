@@ -99,6 +99,7 @@ export default async function EditWorkOrderPage({
     woCategoryId:    wo.woCategoryId ?? '',
     maintenanceScheduleId: wo.maintenanceScheduleId ?? '',
     downtimeStartedAt: wo.downtimeStartedAt ? new Date(wo.downtimeStartedAt).toISOString() : '',
+    downtimeEndedAt: wo.downtimeEndedAt ? new Date(wo.downtimeEndedAt).toISOString() : '',
   }
 
   return (

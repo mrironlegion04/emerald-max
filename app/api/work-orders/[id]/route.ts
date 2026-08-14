@@ -13,6 +13,7 @@ import {
   canReassignWorkOrder,
   canRequesterEditOwnRequest,
   canChangePMGeneratedWOFields,
+  validateDowntimeEdit,
   getCompletionType,
   canCompleteWorkOrder,
   canUploadWOAttachment,
@@ -234,9 +235,18 @@ export async function PUT(
       if (data.customIssue.length === 0) data.customIssue = null
     }
 
-    if (data.downtimeStartedAt && data.downtimeEndedAt &&
-        new Date(data.downtimeEndedAt).getTime() <= new Date(data.downtimeStartedAt).getTime()) {
-      return NextResponse.json({ error: 'Back up time must be after the down time' }, { status: 400 })
+    // Downtime validation uses the merged value (request wins, existing DB
+    // value falls back) because the edit form only sends a field when it changed.
+    const downtimeError = validateDowntimeEdit({
+      existingDowntimeStartedAt: existingWo.downtimeStartedAt?.toISOString() ?? null,
+      existingDowntimeEndedAt: existingWo.downtimeEndedAt?.toISOString() ?? null,
+      currentType: existingWo.type,
+      type: data.type,
+      downtimeStartedAt: data.downtimeStartedAt,
+      downtimeEndedAt: data.downtimeEndedAt,
+    })
+    if (downtimeError) {
+      return NextResponse.json({ error: downtimeError }, { status: 400 })
     }
 
     const effStart = 'startDate' in data ? data.startDate : existingWo.startDate?.toISOString() ?? null

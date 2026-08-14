@@ -26,6 +26,7 @@ interface WOFormData {
   woCategoryId: string
   maintenanceScheduleId: string
   downtimeStartedAt: string
+  downtimeEndedAt: string
 }
 
 interface Meta {
@@ -94,6 +95,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     maintenanceScheduleId: initialData?.maintenanceScheduleId ?? '',
     downtimeStartedAt: (initialData as any)?.downtimeStartedAt
       ? toLocalInput((initialData as any).downtimeStartedAt)
+      : '',
+    downtimeEndedAt: (initialData as any)?.downtimeEndedAt
+      ? toLocalInput((initialData as any).downtimeEndedAt)
       : '',
   })
 
@@ -332,11 +336,23 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
           setSaving(false)
           return
         }
-        if (form.type === 'BREAKDOWN' && !form.downtimeStartedAt) {
-          setError('Down time is required for breakdown work orders')
-          setSaving(false)
-          return
-        }
+      }
+
+      if (form.type === 'BREAKDOWN' && !form.downtimeStartedAt) {
+        setError('Down time is required for breakdown work orders')
+        setSaving(false)
+        return
+      }
+
+      if (form.downtimeStartedAt && form.downtimeEndedAt && form.downtimeEndedAt <= form.downtimeStartedAt) {
+        setError('Back up time must be after the down time')
+        setSaving(false)
+        return
+      }
+      if (form.downtimeEndedAt && !form.downtimeStartedAt) {
+        setError('Machine down since is required when a back up time is recorded')
+        setSaving(false)
+        return
       }
 
       if (form.startDate && form.dueDate && form.dueDate < form.startDate) {
@@ -391,6 +407,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         woCategoryId: form.woCategoryId || null,
         ...(form.downtimeStartedAt !== initialForm.downtimeStartedAt
           ? { downtimeStartedAt: form.downtimeStartedAt ? new Date(form.downtimeStartedAt).toISOString() : null }
+          : {}),
+        ...(form.downtimeEndedAt !== initialForm.downtimeEndedAt
+          ? { downtimeEndedAt: form.downtimeEndedAt ? new Date(form.downtimeEndedAt).toISOString() : null }
           : {}),
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
@@ -521,11 +540,27 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             <input
               type="datetime-local"
               value={form.downtimeStartedAt}
-              onChange={e => set('downtimeStartedAt', e.target.value)}
+              onChange={e => {
+                set('downtimeStartedAt', e.target.value)
+                if (!e.target.value) set('downtimeEndedAt', '')
+              }}
               className="input-field text-xs sm:text-sm bg-white cursor-pointer"
             />
             <p className="text-[11px] text-slate-400 font-medium mt-1">
               When the machine actually went down. If unknown, leave blank — the tech can record it when work starts.
+            </p>
+          </>
+        )}
+        {form.type === 'BREAKDOWN' && inputRow('Back up time', false,
+          <>
+            <input
+              type="datetime-local"
+              value={form.downtimeEndedAt}
+              onChange={e => set('downtimeEndedAt', e.target.value)}
+              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-400 font-medium mt-1">
+              When the machine was back up. Optional here — if the machine is still down, leave blank and record it on completion.
             </p>
           </>
         )}

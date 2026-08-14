@@ -12,6 +12,7 @@ import {
   canViewWorkOrder,
   canEditWorkOrder,
   hasScopeActionFlag,
+  completionResolutionError,
 } from '@/lib/access-control'
 import { updateWorkOrderLinkedAssetMetrics } from '@/lib/metrics'
 import { notificationEmitter } from '@/lib/events'
@@ -19,6 +20,7 @@ import { z } from 'zod'
 
 const statusSchema = z.object({
   status:      z.enum(['OPEN','IN_PROGRESS','ON_HOLD','PENDING_APPROVAL','COMPLETED','CLOSED','CANCELLED']),
+  resolution:  z.enum(['CORRECTION','DESIGN','PREVENTIVE_MAINTENANCE','REPLACEMENT']).optional(),
   notes:       z.string().optional(),
   laborHours:  z.number().optional(),
   laborCost:   z.number().optional(),
@@ -44,7 +46,7 @@ export async function PATCH(
     const parsed = statusSchema.parse(body)
     let { status, notes, laborHours, laborCost, startedAt, completedAt,
           requestedCompletionTime, requestedCompletionNotes,
-          downtimeStartedAt, downtimeEndedAt } = parsed
+          downtimeStartedAt, downtimeEndedAt, resolution } = parsed
     const heldAt = parsed.heldAt
 
     // Downtime window sanity check: "back up at" must come after "down since"
@@ -223,8 +225,15 @@ export async function PATCH(
       }
     }
 
+    // Resolution is required before the WO enters the completion flow.
+    const resolutionError = completionResolutionError(status, resolution, wo.resolution)
+    if (resolutionError) {
+      return NextResponse.json({ error: resolutionError }, { status: 422 })
+    }
+
     // ===== BUILD UPDATE DATA =====
     const updateData: Record<string, unknown> = { status }
+    if (resolution !== undefined) updateData.resolution = resolution
 
     // Reopen: COMPLETED → OPEN — clear completion/timestamp fields, preserve history
     if (status === 'OPEN' && wo.status === 'COMPLETED') {

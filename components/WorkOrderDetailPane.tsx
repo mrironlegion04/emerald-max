@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ExternalLink, Loader2, AlertCircle } from 'lucide-react'
 import Badge, { workOrderStatusVariant, priorityVariant } from './Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
+import { RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 import WOStatusActions from './WOStatusActions'
 import WOPartsPanel from './WOPartsPanel'
 import WOCommentsPanel from './WOCommentsPanel'
@@ -133,6 +134,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           initialLaborCost={wo.laborCost ?? null}
           initialDowntimeStartedAt={wo.downtimeStartedAt ?? null}
           initialDowntimeEndedAt={wo.downtimeEndedAt ?? null}
+          initialResolution={wo.resolution ?? null}
           initialNotes={wo.notes ?? null}
           onStatusChanged={() => setReloadKey(k => k + 1)}
         />
@@ -144,6 +146,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
         <dl className="space-y-3">
           {[
             { label: 'Type', value: typeLabels[wo.type] },
+            { label: 'Resolution', value: wo.resolution ? (RESOLUTION_LABELS[wo.resolution] ?? wo.resolution) : '—' },
             { label: 'Priority', value: <Badge label={priorityLabels[wo.priority]} variant={priorityVariant(wo.priority)} /> },
             { label: 'Asset', value: wo.asset ? (
               <Link href={`/assets/${wo.asset.id}`} className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-bold">{wo.assetNameSnapshot ?? wo.asset.name}</Link>

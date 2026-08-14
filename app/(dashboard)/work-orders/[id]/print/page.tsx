@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import PrintButton from '@/components/PrintButton'
 import { fmtCurrency, fmtDateTime } from '@/lib/utils'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
+import { RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 import { canViewWorkOrder } from '@/lib/access-control'
 import { isOverdueByDate, todayUTC, fmtScheduledTime, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
@@ -14,6 +15,7 @@ const priorityLabels: Record<string, string> = {
   LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical',
 }
 const statusLabels = WO_STATUS_LABELS
+const resolutionLabels = RESOLUTION_LABELS
 
 export default async function WorkOrderPrintPage({
   params,
@@ -60,7 +62,7 @@ export default async function WorkOrderPrintPage({
       </div>
 
       {/* Header section */}
-      <div className="grid grid-cols-3 gap-6 mb-8 pb-8 border-b border-gray-300">
+      <div className="grid grid-cols-4 gap-6 mb-8 pb-8 border-b border-gray-300">
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Status</h3>
           <p className="text-lg font-bold text-gray-900">{statusLabels[wo.status]}</p>
@@ -72,6 +74,10 @@ export default async function WorkOrderPrintPage({
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Type</h3>
           <p className="text-lg font-bold text-gray-900">{typeLabels[wo.type]}</p>
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Resolution</h3>
+          <p className="text-lg font-bold text-gray-900">{wo.resolution ? (resolutionLabels[wo.resolution] ?? wo.resolution) : '—'}</p>
         </div>
       </div>
 

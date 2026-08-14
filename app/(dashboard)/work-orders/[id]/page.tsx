@@ -6,6 +6,7 @@ import { Printer, Download, Layers } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
+import { RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 import WOStatusActions from '@/components/WOStatusActions'
 import WOPartsPanel from '@/components/WOPartsPanel'
 import WOCommentsPanel from '@/components/WOCommentsPanel'
@@ -20,6 +21,7 @@ import { fmtCurrency, fmtDateTime } from '@/lib/utils'
 import { isOverdueByDate, todayUTC, fmtScheduledTime, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 const statusLabels = WO_STATUS_LABELS
+const resolutionLabels = RESOLUTION_LABELS
 const typeLabels: Record<string,string> = {
   BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive',
 }
@@ -179,6 +181,7 @@ export default async function WorkOrderDetailPage({
               initialLaborCost={wo.laborCost != null ? Number(wo.laborCost) : null}
               initialDowntimeStartedAt={wo.downtimeStartedAt?.toISOString() ?? null}
               initialDowntimeEndedAt={wo.downtimeEndedAt?.toISOString() ?? null}
+              initialResolution={wo.resolution ?? null}
               initialNotes={wo.notes ?? null}
             />
             <SkipPMButton
@@ -241,6 +244,7 @@ export default async function WorkOrderDetailPage({
               {[
                 { label: 'WO number',   value: <span className="font-mono text-xs">{wo.woNumber}</span> },
                 { label: 'Type',        value: typeLabels[wo.type] },
+                { label: 'Resolution',  value: wo.resolution ? resolutionLabels[wo.resolution] : '—' },
                 { label: 'Priority',    value: (
                   <Badge label={priorityLabels[wo.priority]} variant={priorityVariant(wo.priority)} />
                 )},

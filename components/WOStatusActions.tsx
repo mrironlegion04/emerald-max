@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Clock, Check, X, Pencil } from 'lucide-react'
 import FaceVerificationModal from './FaceVerificationModal'
+import { WORK_ORDER_RESOLUTIONS, RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 
 interface Props {
   woId: string
@@ -19,6 +20,7 @@ interface Props {
   initialLaborCost?: number | null
   initialDowntimeStartedAt?: string | null
   initialDowntimeEndedAt?: string | null
+  initialResolution?: string | null
   initialNotes?: string | null
   onStatusChanged?: () => void
 }
@@ -61,7 +63,7 @@ function fmtDateTime(iso: string | null) {
   }).format(new Date(iso))
 }
 
-export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialHoldAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialNotes = null, onStatusChanged }: Props) {
+export default function WOStatusActions({ woId, currentStatus, userRole, userId, canCloseWO = false, requestedCompletionTime, requestedCompletionNotes, initialStartAt, initialHoldAt, initialLaborHours, initialLaborCost, initialDowntimeStartedAt, initialDowntimeEndedAt, initialResolution = null, initialNotes = null, onStatusChanged }: Props) {
   const router = useRouter()
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -75,6 +77,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [showFaceVerification, setShowFaceVerification] = useState(false)
   const [hasFaceVerification, setHasFaceVerification] = useState(false)
   const [faceVerificationSucceeded, setFaceVerificationSucceeded] = useState(false)
+  const [resolution, setResolution] = useState(initialResolution ?? '')
 
   // Start work form state
   const [showStartWork, setShowStartWork] = useState(false)
@@ -101,6 +104,19 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
   const [adjustedLaborCost, setAdjustedLaborCost] = useState(() => initialLaborCost != null ? String(initialLaborCost) : '')
   const [adjustedDownSince, setAdjustedDownSince] = useState(() => initialDowntimeStartedAt ? toLocalDatetimeString(new Date(initialDowntimeStartedAt)) : '')
   const [adjustedBackUpAt, setAdjustedBackUpAt] = useState(() => initialDowntimeEndedAt ? toLocalDatetimeString(new Date(initialDowntimeEndedAt)) : '')
+
+  const resolutionField = (
+    <div>
+      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Resolution <span className="text-rose-500">*</span></label>
+      <select value={resolution} onChange={e => setResolution(e.target.value)}
+        className="input-field text-xs bg-white border-slate-200 w-full">
+        <option value="">Select a resolution...</option>
+        {WORK_ORDER_RESOLUTIONS.map(r => (
+          <option key={r} value={r}>{RESOLUTION_LABELS[r]}</option>
+        ))}
+      </select>
+    </div>
+  )
 
   const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER'
   const canClose = userRole === 'ADMIN' || canCloseWO
@@ -280,6 +296,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setError('Final Actions notes are required before submitting')
       return
     }
+    if (!resolution) {
+      setError('Resolution is required before submitting')
+      return
+    }
     if (startedAtValue && requestedTime &&
         new Date(requestedTime).getTime() < new Date(startedAtValue).getTime()) {
       setError('Finish time cannot be before start time')
@@ -305,6 +325,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           notes: notes || undefined,
           laborHours: laborHours ? parseFloat(laborHours) : undefined,
           laborCost:  laborCost  ? parseFloat(laborCost)  : undefined,
+          resolution: resolution || undefined,
           startedAt: startedAtValue ? new Date(startedAtValue).toISOString() : undefined,
           requestedCompletionTime: new Date(requestedTime).toISOString(),
           requestedCompletionNotes: requestNotes || undefined,
@@ -334,6 +355,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
       setError('Final Actions notes are required before completing')
       return
     }
+    if (!resolution) {
+      setError('Resolution is required before completing')
+      return
+    }
     if (adjustedStartAt && adjustedTime &&
         new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
       setError('Completion time cannot be before start time')
@@ -363,6 +388,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
           downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
           notes: notes || undefined,
+          resolution: resolution || undefined,
         }),
       })
       const data = await res.json()
@@ -389,6 +415,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
         body: JSON.stringify({
           status: 'COMPLETED',
           completedAt: requestedCompletionTime || undefined,
+          resolution: resolution || undefined,
         }),
       })
       const data = await res.json()
@@ -404,6 +431,10 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
 
   // Manager approves with adjusted time
   const handleApproveAdjusted = async () => {
+    if (!resolution) {
+      setError('Resolution is required before completing')
+      return
+    }
     if (adjustedStartAt && adjustedTime &&
         new Date(adjustedTime).getTime() < new Date(adjustedStartAt).getTime()) {
       setError('Completion time cannot be before start time')
@@ -432,6 +463,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
           downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
           downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
+          resolution: resolution || undefined,
         }),
       })
       const data = await res.json()
@@ -663,6 +695,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                       className="input-field text-xs bg-white border-slate-200 w-full" />
                   </div>
                 </div>
+                {resolutionField}
                 <div className="flex gap-2 pt-1">
                   <button onClick={handleApproveAdjusted} disabled={loading}
                     className="btn-primary text-xs font-bold py-2 px-4 shadow-sm flex-1">
@@ -842,6 +875,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
           </div>
+          {resolutionField}
           <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
             <button onClick={handleSubmitForApproval} disabled={loading}
               className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">
@@ -905,6 +939,7 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
               placeholder="What actions were taken to resolve this?"
               className="input-field text-xs bg-white border-slate-200 resize-none w-full" rows={2} />
           </div>
+          {resolutionField}
           <div className="flex gap-2.5 pt-1.5 flex-col xs:flex-row">
             <button onClick={handleDirectComplete} disabled={loading}
               className="btn-primary text-xs font-bold py-2 px-4 shadow-sm shadow-blue-50 flex-1">

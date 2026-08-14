@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { hasPermission } from '@/lib/permissions'
-import { canViewWorkOrder, canAccessTeamScope } from '@/lib/access-control'
+import { canViewWorkOrder, canAccessTeamScope, completionResolutionError } from '@/lib/access-control'
 import { z } from 'zod'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -71,6 +71,7 @@ const updateSchema = z.object({
   title:               z.string().min(1).optional(),
   description:         z.string().nullable().optional(),
   type:                z.enum(['BREAKDOWN','PREVENTIVE','PREDICTIVE']).optional(),
+  resolution:          z.enum(['CORRECTION','DESIGN','PREVENTIVE_MAINTENANCE','REPLACEMENT']).nullable().optional(),
   priority:            z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).optional(),
   status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CLOSED','CANCELLED']).optional(),
   dueDate:             z.string().nullable().optional(),
@@ -306,6 +307,18 @@ export async function PUT(
       }
     }
 
+    // Resolution is required before completing or closing, and cannot be
+    // cleared once set on a completed/closed work order. Only enforced when
+    // the status or the resolution itself is being changed.
+    const finalStatus = data.status ?? existingWo.status
+    const resolutionTouch = data.status !== existingWo.status || data.resolution !== undefined
+    if (resolutionTouch) {
+      const resolutionError = completionResolutionError(finalStatus, data.resolution, existingWo.resolution)
+      if (resolutionError) {
+        return NextResponse.json({ error: resolutionError }, { status: 422 })
+      }
+    }
+
     // Validate the status transition, mirroring the status route.
     // Skipped when the status is unchanged (idempotent re-save).
     if (data.status && data.status !== existingWo.status) {
@@ -530,7 +543,7 @@ export async function PUT(
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','customFields','issueId','customIssue','startDate',
-           'downtimeStartedAt','downtimeEndedAt','domainId'].includes(key)
+           'downtimeStartedAt','downtimeEndedAt','domainId','resolution'].includes(key)
         )
       ),
       ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),

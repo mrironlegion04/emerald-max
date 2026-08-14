@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { writeAudit } from '@/lib/audit'
 import { sendWOAssigned } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
-import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations, canWriteToTeams, getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
+import { buildWOVisibilityFilter, canAssignTeams, canAssignUsers, canWriteToAssets, canWriteToLocations, canWriteToTeams, completionResolutionError, getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 import {
@@ -20,6 +20,7 @@ const woSchema = z.object({
   title:               z.string().min(1, 'Title is required'),
   description:         z.string().nullable().optional(),
   type:                z.enum(['BREAKDOWN','PREVENTIVE','PREDICTIVE']).default('BREAKDOWN'),
+  resolution:          z.enum(['CORRECTION','DESIGN','PREVENTIVE_MAINTENANCE','REPLACEMENT']).nullable().optional(),
   priority:            z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
   status:              z.enum(['OPEN','IN_PROGRESS','ON_HOLD','COMPLETED','CANCELLED']).default('OPEN'),
   dueDate:             z.string().nullable().optional(),
@@ -274,12 +275,19 @@ export async function POST(request: NextRequest) {
     const domainNameSnapshot     = snapshotDomain?.name ?? null
     const issueTitleSnapshot     = snapshotIssue?.title ?? null
 
+    // Resolution is required if the WO is created directly in a completed state
+    const resolutionError = completionResolutionError(data.status, data.resolution, null)
+    if (resolutionError) {
+      return NextResponse.json({ error: resolutionError }, { status: 422 })
+    }
+
     const wo = await prisma.workOrder.create({
       data: {
         woNumber,
         title:          data.title,
         description:    data.description  ?? null,
         type:           data.type,
+        resolution:     data.resolution ?? null,
         priority:       data.priority,
         status:         data.status,
         dueDate:        dateOnlyToUtcMidnight(data.dueDate),

@@ -375,6 +375,24 @@ export function validateDowntimeEdit(params: {
 }
 
 /**
+ * A work order resolution is required before it enters the completion flow.
+ * The effective resolution is the provided value when present, otherwise the
+ * stored one (callers that only send the field when it changed must pass the
+ * stored value as the fallback).
+ */
+export function completionResolutionError(
+  targetStatus: string,
+  providedResolution: string | null | undefined,
+  existingResolution: string | null | undefined
+): string | null {
+  if (!['PENDING_APPROVAL', 'COMPLETED', 'CLOSED'].includes(targetStatus)) return null
+  const effective = providedResolution !== undefined ? providedResolution : existingResolution
+  return effective
+    ? null
+    : 'Resolution is required before completing or closing a work order'
+}
+
+/**
  * Determine completion type based on user role and assignment
  */
 export function getCompletionType(

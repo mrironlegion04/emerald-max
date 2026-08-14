@@ -71,6 +71,13 @@ enum WorkOrderType {
   PREDICTIVE
 }
 
+enum WorkOrderResolution {
+  CORRECTION
+  DESIGN
+  PREVENTIVE_MAINTENANCE
+  REPLACEMENT
+}
+
 enum LocationScope {
   ALL_ASSETS      // "All Assets in this Location" - checklist mode
   GENERAL         // "None / General Maintenance" - location-only ticket
@@ -558,6 +565,7 @@ model WorkOrder {
   title       String
   description String?
   type        WorkOrderType     @default(BREAKDOWN)
+  resolution  WorkOrderResolution?
   status      WorkOrderStatus   @default(OPEN)
   priority    WorkOrderPriority @default(MEDIUM)
   dueDate     DateTime?

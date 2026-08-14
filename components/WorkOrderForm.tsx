@@ -8,6 +8,7 @@ import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import CustomFieldsPanel from './CustomFieldsPanel'
 import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
+import { WORK_ORDER_RESOLUTIONS, RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
@@ -15,7 +16,7 @@ interface User  { id: string; name: string; role: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean; recommended?: boolean }
 
 interface WOFormData {
-  title: string; description: string; type: string; priority: string
+  title: string; description: string; type: string; resolution: string; priority: string
   status: string; startDate: string; startTime: string; dueDate: string; dueTime: string
   assetId: string; locationId: string; locationScope: string
   selectedAssetIds: string[]
@@ -50,6 +51,8 @@ const statusOptions   = Object.keys(WO_STATUS_LABELS).filter(s => !['PENDING_APP
 const typeLabels: Record<string,string>     = { BREAKDOWN:'Breakdown', PREVENTIVE:'Preventive', PREDICTIVE:'Predictive' }
 const priorityLabels: Record<string,string> = { LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical' }
 const statusLabels = WO_STATUS_LABELS
+const resolutionOptions = WORK_ORDER_RESOLUTIONS
+const resolutionLabels = RESOLUTION_LABELS
 
 function selectionKey(f: WOFormData): string {
   return `${f.assetId}|${f.selectedAssetIds.join(',')}|${f.type}|${f.issueId}|${f.customIssue}`
@@ -70,6 +73,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     title:          initialData?.title          ?? '',
     description:    initialData?.description    ?? '',
     type:           initialData?.type           ?? 'BREAKDOWN',
+    resolution:     initialData?.resolution     ?? '',
     priority:       initialData?.priority       ?? 'MEDIUM',
     status:         initialData?.status         ?? 'OPEN',
     startDate:      initialData?.startDate      ?? '',
@@ -396,6 +400,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         ...(form.downtimeEndedAt !== initialForm.downtimeEndedAt
           ? { downtimeEndedAt: form.downtimeEndedAt ? new Date(form.downtimeEndedAt).toISOString() : null }
           : {}),
+        ...(form.resolution !== initialForm.resolution
+          ? { resolution: form.resolution || null }
+          : {}),
       }
       const url    = isEdit ? `/api/work-orders/${woId}` : '/api/work-orders'
       const method = isEdit ? 'PUT' : 'POST'
@@ -489,6 +496,12 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
                 </p>
               )}
             </>
+          )}
+          {inputRow('Resolution', false,
+            <select value={form.resolution} onChange={e => set('resolution', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
+              <option value="">None</option>
+              {resolutionOptions.map(r => <option key={r} value={r}>{resolutionLabels[r]}</option>)}
+            </select>
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

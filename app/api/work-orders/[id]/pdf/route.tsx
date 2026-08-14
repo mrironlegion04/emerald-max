@@ -64,6 +64,10 @@ export async function GET(
     const priorityLabels: Record<string, string> = {
       LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical',
     }
+    const resolutionLabels: Record<string, string> = {
+      CORRECTION: 'Correction', DESIGN: 'Design',
+      PREVENTIVE_MAINTENANCE: 'Preventive Maintenance', REPLACEMENT: 'Replacement',
+    }
 
     const fmtCurrency = (v: number | null) => v != null ? `$${v.toFixed(2)}` : '$0.00'
     const fmtDate = (d: Date | string | null) => {
@@ -96,6 +100,10 @@ export async function GET(
             <View style={styles.headerItem}>
               <Text style={styles.label}>Type</Text>
               <Text style={styles.value}>{typeLabels[wo.type]}</Text>
+            </View>
+            <View style={styles.headerItem}>
+              <Text style={styles.label}>Resolution</Text>
+              <Text style={styles.value}>{wo.resolution ? (resolutionLabels[wo.resolution] ?? wo.resolution) : '—'}</Text>
             </View>
           </View>
 

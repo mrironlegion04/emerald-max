@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, buildWOVisibilityFilter } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import { endOfUtcDay, dateOnlyToUtcMidnight, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
+import { RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 
 function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return ''
@@ -104,14 +105,14 @@ export async function GET(request: NextRequest) {
       })
       filename = `work-orders-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
-        'WO Number','Title','Type','Status','Priority',
+        'WO Number','Title','Type','Resolution','Status','Priority',
         'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
         'Shift','Requested By','Lost Hours',
       ]
       const rows = wos.map(w => [
-        w.woNumber, w.title, w.type, w.status, w.priority,
+        w.woNumber, w.title, w.type, RESOLUTION_LABELS[w.resolution ?? ''] ?? '', w.status, w.priority,
         w.asset?.name ?? '', w.asset?.assetCode ?? '',
         w.assignedTo?.name ?? '', w.domain?.name ?? '', w.createdBy?.name ?? '',
         fmtDateOnly(utcDateOnly(w.dueDate)), fmt(w.startedAt), fmt(w.completedAt),

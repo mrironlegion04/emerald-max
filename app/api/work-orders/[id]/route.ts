@@ -121,7 +121,7 @@ export async function GET(
         completedBy: true,
         issue:       true,
         partsUsed:   { include: { part: true } },
-        subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true, assignedDomain: true } },
+        subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true } },
         domain:      true,
         team:        { select: { id: true, name: true, members: { include: { user: { select: { id: true, name: true, isActive: true } } } } } },
 

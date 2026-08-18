@@ -31,7 +31,6 @@ export async function GET(
       where: { id },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedDomain: { select: { id: true, name: true } },
         assignedTeam: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
@@ -70,9 +69,6 @@ export async function PUT(
     // Verify subtask exists
     const existingSubtask = await prisma.subtask.findUnique({
       where: { id },
-      include: {
-        assignedDomain: true
-      }
     })
     if (!existingSubtask) {
       return NextResponse.json({ error: 'Subtask not found' }, { status: 404 })
@@ -104,23 +100,13 @@ export async function PUT(
       }
     }
 
-    // Verify assigned team exists if provided, and auto-derive domain
-    let assignedDomainId: string | null | undefined = undefined
-    if (data.assignedTeamId !== undefined) {
-      if (data.assignedTeamId) {
-        const assignedTeam = await prisma.team.findUnique({
-          where: { id: data.assignedTeamId },
-        })
-        if (!assignedTeam) {
-          return NextResponse.json({ error: 'Assigned team not found' }, { status: 404 })
-        }
-        // Auto-derive domain from team via TeamDomain
-        const teamDomain = await prisma.teamDomain.findFirst({
-          where: { teamId: data.assignedTeamId },
-        })
-        assignedDomainId = teamDomain ? teamDomain.domainId : null
-      } else {
-        assignedDomainId = null
+    // Verify assigned team exists if provided
+    if (data.assignedTeamId !== undefined && data.assignedTeamId) {
+      const assignedTeam = await prisma.team.findUnique({
+        where: { id: data.assignedTeamId },
+      })
+      if (!assignedTeam) {
+        return NextResponse.json({ error: 'Assigned team not found' }, { status: 404 })
       }
     }
 
@@ -169,9 +155,6 @@ export async function PUT(
       updateData.assignedTeamId = data.assignedTeamId
     }
     if (data.required !== undefined) updateData.required = data.required
-    if (assignedDomainId !== undefined) {
-      updateData.assignedDomainId = assignedDomainId
-    }
 
     // Track completion
     if (isCompleting) {
@@ -188,7 +171,6 @@ export async function PUT(
       data: updateData,
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedDomain: { select: { id: true, name: true } },
         assignedTeam: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },

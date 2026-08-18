@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
       where: { workOrderId },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedDomain: { select: { id: true, name: true } },
         assignedTeam: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
@@ -94,21 +93,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify assigned team exists if provided, and auto-derive domain
-    let assignedDomainId: string | null = null
+    // Verify assigned team exists if provided
     if (data.assignedTeamId) {
       const assignedTeam = await prisma.team.findUnique({
         where: { id: data.assignedTeamId },
       })
       if (!assignedTeam) {
         return NextResponse.json({ error: 'Assigned team not found' }, { status: 404 })
-      }
-      // Auto-derive domain from team via TeamDomain
-      const teamDomain = await prisma.teamDomain.findFirst({
-        where: { teamId: data.assignedTeamId },
-      })
-      if (teamDomain) {
-        assignedDomainId = teamDomain.domainId
       }
     }
 
@@ -130,13 +121,11 @@ export async function POST(request: NextRequest) {
         workOrderId: data.workOrderId,
         assignedToId: data.assignedToId ?? null,
         assignedTeamId: data.assignedTeamId ?? null,
-        assignedDomainId,
         required: data.required,
         createdById: user.userId,
       },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
-        assignedDomain: { select: { id: true, name: true } },
         assignedTeam: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true } },

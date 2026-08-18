@@ -412,9 +412,6 @@ model AssetCategory {
   templates  WorkOrderTemplate[]
   issues   IssueCategory[]
 
-  defaultDomainId String?
-  defaultDomain   MaintenanceDomain? @relation("CategoryDefaultDomain", fields: [defaultDomainId], references: [id], onDelete: SetNull)
-
   @@map("asset_categories")
 }
 
@@ -689,8 +686,6 @@ model MaintenanceDomain {
   teams              TeamDomain[]
   workOrders         WorkOrder[]        @relation("WorkOrderDomain")
   assetLinks         AssetDomain[]
-  assignedSubtasks   Subtask[]          @relation("SubtasksAssignedToDomain")
-  defaultCategories  AssetCategory[]    @relation("CategoryDefaultDomain")
 
   @@map("maintenance_domains")
 }
@@ -967,8 +962,6 @@ model Subtask {
   workOrder     WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   assignedToId  String?
   assignedTo    User?           @relation("SubtaskAssignedTo", fields: [assignedToId], references: [id])
-  assignedDomainId String?
-  assignedDomain   MaintenanceDomain? @relation("SubtasksAssignedToDomain", fields: [assignedDomainId], references: [id], onDelete: SetNull)
   assignedTeamId   String?
   assignedTeam     Team?              @relation("SubtasksAssignedToTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
   completedById String?
@@ -979,7 +972,6 @@ model Subtask {
 
   @@index([workOrderId])
   @@index([assignedToId])
-  @@index([assignedDomainId])
   @@index([assignedTeamId])
   @@index([completedById])
   @@map("subtasks")

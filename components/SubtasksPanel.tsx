@@ -18,7 +18,6 @@ interface Subtask {
   completionType: 'ASSIGNED' | 'ADMIN_OVERRIDE' | 'MANAGER_OVERRIDE' | null
   assignedTo: { id: string; name: string; email: string } | null
   assignedTeam: { id: string; name: string } | null
-  assignedDomain: { id: string; name: string } | null
   completedBy: { id: string; name: string; email: string } | null
   createdBy: { id: string; name: string } | null
   workOrderId: string

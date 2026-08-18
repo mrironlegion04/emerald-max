@@ -183,7 +183,6 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
       where: { assignedToId: userId, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
       include: {
         assignedTo: { select: { id: true, name: true } },
-        assignedDomain: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true, status: true, dueDate: true, asset: { select: { id: true, name: true, assetCode: true } } } },
       },
       orderBy: woOrder,
@@ -194,10 +193,9 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
       orderBy: woOrder,
     }) : [],
     teamIds.length ? prisma.subtask.findMany({
-      where: { assignedDomainId: { in: teamIds }, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
+      where: { assignedTeamId: { in: teamIds }, status: { in: ['PENDING', 'IN_PROGRESS'] as any } },
       include: {
         assignedTo: { select: { id: true, name: true } },
-        assignedDomain: { select: { id: true, name: true } },
         workOrder: { select: { id: true, woNumber: true, title: true, status: true, dueDate: true, asset: { select: { id: true, name: true, assetCode: true } } } },
       },
       orderBy: woOrder,

@@ -41,7 +41,6 @@ const woSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
-  domainId:            z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
   attachments:         z.array(z.object({
     url: z.string().min(1),
@@ -131,7 +130,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── Issue is required; domain derives from the assigned team ────
+    // ── Issue is required ─────────────────────────────────────────────
     const hasIssue = !!data.issueId || !!data.customIssue
     if (!hasIssue) {
       return NextResponse.json(
@@ -236,43 +235,19 @@ export async function POST(request: NextRequest) {
 
     const woNumber = await generateWONumber()
 
-    // ── Auto-derive domainId from team ───────────────────────────────
-    let derivedDomainId: string | null = null
-    if (data.teamId) {
-      const teamDomain = await prisma.teamDomain.findFirst({
-        where: { teamId: data.teamId },
-        include: { domain: true },
-      })
-      derivedDomainId = teamDomain?.domainId ?? null
-    }
-
-    // ── 1 Domain → 1 Issue → optional Custom Issue ───────────────────
-    const woDomainId = data.domainId !== undefined ? data.domainId : derivedDomainId
-    if (data.domainId) {
-      const domain = await prisma.maintenanceDomain.findUnique({
-        where: { id: data.domainId },
-        select: { id: true, isActive: true },
-      })
-      if (!domain || !domain.isActive) {
-        return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
-      }
-    }
-
     // ── Freeze master-data names so later renames don't rewrite history ──
     // Snapshot = name at the time the value is selected/recorded (creation here).
     const primaryAssetId = normalized.assetId ?? normalized.entries[0]?.assetId ?? null
 
-    const [snapshotAsset, snapshotLocation, snapshotDomain, snapshotIssue] =
+    const [snapshotAsset, snapshotLocation, snapshotIssue] =
       await Promise.all([
         primaryAssetId ? prisma.asset.findUnique({ where: { id: primaryAssetId }, select: { name: true } }) : null,
         locationId    ? prisma.location.findUnique({ where: { id: locationId }, select: { name: true } }) : null,
-        woDomainId    ? prisma.maintenanceDomain.findUnique({ where: { id: woDomainId }, select: { name: true } }) : null,
         data.issueId  ? prisma.issue.findUnique({ where: { id: data.issueId }, select: { title: true } }) : null,
       ])
 
     const assetNameSnapshot      = snapshotAsset?.name ?? null
     const locationNameSnapshot   = snapshotLocation?.name ?? null
-    const domainNameSnapshot     = snapshotDomain?.name ?? null
     const issueTitleSnapshot     = snapshotIssue?.title ?? null
 
     // Resolution is required if the WO is created directly in a completed state
@@ -300,7 +275,6 @@ export async function POST(request: NextRequest) {
         locationScope:  data.locationScope ?? null,
         assignedToId:   data.assignedToId ?? null,
         teamId:         data.teamId       ?? null,
-        domainId:       woDomainId,
         createdById:    user.userId,
         laborHours:     data.laborHours   ?? null,
         laborCost:      data.laborCost    ?? null,
@@ -312,7 +286,6 @@ export async function POST(request: NextRequest) {
         issueTitleSnapshot,
         assetNameSnapshot,
         locationNameSnapshot,
-        domainNameSnapshot,
         shift:          await resolveShift(),
         requestedBy,
         requestedById:  user.userId,

@@ -170,13 +170,10 @@ export async function showDesktopNotification(options: NotificationOptions): Pro
 export async function notifyWorkOrderAssigned(
   woNumber: string,
   title: string,
-  domainName?: string
 ): Promise<void> {
   await showDesktopNotification({
     title: `Work Order ${woNumber}`,
-    body: domainName
-      ? `Assigned to industrial domain: ${domainName}`
-      : title,
+    body: title,
     level: 'info',
     tag: `wo-${woNumber}`,
     sound: true,

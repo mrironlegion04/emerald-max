@@ -92,7 +92,6 @@ const updateSchema = z.object({
   customFields:        z.record(z.string(), z.any()).nullable().optional(),
   issueId:             z.string().nullable().optional(),
   customIssue:         z.string().nullable().optional(),
-  domainId:            z.string().nullable().optional(),
   shift:               z.string().nullable().optional(),
   downtimeStartedAt:   z.string().nullable().optional(),
   downtimeEndedAt:     z.string().nullable().optional(),
@@ -122,7 +121,6 @@ export async function GET(
         issue:       true,
         partsUsed:   { include: { part: true } },
         subtasks:    { include: { assignedTo: true, completedBy: true, createdBy: true } },
-        domain:      true,
         team:        { select: { id: true, name: true, members: { include: { user: { select: { id: true, name: true, isActive: true } } } } } },
 
         attachments: { include: { uploadedBy: { select: { name: true } } } },
@@ -176,7 +174,6 @@ export async function PUT(
     const existingWo = await prisma.workOrder.findUnique({
       where: { id },
       include: {
-        domain: true,
         assets: { select: { assetId: true } },
       },
     })
@@ -370,26 +367,6 @@ export async function PUT(
       data.teamId = null
     }
 
-    // ── Auto-derive domainId from team (only when not chosen explicitly) ──
-    let derivedDomainId: string | null = null
-    if (data.teamId) {
-      const teamDomain = await prisma.teamDomain.findFirst({
-        where: { teamId: data.teamId },
-        include: { domain: true },
-      })
-      derivedDomainId = teamDomain?.domainId ?? null
-    }
-    if (data.domainId) {
-      const domain = await prisma.maintenanceDomain.findUnique({
-        where: { id: data.domainId },
-        select: { id: true, isActive: true },
-      })
-      if (!domain || !domain.isActive) {
-        return NextResponse.json({ error: 'Domain not found' }, { status: 400 })
-      }
-    }
-    const finalDomainId = data.domainId !== undefined ? data.domainId : (data.teamId ? derivedDomainId : undefined)
-
     // ── Normalize asset scope ─────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
       data.assetId !== undefined ? data.assetId : existingWo.assetId,
@@ -469,20 +446,6 @@ export async function PUT(
       }
     }
 
-    if (data.domainId !== undefined || data.teamId !== undefined) {
-      if (finalDomainId !== undefined) {
-        if (finalDomainId) {
-          const snapshotDomain = await prisma.maintenanceDomain.findUnique({
-            where: { id: finalDomainId },
-            select: { name: true },
-          })
-          snapshotUpdates.domainNameSnapshot = snapshotDomain?.name ?? null
-        } else {
-          snapshotUpdates.domainNameSnapshot = null
-        }
-      }
-    }
-
     // ── Failed component must be a descendant of the primary asset ───
     let failedComponentId = existingWo.failedComponentId
     if (data.failedComponentId !== undefined) {
@@ -543,10 +506,9 @@ export async function PUT(
           ['title','description','type','priority','status','assetId','locationId',
            'locationScope','assignedToId','teamId','laborHours','laborCost',
            'partsCost','notes','customFields','issueId','customIssue','startDate',
-           'downtimeStartedAt','downtimeEndedAt','domainId','resolution'].includes(key)
+           'downtimeStartedAt','downtimeEndedAt','resolution'].includes(key)
         )
       ),
-      ...(finalDomainId !== undefined ? { domainId: finalDomainId } : {}),
       ...(derivedLocationId !== undefined ? { locationId: derivedLocationId } : {}),
       ...snapshotUpdates,
       ...extra,
@@ -569,7 +531,6 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        domain: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, name: true } },
         completedBy: { select: { id: true, name: true } },
       },

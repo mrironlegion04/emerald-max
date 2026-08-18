@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client'
 import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users, SearchX, Layers, AlertTriangle } from 'lucide-react'
+import { FileText, Plus, Package, MapPin, ChevronRight, CalendarClock, Users, SearchX, AlertTriangle } from 'lucide-react'
 import Badge, { priorityVariant, workOrderStatusVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
@@ -45,7 +45,6 @@ export default async function MyWorkOrdersPage({
     orderBy: { createdAt: 'desc' },
     include: {
       issue: { select: { id: true, code: true, title: true } },
-      domain: { select: { id: true, name: true } },
       team: { select: { id: true, name: true } },
       assignedTo: { select: { id: true, name: true } },
       asset: { select: { id: true, name: true, assetCode: true, location: { select: { name: true } } } },
@@ -151,11 +150,6 @@ export default async function MyWorkOrdersPage({
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
                         {wo.locationNameSnapshot || wo.asset?.location?.name}
-                      </span>
-                    )}
-                    {wo.domain && (
-                      <span className="inline-flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5" /> {wo.domain.name}
                       </span>
                     )}
                     {wo.customIssue && (

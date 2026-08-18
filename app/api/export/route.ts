@@ -99,14 +99,13 @@ export async function GET(request: NextRequest) {
           asset:        { select: { name: true, assetCode: true } },
           assignedTo:   { select: { name: true, email: true } },
           createdBy:    { select: { name: true } },
-          domain:       { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
       })
       filename = `work-orders-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
         'WO Number','Title','Type','Resolution','Status','Priority',
-        'Asset','Asset Code','Assigned To','Industrial Domain','Created By',
+        'Asset','Asset Code','Assigned To','Created By',
         'Due Date','Started','Completed',
         'Labor Hours','Labor Cost','Parts Cost','Total Cost','Created At',
         'Shift','Requested By','Lost Hours',
@@ -114,7 +113,7 @@ export async function GET(request: NextRequest) {
       const rows = wos.map(w => [
         w.woNumber, w.title, w.type, RESOLUTION_LABELS[w.resolution ?? ''] ?? '', w.status, w.priority,
         w.asset?.name ?? '', w.asset?.assetCode ?? '',
-        w.assignedTo?.name ?? '', w.domain?.name ?? '', w.createdBy?.name ?? '',
+        w.assignedTo?.name ?? '', w.createdBy?.name ?? '',
         fmtDateOnly(utcDateOnly(w.dueDate)), fmt(w.startedAt), fmt(w.completedAt),
         w.laborHours ?? '', w.laborCost ?? '', w.partsCost ?? '',
         ((Number(w.laborCost ?? 0) + Number(w.partsCost ?? 0))) || '',

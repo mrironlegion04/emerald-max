@@ -18,7 +18,6 @@ interface SearchParams {
   priority?:    string | string[]
   type?:        string | string[]
   assignedToId?:string
-  domainId?:    string
   assetId?:     string
   dueDateFrom?: string
   dueDateTo?:   string
@@ -70,7 +69,6 @@ async function getWorkOrders(
   }
 
   if (filters.assignedToId) where.assignedToId = filters.assignedToId
-  if (filters.domainId)     where.domainId     = filters.domainId
 
   if (locationScopeIds) {
     const locFilter = { locationId: { in: locationScopeIds } }
@@ -123,13 +121,12 @@ async function getWorkOrders(
   const page = Math.max(1, parseInt(filters.page ?? '1', 10))
   const skip = (page - 1) * ITEMS_PER_PAGE
 
-  const [workOrders, totalCount, technicians, domains, assets] = await Promise.all([
+  const [workOrders, totalCount, technicians, assets] = await Promise.all([
     prisma.workOrder.findMany({
       where,
       include: {
         asset:        { select: { id: true, name: true, assetCode: true } },
         assignedTo:   { select: { id: true, name: true } },
-        domain:       { select: { id: true, name: true } },
         createdBy:    { select: { name: true } },
       },
       orderBy: [{ createdAt: 'desc' }],
@@ -142,11 +139,6 @@ async function getWorkOrders(
       select:  { id: true, name: true, role: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.maintenanceDomain.findMany({
-      where:   { isActive: true },
-      select:  { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
     prisma.asset.findMany({
       where: { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(pickerScopeIds ? { locationId: { in: pickerScopeIds } } : {}) },
       select: { id: true, name: true, assetCode: true, imageUrl: true, parentId: true, locationId: true },
@@ -154,7 +146,7 @@ async function getWorkOrders(
     }),
   ])
 
-  return { workOrders: workOrders.map(woToClient), technicians, domains, assets, totalCount, page }
+  return { workOrders: workOrders.map(woToClient), technicians, assets, totalCount, page }
 }
 
 async function getPanelViewData(userId: string, teamIds: string[], visibilityFilter: Record<string, unknown> | null, locationScopeIds: string[] | null) {
@@ -163,7 +155,6 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     priority: true, dueDate: true, dueTime: true, startTime: true, createdAt: true,
     asset: { select: { id: true, name: true, assetCode: true } },
     assignedTo: { select: { id: true, name: true } },
-    domain: { select: { id: true, name: true } },
     createdBy: { select: { name: true } },
   }
 
@@ -176,7 +167,7 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
   const [myWOs, mySubtasks, rawTeamWOs, rawTeamSubtasks, createdWOs, allOpen, done] = await Promise.all([
     prisma.workOrder.findMany({
       where: { AND: visAnd, assignedToId: userId, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }),
     prisma.subtask.findMany({
@@ -189,7 +180,7 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     }),
     teamIds.length ? prisma.workOrder.findMany({
       where: { AND: visAnd, teamId: { in: teamIds }, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }) : [],
     teamIds.length ? prisma.subtask.findMany({
@@ -202,17 +193,17 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     }) : [],
     prisma.workOrder.findMany({
       where: { AND: visAnd, createdById: userId, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }),
     prisma.workOrder.findMany({
       where: { AND: visAnd, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }),
     prisma.workOrder.findMany({
       where: { AND: visAnd, status: { in: DONE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, domain: woSelect.domain, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
       orderBy: { updatedAt: 'desc' as const },
       take: 100,
     }),
@@ -255,7 +246,7 @@ export default async function WorkOrdersPage({
   const activeScope = user ? await resolveActiveScope(user, params.location) : { scopeIds: null }
   const pickerScopeIds = user ? await getWriteScopeIds(user) : null
   const visibilityFilter = user ? await buildWOVisibilityFilter(user) : null
-  const { workOrders, technicians, domains, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter, activeScope.scopeIds, pickerScopeIds)
+  const { workOrders, technicians, assets, totalCount, page } = await getWorkOrders(params, visibilityFilter, activeScope.scopeIds, pickerScopeIds)
   const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER'
   const canEditWO = user ? (await hasScopeActionFlag(user, 'canEditWO')) && (await hasPermission(user, 'wo:create')) : false
 
@@ -319,7 +310,7 @@ export default async function WorkOrdersPage({
           userRole={user?.role}
           userId={user?.userId}
         >
-          <AdvancedWOFilters technicians={technicians} domains={domains} assets={assets} canExport={canExport} />
+          <AdvancedWOFilters technicians={technicians} assets={assets} canExport={canExport} />
         </WorkOrderViewShell>
       )}
     </div>

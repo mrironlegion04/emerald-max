@@ -149,19 +149,18 @@ export async function POST(request: NextRequest) {
         include: {
           asset: { select: { name: true } },
           assignedTo: { select: { name: true } },
-          domain: { select: { name: true } },
         },
       })
 
       // Convert to CSV
-      const headers = ['WO Number', 'Title', 'Asset', 'Status', 'Priority', 'Assigned To (User or Domain)', 'Due Date', 'Created At']
+      const headers = ['WO Number', 'Title', 'Asset', 'Status', 'Priority', 'Assigned To', 'Due Date', 'Created At']
       const rows = workOrders.map(wo => [
         wo.woNumber,
         wo.title,
         wo.asset?.name || '',
         wo.status,
         wo.priority,
-        wo.assignedTo?.name || wo.domain?.name || '',
+        wo.assignedTo?.name || '',
         wo.dueDate ? utcDateOnly(wo.dueDate) ?? '' : '',
         new Date(wo.createdAt).toLocaleDateString(),
       ])

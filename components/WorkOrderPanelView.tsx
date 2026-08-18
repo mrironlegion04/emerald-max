@@ -24,7 +24,6 @@ export interface WOListItem {
   startTime: string | null
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
-  domain: { id: string; name: string } | null
   createdBy: { name: string } | null
 }
 
@@ -205,14 +204,14 @@ export default function WorkOrderPanelView({ grouped, userRole = 'TECHNICIAN', u
     { id: 'mine' as SubTab,    label: 'Assigned to Me', count: grouped.myWOs.length },
     { id: 'team' as SubTab,    label: 'My Team',    count: grouped.teamWOs.length },
     { id: 'created' as SubTab, label: 'Created by Me', count: grouped.createdWOs.length },
-    { id: 'pool' as SubTab,    label: 'Open Pool',  count: grouped.allOpen.filter(wo => !wo.assignedTo && !wo.domain).length },
+    { id: 'pool' as SubTab,    label: 'Open Pool',  count: grouped.allOpen.filter(wo => !wo.assignedTo).length },
   ].filter(t => t.count > 0 || t.id === 'all')
 
   const getVisibleWOs = (): WOListItem[] => {
     if (activeSubTab === 'mine')    return grouped.myWOs
     if (activeSubTab === 'team')    return grouped.teamWOs
     if (activeSubTab === 'created') return grouped.createdWOs
-    if (activeSubTab === 'pool')    return grouped.allOpen.filter(wo => !wo.assignedTo && !wo.domain)
+    if (activeSubTab === 'pool')    return grouped.allOpen.filter(wo => !wo.assignedTo)
     return grouped.allOpen
   }
 

@@ -9,11 +9,9 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 
 interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null }
 interface User { id: string; name: string; role: string }
-interface Domain { id: string; name: string }
 
 interface Props {
   technicians: User[]
-  domains: Domain[]
   assets: Asset[]
   canExport?: boolean
 }
@@ -36,7 +34,7 @@ const typeOptions = [
   { value: 'PREDICTIVE', label: 'Predictive' },
 ]
 
-export default function AdvancedWOFilters({ technicians, domains, assets, canExport = true }: Props) {
+export default function AdvancedWOFilters({ technicians, assets, canExport = true }: Props) {
   const router      = useRouter()
   const pathname    = usePathname()
   const searchParams= useSearchParams()
@@ -54,24 +52,17 @@ export default function AdvancedWOFilters({ technicians, domains, assets, canExp
   const updateWithConflictCheck = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     
-    // Clear conflicting filter
-    if (key === 'domainId' && value) {
-      params.delete('assignedToId') // Clear user filter when selecting domain
-    } else if (key === 'assignedToId' && value) {
-      params.delete('domainId') // Clear domain filter when selecting user
-    }
-    
     value ? params.set(key, value) : params.delete(key)
     startTransition(() => router.push(`${pathname}?${params.toString()}`))
   }, [router, pathname, searchParams])
 
-  const advancedKeys = ['dueDateFrom','dueDateTo','createdFrom','createdTo','domainId','assetId']
+  const advancedKeys = ['dueDateFrom','dueDateTo','createdFrom','createdTo','assetId']
   const hasAdvanced  = advancedKeys.some(k => searchParams.get(k))
   
-  const filterKeys = ['status', 'priority', 'type', 'assignedToId', 'dueDateFrom', 'dueDateTo', 'createdFrom', 'createdTo', 'domainId', 'assetId']
+  const filterKeys = ['status', 'priority', 'type', 'assignedToId', 'dueDateFrom', 'dueDateTo', 'createdFrom', 'createdTo', 'assetId']
   const activeCount = filterKeys.filter(k => !!searchParams.get(k)).length
   
-  const hasAnyFilter = ['search','status','priority','type','assignedToId','domainId', ...advancedKeys]
+  const hasAnyFilter = ['search','status','priority','type','assignedToId', ...advancedKeys]
     .some(k => searchParams.get(k))
 
   // Auto-open advanced panel if any advanced filter is active on desktop
@@ -129,14 +120,6 @@ export default function AdvancedWOFilters({ technicians, domains, assets, canExp
         <select value={searchParams.get('assignedToId') ?? ''} onChange={e => updateWithConflictCheck('assignedToId', e.target.value)} className="input-field w-full text-sm bg-white">
           <option value="">All assignees</option>
           {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </div>
-
-      <div id="drawer-filter-domain" className="space-y-1.5">
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">By Domain</label>
-        <select value={searchParams.get('domainId') ?? ''} onChange={e => updateWithConflictCheck('domainId', e.target.value)} className="input-field w-full text-sm bg-white">
-          <option value="">All domains</option>
-          {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </div>
 
@@ -396,13 +379,6 @@ export default function AdvancedWOFilters({ technicians, domains, assets, canExp
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5">Created To</label>
                 <input type="date" value={searchParams.get('createdTo') ?? ''} onChange={e => update('createdTo', e.target.value)} className="input-field text-sm bg-white" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">By Domain</label>
-                <select value={searchParams.get('domainId') ?? ''} onChange={e => updateWithConflictCheck('domainId', e.target.value)} className="input-field text-sm bg-white">
-                  <option value="">All domains</option>
-                  {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5">By Asset</label>

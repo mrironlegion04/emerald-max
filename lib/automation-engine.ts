@@ -81,7 +81,6 @@ function getFieldValue(field: string, context: TriggerContext): any {
     case 'type': return wo.type
     case 'status': return wo.status
     case 'assignedToId': return wo.assignedToId
-    case 'domainId': return wo.domainId
     case 'categoryId': return wo.categoryId
     case 'title': return wo.title
     case 'description': return wo.description

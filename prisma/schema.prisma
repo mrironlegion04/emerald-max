@@ -605,8 +605,6 @@ model WorkOrder {
   locationScope LocationScope? // null for asset-based WOs, set for location-based WOs
   assignedToId String?
   assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
-  domainId     String?
-  domain       MaintenanceDomain? @relation("WorkOrderDomain", fields: [domainId], references: [id], onDelete: SetNull)
   createdById  String?
   createdBy    User?   @relation("CreatedBy", fields: [createdById], references: [id])
   completedById String?
@@ -616,7 +614,6 @@ model WorkOrder {
   issue        Issue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
   customIssue  String?   // free-text when user picks "Other"
   issueTitleSnapshot String?  // frozen issue title at selection so renames don't rewrite history
-  domainNameSnapshot  String?  // frozen domain name at selection
   assetNameSnapshot   String?  // frozen primary asset name at selection
   locationNameSnapshot String? // frozen location name at selection
 
@@ -646,7 +643,6 @@ model WorkOrder {
   @@index([status])
   @@index([priority])
   @@index([assignedToId])
-  @@index([domainId])
   @@index([assetId])
   @@index([failedComponentId])
   @@index([locationId])
@@ -684,7 +680,6 @@ model MaintenanceDomain {
   updatedAt   DateTime @updatedAt
 
   teams              TeamDomain[]
-  workOrders         WorkOrder[]        @relation("WorkOrderDomain")
   assetLinks         AssetDomain[]
 
   @@map("maintenance_domains")

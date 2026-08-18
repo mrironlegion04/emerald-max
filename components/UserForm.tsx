@@ -547,7 +547,7 @@ export default function UserForm({ initialData, userId, teams }: Props) {
               <option value="LIMITED">Limited — only assigned/created/team WOs</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Limited visibility restricts the user to only see WOs assigned to them, created by them, or in their team/domain.
+              Limited visibility restricts the user to only see WOs assigned to them, created by them, or in their team.
             </p>
           </div>
         )}

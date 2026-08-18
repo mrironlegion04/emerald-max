@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/session'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Printer, Download, Layers } from 'lucide-react'
+import { Printer, Download } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge, { workOrderStatusVariant, priorityVariant } from '@/components/Badge'
 import { WO_STATUS_LABELS } from '@/lib/work-order-status'
@@ -60,7 +60,6 @@ export default async function WorkOrderDetailPage({
       location:     { select: { id: true, name: true, address: true } },
       assignedTo:   { select: { id: true, name: true, email: true } },
       team:         { select: { id: true, name: true } },
-      domain:       { select: { id: true, name: true } },
       createdBy:    { select: { name: true } },
       completedBy:  { select: { id: true, name: true, email: true } },
       issue:        true,
@@ -97,7 +96,6 @@ export default async function WorkOrderDetailPage({
     },
     orderBy: { name: 'asc' },
   })
-  const allDomains = await prisma.maintenanceDomain.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
   const allTeams = await prisma.team.findMany({
     where: {
       isActive: true,
@@ -267,11 +265,6 @@ export default async function WorkOrderDetailPage({
                   </Link>
                 ) }] : []),
                 { label: 'Location',    value: wo.locationNameSnapshot ?? wo.location?.name ?? wo.asset?.location?.name ?? '—' },
-                { label: 'Domain / Nature', value: (wo.domainNameSnapshot ?? wo.domain?.name) ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold">
-                    <Layers className="w-3 h-3 text-slate-400" /> {wo.domainNameSnapshot ?? wo.domain?.name}
-                  </span>
-                ) : '—' },
                 { label: 'Assigned to', value: wo.assignedTo?.name ? (
                   wo.assignedTo.name
                 ) : wo.team?.name ? (

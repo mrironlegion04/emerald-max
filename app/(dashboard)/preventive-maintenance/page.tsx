@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/session'
 import { buildLocationFilter, getWriteScopeIds, resolveActiveScope, hasScopeActionFlag } from '@/lib/access-control'
 import { hasPermission } from '@/lib/permissions'
 import Link from 'next/link'
-import { ClipboardList, Clock, AlertTriangle, Calendar } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Badge from '@/components/Badge'
 import EmptyState from '@/components/EmptyState'
@@ -97,10 +97,6 @@ export default async function PMPage({
   ])
 
   const overdueCount  = schedules.filter((s: any) => s.isActive && new Date(s.nextDueDate) < new Date()).length
-  const dueSoonCount  = schedules.filter((s: any) => {
-    const d = daysUntil(s.nextDueDate)
-    return s.isActive && d >= 0 && d <= 7
-  }).length
   const activeCount   = schedules.filter((s: any) => s.isActive).length
 
   const generateableIds = schedules
@@ -126,37 +122,6 @@ export default async function PMPage({
           ) : undefined
         }
       />
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="stat-card flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <ClipboardList className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">Active schedules</p>
-            <p className="text-xl font-bold text-gray-900">{activeCount}</p>
-          </div>
-        </div>
-        <div className="stat-card flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center">
-            <Clock className="w-5 h-5 text-yellow-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">Due within 7 days</p>
-            <p className="text-xl font-bold text-yellow-700">{dueSoonCount}</p>
-          </div>
-        </div>
-        <div className="stat-card flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">Overdue</p>
-            <p className="text-xl font-bold text-red-700">{overdueCount}</p>
-          </div>
-        </div>
-      </div>
 
       {/* Advanced filters */}
       <AdvancedPMFilters assets={assets} canExport={canEdit} />

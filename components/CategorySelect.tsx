@@ -180,13 +180,6 @@ export default function CategorySelect({
           <>
             <FolderTree className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
             <span className="flex-1 text-sm text-gray-900 truncate">{selectedPath}</span>
-            <button
-              type="button"
-              onClick={clearValue}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
           </>
         ) : (
           <>
@@ -195,6 +188,15 @@ export default function CategorySelect({
           </>
         )}
       </button>
+      {value && (
+        <button
+          type="button"
+          onClick={clearValue}
+          className="absolute right-8 top-1/2 -translate-y-1/2 flex-shrink-0 text-gray-400 hover:text-gray-600 p-0.5 z-10"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {/* Dropdown */}
       {open && (

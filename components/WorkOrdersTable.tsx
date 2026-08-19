@@ -15,6 +15,7 @@ interface WorkOrder {
   dueDate: Date | string | null
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
+  team: { id: string; name: string } | null
   assetNameSnapshot: string | null
   priority: string
   status: string
@@ -186,10 +187,15 @@ export default function WorkOrdersTable({
                       )}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      {wo.assignedTo?.name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 border border-blue-100/40 rounded-full text-xs font-bold leading-none select-none">
-                          👤 {wo.assignedTo.name}
-                        </span>
+                      {wo.assignedTo?.name || wo.team?.name ? (
+                        <div className="flex flex-col gap-0.5 px-2.5 py-1.5 bg-blue-50/40 border border-blue-100/40 rounded-lg min-w-[120px]">
+                          {wo.assignedTo?.name ? (
+                            <span className="text-xs font-bold text-blue-700 truncate">{wo.assignedTo.name}</span>
+                          ) : null}
+                          {wo.team?.name && (
+                            <span className="text-xs font-semibold text-slate-600 truncate">{wo.team.name}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-slate-400 text-xs italic select-none font-semibold">Unassigned</span>
                       )}
@@ -339,10 +345,15 @@ export default function WorkOrdersTable({
                   {/* Assigned to */}
                   <div className="flex flex-col gap-1 min-w-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assignee</span>
-                    {wo.assignedTo?.name ? (
-                      <span className="text-blue-700 font-bold truncate">
-                        👤 {wo.assignedTo.name}
-                      </span>
+                    {wo.assignedTo?.name || wo.team?.name ? (
+                      <div className="flex flex-col gap-0.5 px-2.5 py-1.5 bg-blue-50/40 border border-blue-100/40 rounded-lg">
+                        {wo.assignedTo?.name && (
+                          <span className="text-xs font-bold text-blue-700 truncate">{wo.assignedTo.name}</span>
+                        )}
+                        {wo.team?.name && (
+                          <span className="text-xs font-semibold text-slate-600 truncate">{wo.team.name}</span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-slate-400 font-medium italic">Unassigned</span>
                     )}

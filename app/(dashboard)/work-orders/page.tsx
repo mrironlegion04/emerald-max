@@ -127,6 +127,7 @@ async function getWorkOrders(
       include: {
         asset:        { select: { id: true, name: true, assetCode: true } },
         assignedTo:   { select: { id: true, name: true } },
+        team:         { select: { id: true, name: true } },
         createdBy:    { select: { name: true } },
       },
       orderBy: [{ createdAt: 'desc' }],

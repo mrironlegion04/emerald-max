@@ -15,6 +15,7 @@ import AssetChildrenPanel from '@/components/AssetChildrenPanel'
 import AssetPartsTab from '@/components/AssetPartsTab'
 import AssetTabs from '@/components/AssetTabs'
 import MeterListPanel from '@/components/MeterListPanel'
+import ActivityTimeline from '@/components/ActivityTimeline'
 import { getAssetBreadcrumbs, getAssetChildren } from '@/lib/asset-hierarchy'
 import { getAssetMetrics, formatMinutes, formatDays } from '@/lib/metrics'
 import { canUploadAssetAttachment, canViewAsset, canWriteToAssets, hasScopeActionFlag } from '@/lib/access-control'
@@ -611,6 +612,7 @@ export default async function AssetDetailPage({
             entityId={asset.id}
             canEdit={canManageAttachments}
           />
+          <ActivityTimeline fetchUrl={`/api/assets/${asset.id}/activity`} />
         </div>
       )}
     </div>

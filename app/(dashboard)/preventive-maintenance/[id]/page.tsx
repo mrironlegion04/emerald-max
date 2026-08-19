@@ -10,6 +10,7 @@ import PMToggleButton from '@/components/PMToggleButton'
 import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
+import ActivityTimeline from '@/components/ActivityTimeline'
 import { fmt, daysUntil } from '@/lib/utils'
 import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 import { getUserLocationIds, hasScopeActionFlag } from '@/lib/access-control'
@@ -384,6 +385,11 @@ export default async function PMDetailPage({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Activity */}
+        <div className="lg:col-span-2">
+          <ActivityTimeline fetchUrl={`/api/pm/${schedule.id}/activity`} />
         </div>
       </div>
     </div>

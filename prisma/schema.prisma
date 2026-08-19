@@ -206,7 +206,6 @@ model Team {
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
   pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
-  templates   WorkOrderTemplate[]
   woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
 
   @@map("teams")
@@ -327,8 +326,6 @@ model User {
   teamMemberships       TeamMember[]
   teamScopes            UserTeamScope[] @relation("UserTeamScopes")
   userLocations         UserLocation[]
-  createdTemplates      WorkOrderTemplate[] @relation("TemplateCreatedBy")
-  assignedTemplates     WorkOrderTemplate[] @relation("TemplateAssignedTo")
   createdAutomationRules AutomationRule[]   @relation("AutomationRuleCreator")
   telegramPairings       TelegramPairing[]
   woPerformers           WorkOrderPerformer[] @relation("WOPerformerUser")
@@ -409,7 +406,6 @@ model AssetCategory {
   assets   Asset[]
   pmSchedules MaintenanceSchedule[] @relation("PMCategoryAssigned")
   workOrders WorkOrder[] @relation("WOCategory")
-  templates  WorkOrderTemplate[]
   issues   IssueCategory[]
 
   @@map("asset_categories")
@@ -1170,30 +1166,6 @@ model WorkOrderPerformer {
   @@unique([workOrderId, userId])
   @@index([workOrderId])
   @@map("work_order_performers")
-}
-
-model WorkOrderTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  woType      WorkOrderType @default(PREVENTIVE)
-  priority    WorkOrderPriority @default(MEDIUM)
-  woDescription String?
-  notes       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  createdById String?
-  createdBy   User?    @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  assignedToId String?
-  assignedTo   User?    @relation("TemplateAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
-  teamId       String?
-  team         Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  categoryId   String?
-  category     AssetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  @@map("work_order_templates")
 }
 
 model RepairSession {

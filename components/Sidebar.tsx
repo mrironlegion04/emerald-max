@@ -59,11 +59,6 @@ const navItems: NavItem[] = [
     icon: <ClipboardList className="w-4.5 h-4.5" />,
   },
   {
-    label: 'WO Templates',
-    href: '/work-order-templates',
-    icon: <ClipboardList className="w-4.5 h-4.5" />,
-  },
-  {
     label: 'Messages',
     href: '/messages',
     icon: <MessageCircle className="w-4.5 h-4.5" />,

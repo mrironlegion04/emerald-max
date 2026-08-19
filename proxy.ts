@@ -36,7 +36,6 @@ const STAFF_ONLY_PATHS = [
   '/issues',
   '/skills',
   '/inventory',
-  '/work-order-templates',
   '/preventive-maintenance',
   '/messages',
   '/asset-explorer',

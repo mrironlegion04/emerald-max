@@ -5,6 +5,7 @@ import {
   RefreshCw, User, Users, UserCog, PlusCircle, Pencil, History, Loader2,
 } from 'lucide-react'
 import { fmtDateTime } from '@/lib/utils'
+import { useVisibleEventSource } from '@/lib/use-visible-event-source'
 
 interface ActivityEvent {
   id: string
@@ -47,18 +48,11 @@ export default function WOHistoryPanel({ woId }: Props) {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time via SSE
-  useEffect(() => {
-    const es = new EventSource(`/api/work-orders/${woId}/activity/stream`)
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data)
-        if (data.events) setEvents(data.events)
-      } catch { /* ignore malformed frames */ }
-    }
-    es.onerror = () => { /* EventSource auto-reconnects */ }
-    return () => es.close()
-  }, [woId])
+  // Real-time via SSE (only when tab is visible)
+  useVisibleEventSource(`/api/work-orders/${woId}/activity/stream`, (raw) => {
+    const data = raw as { events?: ActivityEvent[] }
+    if (data.events) setEvents(data.events)
+  })
 
   return (
     <div className="premium-card p-5 border border-slate-200/50 shadow-sm bg-white">

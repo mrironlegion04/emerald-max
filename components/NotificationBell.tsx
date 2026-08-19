@@ -8,6 +8,7 @@ import {
   registerServiceWorker,
   requestNotificationPermission,
 } from '@/lib/browser-notifications'
+import { useVisibleEventSource } from '@/lib/use-visible-event-source'
 import { Bell, X } from 'lucide-react'
 
 interface Notification {
@@ -32,48 +33,37 @@ export default function NotificationBell() {
   useEffect(() => {
     // Initialize service worker for mobile notifications
     registerServiceWorker()
-
-    // Setup Server-Sent Events (SSE) for real-time in-app updates
-    const eventSource = new EventSource('/api/notifications/stream')
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        
-        // Check for new notifications
-        if (notificationsEnabled()) {
-          data.forEach((notification: Notification) => {
-            if (!previousNotificationIdsRef.current.has(notification.id)) {
-              // This is a new notification, show browser notification
-              showDesktopNotification({
-                title: notification.title,
-                body: notification.message,
-                level: mapNotificationType(notification.type),
-                sound: true,
-                tag: notification.type, // Prevent duplicate notifications of same type
-              })
-              // Track this notification ID
-              previousNotificationIdsRef.current.add(notification.id)
-            }
-          })
-        }
-
-        setNotifications(data)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Error parsing SSE data:', error)
-      }
-    }
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
-      // SSE automatically reconnects, but we can handle errors here
-    }
-
-    return () => {
-      eventSource.close()
-    }
   }, [])
+
+  // Real-time via SSE (only when tab is visible)
+  useVisibleEventSource('/api/notifications/stream', (raw) => {
+    try {
+      const data = raw as Notification[]
+
+      // Check for new notifications
+      if (notificationsEnabled()) {
+        data.forEach((notification: Notification) => {
+          if (!previousNotificationIdsRef.current.has(notification.id)) {
+            // This is a new notification, show browser notification
+            showDesktopNotification({
+              title: notification.title,
+              body: notification.message,
+              level: mapNotificationType(notification.type),
+              sound: true,
+              tag: notification.type, // Prevent duplicate notifications of same type
+            })
+            // Track this notification ID
+            previousNotificationIdsRef.current.add(notification.id)
+          }
+        })
+      }
+
+      setNotifications(data)
+      setIsLoading(false)
+    } catch (error) {
+      console.error('Error parsing SSE data:', error)
+    }
+  })
 
   // Close dropdown on outside click
   useEffect(() => {

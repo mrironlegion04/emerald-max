@@ -5,6 +5,7 @@ import {
   Send, Paperclip, X, Pencil, Trash2, SmilePlus, Loader2, FileText, Image as ImageIcon,
 } from 'lucide-react'
 import { fmtDateTime } from '@/lib/utils'
+import { useVisibleEventSource } from '@/lib/use-visible-event-source'
 
 interface Reaction { emoji: string; count: number; reactedByMe: boolean }
 interface AttachmentItem {
@@ -91,19 +92,12 @@ export default function WOCommentsPanel({ woId, woStatus }: Props) {
 
   useEffect(() => { load() }, [load])
 
-  // Real-time via SSE
-  useEffect(() => {
-    const es = new EventSource(`/api/work-orders/${woId}/comments/stream`)
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data)
-        setPayload(data)
-        setMe(data.currentUserId ? { id: data.currentUserId, role: data.currentUserRole ?? null } : null)
-      } catch { /* ignore malformed frames */ }
-    }
-    es.onerror = () => { /* EventSource auto-reconnects */ }
-    return () => es.close()
-  }, [woId])
+  // Real-time via SSE (only when tab is visible)
+  useVisibleEventSource(`/api/work-orders/${woId}/comments/stream`, (raw) => {
+    const data = raw as any
+    if (data.comments) setPayload(data)
+    if (data.currentUserId) setMe({ id: data.currentUserId, role: data.currentUserRole ?? '' })
+  })
 
   const comments = payload?.comments ?? []
 

@@ -234,6 +234,7 @@ export async function generateWOsForSchedule(
 
   // Per-asset duplicate + meter threshold checks (asset-based schedules only)
   const skippedAssets = new Set<string>()
+  const skipDetails: { assetId: string; assetName: string; reason: string; blockingWoId?: string }[] = []
   if (targetAssets.length > 0) {
     for (const asset of targetAssets) {
       const existingWO = await prisma.workOrder.findFirst({
@@ -242,10 +243,11 @@ export async function generateWOsForSchedule(
           status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
           type: 'PREVENTIVE',
         },
-        select: { woNumber: true },
+        select: { id: true, woNumber: true },
       })
       if (existingWO) {
         skippedAssets.add(asset.id)
+        skipDetails.push({ assetId: asset.id, assetName: asset.name, reason: 'ACTIVE_WO', blockingWoId: existingWO.id })
         result.errors.push(`Active WO already exists for ${asset.name}: ${existingWO.woNumber}`)
         continue
       }
@@ -257,6 +259,7 @@ export async function generateWOsForSchedule(
           asset.currentMeterValue - lastTriggered < schedule.meterInterval
         ) {
           skippedAssets.add(asset.id)
+          skipDetails.push({ assetId: asset.id, assetName: asset.name, reason: 'METER_BELOW_THRESHOLD' })
           result.errors.push(`${asset.name}: meter value below threshold`)
         }
       }
@@ -264,6 +267,32 @@ export async function generateWOsForSchedule(
 
     if (skippedAssets.size === targetAssets.length) {
       result.errors = result.errors.length > 0 ? [result.errors[0]] : result.errors
+    }
+  }
+
+  // Log skip events and update schedule counters
+  if (skipDetails.length > 0) {
+    result.skipped = skipDetails.length
+    const now = new Date()
+    await prisma.$transaction([
+      prisma.pmSkipLog.createMany({
+        data: skipDetails.map(s => ({
+          scheduleId,
+          assetId: s.assetId,
+          blockingWoId: s.blockingWoId ?? null,
+          reason: s.reason,
+          skippedAt: now,
+        })),
+      }),
+      prisma.maintenanceSchedule.update({
+        where: { id: scheduleId },
+        data: {
+          skipCount: { increment: skipDetails.length },
+          lastSkippedAt: now,
+        },
+      }),
+    ])
+    if (skippedAssets.size === targetAssets.length) {
       return result
     }
   }
@@ -333,10 +362,22 @@ export async function generateWOsForSchedule(
               status: { in: ['OPEN', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
               type: 'PREVENTIVE',
             },
-            select: { woNumber: true },
+            select: { id: true, woNumber: true },
           })
           if (existingWO) {
             result.errors.push(`Active WO already exists for ${asset.name}: ${existingWO.woNumber}`)
+            // Log this late-detected skip inside the transaction
+            const now = new Date()
+            await Promise.all([
+              tx.pmSkipLog.create({
+                data: { scheduleId, assetId: asset.id, blockingWoId: existingWO.id, reason: 'ACTIVE_WO', skippedAt: now },
+              }),
+              tx.maintenanceSchedule.update({
+                where: { id: scheduleId },
+                data: { skipCount: { increment: 1 }, lastSkippedAt: now },
+              }),
+            ])
+            result.skipped++
             continue
           }
         }

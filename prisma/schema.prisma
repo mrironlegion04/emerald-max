@@ -472,6 +472,7 @@ model Asset {
   failedComponentWorkOrders WorkOrder[] @relation("WOFailedComponent")
   maintenanceSchedules MaintenanceSchedule[]
   pmScheduleLinks      MaintenanceScheduleAsset[]
+  skipLogs             PmSkipLog[]          @relation("PmSkipLogAsset")
   meters               Meter[]
   meterReadings        MeterReading[]
   attachments          Attachment[]          @relation("AssetAttachments")
@@ -634,6 +635,7 @@ model WorkOrder {
   statusHistory WorkOrderStatusHistory[]
   repairSessions RepairSession[]
   performers    WorkOrderPerformer[]
+  skipLogs      PmSkipLog[]         @relation("PmSkipLogBlockingWo")
 
   @@index([issueId, createdAt])
   @@index([status])
@@ -854,6 +856,9 @@ model MaintenanceSchedule {
   locationScope       LocationScope?
   workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
   tasks               PmScheduleTask[]   @relation("PMScheduleTasks")
+  skipLogs            PmSkipLog[]        @relation("PmSkipLogSchedule")
+  skipCount           Int       @default(0)
+  lastSkippedAt       DateTime?
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
 
@@ -873,6 +878,23 @@ model MaintenanceScheduleAsset {
   @@index([scheduleId])
   @@index([assetId])
   @@map("maintenance_schedule_assets")
+}
+
+model PmSkipLog {
+  id            String   @id @default(cuid())
+  scheduleId    String
+  schedule      MaintenanceSchedule @relation("PmSkipLogSchedule", fields: [scheduleId], references: [id], onDelete: Cascade)
+  assetId       String?
+  asset         Asset?   @relation("PmSkipLogAsset", fields: [assetId], references: [id], onDelete: SetNull)
+  blockingWoId  String?
+  blockingWo    WorkOrder? @relation("PmSkipLogBlockingWo", fields: [blockingWoId], references: [id], onDelete: SetNull)
+  reason        String
+  skippedAt     DateTime @default(now())
+
+  @@index([scheduleId])
+  @@index([assetId])
+  @@index([skippedAt])
+  @@map("pm_skip_logs")
 }
 
 model PmScheduleTask {

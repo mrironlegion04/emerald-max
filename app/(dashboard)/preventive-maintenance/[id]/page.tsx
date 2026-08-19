@@ -90,6 +90,14 @@ export default async function PMDetailPage({
         orderBy: { order: 'asc' },
         include: { assignedTo: { select: { name: true } } },
       },
+      skipLogs: {
+        orderBy: { skippedAt: 'desc' },
+        take: 20,
+        include: {
+          asset: { select: { id: true, name: true } },
+          blockingWo: { select: { id: true, woNumber: true } },
+        },
+      },
     },
   })
 
@@ -256,6 +264,16 @@ export default async function PMDetailPage({
                   { label: 'WO Category', value: schedule.woCategory.name },
                 ] : []),
                 { label: 'Task template', value: `${schedule.tasks.length} task${schedule.tasks.length !== 1 ? 's' : ''}` },
+                ...(schedule.skipCount > 0 ? [
+                  { label: 'Backlog', value: (
+                    <span className="inline-flex items-center gap-1">
+                      <Badge label={`${schedule.skipCount} skip${schedule.skipCount !== 1 ? 's' : ''}`} variant="orange" />
+                      {schedule.lastSkippedAt && (
+                        <span className="text-[10px] text-gray-400 font-normal">since {fmt(schedule.lastSkippedAt)}</span>
+                      )}
+                    </span>
+                  )},
+                ] : []),
                 { label: 'Created by', value: schedule.createdBy?.name ?? '—' },
                 { label: 'Created',    value: fmt(schedule.createdAt) },
               ].map(row => (
@@ -386,6 +404,42 @@ export default async function PMDetailPage({
             )}
           </div>
         </div>
+
+        {/* Skipped cycles */}
+        {schedule.skipLogs.length > 0 && (
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h2 className="font-semibold text-gray-900 text-sm">
+                  Skipped cycles
+                  <span className="ml-2 text-gray-400 font-normal">({schedule.skipLogs.length})</span>
+                </h2>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {schedule.skipLogs.map((log: any) => (
+                  <div key={log.id} className="flex items-center gap-4 px-5 py-3.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">
+                        {log.asset ? (
+                          <Link href={`/assets/${log.asset.id}`} className="text-blue-600 hover:underline">{log.asset.name}</Link>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {log.reason === 'ACTIVE_WO' ? 'Active WO exists' : 'Meter below threshold'}
+                        {log.blockingWo && (
+                          <> · Blocked by <Link href={`/work-orders/${log.blockingWo.id}`} className="text-blue-600 hover:underline">{log.blockingWo.woNumber}</Link></>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{fmt(log.skippedAt)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Activity */}
         <div className="lg:col-span-2">

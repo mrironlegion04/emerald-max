@@ -430,13 +430,18 @@ export default async function AssetDetailPage({
                   {asset.maintenanceSchedules.map((pm: any) => {
                     const isOverdue = new Date(pm.nextDueDate) < new Date()
                     return (
-                      <div key={pm.id} className="border border-gray-100 rounded-lg p-3">
+                      <div key={pm.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-gray-900">{pm.title}</p>
-                          <Badge
-                            label={pm.isActive ? 'Active' : 'Inactive'}
-                            variant={pm.isActive ? 'green' : 'gray'}
-                          />
+                          <Link href={`/preventive-maintenance/${pm.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">{pm.title}</Link>
+                          <div className="flex gap-1 flex-shrink-0">
+                            {(pm.skipCount ?? 0) > 0 && (
+                              <Badge label={`${pm.skipCount} skip${pm.skipCount !== 1 ? 's' : ''}`} variant="orange" />
+                            )}
+                            <Badge
+                              label={pm.isActive ? 'Active' : 'Inactive'}
+                              variant={pm.isActive ? 'green' : 'gray'}
+                            />
+                          </div>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
                           Every {pm.interval} {pm.frequency.toLowerCase()}

@@ -147,14 +147,15 @@ export async function GET(request: NextRequest) {
       })
       filename = `pm-schedules-${new Date().toISOString().slice(0,10)}.csv`
       const headers = [
-        'Title','Description','Trigger','Frequency','Interval','Next Due',
-        'Asset','Asset Code','Location','Active','Created At',
+        'PM Number','Title','Description','Trigger','Frequency','Interval','Next Due',
+        'Asset','Asset Code','Location','Active','Skip Count','Last Skipped','Created At',
       ]
       const rows = schedules.map(s => [
-        s.title, s.description ?? '',
+        s.pmNumber ?? '', s.title, s.description ?? '',
         s.triggerType, s.frequency, s.interval, fmt(s.nextDueDate),
         s.asset?.name ?? '', s.asset?.assetCode ?? '', s.asset?.location?.name ?? s.location?.name ?? '',
-        s.isActive ? 'Yes' : 'No', fmt(s.createdAt),
+        s.isActive ? 'Yes' : 'No', s.skipCount ?? 0,
+        s.lastSkippedAt ? fmt(s.lastSkippedAt) : '', fmt(s.createdAt),
       ])
       csv = toCSV(headers, rows)
 
@@ -199,6 +200,38 @@ export async function GET(request: NextRequest) {
         p.unit,
         p.unitCost ?? '',
         p._count.usedInWorkOrders, fmt(p.createdAt),
+      ])
+      csv = toCSV(headers, rows)
+
+    } else if (type === 'pm-skip-logs') {
+      const locationFilter = await buildLocationFilter(user)
+      const where: Record<string, unknown> = { ...(locationFilter ?? {}) }
+      const scheduleId = sp.get('scheduleId')
+      if (scheduleId) where.scheduleId = scheduleId
+
+      const skipLogs = await prisma.pmSkipLog.findMany({
+        where,
+        include: {
+          schedule: { select: { title: true, pmNumber: true } },
+          asset: { select: { name: true, assetCode: true } },
+          blockingWo: { select: { woNumber: true } },
+        },
+        orderBy: { skippedAt: 'desc' },
+        take: 10000,
+      })
+      filename = `pm-skip-logs-${new Date().toISOString().slice(0,10)}.csv`
+      const headers = [
+        'Date','Schedule','PM Number','Asset','Asset Code',
+        'Blocking WO','Reason',
+      ]
+      const rows = skipLogs.map(l => [
+        fmt(l.skippedAt),
+        l.schedule?.title ?? '',
+        l.schedule?.pmNumber ?? '',
+        l.asset?.name ?? '',
+        l.asset?.assetCode ?? '',
+        l.blockingWo?.woNumber ?? '',
+        l.reason === 'ACTIVE_WO' ? 'Active WO exists' : 'Meter below threshold',
       ])
       csv = toCSV(headers, rows)
 

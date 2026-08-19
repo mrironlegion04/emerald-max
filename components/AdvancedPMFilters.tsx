@@ -62,6 +62,25 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
     } finally { setExporting(false) }
   }
 
+  async function doExportSkipLogs() {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams()
+      params.set('type', 'pm-skip-logs')
+      const res = await fetch(`/api/export?${params}`)
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const cd   = res.headers.get('content-disposition') ?? ''
+      const filename = cd.match(/filename="?([^"]+)"?/)?.[1] ?? 'pm-skip-logs.csv'
+      const a = document.createElement('a')
+      a.href = url; a.download = filename
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally { setExporting(false) }
+  }
+
   const handleClearAll = () => {
     router.push(pathname)
   }
@@ -148,14 +167,24 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
 
         <div className="flex items-center justify-between gap-2 border-t border-dashed border-slate-150 pt-2">
           {canExport && (
-            <button
-              onClick={doExport}
-              disabled={exporting}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-655 hover:bg-slate-50 text-xs font-bold bg-white"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              {exporting ? 'Exporting...' : 'Export CSV'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={doExport}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-655 hover:bg-slate-50 text-xs font-bold bg-white"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                {exporting ? 'Exporting...' : 'Export CSV'}
+              </button>
+              <button
+                onClick={doExportSkipLogs}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-orange-200 rounded-lg text-orange-600 hover:bg-orange-50 text-xs font-bold bg-white"
+              >
+                <Download className="w-3.5 h-3.5 text-orange-500" />
+                {exporting ? 'Exporting...' : 'Skip Logs'}
+              </button>
+            </div>
           )}
 
           {hasAnyFilter && (
@@ -198,14 +227,24 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
           </button>
 
           {canExport && (
-            <button
-              onClick={doExport}
-              disabled={exporting}
-              className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-slate-650 hover:bg-slate-50 text-sm font-bold bg-white"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              {exporting ? 'Exporting...' : 'Export'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={doExport}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-slate-650 hover:bg-slate-50 text-sm font-bold bg-white"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                {exporting ? 'Exporting...' : 'Export'}
+              </button>
+              <button
+                onClick={doExportSkipLogs}
+                disabled={exporting}
+                className="flex items-center gap-1.5 px-3 py-2 border border-orange-200 rounded-xl text-orange-600 hover:bg-orange-50 text-sm font-bold bg-white"
+              >
+                <Download className="w-3.5 h-3.5 text-orange-500" />
+                {exporting ? 'Exporting...' : 'Skip Logs'}
+              </button>
+            </div>
           )}
 
           {hasAnyFilter && (
@@ -264,14 +303,24 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
         </button>
 
         {canExport && (
-          <button
-            onClick={doExport}
-            disabled={exporting}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-655 hover:bg-slate-50 text-sm font-bold transition-all shadow-3xs"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={doExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-655 hover:bg-slate-50 text-sm font-bold transition-all shadow-3xs"
+            >
+              <Download className="w-4 h-4 text-slate-500" />
+              <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
+            </button>
+            <button
+              onClick={doExportSkipLogs}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 text-sm font-bold transition-all shadow-3xs"
+            >
+              <Download className="w-4 h-4 text-orange-500" />
+              <span>{exporting ? 'Exporting...' : 'Skip Logs'}</span>
+            </button>
+          </div>
         )}
 
         {hasAnyFilter && (

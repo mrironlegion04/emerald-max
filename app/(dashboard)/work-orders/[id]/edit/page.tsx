@@ -43,7 +43,7 @@ export default async function EditWorkOrderPage({
     }),
     prisma.asset.findMany({
       where:   { isDeleted: false, status: { not: 'DECOMMISSIONED' }, ...(assetFilter ?? {}) },
-      select:  { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true },
+      select:  { id: true, name: true, assetCode: true, imageUrl: true, categoryId: true, parentId: true, locationId: true, description: true },
       orderBy: { name: 'asc' },
     }),
     prisma.location.findMany({

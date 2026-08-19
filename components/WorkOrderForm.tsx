@@ -10,7 +10,7 @@ import CustomFieldsPanel from './CustomFieldsPanel'
 import { WO_STATUS_LABELS, WO_STATUS_PILL } from '@/lib/work-order-status'
 import { WORK_ORDER_RESOLUTIONS, RESOLUTION_LABELS } from '@/lib/work-order-resolution'
 
-interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null }
+interface Asset { id: string; name: string; assetCode: string | null; imageUrl?: string | null; categoryId?: string | null; parentId?: string | null; locationId?: string | null; description?: string | null }
 interface Location { id: string; name: string; address: string | null; path: string | null; parentId: string | null }
 interface User  { id: string; name: string; role: string }
 interface DomainGroup { id: string; name: string; issues: { id: string; code: string; title: string; severity?: string }[]; isFallback?: boolean; recommended?: boolean }

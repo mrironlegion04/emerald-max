@@ -12,6 +12,7 @@ interface Asset {
   categoryId?: string | null
   parentId?: string | null
   locationId?: string | null
+  description?: string | null
 }
 
 interface Location {
@@ -31,6 +32,7 @@ interface CombinedNode {
   isLocation: boolean
   assetCode?: string | null
   imageUrl?: string | null
+  description?: string | null
   assetId?: string
   locationId?: string
   children: CombinedNode[]
@@ -147,6 +149,7 @@ function buildAssetSubtree(asset: Asset, allAssets: Asset[]): CombinedNode {
     isLocation: false,
     assetCode: asset.assetCode,
     imageUrl: asset.imageUrl,
+    description: asset.description,
     assetId: asset.id,
     children: []
   }
@@ -303,7 +306,8 @@ export default function AssetTreeSelect({
       .filter(asset =>
         (!subtreeIds || subtreeIds.has(asset.id)) &&
         (asset.name.toLowerCase().includes(trimmed) ||
-        (asset.assetCode && asset.assetCode.toLowerCase().includes(trimmed)))
+        (asset.assetCode && asset.assetCode.toLowerCase().includes(trimmed)) ||
+        (asset.description && asset.description.toLowerCase().includes(trimmed)))
       )
       .map(asset => {
         const path = locations.length > 0 
@@ -454,6 +458,9 @@ export default function AssetTreeSelect({
               {node.assetCode && (
                 <span className="ml-1.5 text-xs font-mono text-gray-400">({node.assetCode})</span>
               )}
+              {node.description && (
+                <span className="ml-1.5 text-xs text-gray-400 truncate">— {node.description}</span>
+              )}
             </span>
 
             {!multiSelect && isSelected && <span className="text-indigo-600 text-xs font-semibold">✓</span>}
@@ -561,6 +568,9 @@ export default function AssetTreeSelect({
                 <span className="font-normal">{node.name}</span>
                 {node.assetCode && (
                   <span className="ml-1.5 text-xs font-mono text-gray-400">({node.assetCode})</span>
+                )}
+                {node.description && (
+                  <span className="ml-1.5 text-xs text-gray-400 truncate">— {node.description}</span>
                 )}
               </span>
 
@@ -783,6 +793,9 @@ export default function AssetTreeSelect({
                             {asset.name}
                             {asset.assetCode && (
                               <span className="ml-1.5 text-xs font-mono text-gray-400">({asset.assetCode})</span>
+                            )}
+                            {asset.description && (
+                              <span className="ml-1.5 text-xs text-gray-400 truncate">— {asset.description}</span>
                             )}
                           </p>
                           <p className="text-xs text-gray-400 truncate">{path}</p>

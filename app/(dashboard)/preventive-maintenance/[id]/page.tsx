@@ -133,7 +133,7 @@ export default async function PMDetailPage({
       </div>
       <PageHeader
         title={schedule.title}
-        subtitle={`${targetName} · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}`}
+        subtitle={`${schedule.pmNumber ? `${schedule.pmNumber} · ` : ''}${targetName} · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}`}
         action={
           canEditPM || canCreatePM ? (
             <div className="flex gap-2">
@@ -187,6 +187,7 @@ export default async function PMDetailPage({
                 { label: 'Status',     value: (
                   <Badge label={schedule.isActive ? 'Active' : 'Inactive'} variant={schedule.isActive ? 'green' : 'gray'} />
                 )},
+                ...(schedule.pmNumber ? [{ label: 'PM Number', value: <span className="font-mono text-xs font-bold text-slate-600">{schedule.pmNumber}</span> }] : []),
                 ...(targetAssets.length === 1 ? [
                   { label: 'Asset',      value: (
                     <Link href={`/assets/${targetAssets[0].id}`} className="text-blue-600 hover:underline text-xs">

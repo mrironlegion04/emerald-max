@@ -5,6 +5,7 @@ import { hasPermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { buildLocationFilter, canAssignTeams, canAssignUsers, canWriteToLocations, canWriteToTeams, hasScopeActionFlag } from '@/lib/access-control'
 import { computeNextDueDate } from '@/lib/pm-generation'
+import { generatePMNumber } from '@/lib/wo-number'
 import { dateOnlyToUtcMidnight } from '@/lib/date-format'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
@@ -151,8 +152,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const pmNumber = await generatePMNumber()
+
     const schedule = await prisma.maintenanceSchedule.create({
       data: {
+        pmNumber:             pmNumber,
         title:               data.title,
         description:         data.description         ?? null,
         triggerType:         data.triggerType,

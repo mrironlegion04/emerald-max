@@ -794,6 +794,7 @@ model BOMTemplatePart {
 
 model MaintenanceSchedule {
   id            String        @id @default(cuid())
+  pmNumber      String?       @unique
   title         String
   description   String?
   triggerType   PMTriggerType @default(TIME)

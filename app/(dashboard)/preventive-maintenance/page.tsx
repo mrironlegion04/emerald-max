@@ -174,7 +174,14 @@ export default async function PMPage({
                   return (
                     <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{s.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900">{s.title}</p>
+                          {s.pmNumber && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200/60">
+                              {s.pmNumber}
+                            </span>
+                          )}
+                        </div>
                         {s.description && (
                           <p className="text-xs text-gray-400 truncate max-w-xs">{s.description}</p>
                         )}
@@ -271,9 +278,16 @@ export default async function PMPage({
                   {/* Title & Status */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <Link href={`/preventive-maintenance/${s.id}`} className="font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 block truncate">
-                        {s.title}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/preventive-maintenance/${s.id}`} className="font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 block truncate">
+                          {s.title}
+                        </Link>
+                        {s.pmNumber && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200/60 flex-shrink-0">
+                            {s.pmNumber}
+                          </span>
+                        )}
+                      </div>
                       {s.description && (
                         <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{s.description}</p>
                       )}

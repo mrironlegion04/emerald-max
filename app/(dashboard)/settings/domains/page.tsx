@@ -25,11 +25,12 @@ export default async function DomainsPage({
 
   const [domains, totalCount] = await Promise.all([
     prisma.maintenanceDomain.findMany({
+      where: { isDeleted: false },
       orderBy: { name: 'asc' },
       skip,
       take: ITEMS_PER_PAGE,
-    }).then((domains: any) => domains.map((d: any) => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true }))),
-    prisma.maintenanceDomain.count(),
+    }).then((domains: any) => domains.map((d: any) => ({ ...d, description: d.description ?? null, isActive: d.isActive ?? true, isDeleted: d.isDeleted ?? false }))),
+    prisma.maintenanceDomain.count({ where: { isDeleted: false } }),
   ])
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)

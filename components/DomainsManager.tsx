@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, AlertCircle, X, Check, Layers, Search, EyeOff, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle, X, Check, Layers, Search, EyeOff, Eye, LayoutGrid, RotateCcw } from 'lucide-react'
 
 interface Domain {
   id: string
   name: string
   description?: string | null
   isActive?: boolean
+  isDeleted?: boolean
   _count?: { categories: number }
 }
 
@@ -25,7 +26,13 @@ export default function DomainsManager({ initialDomains }: Props) {
   const [formIsActive, setFormIsActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [forceOpenId, setForceOpenId] = useState<string | null>(null)
+  const [linkedAssets, setLinkedAssets] = useState(0)
+  const [linkedTeams, setLinkedTeams] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   function openAdd() {
     setEditingId(null)
@@ -88,22 +95,101 @@ export default function DomainsManager({ initialDomains }: Props) {
     }
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete domain "${name}"?`)) return
-    setDeleteErrors(prev => ({ ...prev, [id]: '' }))
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    setDeleteError('')
     try {
       const res = await fetch(`/api/domains/${id}`, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to delete')
-      setDomains(prev => prev.filter(d => d.id !== id))
-    } catch (err) {
-      setDeleteErrors(prev => ({ ...prev, [id]: err instanceof Error ? err.message : 'Failed' }))
+      if (res.status === 409) {
+        const data = await res.json()
+        if (data.requiresForce) {
+          setLinkedAssets(data.linkedAssets)
+          setLinkedTeams(data.linkedTeams)
+          setForceOpenId(id)
+          setDeleting(false)
+          return
+        }
+      }
+      if (!res.ok) {
+        const data = await res.json()
+        setDeleteError(data.error ?? 'Archive failed')
+        setDeleting(false)
+        return
+      }
+      setDomains(prev => prev.map(d => d.id === id ? { ...d, isDeleted: true } : d))
+      setDeleteConfirmId(null)
+      setDeleting(false)
+    } catch {
+      setDeleteError('Network error')
+      setDeleting(false)
+    }
+  }
+
+  async function handleForceDelete(id: string) {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const res = await fetch(`/api/domains/${id}?force=true`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        setDeleteError(data.error ?? 'Archive failed')
+        setDeleting(false)
+        return
+      }
+      setDomains(prev => prev.map(d => d.id === id ? { ...d, isDeleted: true } : d))
+      setForceOpenId(null)
+      setDeleteConfirmId(null)
+      setDeleting(false)
+    } catch {
+      setDeleteError('Network error')
+      setDeleting(false)
+    }
+  }
+
+  async function handleRestore(id: string) {
+    try {
+      const res = await fetch(`/api/domains/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restore' }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setDeleteError(data.error ?? 'Restore failed')
+        return
+      }
+      setDomains(prev => prev.map(d => d.id === id ? { ...d, isDeleted: false } : d))
+    } catch {
+      setDeleteError('Network error')
+    }
+  }
+
+  async function toggleShowDeleted() {
+    const next = !showDeleted
+    setShowDeleted(next)
+    if (next) {
+      try {
+        const res = await fetch('/api/domains?includeDeleted=true')
+        if (res.ok) {
+          const all = await res.json()
+          setDomains(all.map((d: Record<string, unknown>) => ({
+            ...d,
+            description: d.description ?? null,
+            isActive: d.isActive ?? true,
+            isDeleted: d.isDeleted ?? false,
+          })))
+        }
+      } catch { /* keep current list */ }
+    } else {
+      setDomains(prev => prev.filter(d => !d.isDeleted))
     }
   }
 
   const filteredDomains = domains.filter(d =>
     d.name.toLowerCase().includes(search.toLowerCase())
   )
+  const activeDomains = filteredDomains.filter(d => !d.isDeleted)
+  const deletedDomains = filteredDomains.filter(d => d.isDeleted)
 
   return (
     <div className="space-y-6">
@@ -133,6 +219,17 @@ export default function DomainsManager({ initialDomains }: Props) {
             <Layers className="w-3.5 h-3.5 text-slate-400" />
             <span>{domains.length} absolute domains</span>
           </div>
+          <button
+            onClick={toggleShowDeleted}
+            className={`flex items-center justify-center gap-1.5 flex-shrink-0 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+              showDeleted
+                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                : 'bg-slate-100 text-slate-600 border-slate-200/50 hover:bg-slate-200/60'
+            }`}
+          >
+            {showDeleted ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>{showDeleted ? 'Hide' : 'Show'} Deleted</span>
+          </button>
           <button onClick={openAdd} className="btn-primary flex items-center justify-center gap-2 flex-shrink-0 shadow-sm">
             <Plus className="w-4 h-4" />
             <span>Add Domain</span>
@@ -235,8 +332,19 @@ export default function DomainsManager({ initialDomains }: Props) {
         </div>
       )}
 
-      {/* Main List Display */}
-      {domains.length === 0 ? (
+      {/* Delete Error Banner */}
+      {deleteError && (
+        <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 text-sm text-red-700 rounded-xl border border-red-100">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+          <span className="flex-1 font-medium">{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="p-0.5 rounded text-red-400 hover:bg-red-100 hover:text-red-700">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Active Domains */}
+      {domains.length === 0 && !showDeleted ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-16 px-4 text-center">
           <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
             <LayoutGrid className="w-6 h-6 text-blue-600" />
@@ -247,7 +355,7 @@ export default function DomainsManager({ initialDomains }: Props) {
             <Plus className="w-4 h-4" /> Add First Domain
           </button>
         </div>
-      ) : filteredDomains.length === 0 ? (
+      ) : activeDomains.length === 0 && !showDeleted ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-14 px-4 text-center">
           <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-slate-700 font-bold">No matching domains found</p>
@@ -259,7 +367,7 @@ export default function DomainsManager({ initialDomains }: Props) {
       ) : (
         <div className="responsive-table-container">
           <div className="divide-y divide-slate-100">
-            {filteredDomains.map(d => (
+            {activeDomains.map(d => (
               <div key={d.id} className="relative transition-colors duration-150">
                 <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 hover:bg-slate-50/70 ${!d.isActive ? 'bg-slate-50/30' : ''} group`}>
                   
@@ -303,30 +411,102 @@ export default function DomainsManager({ initialDomains }: Props) {
                         <Pencil className="w-3.5 h-3.5" />
                         <span className="sm:hidden md:inline">Edit</span>
                       </button>
-                      <button
-                        onClick={() => handleDelete(d.id, d.name)}
-                        className="p-1 px-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-700 transition-colors border border-transparent hover:border-red-200/50 flex items-center gap-1 text-xs font-semibold"
-                        title="Delete domain"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="sm:hidden md:inline">Delete</span>
-                      </button>
+
+                      {/* Delete / Confirm / Force flow */}
+                      {deleteConfirmId === d.id && !forceOpenId && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <span className="text-[11px] text-red-600 font-medium whitespace-nowrap">Archive?</span>
+                          <button
+                            onClick={() => handleDelete(d.id)}
+                            disabled={deleting}
+                            className="p-1 px-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-[11px] font-bold transition-colors disabled:opacity-50"
+                          >
+                            {deleting ? '…' : 'Yes'}
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmId(null); setDeleteError('') }}
+                            className="p-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-[11px] font-bold transition-colors"
+                          >
+                            No
+                          </button>
+                        </div>
+                      )}
+                      {forceOpenId === d.id && (
+                        <div className="flex items-center gap-2 ml-1">
+                          <span className="text-[11px] text-red-600 font-medium whitespace-nowrap">
+                            {linkedAssets} asset{linkedAssets !== 1 ? 's' : ''}, {linkedTeams} team{linkedTeams !== 1 ? 's' : ''} linked. Force?
+                          </span>
+                          <button
+                            onClick={() => handleForceDelete(d.id)}
+                            disabled={deleting}
+                            className="p-1 px-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-[11px] font-bold transition-colors disabled:opacity-50"
+                          >
+                            {deleting ? '…' : 'Force'}
+                          </button>
+                          <button
+                            onClick={() => { setForceOpenId(null); setDeleteConfirmId(null); setDeleteError('') }}
+                            className="p-1 px-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-[11px] font-bold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                      {deleteConfirmId !== d.id && forceOpenId !== d.id && (
+                        <button
+                          onClick={() => { setDeleteConfirmId(d.id); setDeleteError('') }}
+                          className="p-1 px-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-700 transition-colors border border-transparent hover:border-red-200/50 flex items-center gap-1 text-xs font-semibold"
+                          title="Delete domain"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="sm:hidden md:inline">Delete</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                {/* Local Delete Error banner */}
-                {deleteErrors[d.id] && (
-                  <div className="flex items-center gap-2.5 px-4 py-2 bg-red-50 text-xs text-red-700 border-t border-red-100/50">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
-                    <span className="flex-1 font-medium">{deleteErrors[d.id]}</span>
-                    <button onClick={() => setDeleteErrors(prev => ({ ...prev, [d.id]: '' }))} className="p-0.5 rounded text-red-400 hover:bg-red-100 hover:text-red-700">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
+
+            {/* Archived Domains Section */}
+            {showDeleted && deletedDomains.length > 0 && (
+              <>
+                <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-200/60">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Archived ({deletedDomains.length})
+                  </span>
+                </div>
+                {deletedDomains.map(d => (
+                  <div key={d.id} className="relative transition-colors duration-150">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-50/40 group">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0 bg-slate-300" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-sm tracking-tight text-slate-500 line-through">{d.name}</span>
+                            <span className="inline-flex items-center gap-1 bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full text-[10px] border border-slate-300">
+                              <EyeOff className="w-2.5 h-2.5" /> ARCHIVED
+                            </span>
+                          </div>
+                          {d.description && (
+                            <p className="text-xs text-slate-400 leading-relaxed mt-1">{d.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150 flex-shrink-0">
+                        <button
+                          onClick={() => handleRestore(d.id)}
+                          className="p-1 px-2 rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 transition-colors border border-transparent hover:border-emerald-200/50 flex items-center gap-1 text-xs font-semibold"
+                          title="Restore domain"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span className="sm:hidden md:inline">Restore</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       )}

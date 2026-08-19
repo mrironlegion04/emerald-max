@@ -9,9 +9,13 @@ const schema = z.object({
   description: z.string().nullable().optional(),
 })
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const includeDeleted = searchParams.get('includeDeleted') === 'true'
+
     const domains = await prisma.maintenanceDomain.findMany({
+      where: includeDeleted ? undefined : { isDeleted: false },
       orderBy: { name: 'asc' },
     })
     return NextResponse.json(domains)

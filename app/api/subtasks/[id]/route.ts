@@ -131,14 +131,6 @@ export async function PUT(
       )
     }
 
-    // Ensure mutual exclusivity: can't assign to both user and team
-    if (data.assignedToId && data.assignedTeamId) {
-      return NextResponse.json(
-        { error: 'Cannot assign to both user and team' },
-        { status: 400 }
-      )
-    }
-
     // Determine if completing the subtask
     const isCompleting = data.status === 'COMPLETED' && existingSubtask.status !== 'COMPLETED'
 

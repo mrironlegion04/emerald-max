@@ -104,14 +104,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Ensure mutual exclusivity: can't assign to both user and team
-    if (data.assignedToId && data.assignedTeamId) {
-      return NextResponse.json(
-        { error: 'Cannot assign to both user and team' },
-        { status: 400 }
-      )
-    }
-
     const subtask = await prisma.subtask.create({
       data: {
         title: data.title,

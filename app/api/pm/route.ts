@@ -66,7 +66,7 @@ const pmSchema = z.object({
   woPriority:           z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
   woDescription:        z.string().nullable().optional(),
   woAssignedToId:       z.string().nullable().optional(),
-  woTeamId:             z.string().nullable().optional(),
+  woTeamId:             z.string().min(1, 'Team is required'),
   // Start date offset
   startDateOffset:      z.number().int().min(0).default(0),
   // Nested start index

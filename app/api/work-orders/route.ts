@@ -33,7 +33,7 @@ const woSchema = z.object({
   locationScope:       z.enum(['ALL_ASSETS', 'GENERAL']).nullable().optional(),
   selectedAssetIds:    z.array(z.string()).optional().default([]),
   assignedToId:        z.string().nullable().optional(),
-  teamId:              z.string().nullable().optional(),
+  teamId:              z.string().min(1, 'Team is required'),
   laborHours:          z.number().nullable().optional(),
   laborCost:           z.number().nullable().optional(),
   partsCost:           z.number().nullable().optional(),

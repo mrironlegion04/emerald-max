@@ -916,21 +916,20 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             </select>
           </div>
 
-          {teams.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Team <span className="text-red-500">*</span></label>
               <select
                 value={form.woTeamId}
                 onChange={e => set('woTeamId', e.target.value)}
                 className="input-field"
+                required
               >
-                <option value="">— No team —</option>
+                <option value="">Select team...</option>
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
             </div>
-          )}
         </div>
 
         <div>

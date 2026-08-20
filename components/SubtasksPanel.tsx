@@ -131,20 +131,13 @@ export default function SubtasksPanel({
     try {
       setLoading(true)
 
-      // Validate: can't assign to both user and team
-      if (formData.assignedToId && formData.assignedTeamId) {
-        alert('Assign to either a team or an individual, not both')
-        setLoading(false)
-        return
-      }
-
       const payload = {
         title: formData.title,
         description: formData.description || null,
         priority: formData.priority,
         dueDate: formData.dueDate || null,
         workOrderId: woId,
-        assignedToId: formData.assignedTeamId ? null : (formData.assignedToId || null),
+        assignedToId: formData.assignedToId || null,
         assignedTeamId: formData.assignedTeamId || null,
         required: formData.required,
         remarks: formData.remarks || null,
@@ -399,7 +392,7 @@ export default function SubtasksPanel({
                 </label>
                 <select
                   value={formData.assignedToId}
-                  onChange={e => setFormData({ ...formData, assignedToId: e.target.value, assignedTeamId: e.target.value ? '' : formData.assignedTeamId })}
+                  onChange={e => setFormData({ ...formData, assignedToId: e.target.value })}
                   className="input-field text-sm bg-white"
                 >
                   <option value="">Select user...</option>
@@ -417,7 +410,7 @@ export default function SubtasksPanel({
                 </label>
                 <select
                   value={formData.assignedTeamId}
-                  onChange={e => setFormData({ ...formData, assignedTeamId: e.target.value, assignedToId: e.target.value ? '' : formData.assignedToId })}
+                  onChange={e => setFormData({ ...formData, assignedTeamId: e.target.value })}
                   className="input-field text-sm bg-white"
                 >
                   <option value="">Select team...</option>

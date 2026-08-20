@@ -308,7 +308,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     setError(''); setSaving(true)
     try {
       if (!form.title.trim()) { setError('Title is required'); setSaving(false); return }
-      if (form.teamId && form.assignedToId) { setError('Assign to either a team or an individual, not both'); setSaving(false); return }
       if (!isEdit) {
         if (!form.assetId && form.selectedAssetIds.length === 0 && !form.locationId) {
           setError('Select an asset or location for the work order')
@@ -637,9 +636,9 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         <div className="space-y-3 pt-3 border-t border-slate-100">
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Assign work to:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {inputRow('Team', false,
-              <select value={form.teamId} onChange={e => { set('teamId', e.target.value); if (e.target.value) set('assignedToId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
-                <option value="">— No team —</option>
+            {inputRow('Team', true,
+              <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field text-xs sm:text-sm bg-white cursor-pointer" required>
+                <option value="">Select team...</option>
                 {recommendedTeams.length > 0 && (
                   <optgroup label="⭐ Recommended">
                     {recommendedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -653,7 +652,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               </select>
             )}
             {inputRow('Individual', false,
-              <select value={form.assignedToId} onChange={e => { set('assignedToId', e.target.value); if (e.target.value) set('teamId', '') }} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
+              <select value={form.assignedToId} onChange={e => set('assignedToId', e.target.value)} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
                 <option value="">— Unassigned —</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
               </select>

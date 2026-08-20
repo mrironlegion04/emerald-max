@@ -207,7 +207,15 @@ export async function GET(request: NextRequest) {
       const locationFilter = await buildLocationFilter(user)
       const where: Record<string, unknown> = { ...(locationFilter ?? {}) }
       const scheduleId = sp.get('scheduleId')
+      const from = sp.get('from')
+      const to = sp.get('to')
       if (scheduleId) where.scheduleId = scheduleId
+      if (from || to) {
+        where.skippedAt = {
+          ...(from ? { gte: new Date(from) } : {}),
+          ...(to ? { lte: new Date(to) } : {}),
+        }
+      }
 
       const skipLogs = await prisma.pmSkipLog.findMany({
         where,

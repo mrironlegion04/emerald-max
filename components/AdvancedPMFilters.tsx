@@ -22,12 +22,18 @@ const freqOptions = [
   { value: 'YEARLY',    label: 'Yearly' },
 ]
 
+const skipStatusOptions = [
+  { value: '',   label: 'All schedules' },
+  { value: 'yes', label: 'Has skips' },
+  { value: 'no',  label: 'No skips' },
+]
+
 export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
   const router      = useRouter()
   const pathname    = usePathname()
   const searchParams= useSearchParams()
   const [isPending, startTransition] = useTransition()
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showDrawerAdvanced, setShowDrawerAdvanced] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
@@ -37,8 +43,8 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
     startTransition(() => router.push(`${pathname}?${params.toString()}`))
   }, [router, pathname, searchParams])
 
-  const advancedKeys = ['assetId','dueDateFrom','dueDateTo']
-  const filterKeys   = ['frequency','isActive','overdueOnly', ...advancedKeys]
+  const advancedKeys = ['assetId','dueDateFrom','dueDateTo','skipStatus','skipFrom','skipTo']
+  const filterKeys   = ['frequency','isActive','overdueOnly','skipFrom','skipTo','skipStatus', ...advancedKeys]
   const hasAdvanced  = advancedKeys.some(k => searchParams.get(k))
   const activeCount  = filterKeys.filter(k => !!searchParams.get(k)).length
   const hasAnyFilter = ['search', ...filterKeys].some(k => searchParams.get(k))
@@ -67,6 +73,10 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
     try {
       const params = new URLSearchParams()
       params.set('type', 'pm-skip-logs')
+      const skipFrom = searchParams.get('skipFrom')
+      const skipTo = searchParams.get('skipTo')
+      if (skipFrom) params.set('from', skipFrom)
+      if (skipTo) params.set('to', skipTo)
       const res = await fetch(`/api/export?${params}`)
       if (!res.ok) return
       const blob = await res.blob()
@@ -83,6 +93,11 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
 
   const handleClearAll = () => {
     router.push(pathname)
+  }
+
+  const openDrawer = () => {
+    setShowDrawerAdvanced(hasAdvanced)
+    setIsDrawerOpen(true)
   }
 
   const filterInputs = (
@@ -103,24 +118,6 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
         </select>
       </div>
 
-      <div id="drawer-pm-asset" className="space-y-1.5">
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Asset</label>
-        <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field w-full text-sm bg-white">
-          <option value="">All assets</option>
-          {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
-        </select>
-      </div>
-
-      <div id="drawer-pm-from" className="space-y-1.5">
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due From</label>
-        <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field w-full text-sm bg-white" />
-      </div>
-
-      <div id="drawer-pm-to" className="space-y-1.5">
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due To</label>
-        <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field w-full text-sm bg-white" />
-      </div>
-
       <div id="drawer-pm-overdue" className="pt-3 border-t border-dashed border-slate-150">
         <label className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer select-none font-medium">
           <input
@@ -132,6 +129,76 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
           Overdue Only
         </label>
       </div>
+
+      <div id="drawer-pm-advanced-toggle" className="pt-3 border-t border-dashed border-slate-150">
+        <button
+          onClick={() => setShowDrawerAdvanced(v => !v)}
+          className="flex items-center gap-2 w-full text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          <ChevronDown className={`w-4 h-4 transition-transform ${showDrawerAdvanced ? 'rotate-180' : ''}`} />
+          Advanced Filters
+          {hasAdvanced && <span className="w-2 h-2 bg-blue-600 rounded-full" />}
+        </button>
+      </div>
+
+      {showDrawerAdvanced && (
+        <div className="space-y-4 pt-2">
+          <div id="drawer-pm-asset" className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Asset</label>
+            <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field w-full text-sm bg-white">
+              <option value="">All assets</option>
+              {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div id="drawer-pm-from" className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due From</label>
+              <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field w-full text-sm bg-white" />
+            </div>
+
+            <div id="drawer-pm-to" className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Due To</label>
+              <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field w-full text-sm bg-white" />
+            </div>
+          </div>
+
+          <div id="drawer-pm-skip-status" className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Skip status</label>
+            <select
+              value={searchParams.get('skipStatus') ?? ''}
+              onChange={e => update('skipStatus', e.target.value)}
+              className="input-field w-full text-sm bg-white"
+            >
+              {skipStatusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Skip window</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">From</label>
+                <input
+                  type="date"
+                  value={searchParams.get('skipFrom') ?? ''}
+                  onChange={e => update('skipFrom', e.target.value)}
+                  className="input-field w-full text-sm bg-white"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">To</label>
+                <input
+                  type="date"
+                  value={searchParams.get('skipTo') ?? ''}
+                  onChange={e => update('skipTo', e.target.value)}
+                  className="input-field w-full text-sm bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -151,7 +218,7 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10 group-focus-within:text-blue-500 transition-colors" />
           </div>
           <button
-            onClick={() => setIsDrawerOpen(true)}
+            onClick={openDrawer}
             className={`flex items-center justify-center p-2.5 rounded-xl border transition-all active:scale-95 shadow-3xs focus:outline-none ${
               activeCount > 0 ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-650'
             }`}
@@ -216,7 +283,7 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsDrawerOpen(true)}
+            onClick={openDrawer}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-bold transition-all shadow-3xs ${
               activeCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-650'
             }`}
@@ -289,9 +356,9 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
         </label>
 
         <button
-          onClick={() => setShowAdvanced(v => !v)}
+          onClick={openDrawer}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-sm font-bold transition-all shadow-3xs ${
-            showAdvanced || hasAdvanced
+            hasAdvanced
               ? 'bg-blue-50 border-blue-200 text-blue-700'
               : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50'
           }`}
@@ -299,7 +366,6 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
           <Filter className="w-4 h-4" />
           <span>Advanced</span>
           {hasAdvanced && <span className="w-2 h-2 bg-blue-650 rounded-full" />}
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
         </button>
 
         {canExport && (
@@ -331,29 +397,6 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
         )}
         {isPending && <span className="text-xs text-slate-400 self-center font-bold">Filtering...</span>}
       </div>
-
-      {showAdvanced && (
-        <div id="pm-filters-desktop-advanced" className="bg-blue-50/50 border border-blue-100/70 rounded-2xl p-4.5 space-y-3.5 shadow-3xs hidden lg:block">
-          <p className="text-xs font-black text-blue-700 uppercase tracking-wider">Advanced Schedule Filters</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-550">Asset</label>
-              <select value={searchParams.get('assetId') ?? ''} onChange={e => update('assetId', e.target.value)} className="input-field text-sm bg-white">
-                <option value="">All assets</option>
-                {assets.map(a => <option key={a.id} value={a.id}>{a.name} ({a.assetCode})</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-550">Due From</label>
-              <input type="date" value={searchParams.get('dueDateFrom') ?? ''} onChange={e => update('dueDateFrom', e.target.value)} className="input-field text-sm bg-white" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-550">Due To</label>
-              <input type="date" value={searchParams.get('dueDateTo') ?? ''} onChange={e => update('dueDateTo', e.target.value)} className="input-field text-sm bg-white" />
-            </div>
-          </div>
-        </div>
-      )}
 
       <FilterDrawer
         isOpen={isDrawerOpen}

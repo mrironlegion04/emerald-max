@@ -133,6 +133,16 @@ export default async function PMDetailPage({
 
   const targetName = targetAssets[0]?.name ?? schedule.location?.name ?? 'General'
 
+  // Period-based skip count for the last 30 days
+  const skipCutoff30d = new Date()
+  skipCutoff30d.setDate(skipCutoff30d.getDate() - 30)
+  const skipCount30d = await prisma.pmSkipLog.count({
+    where: { scheduleId: schedule.id, skippedAt: { gte: skipCutoff30d } },
+  })
+
+  // Format date range labels
+  const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-1">
@@ -267,7 +277,7 @@ export default async function PMDetailPage({
                 ...(schedule.skipCount > 0 ? [
                   { label: 'Backlog', value: (
                     <span className="inline-flex items-center gap-1">
-                      <Badge label={`${schedule.skipCount} skip${schedule.skipCount !== 1 ? 's' : ''}`} variant="orange" />
+                      <Badge label={`${skipCount30d} skip${skipCount30d !== 1 ? 's' : ''} (30d)`} variant="orange" />
                       {schedule.lastSkippedAt && (
                         <span className="text-[10px] text-gray-400 font-normal">since {fmt(schedule.lastSkippedAt)}</span>
                       )}
@@ -412,7 +422,9 @@ export default async function PMDetailPage({
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h2 className="font-semibold text-gray-900 text-sm">
                   Skipped cycles
-                  <span className="ml-2 text-gray-400 font-normal">({schedule.skipLogs.length})</span>
+                  <span className="ml-2 text-gray-400 font-normal">
+                    ({skipCount30d} in last 30 days · {schedule.skipLogs.length} shown)
+                  </span>
                 </h2>
               </div>
               <div className="divide-y divide-gray-50">

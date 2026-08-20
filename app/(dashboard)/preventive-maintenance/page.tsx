@@ -20,6 +20,9 @@ interface SearchParams {
   dueDateFrom?: string
   dueDateTo?:   string
   location?:    string
+  skipFrom?:    string
+  skipTo?:      string
+  skipStatus?:  string
   page?:        string
 }
 
@@ -75,6 +78,20 @@ export default async function PMPage({
 
   const page = Math.max(1, parseInt(params.page ?? '1', 10))
   const skip = (page - 1) * ITEMS_PER_PAGE
+  const skipFrom = params.skipFrom ? new Date(params.skipFrom) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d })()
+  const skipTo = params.skipTo ? new Date(params.skipTo) : new Date()
+  skipTo.setHours(23, 59, 59, 999)
+  const hasSkipFilter = !!(params.skipFrom || params.skipTo)
+
+  // Skip status filter: filter schedules by whether they have skip logs in the window
+  if (params.skipStatus === 'yes' || params.skipStatus === 'no') {
+    const skipFilter = {
+      some: {
+        skippedAt: { gte: skipFrom, lte: skipTo },
+      },
+    }
+    where.skipLogs = params.skipStatus === 'yes' ? skipFilter : { none: skipFilter.some }
+  }
 
   const [schedules, totalCount, assets] = await Promise.all([
     prisma.maintenanceSchedule.findMany({
@@ -96,9 +113,29 @@ export default async function PMPage({
     }),
   ])
 
+  // Period-based skip counts for the current page's schedules
+  const scheduleIds = schedules.map((s: any) => s.id)
+  const skipLogs = await prisma.pmSkipLog.findMany({
+    where: {
+      scheduleId: { in: scheduleIds },
+      skippedAt: { gte: skipFrom, lte: skipTo },
+    },
+    select: { scheduleId: true },
+  })
+  const skipCountBySchedule: Record<string, number> = {}
+  for (const log of skipLogs) {
+    skipCountBySchedule[log.scheduleId] = (skipCountBySchedule[log.scheduleId] ?? 0) + 1
+  }
+
   const overdueCount  = schedules.filter((s: any) => s.isActive && new Date(s.nextDueDate) < new Date()).length
   const activeCount   = schedules.filter((s: any) => s.isActive).length
-  const backlogCount  = schedules.filter((s: any) => (s.skipCount ?? 0) > 0).length
+  const backlogCount  = schedules.filter((s: any) => (skipCountBySchedule[s.id] ?? 0) > 0).length
+
+  // Format skip window label for display
+  const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const skipWindowLabel = hasSkipFilter
+    ? `${fmtShort(skipFrom)}–${fmtShort(skipTo)}`
+    : 'last 30d'
 
   const generateableIds = schedules
     .filter((s: any) => s.isActive && daysUntil(s.nextDueDate) <= 0)
@@ -113,7 +150,7 @@ export default async function PMPage({
     <div className="p-6 max-w-7xl mx-auto">
       <PageHeader
         title="Preventive Maintenance"
-        subtitle={`${totalCount} total · ${activeCount} active${overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}${backlogCount > 0 ? ` · ${backlogCount} backlogged` : ''}`}
+        subtitle={`${totalCount} total · ${activeCount} active${overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}${backlogCount > 0 ? ` · ${backlogCount} backlogged (${skipWindowLabel})` : ''}`}
         action={
           canEditPM || canCreatePM ? (
             <div className="flex gap-2">
@@ -245,8 +282,8 @@ export default async function PMPage({
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        {(s.skipCount ?? 0) > 0 ? (
-                          <Badge label={`${s.skipCount} skip${s.skipCount !== 1 ? 's' : ''}`} variant="orange" />
+                        {(skipCountBySchedule[s.id] ?? 0) > 0 ? (
+                          <Badge label={`${skipCountBySchedule[s.id]} skip${skipCountBySchedule[s.id] !== 1 ? 's' : ''} (${skipWindowLabel})`} variant="orange" />
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
                         )}
@@ -385,11 +422,11 @@ export default async function PMPage({
                     </div>
 
                     {/* Backlog */}
-                    {(s.skipCount ?? 0) > 0 && (
+                    {(skipCountBySchedule[s.id] ?? 0) > 0 && (
                       <div className="flex flex-col gap-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Backlog</span>
                         <span className="text-orange-600 font-bold">
-                          {s.skipCount} skip{s.skipCount !== 1 ? 's' : ''}
+                          {skipCountBySchedule[s.id]} skip{skipCountBySchedule[s.id] !== 1 ? 's' : ''} ({skipWindowLabel})
                         </span>
                       </div>
                     )}

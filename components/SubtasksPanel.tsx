@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, Circle, AlertCircle, Trash2, Plus, Edit2, X, Search } from 'lucide-react'
+import { CheckCircle, Circle, AlertCircle, Trash2, Plus, Edit2, X, Search, LayoutGrid, List } from 'lucide-react'
 import { fmtCurrency } from '@/lib/utils'
 import { isOverdueByDate, todayUTC, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
@@ -92,6 +92,7 @@ export default function SubtasksPanel({
   const [expandedCompleted, setExpandedCompleted] = useState<Set<string>>(new Set())
   const [editingRemarksId, setEditingRemarksId] = useState<string | null>(null)
   const [remarksDraft, setRemarksDraft] = useState('')
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -301,15 +302,35 @@ export default function SubtasksPanel({
             {completedCount} of {totalCount} completed
           </p>
         </div>
-        {canEdit && woStatus !== 'COMPLETED' && woStatus !== 'CANCELLED' && woStatus !== 'CLOSED' && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 border-slate-200 font-bold hover:bg-slate-50 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add subtask
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {totalCount > 0 && (
+            <div className="flex bg-slate-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode('card')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'card' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Card view"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Table view"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+          {canEdit && woStatus !== 'COMPLETED' && woStatus !== 'CANCELLED' && woStatus !== 'CLOSED' && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 border-slate-200 font-bold hover:bg-slate-50 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add subtask
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -517,7 +538,8 @@ export default function SubtasksPanel({
         <div className="text-center py-10 bg-slate-50/20 border border-dashed border-slate-200 rounded-xl">
           <p className="text-xs text-slate-400 font-semibold">No subtasks match your search</p>
         </div>
-      ) : (
+      ) : viewMode === 'card' ? (
+        /* ── Card View ── */
         <div className="max-h-[40rem] overflow-y-auto -mx-1 px-1 space-y-3">
           {filteredSubtasks.map(subtask => {
             const isOverdue =
@@ -757,6 +779,166 @@ export default function SubtasksPanel({
               </div>
             )
           })}
+        </div>
+      ) : (
+        /* ── Table View ── */
+        <div className="max-h-[40rem] overflow-y-auto -mx-1 px-1">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="pb-2 pr-2 w-8"></th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Title</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Priority</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Assignee</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Due</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Remarks</th>
+                {canEdit && <th className="pb-2 w-16"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSubtasks.map(subtask => {
+                const isCompleted = subtask.status === 'COMPLETED'
+                const isOverdue =
+                  subtask.dueDate &&
+                  isOverdueByDate(subtask.dueDate, todayUTC()) &&
+                  !isCompleted
+                const isEditingRemarks = editingRemarksId === subtask.id
+                const assignee = subtask.assignedTo?.name || subtask.assignedTeam?.name || null
+
+                return (
+                  <tr
+                    key={subtask.id}
+                    className="border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50/50"
+                  >
+                    {/* Status */}
+                    <td className="py-2.5 pr-2">
+                      <button
+                        onClick={() => handleStatusChange(subtask.id, isCompleted ? 'PENDING' : 'COMPLETED')}
+                        disabled={!canComplete(subtask)}
+                        className={`flex-shrink-0 transition-transform ${canComplete(subtask) ? 'hover:scale-110 cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-slate-300 hover:text-blue-500" />
+                        )}
+                      </button>
+                    </td>
+
+                    {/* Title + description */}
+                    <td className="py-2.5 pr-3 min-w-0">
+                      <p className="text-xs font-semibold truncate text-slate-800">
+                        {subtask.title}
+                      </p>
+                      {subtask.description && (
+                        <p className={`text-[11px] mt-0.5 truncate leading-relaxed ${isCompleted ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {subtask.description}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Priority */}
+                    <td className="py-2.5 pr-3 hidden sm:table-cell">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${
+                        subtask.priority === 'CRITICAL' ? 'text-rose-600' :
+                        subtask.priority === 'HIGH' ? 'text-orange-600' :
+                        subtask.priority === 'MEDIUM' ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          subtask.priority === 'CRITICAL' ? 'bg-rose-500' :
+                          subtask.priority === 'HIGH' ? 'bg-orange-500' :
+                          subtask.priority === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`} />
+                        {priorityLabels[subtask.priority]}
+                      </span>
+                    </td>
+
+                    {/* Assignee */}
+                    <td className="py-2.5 pr-3 hidden md:table-cell">
+                      {assignee ? (
+                        <span className="text-[11px] text-slate-600 font-medium truncate block max-w-[8rem]">
+                          {assignee}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Due */}
+                    <td className="py-2.5 pr-3 hidden lg:table-cell">
+                      {subtask.dueDate ? (
+                        <span className={`text-[11px] font-medium whitespace-nowrap ${isOverdue ? 'text-rose-600' : 'text-slate-500'}`}>
+                          {fmtDateOnly(utcDateOnly(subtask.dueDate))}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Remarks */}
+                    <td className="py-2.5 pr-3 hidden md:table-cell min-w-0">
+                      {isEditingRemarks ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={remarksDraft}
+                            onChange={e => setRemarksDraft(e.target.value)}
+                            placeholder="Add note..."
+                            className="flex-1 min-w-0 text-[11px] px-2 py-1 border border-slate-200 rounded-md focus:ring-1 focus:ring-emerald-300 focus:border-emerald-300"
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleRemarksSave(subtask.id)
+                              }
+                              if (e.key === 'Escape') setEditingRemarksId(null)
+                            }}
+                          />
+                          <button onClick={() => handleRemarksSave(subtask.id)} className="text-[10px] font-bold px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 whitespace-nowrap">Save</button>
+                        </div>
+                      ) : subtask.remarks ? (
+                        <button
+                          onClick={() => { setEditingRemarksId(subtask.id); setRemarksDraft(subtask.remarks || '') }}
+                          className="text-[11px] italic text-slate-400 hover:text-slate-600 truncate max-w-[12rem] block text-left transition"
+                          title={subtask.remarks}
+                        >
+                          💬 {subtask.remarks}
+                        </button>
+                      ) : canEdit ? (
+                        <button
+                          onClick={() => { setEditingRemarksId(subtask.id); setRemarksDraft('') }}
+                          className="text-[10px] text-slate-300 hover:text-slate-500 transition"
+                        >
+                          + remarks
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Required + Actions */}
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        {!subtask.required && (
+                          <span className="text-[9px] text-slate-300 font-bold" title="Optional">○</span>
+                        )}
+                        {canEdit && (
+                          <>
+                            <button onClick={() => handleEdit(subtask)} className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded transition" title="Edit">
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => handleDelete(subtask.id)} className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition" title="Delete">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

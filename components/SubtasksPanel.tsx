@@ -328,137 +328,132 @@ export default function SubtasksPanel({
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="mb-5 p-4 sm:p-5 bg-slate-50 border border-slate-200/60 rounded-xl shadow-inner-light">
-          <form onSubmit={handleAddOrUpdate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., Replace pump seal"
-                className="input-field text-sm"
-                required
-              />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={resetForm} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800">
+                {editingId ? 'Edit Subtask' : 'New Subtask'}
+              </h3>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Detailed description..."
-                className="input-field text-sm resize-none"
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Form */}
+            <form onSubmit={handleAddOrUpdate} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                  className="input-field text-sm bg-white"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="CRITICAL">Critical</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Due Date
-                </label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Title *</label>
                 <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                  className="input-field text-sm bg-white cursor-pointer"
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Replace pump seal"
+                  className="input-field text-sm"
+                  required
+                  autoFocus
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Assign to User
-                </label>
-                <select
-                  value={formData.assignedToId}
-                  onChange={e => setFormData({ ...formData, assignedToId: e.target.value })}
-                  className="input-field text-sm bg-white"
-                >
-                  <option value="">Select user...</option>
-                  {allUsers.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Assign to Team
-                </label>
-                <select
-                  value={formData.assignedTeamId}
-                  onChange={e => setFormData({ ...formData, assignedTeamId: e.target.value })}
-                  className="input-field text-sm bg-white"
-                >
-                  <option value="">Select team...</option>
-                  {allTeams.map(team => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detailed description..."
+                  className="input-field text-sm resize-none"
+                  rows={3}
+                />
               </div>
-            </div>
 
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={formData.required}
-                onChange={e => setFormData({ ...formData, required: e.target.checked })}
-                className="sr-only peer"
-              />
-              <span className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
-              <span className="text-xs font-bold text-slate-700">
-                Required — {formData.required
-                  ? 'must be completed before the work order can be closed'
-                  : 'optional; does not block work order completion'}
-              </span>
-            </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Priority</label>
+                  <select
+                    value={formData.priority}
+                    onChange={e => setFormData({ ...formData, priority: e.target.value })}
+                    className="input-field text-sm bg-white"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                    className="input-field text-sm bg-white cursor-pointer"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Remarks
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Assign to User</label>
+                  <select
+                    value={formData.assignedToId}
+                    onChange={e => setFormData({ ...formData, assignedToId: e.target.value })}
+                    className="input-field text-sm bg-white"
+                  >
+                    <option value="">Select user...</option>
+                    {allUsers.map(user => (
+                      <option key={user.id} value={user.id}>{user.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Assign to Team</label>
+                  <select
+                    value={formData.assignedTeamId}
+                    onChange={e => setFormData({ ...formData, assignedTeamId: e.target.value })}
+                    className="input-field text-sm bg-white"
+                  >
+                    <option value="">Select team...</option>
+                    {allTeams.map(team => (
+                      <option key={team.id} value={team.id}>{team.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.required}
+                  onChange={e => setFormData({ ...formData, required: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <span className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+                <span className="text-xs font-bold text-slate-700">
+                  Required — {formData.required
+                    ? 'must be completed before the work order can be closed'
+                    : 'optional; does not block work order completion'}
+                </span>
               </label>
-              <textarea
-                value={formData.remarks}
-                onChange={e => setFormData({ ...formData, remarks: e.target.value })}
-                placeholder="Optional notes — what was found, done, or observed..."
-                className="input-field text-sm resize-none"
-                rows={2}
-              />
-            </div>
 
-            <div className="flex gap-2.5 pt-1">
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary text-xs py-2 px-4 shadow-sm font-bold flex-1"
-              >
-                {editingId ? 'Update' : 'Create'} subtask
-              </button>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Remarks</label>
+                <textarea
+                  value={formData.remarks}
+                  onChange={e => setFormData({ ...formData, remarks: e.target.value })}
+                  placeholder="Optional notes — what was found, done, or observed..."
+                  className="input-field text-sm resize-none"
+                  rows={2}
+                />
+              </div>
+            </form>
+
+            {/* Footer */}
+            <div className="flex gap-2.5 px-5 py-4 border-t border-slate-100 bg-slate-50/50">
               <button
                 type="button"
                 onClick={resetForm}
@@ -466,8 +461,16 @@ export default function SubtasksPanel({
               >
                 Cancel
               </button>
+              <button
+                type="submit"
+                disabled={loading}
+                onClick={handleAddOrUpdate}
+                className="btn-primary text-xs py-2 px-4 shadow-sm font-bold flex-1"
+              >
+                {editingId ? 'Update' : 'Create'} subtask
+              </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
 

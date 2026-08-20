@@ -23,7 +23,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['66e4-14-97-42-26.ngrok-free.app'],
   async headers() {
     return [
       {

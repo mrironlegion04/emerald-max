@@ -265,18 +265,16 @@ export default async function WorkOrderDetailPage({
                   </Link>
                 ) }] : []),
                 { label: 'Location',    value: wo.locationNameSnapshot ?? wo.location?.name ?? wo.asset?.location?.name ?? '—' },
-                { label: 'Assigned to', value: (wo.assignedTo?.name || wo.team?.name) ? (
-                  <span className="inline-flex items-center gap-2 flex-wrap">
-                    {wo.team?.name && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
-                        👥 {wo.team.name}
-                      </span>
-                    )}
-                    {wo.assignedTo?.name && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-[10px] font-bold">
-                        👤 {wo.assignedTo.name}
-                      </span>
-                    )}
+                ...(wo.team?.name ? [{
+                  label: 'Team', value: (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">
+                      👥 {wo.team.name}
+                    </span>
+                  ),
+                }] : []),
+                { label: 'Assigned to', value: wo.assignedTo?.name ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-[10px] font-bold">
+                    👤 {wo.assignedTo.name}
                   </span>
                 ) : (
                   <span className="text-slate-400 italic">Unassigned</span>

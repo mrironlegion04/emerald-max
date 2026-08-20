@@ -359,14 +359,6 @@ export async function PUT(
       }
     }
 
-    // ── Mutual exclusion: team vs individual ──────────────────────────
-    if (data.teamId) {
-      data.assignedToId = null
-    }
-    if (data.assignedToId) {
-      data.teamId = null
-    }
-
     // ── Normalize asset scope ─────────────────────────────────────────
     const normalized = await normalizeWorkOrderAssets(
       data.assetId !== undefined ? data.assetId : existingWo.assetId,

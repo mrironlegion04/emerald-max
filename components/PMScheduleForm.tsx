@@ -46,11 +46,6 @@ interface SimpleTeam {
   name: string
 }
 
-interface SimpleCategory {
-  id: string
-  name: string
-}
-
 interface PMFormData {
   title: string; description: string
   triggerType: string; frequency: string; interval: string
@@ -218,6 +213,8 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   const [tasks, setTasks] = useState<PMTask[]>(
     (initialData as any)?.tasks ?? []
   )
+  const [showAllTasks, setShowAllTasks] = useState(false)
+  const VISIBLE_TASKS = 10
 
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -953,103 +950,128 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         <div className="flex items-center gap-2">
           <ListChecks className="w-4 h-4 text-emerald-600" />
           <h2 className="font-semibold text-gray-900 text-sm">Task Template</h2>
+          {tasks.length > 0 && (
+            <span className="text-xs text-gray-400 font-medium">({tasks.length})</span>
+          )}
         </div>
         <p className="text-xs text-gray-500">
           These tasks are copied onto every work order generated from this schedule as subtasks.
         </p>
 
-        {tasks.length > 0 && (
-          <div className="space-y-3">
-            {tasks.map((task, idx) => (
-              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
-                {/* Row 1: number, title, user, priority, required, actions */}
-                <div className="flex items-center gap-2">
-                  <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
-                    {idx + 1}
-                  </span>
-                  <input
-                    type="text"
-                    value={task.title}
-                    onChange={e => updateTask(idx, 'title', e.target.value)}
-                    placeholder="Task title (e.g. Check belt tension)"
-                    className="input-field flex-1"
-                  />
-                  <select
-                    value={task.assignedToId}
-                    onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
-                    className="input-field w-36"
-                  >
-                    <option value="">— Unassigned —</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={task.priority}
-                    onChange={e => updateTask(idx, 'priority', e.target.value)}
-                    className="input-field w-28"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
-                  <label
-                    className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
-                    title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={task.required}
-                      onChange={e => updateTask(idx, 'required', e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {task.required ? 'Req' : 'Opt'}
+        {tasks.length > 0 && (() => {
+          const visibleTasks = showAllTasks ? tasks : tasks.slice(0, VISIBLE_TASKS)
+          const hiddenCount = tasks.length - VISIBLE_TASKS
+          return (
+            <div className="max-h-[32rem] overflow-y-auto -mx-1 px-1 space-y-3">
+              {visibleTasks.map((task, idx) => (
+                <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
+                  {/* Row 1: number, title, user, priority, required, actions */}
+                  <div className="flex items-center gap-2">
+                    <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
+                      {idx + 1}
                     </span>
-                  </label>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button type="button" onClick={() => moveTask(idx, -1)} disabled={idx === 0}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
-                      <ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1}
-                      className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
-                      <ArrowDown className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => removeTask(idx)}
-                      className="p-1.5 rounded-md text-red-500 hover:bg-red-50" title="Remove task">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                {/* Row 2: description + team */}
-                <div className="flex items-start gap-2 pl-8">
-                  <textarea
-                    value={task.description}
-                    onChange={e => updateTask(idx, 'description', e.target.value)}
-                    placeholder="Description (optional)"
-                    rows={1}
-                    className="input-field flex-1 text-xs resize-none"
-                  />
-                  {teams.length > 0 && (
+                    <input
+                      type="text"
+                      value={task.title}
+                      onChange={e => updateTask(idx, 'title', e.target.value)}
+                      placeholder="Task title (e.g. Check belt tension)"
+                      className="input-field flex-1"
+                    />
                     <select
-                      value={task.assignedTeamId}
-                      onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)}
-                      className="input-field w-36 text-xs"
+                      value={task.assignedToId}
+                      onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
+                      className="input-field w-36"
                     >
-                      <option value="">— No team —</option>
-                      {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                      <option value="">— Unassigned —</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
                       ))}
                     </select>
-                  )}
+                    <select
+                      value={task.priority}
+                      onChange={e => updateTask(idx, 'priority', e.target.value)}
+                      className="input-field w-28"
+                    >
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="CRITICAL">Critical</option>
+                    </select>
+                    <label
+                      className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
+                      title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.required}
+                        onChange={e => updateTask(idx, 'required', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
+                        {task.required ? 'Req' : 'Opt'}
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button type="button" onClick={() => moveTask(idx, -1)} disabled={idx === 0}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
+                        <ArrowUp className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
+                        <ArrowDown className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => removeTask(idx)}
+                        className="p-1.5 rounded-md text-red-500 hover:bg-red-50" title="Remove task">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {/* Row 2: description + team */}
+                  <div className="flex items-start gap-2 pl-8">
+                    <textarea
+                      value={task.description}
+                      onChange={e => updateTask(idx, 'description', e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={1}
+                      className="input-field flex-1 text-xs resize-none"
+                    />
+                    {teams.length > 0 && (
+                      <select
+                        value={task.assignedTeamId}
+                        onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)}
+                        className="input-field w-36 text-xs"
+                      >
+                        <option value="">— No team —</option>
+                        {teams.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+              {!showAllTasks && hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllTasks(true)}
+                  className="w-full py-2 text-xs font-bold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors"
+                >
+                  Show {hiddenCount} more task{hiddenCount !== 1 ? 's' : ''}
+                </button>
+              )}
+              {showAllTasks && tasks.length > VISIBLE_TASKS && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllTasks(false)}
+                  className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Show less
+                </button>
+              )}
+            </div>
+          )
+        })()}
 
         <div className="flex items-center gap-4">
           <button

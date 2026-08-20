@@ -16,6 +16,7 @@ const subtaskSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   assignedTeamId: z.string().nullable().optional(),
   required: z.boolean().default(true),
+  remarks: z.string().nullable().optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
         assignedToId: data.assignedToId ?? null,
         assignedTeamId: data.assignedTeamId ?? null,
         required: data.required,
+        remarks: data.remarks ?? null,
         createdById: user.userId,
       },
       include: {

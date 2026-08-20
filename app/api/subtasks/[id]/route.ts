@@ -15,6 +15,7 @@ const updateSubtaskSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   assignedTeamId: z.string().nullable().optional(),
   required: z.boolean().optional(),
+  remarks: z.string().nullable().optional(),
 })
 
 export async function GET(
@@ -155,6 +156,7 @@ export async function PUT(
       updateData.assignedTeamId = data.assignedTeamId
     }
     if (data.required !== undefined) updateData.required = data.required
+    if (data.remarks !== undefined) updateData.remarks = data.remarks
 
     // Track completion
     if (isCompleting) {

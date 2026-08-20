@@ -16,6 +16,7 @@ interface Subtask {
   createdAt: string
   required: boolean
   completionType: 'ASSIGNED' | 'ADMIN_OVERRIDE' | 'MANAGER_OVERRIDE' | null
+  remarks: string | null
   assignedTo: { id: string; name: string; email: string } | null
   assignedTeam: { id: string; name: string } | null
   completedBy: { id: string; name: string; email: string } | null
@@ -89,6 +90,8 @@ export default function SubtasksPanel({
   const [search, setSearch] = useState('')
   const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'completed'>('all')
   const [expandedCompleted, setExpandedCompleted] = useState<Set<string>>(new Set())
+  const [editingRemarksId, setEditingRemarksId] = useState<string | null>(null)
+  const [remarksDraft, setRemarksDraft] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -97,6 +100,7 @@ export default function SubtasksPanel({
     assignedToId: '',
     assignedTeamId: '',
     required: true,
+    remarks: '',
   })
 
   // Load subtasks from API if not provided
@@ -142,6 +146,7 @@ export default function SubtasksPanel({
         assignedToId: formData.assignedTeamId ? null : (formData.assignedToId || null),
         assignedTeamId: formData.assignedTeamId || null,
         required: formData.required,
+        remarks: formData.remarks || null,
       }
 
       if (editingId) {
@@ -227,6 +232,7 @@ export default function SubtasksPanel({
       assignedToId: subtask.assignedTo?.id || '',
       assignedTeamId: subtask.assignedTeam?.id || '',
       required: subtask.required,
+      remarks: subtask.remarks || '',
     })
     setEditingId(subtask.id)
     setShowForm(true)
@@ -241,9 +247,27 @@ export default function SubtasksPanel({
       assignedToId: '',
       assignedTeamId: '',
       required: true,
+      remarks: '',
     })
     setEditingId(null)
     setShowForm(false)
+  }
+
+  const handleRemarksSave = async (id: string) => {
+    try {
+      const res = await fetch(`/api/subtasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remarks: remarksDraft || null }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setSubtasks(subtasks.map(s => (s.id === id ? updated : s)))
+      }
+    } catch (error) {
+      console.error('Failed to save remarks:', error)
+    }
+    setEditingRemarksId(null)
   }
 
   const completedCount = subtasks.filter(s => s.status === 'COMPLETED').length
@@ -400,6 +424,19 @@ export default function SubtasksPanel({
               </span>
             </label>
 
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Remarks
+              </label>
+              <textarea
+                value={formData.remarks}
+                onChange={e => setFormData({ ...formData, remarks: e.target.value })}
+                placeholder="Optional notes — what was found, done, or observed..."
+                className="input-field text-sm resize-none"
+                rows={2}
+              />
+            </div>
+
             <div className="flex gap-2.5 pt-1">
               <button
                 type="submit"
@@ -493,7 +530,7 @@ export default function SubtasksPanel({
             return (
               <div
                 key={subtask.id}
-                className={`p-3.5 border rounded-xl hover:bg-slate-50/20 hover:border-slate-350/50 transition duration-150 ${
+                className={`group p-3.5 border rounded-xl hover:bg-slate-50/20 hover:border-slate-350/50 transition duration-150 ${
                   isCompleted
                     ? 'border-slate-100 bg-slate-50/10 opacity-75'
                     : 'border-slate-200/60 bg-white'
@@ -565,6 +602,50 @@ export default function SubtasksPanel({
                               <p className={`text-xs mt-1.5 whitespace-pre-wrap leading-relaxed ${isCompleted ? 'text-slate-400' : 'text-slate-500'}`}>
                                 {subtask.description}
                               </p>
+                            )}
+
+                            {/* Remarks */}
+                            {editingRemarksId === subtask.id ? (
+                              <div className="mt-2">
+                                <textarea
+                                  autoFocus
+                                  value={remarksDraft}
+                                  onChange={e => setRemarksDraft(e.target.value)}
+                                  placeholder="What was found, done, or observed..."
+                                  className="w-full text-xs p-2 border border-slate-200 rounded-lg resize-none focus:ring-1 focus:ring-emerald-300 focus:border-emerald-300"
+                                  rows={2}
+                                />
+                                <div className="flex gap-1.5 mt-1.5">
+                                  <button
+                                    onClick={() => handleRemarksSave(subtask.id)}
+                                    className="text-[10px] font-bold px-2.5 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingRemarksId(null)}
+                                    className="text-[10px] font-bold px-2.5 py-1 text-slate-400 hover:text-slate-600 transition"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : subtask.remarks ? (
+                              <button
+                                onClick={() => { setEditingRemarksId(subtask.id); setRemarksDraft(subtask.remarks || '') }}
+                                className="mt-2 block w-full text-left group"
+                              >
+                                <span className="text-[11px] italic text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 leading-relaxed whitespace-pre-wrap block group-hover:bg-slate-100/80 transition">
+                                  💬 {subtask.remarks}
+                                </span>
+                              </button>
+                            ) : canEdit && (
+                              <button
+                                onClick={() => { setEditingRemarksId(subtask.id); setRemarksDraft('') }}
+                                className="mt-2 text-[10px] text-slate-400 hover:text-slate-600 transition lg:opacity-0 lg:group-hover:opacity-100"
+                              >
+                                + Add remarks
+                              </button>
                             )}
 
                             {/* Metadata row */}

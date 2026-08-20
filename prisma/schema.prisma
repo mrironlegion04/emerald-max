@@ -975,6 +975,7 @@ model Subtask {
   dueDate       DateTime?
   order         Int             @default(0)
   required      Boolean         @default(true)
+  remarks       String?
   completedAt   DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

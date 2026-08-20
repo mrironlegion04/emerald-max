@@ -124,7 +124,7 @@ export default async function PMDetailPage({
         ...(targetAssets.length > 0 ? [{ assetId: { in: targetAssets.map(a => a.id) }, type: 'PREVENTIVE' as const }] : []),
       ]
     },
-    include: { assignedTo: { select: { name: true } } },
+    include: { assignedTo: { select: { name: true } }, team: { select: { name: true } } },
     orderBy: { createdAt: 'desc' },
     take: 20,
   })
@@ -418,7 +418,7 @@ export default async function PMDetailPage({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                       <p className="text-xs text-gray-400">
-                        {wo.woNumber}{wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
+                        {wo.woNumber}{wo.team ? ` · 👥 ${wo.team.name}` : ''}{wo.assignedTo ? ` · 👤 ${wo.assignedTo.name}` : ''}
                         {wo.dueDate ? ` · Due ${fmtDateOnly(utcDateOnly(wo.dueDate))}` : ''}
                         {wo.nestedLabel ? ` · ${wo.nestedLabel}` : ''}
                       </p>

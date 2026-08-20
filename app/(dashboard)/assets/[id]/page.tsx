@@ -66,6 +66,7 @@ export default async function AssetDetailPage({
       workOrders: {
         include: {
           assignedTo: { select: { name: true } },
+          team: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: 20,
@@ -513,7 +514,8 @@ export default async function AssetDetailPage({
                         <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {wo.woNumber}
-                          {wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
+                          {wo.team ? ` · 👥 ${wo.team.name}` : ''}
+                          {wo.assignedTo ? ` · 👤 ${wo.assignedTo.name}` : ''}
                           {wo.dueDate ? ` · Due ${formatDate(wo.dueDate)}` : ''}
                         </p>
                       </div>
@@ -588,7 +590,8 @@ export default async function AssetDetailPage({
                     <p className="text-sm font-medium text-gray-900 truncate">{wo.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {wo.woNumber}
-                      {wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
+                      {wo.team ? ` · 👥 ${wo.team.name}` : ''}
+                      {wo.assignedTo ? ` · 👤 ${wo.assignedTo.name}` : ''}
                       {wo.dueDate ? ` · Due ${formatDate(wo.dueDate)}` : ''}
                     </p>
                   </div>

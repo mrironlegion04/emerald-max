@@ -156,6 +156,7 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     priority: true, dueDate: true, dueTime: true, startTime: true, createdAt: true,
     asset: { select: { id: true, name: true, assetCode: true } },
     assignedTo: { select: { id: true, name: true } },
+    team: { select: { id: true, name: true } },
     createdBy: { select: { name: true } },
   }
 
@@ -181,7 +182,7 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     }),
     teamIds.length ? prisma.workOrder.findMany({
       where: { AND: visAnd, teamId: { in: teamIds }, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, team: woSelect.team, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }) : [],
     teamIds.length ? prisma.subtask.findMany({
@@ -194,17 +195,17 @@ async function getPanelViewData(userId: string, teamIds: string[], visibilityFil
     }) : [],
     prisma.workOrder.findMany({
       where: { AND: visAnd, createdById: userId, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, team: woSelect.team, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }),
     prisma.workOrder.findMany({
       where: { AND: visAnd, status: { in: ACTIVE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, team: woSelect.team, createdBy: woSelect.createdBy },
       orderBy: woOrder,
     }),
     prisma.workOrder.findMany({
       where: { AND: visAnd, status: { in: DONE_STATUSES as any } },
-      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, createdBy: woSelect.createdBy },
+      include: { asset: woSelect.asset, assignedTo: woSelect.assignedTo, team: woSelect.team, createdBy: woSelect.createdBy },
       orderBy: { updatedAt: 'desc' as const },
       take: 100,
     }),

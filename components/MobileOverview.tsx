@@ -11,7 +11,7 @@ import { todayUTC } from '@/lib/date-format'
 
 interface WO {
   id: string; woNumber: string; title: string; priority: string; status: string
-  dueDate: string | null; asset?: { name: string } | null; assignedTo?: { name: string } | null
+  dueDate: string | null; asset?: { name: string } | null; assignedTo?: { name: string } | null; team?: { name: string } | null
 }
 
 interface Activity {
@@ -176,7 +176,8 @@ export default function MobileOverview({ userName }: { userName: string }) {
                   <p className="text-sm font-semibold text-slate-800 truncate">{wo.title}</p>
                   <p className="text-[10px] text-slate-400 font-medium mt-0.5">
                     {wo.woNumber}{wo.asset ? ` · ${wo.asset.name}` : ''}
-                    {wo.assignedTo ? ` · ${wo.assignedTo.name}` : ''}
+                    {wo.team ? ` · 👥 ${wo.team.name}` : ''}
+                    {wo.assignedTo ? ` · 👤 ${wo.assignedTo.name}` : ''}
                   </p>
                 </div>
                 <Badge label={wo.priority} variant={priorityVariant(wo.priority)} />

@@ -28,6 +28,7 @@ export default async function WorkOrderPrintPage({
     include: {
       asset: { select: { id: true, name: true, assetCode: true, serialNumber: true, location: { select: { name: true } } } },
       assignedTo: { select: { id: true, name: true, email: true } },
+      team: { select: { id: true, name: true } },
       createdBy: { select: { name: true } },
       partsUsed: { include: { part: { select: { id: true, name: true, partNumber: true, unitCost: true } } } },
       attachments: { include: { uploadedBy: { select: { name: true } } } },
@@ -106,8 +107,9 @@ export default async function WorkOrderPrintPage({
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Assignment</h3>
           <div className="space-y-1 text-sm">
+            {wo.team && <p><strong>Team:</strong> {wo.team.name}</p>}
             {wo.assignedTo && <p><strong>Assigned to:</strong> {wo.assignedTo.name}</p>}
-            {!wo.assignedTo && <p className="text-gray-500">Unassigned</p>}
+            {!wo.team && !wo.assignedTo && <p className="text-gray-500">Unassigned</p>}
             {wo.requestedBy && <p><strong>Requested by:</strong> {wo.requestedBy}</p>}
             {wo.createdBy && <p><strong>Created by:</strong> {wo.createdBy.name}</p>}
           </div>

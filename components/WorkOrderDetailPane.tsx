@@ -158,10 +158,15 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
               </div>
             ) : '—' },
             { label: 'Location', value: wo.locationNameSnapshot ?? wo.location?.name ?? wo.asset?.location?.name ?? '—' },
-            { label: 'Assigned to', value: wo.assignedTo?.name ? (
-              <span className="text-xs font-bold">{wo.assignedTo.name}</span>
-            ) : wo.team?.name ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">👥 {wo.team.name}</span>
+            { label: 'Assigned to', value: (wo.assignedTo?.name || wo.team?.name) ? (
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                {wo.team?.name && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-full text-[10px] font-bold">👥 {wo.team.name}</span>
+                )}
+                {wo.assignedTo?.name && (
+                  <span className="text-xs font-bold">{wo.assignedTo.name}</span>
+                )}
+              </span>
             ) : (
               <span className="text-slate-400 italic text-xs">Unassigned</span>
             )},

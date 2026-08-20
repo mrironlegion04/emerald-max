@@ -382,7 +382,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         locationId:   form.locationId     || null,
         locationScope: form.locationId && form.selectedAssetIds.length === 0 ? form.locationScope : null,
         selectedAssetIds: uniqueAssetIds,
-        assignedToId: form.teamId ? null : (form.assignedToId || null),
+        assignedToId: form.assignedToId || null,
         teamId:       form.teamId || null,
         laborHours:   form.laborHours     ? parseFloat(form.laborHours)  : null,
         laborCost:    form.laborCost      ? parseFloat(form.laborCost)   : null,
@@ -734,7 +734,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             {recommendation.owner && recommendation.owner.id !== form.assignedToId && (
               <button
                 type="button"
-                onClick={() => { set('assignedToId', recommendation.owner!.id); set('teamId', '') }}
+                onClick={() => set('assignedToId', recommendation.owner!.id)}
                 className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200/70 rounded-lg px-2.5 py-1.5 hover:bg-blue-100/70 transition"
               >
                 🧑‍🔧 Owner: {recommendation.owner.name} — <span className="underline underline-offset-2">Assign</span>

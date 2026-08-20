@@ -45,6 +45,7 @@ export async function GET(
       include: {
         asset: { select: { name: true, assetCode: true, serialNumber: true, location: { select: { name: true } } } },
         assignedTo: { select: { name: true } },
+        team: { select: { name: true } },
         createdBy: { select: { name: true } },
         partsUsed: { include: { part: { select: { name: true, partNumber: true, unitCost: true } } } },
       },
@@ -124,7 +125,9 @@ export async function GET(
               {!wo.asset && <Text style={styles.text}>No asset assigned</Text>}
             </View>
             <View style={styles.col2}>
+              {wo.team && <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Team:</Text> {wo.team.name}</Text>}
               {wo.assignedTo && <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Assigned to:</Text> {wo.assignedTo.name}</Text>}
+              {!wo.team && !wo.assignedTo && <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Assigned:</Text> Unassigned</Text>}
               <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Created:</Text> {fmtDateTime(wo.createdAt)}</Text>
               {wo.dueDate && <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Due:</Text> {fmtDate(wo.dueDate)}</Text>}
               {wo.completedAt && <Text style={styles.text}><Text style={{ fontWeight: 'bold' }}>Completed:</Text> {fmtDateTime(wo.completedAt)}</Text>}

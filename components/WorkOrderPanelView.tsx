@@ -24,6 +24,7 @@ export interface WOListItem {
   startTime: string | null
   asset: { id: string; name: string; assetCode: string | null } | null
   assignedTo: { id: string; name: string } | null
+  team: { id: string; name: string } | null
   createdBy: { name: string } | null
 }
 
@@ -106,6 +107,11 @@ function WOCardMini({ wo, isSelected, onClick }: { wo: WOListItem; isSelected: b
         {wo.asset && (
           <span className="flex items-center gap-1 truncate">
             <Package className="w-3 h-3 shrink-0" /> {wo.asset.name}
+          </span>
+        )}
+        {wo.team && (
+          <span className="flex items-center gap-1 truncate text-purple-600">
+            <Users className="w-3 h-3 shrink-0" /> {wo.team.name}
           </span>
         )}
         {wo.assignedTo && (

@@ -797,6 +797,7 @@ export default function SubtasksPanel({
                   !isCompleted
                 const isEditingRemarks = editingRemarksId === subtask.id
                 const assignee = subtask.assignedTo?.name || subtask.assignedTeam?.name || null
+                const hasBoth = subtask.assignedTo && subtask.assignedTeam
 
                 return (
                   <tr
@@ -848,9 +849,14 @@ export default function SubtasksPanel({
 
                     {/* Assignee */}
                     <td className="py-2.5 pr-3 hidden md:table-cell">
-                      {assignee ? (
+                      {hasBoth ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-purple-600 font-bold truncate">👥 {subtask.assignedTeam!.name}</span>
+                          <span className="text-[10px] text-blue-600 font-bold truncate">👤 {subtask.assignedTo!.name}</span>
+                        </div>
+                      ) : assignee ? (
                         <span className="text-[11px] text-slate-600 font-medium truncate block max-w-[8rem]">
-                          {assignee}
+                          {subtask.assignedTeam ? '👥 ' : '👤 '}{assignee}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-300">—</span>

@@ -782,7 +782,8 @@ export default function SubtasksPanel({
                 <th className="pb-2 pr-2 w-8"></th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Title</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Priority</th>
-                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Assignee</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Team</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Assigned To</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Due</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Remarks</th>
                 {canEdit && <th className="pb-2 w-16"></th>}
@@ -796,8 +797,6 @@ export default function SubtasksPanel({
                   isOverdueByDate(subtask.dueDate, todayUTC()) &&
                   !isCompleted
                 const isEditingRemarks = editingRemarksId === subtask.id
-                const assignee = subtask.assignedTo?.name || subtask.assignedTeam?.name || null
-                const hasBoth = subtask.assignedTo && subtask.assignedTeam
 
                 return (
                   <tr
@@ -847,16 +846,22 @@ export default function SubtasksPanel({
                       </span>
                     </td>
 
-                    {/* Assignee */}
-                    <td className="py-2.5 pr-3 hidden md:table-cell">
-                      {hasBoth ? (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] text-purple-600 font-bold truncate">👥 {subtask.assignedTeam!.name}</span>
-                          <span className="text-[10px] text-blue-600 font-bold truncate">👤 {subtask.assignedTo!.name}</span>
-                        </div>
-                      ) : assignee ? (
-                        <span className="text-[11px] text-slate-600 font-medium truncate block max-w-[8rem]">
-                          {subtask.assignedTeam ? '👥 ' : '👤 '}{assignee}
+                    {/* Team */}
+                    <td className="py-2.5 pr-3 hidden sm:table-cell">
+                      {subtask.assignedTeam ? (
+                        <span className="text-[11px] text-purple-600 font-bold truncate block max-w-[8rem]">
+                          {subtask.assignedTeam.name}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Assigned To */}
+                    <td className="py-2.5 pr-3 hidden lg:table-cell">
+                      {subtask.assignedTo ? (
+                        <span className="text-[11px] text-blue-600 font-bold truncate block max-w-[8rem]">
+                          {subtask.assignedTo.name}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-300">—</span>

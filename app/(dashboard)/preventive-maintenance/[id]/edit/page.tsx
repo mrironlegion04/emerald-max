@@ -27,13 +27,13 @@ export default async function EditPMPage({
       })).map(u => u.id)
     : null
 
-  const [schedule, assets, locations, users, teams, categories] = await Promise.all([
+  const [schedule, assets, locations, users, teams] = await Promise.all([
     prisma.maintenanceSchedule.findUnique({
       where: { id },
       include: {
         tasks: {
           orderBy: { order: 'asc' },
-          select: { title: true, order: true, assignedToId: true, required: true },
+          select: { title: true, description: true, priority: true, order: true, assignedToId: true, assignedTeamId: true, required: true },
         },
         assets: { select: { assetId: true } },
       },
@@ -55,10 +55,6 @@ export default async function EditPMPage({
     }),
     prisma.team.findMany({
       where:   { isActive: true, ...(scopeUserIds ? { members: { some: { userId: { in: scopeUserIds } } } } : {}) },
-      select:  { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.assetCategory.findMany({
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
@@ -95,7 +91,6 @@ export default async function EditPMPage({
     woDescription:       schedule.woDescription ?? '',
     woAssignedToId:      schedule.woAssignedToId ?? '',
     woTeamId:            schedule.woTeamId       ?? '',
-    woCategoryId:        schedule.woCategoryId   ?? '',
     startDateOffset:     String(schedule.startDateOffset),
     nestedStartIndex:    String(schedule.nestedStartIndex),
     recurrenceRule:      schedule.recurrenceRule as unknown as RecurrenceRule | null,
@@ -103,7 +98,10 @@ export default async function EditPMPage({
     endDate:             schedule.endDate ? new Date(schedule.endDate).toISOString().split('T')[0] : '',
     tasks:               (schedule.tasks ?? []).map(t => ({
       title:        t.title,
+      description:  t.description ?? '',
+      priority:     t.priority,
       assignedToId: t.assignedToId ?? '',
+      assignedTeamId: t.assignedTeamId ?? '',
       required:     t.required ?? true,
     })),
   }
@@ -116,7 +114,7 @@ export default async function EditPMPage({
         </Link>
       </div>
       <PageHeader title={`Edit: ${schedule.title}`} />
-      <PMScheduleForm assets={assets} locations={locations} users={users} teams={teams} categories={categories} initialData={initialData} scheduleId={id} />
+      <PMScheduleForm assets={assets} locations={locations} users={users} teams={teams} initialData={initialData} scheduleId={id} />
     </div>
   )
 }

@@ -18,9 +18,12 @@ const nestedTierSchema = z.object({
 })
 
 const pmTaskSchema = z.object({
-  title:        z.string().min(1, 'Task title is required'),
-  assignedToId: z.string().nullable().optional(),
-  required:     z.boolean().default(true),
+  title:          z.string().min(1, 'Task title is required'),
+  description:    z.string().nullable().optional(),
+  priority:       z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
+  assignedToId:   z.string().nullable().optional(),
+  assignedTeamId: z.string().nullable().optional(),
+  required:       z.boolean().default(true),
 })
 
 const recurrenceRuleSchema = z
@@ -63,7 +66,6 @@ const updateSchema = z.object({
   woDescription:        z.string().nullable().optional(),
   woAssignedToId:       z.string().nullable().optional(),
   woTeamId:             z.string().nullable().optional(),
-  woCategoryId:         z.string().nullable().optional(),
   // Start date offset
   startDateOffset:      z.number().int().min(0).optional(),
   // Nested start index
@@ -95,7 +97,10 @@ export async function GET(
         location: true,
         tasks: {
           orderBy: { order: 'asc' as const },
-          include: { assignedTo: { select: { id: true, name: true } } },
+          include: {
+            assignedTo: { select: { id: true, name: true } },
+            assignedTeam: { select: { id: true, name: true } },
+          },
         },
       },
     })
@@ -196,11 +201,14 @@ export async function PUT(
         await tx.pmScheduleTask.deleteMany({ where: { scheduleId: id } })
         await tx.pmScheduleTask.createMany({
           data: data.tasks.map((t, i) => ({
-            title:        t.title,
-            order:        i,
-            assignedToId: t.assignedToId ?? null,
-            required:     t.required,
-            scheduleId:   id,
+            title:           t.title,
+            description:     t.description ?? null,
+            priority:        t.priority,
+            order:           i,
+            assignedToId:    t.assignedToId ?? null,
+            assignedTeamId:  t.assignedTeamId ?? null,
+            required:        t.required,
+            scheduleId:      id,
           })),
         })
       }
@@ -249,7 +257,6 @@ export async function PUT(
           woDescription:       data.woDescription        ?? undefined,
           woAssignedToId:      data.woAssignedToId       ?? undefined,
           woTeamId:            data.woTeamId              ?? undefined,
-          woCategoryId:        data.woCategoryId          ?? undefined,
           startDateOffset:     data.startDateOffset,
           nestedStartIndex:    data.nestedStartIndex,
         },

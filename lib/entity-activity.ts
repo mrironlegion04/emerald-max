@@ -23,7 +23,6 @@ const PM_FIELD_LABELS: Record<string, string> = {
   woDescription: 'WO description',
   woAssignedToId: 'WO assignee',
   woTeamId: 'WO team',
-  woCategoryId: 'WO category',
   assetId: 'Asset',
   locationId: 'Location',
   startDateOffset: 'Start date offset',

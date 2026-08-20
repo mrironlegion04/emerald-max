@@ -19,9 +19,12 @@ const nestedTierSchema = z.object({
 })
 
 const pmTaskSchema = z.object({
-  title:        z.string().min(1, 'Task title is required'),
-  assignedToId: z.string().nullable().optional(),
-  required:     z.boolean().default(true),
+  title:          z.string().min(1, 'Task title is required'),
+  description:    z.string().nullable().optional(),
+  priority:       z.enum(['LOW','MEDIUM','HIGH','CRITICAL']).default('MEDIUM'),
+  assignedToId:   z.string().nullable().optional(),
+  assignedTeamId: z.string().nullable().optional(),
+  required:       z.boolean().default(true),
 })
 
 const recurrenceRuleSchema = z
@@ -64,7 +67,6 @@ const pmSchema = z.object({
   woDescription:        z.string().nullable().optional(),
   woAssignedToId:       z.string().nullable().optional(),
   woTeamId:             z.string().nullable().optional(),
-  woCategoryId:         z.string().nullable().optional(),
   // Start date offset
   startDateOffset:      z.number().int().min(0).default(0),
   // Nested start index
@@ -185,15 +187,17 @@ export async function POST(request: NextRequest) {
         woDescription:       data.woDescription        ?? null,
         woAssignedToId:      data.woAssignedToId       ?? null,
         woTeamId:            data.woTeamId              ?? null,
-        woCategoryId:        data.woCategoryId          ?? null,
         startDateOffset:     data.startDateOffset,
         nestedStartIndex:    data.nestedStartIndex,
         tasks: {
           create: data.tasks.map((t, i) => ({
-            title:        t.title,
-            order:        i,
-            assignedToId: t.assignedToId ?? null,
-            required:     t.required,
+            title:           t.title,
+            description:     t.description ?? null,
+            priority:        t.priority,
+            order:           i,
+            assignedToId:    t.assignedToId ?? null,
+            assignedTeamId:  t.assignedTeamId ?? null,
+            required:        t.required,
           })),
         },
       },

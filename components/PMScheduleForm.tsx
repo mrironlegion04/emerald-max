@@ -28,7 +28,10 @@ interface NestedTier {
 
 interface PMTask {
   title: string
+  description: string
+  priority: string
   assignedToId: string
+  assignedTeamId: string
   required: boolean
 }
 
@@ -57,7 +60,7 @@ interface PMFormData {
   scheduleBehavior: string; schedulingHorizon: string
   // WO Template fields
   woPriority: string; woDescription: string; woAssignedToId: string
-  woTeamId: string; woCategoryId: string
+  woTeamId: string
   // Start date offset
   startDateOffset: string
   // Nested start index
@@ -76,7 +79,6 @@ interface Props {
   locations:  Location[]
   users?:     SimpleUser[]
   teams?:     SimpleTeam[]
-  categories?: SimpleCategory[]
   initialData?: Partial<PMFormData> & { nestedConfig?: NestedTier[] | null; tasks?: PMTask[] | null }
   scheduleId?: string
   preselectedAssetId?: string
@@ -163,7 +165,7 @@ function recurrenceSummary(frequency: string, interval: string, type: string, oc
   return every
 }
 
-export default function PMScheduleForm({ assets, locations, users = [], teams = [], categories = [], initialData, scheduleId, preselectedAssetId }: Props) {
+export default function PMScheduleForm({ assets, locations, users = [], teams = [], initialData, scheduleId, preselectedAssetId }: Props) {
   const router = useRouter()
   const isEdit = !!scheduleId
 
@@ -193,7 +195,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     woDescription:      (initialData as any)?.woDescription     ?? '',
     woAssignedToId:     (initialData as any)?.woAssignedToId    ?? '',
     woTeamId:           (initialData as any)?.woTeamId          ?? '',
-    woCategoryId:       (initialData as any)?.woCategoryId      ?? '',
     startDateOffset:    (initialData as any)?.startDateOffset   ?? '0',
     nestedStartIndex:   (initialData as any)?.nestedStartIndex  ?? '0',
     recurrenceType:     (initialData as any)?.recurrenceRule?.type ?? '',
@@ -289,7 +290,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   // Task template management
   function addTask() {
-    setTasks(prev => [...prev, { title: '', assignedToId: '', required: true }])
+    setTasks(prev => [...prev, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', assignedTeamId: '', required: true }])
   }
 
   function updateTask(index: number, field: keyof PMTask, value: string | boolean) {
@@ -318,10 +319,10 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   function downloadTaskCsvSample() {
     const csv = [
-      'title,assigned_to,required',
-      'Check belt tension,,required',
-      'Lubricate bearings,,optional',
-      'Replace worn seals,Ankit Mehta,required',
+      'title,description,priority,assigned_to,assigned_team,required',
+      'Check belt tension,Inspect and adjust tension,,Ankit Mehta,,required',
+      'Lubricate bearings,,medium,,Maintenance Team,required',
+      'Replace worn seals,Check seal condition and replace if damaged,high,,Mechanical,optional',
     ].join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
@@ -354,9 +355,22 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           if (match) assignedToId = match.id
           else unmatched++
         }
+        const teamRaw = (row.assigned_team ?? row.team ?? '').trim()
+        let assignedTeamId = ''
+        if (teamRaw) {
+          const target = teamRaw.toLowerCase()
+          const match = teams.find(t => t.name.toLowerCase() === target)
+          if (match) assignedTeamId = match.id
+        }
+        const priorityRaw = (row.priority ?? '').trim().toUpperCase()
+        const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+        const priority = validPriorities.includes(priorityRaw) ? priorityRaw : 'MEDIUM'
         mapped.push({
           title,
+          description: (row.description ?? '').trim(),
+          priority,
           assignedToId,
+          assignedTeamId,
           required: /^(yes|true|1|required)$/i.test((row.required ?? '').trim()),
         })
       }
@@ -398,7 +412,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         woDescription:        form.woDescription || null,
         woAssignedToId:       form.woAssignedToId || null,
         woTeamId:             form.woTeamId || null,
-        woCategoryId:         form.woCategoryId || null,
         startDateOffset:      parseInt(form.startDateOffset) || 0,
         nestedStartIndex:     parseInt(form.nestedStartIndex) || 0,
         recurrenceRule:       form.frequency === 'MONTHLY' && form.recurrenceType === 'NTH_WEEKDAY'
@@ -410,7 +423,14 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         endDate:              form.endDate || null,
         tasks:                tasks
           .filter(t => t.title.trim())
-          .map(t => ({ title: t.title.trim(), assignedToId: t.assignedToId || null, required: t.required })),
+          .map(t => ({
+            title: t.title.trim(),
+            description: t.description.trim() || null,
+            priority: t.priority,
+            assignedToId: t.assignedToId || null,
+            assignedTeamId: t.assignedTeamId || null,
+            required: t.required,
+          })),
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -914,22 +934,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
               </select>
             </div>
           )}
-
-          {categories.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={form.woCategoryId}
-                onChange={e => set('woCategoryId', e.target.value)}
-                className="input-field"
-              >
-                <option value="">— No category —</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
 
         <div>
@@ -955,71 +959,92 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         </p>
 
         {tasks.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {tasks.map((task, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
-                  {idx + 1}
-                </span>
-                <input
-                  type="text"
-                  value={task.title}
-                  onChange={e => updateTask(idx, 'title', e.target.value)}
-                  placeholder="Task title (e.g. Check belt tension)"
-                  className="input-field flex-1"
-                />
-                <select
-                  value={task.assignedToId}
-                  onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
-                  className="input-field w-40"
-                >
-                  <option value="">— Unassigned —</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-                <label
-                  className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
-                  title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
-                >
-                  <input
-                    type="checkbox"
-                    checked={task.required}
-                    onChange={e => updateTask(idx, 'required', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
-                    {task.required ? 'Required' : 'Optional'}
+              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
+                {/* Row 1: number, title, user, priority, required, actions */}
+                <div className="flex items-center gap-2">
+                  <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
+                    {idx + 1}
                   </span>
-                </label>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => moveTask(idx, -1)}
-                    disabled={idx === 0}
-                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Move up"
+                  <input
+                    type="text"
+                    value={task.title}
+                    onChange={e => updateTask(idx, 'title', e.target.value)}
+                    placeholder="Task title (e.g. Check belt tension)"
+                    className="input-field flex-1"
+                  />
+                  <select
+                    value={task.assignedToId}
+                    onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
+                    className="input-field w-36"
                   >
-                    <ArrowUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveTask(idx, 1)}
-                    disabled={idx === tasks.length - 1}
-                    className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Move down"
+                    <option value="">— Unassigned —</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={task.priority}
+                    onChange={e => updateTask(idx, 'priority', e.target.value)}
+                    className="input-field w-28"
                   >
-                    <ArrowDown className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeTask(idx)}
-                    className="p-1.5 rounded-md text-red-500 hover:bg-red-50"
-                    title="Remove task"
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                  <label
+                    className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
+                    title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
                   >
-                    <X className="w-4 h-4" />
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={task.required}
+                      onChange={e => updateTask(idx, 'required', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {task.required ? 'Req' : 'Opt'}
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={() => moveTask(idx, -1)} disabled={idx === 0}
+                      className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1}
+                      className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
+                      <ArrowDown className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => removeTask(idx)}
+                      className="p-1.5 rounded-md text-red-500 hover:bg-red-50" title="Remove task">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {/* Row 2: description + team */}
+                <div className="flex items-start gap-2 pl-8">
+                  <textarea
+                    value={task.description}
+                    onChange={e => updateTask(idx, 'description', e.target.value)}
+                    placeholder="Description (optional)"
+                    rows={1}
+                    className="input-field flex-1 text-xs resize-none"
+                  />
+                  {teams.length > 0 && (
+                    <select
+                      value={task.assignedTeamId}
+                      onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)}
+                      className="input-field w-36 text-xs"
+                    >
+                      <option value="">— No team —</option>
+                      {teams.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
             ))}
@@ -1054,7 +1079,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           <input ref={taskCsvInputRef} type="file" accept=".csv" className="hidden" onChange={handleTaskCsvFile} />
         </div>
         <p className="text-xs text-gray-400">
-          CSV columns: title, assigned_to (name or email), required (yes/no). Imported tasks are appended to this template.
+          CSV columns: title, description, priority (low/medium/high/critical), assigned_to (name or email), assigned_team (name), required (yes/no). Imported tasks are appended to this template.
         </p>
         {importMsg && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">{importMsg}</p>}
       </div>

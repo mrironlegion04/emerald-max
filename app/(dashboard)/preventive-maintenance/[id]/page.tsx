@@ -85,10 +85,12 @@ export default async function PMDetailPage({
       createdBy: { select: { name: true } },
       woAssignedTo: { select: { name: true } },
       woTeam: { select: { name: true } },
-      woCategory: { select: { name: true } },
       tasks: {
         orderBy: { order: 'asc' },
-        include: { assignedTo: { select: { name: true } } },
+        include: {
+          assignedTo: { select: { name: true } },
+          assignedTeam: { select: { name: true } },
+        },
       },
       skipLogs: {
         orderBy: { skippedAt: 'desc' },
@@ -270,9 +272,6 @@ export default async function PMDetailPage({
                 ...(schedule.woTeam ? [
                   { label: 'WO Team', value: schedule.woTeam.name },
                 ] : []),
-                ...(schedule.woCategory ? [
-                  { label: 'WO Category', value: schedule.woCategory.name },
-                ] : []),
                 { label: 'Task template', value: `${schedule.tasks.length} task${schedule.tasks.length !== 1 ? 's' : ''}` },
                 ...(schedule.skipCount > 0 ? [
                   { label: 'Backlog', value: (
@@ -331,16 +330,36 @@ export default async function PMDetailPage({
               <p className="text-xs text-gray-400 mb-3">
                 Copied onto generated work orders as subtasks.
               </p>
-              <ol className="space-y-2">
+              <ol className="space-y-3">
                 {schedule.tasks.map((task: any, i: number) => (
-                  <li key={i} className="flex items-center gap-3 text-sm">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center justify-center">
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center justify-center mt-0.5">
                       {i + 1}
                     </span>
-                    <span className="flex-1 text-gray-800">{task.title}</span>
-                    {task.assignedTo && (
-                      <span className="text-xs text-gray-400 flex-shrink-0">→ {task.assignedTo.name}</span>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-gray-800">{task.title}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                          task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' :
+                          'bg-blue-50 text-blue-600'
+                        }`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {task.assignedTo && (
+                          <span className="text-xs text-gray-400">→ {task.assignedTo.name}</span>
+                        )}
+                        {task.assignedTeam && (
+                          <span className="text-xs text-gray-400">team: {task.assignedTeam.name}</span>
+                        )}
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ol>

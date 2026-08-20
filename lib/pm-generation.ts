@@ -438,7 +438,6 @@ export async function generateWOsForSchedule(
               requestedBy: 'System Generated',
               assignedToId: schedule.woAssignedToId ?? null,
               teamId: schedule.woTeamId ?? null,
-              categoryId: schedule.woCategoryId ?? null,
               nestedLevel: i,
               nestedLabel: tier.label || null,
             },
@@ -459,12 +458,15 @@ export async function generateWOsForSchedule(
           if (schedule.tasks.length > 0) {
             await tx.subtask.createMany({
               data: schedule.tasks.map(t => ({
-                title:        t.title,
-                order:        t.order,
-                required:     t.required,
-                assignedToId: t.assignedToId ?? null,
-                workOrderId:  wo.id,
-                createdById:  options?.userId ?? null,
+                title:           t.title,
+                description:     t.description ?? null,
+                priority:        t.priority,
+                order:           t.order,
+                required:        t.required,
+                assignedToId:    t.assignedToId ?? null,
+                assignedTeamId:  t.assignedTeamId ?? null,
+                workOrderId:     wo.id,
+                createdById:     options?.userId ?? null,
               })),
             })
           }

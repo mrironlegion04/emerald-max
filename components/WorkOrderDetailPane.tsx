@@ -280,6 +280,7 @@ export default function WorkOrderDetailPane({ woId, onLoadingChange, userRole = 
           required: s.required ?? true,
           remarks: s.remarks ?? null,
           createdAt: new Date(s.createdAt).toISOString(),
+          updatedAt: new Date(s.updatedAt).toISOString(),
           workOrderId: s.workOrderId,
           assignedTo: s.assignedTo,
           assignedTeam: s.assignedTeam,

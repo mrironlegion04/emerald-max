@@ -458,6 +458,7 @@ export default async function WorkOrderDetailPage({
               required: s.required ?? true,
               remarks: s.remarks ?? null,
               createdAt: s.createdAt.toISOString(),
+              updatedAt: s.updatedAt.toISOString(),
               workOrderId: s.workOrderId,
               assignedTo: s.assignedTo,
               assignedTeam: s.assignedTeam,

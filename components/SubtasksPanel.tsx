@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { CheckCircle, Circle, AlertCircle, Trash2, Plus, Edit2, X, Search, LayoutGrid, List } from 'lucide-react'
-import { fmtCurrency } from '@/lib/utils'
+import { fmtCurrency, fmtDateTime } from '@/lib/utils'
 import { isOverdueByDate, todayUTC, utcDateOnly, fmtDateOnly } from '@/lib/date-format'
 
 interface Subtask {
@@ -14,6 +14,7 @@ interface Subtask {
   dueDate: string | null
   completedAt: string | null
   createdAt: string
+  updatedAt: string
   required: boolean
   completionType: 'ASSIGNED' | 'ADMIN_OVERRIDE' | 'MANAGER_OVERRIDE' | null
   remarks: string | null
@@ -788,6 +789,9 @@ export default function SubtasksPanel({
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Team</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Assigned To</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Due</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden xl:table-cell">Completed</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden xl:table-cell">Completed By</th>
+                <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden xl:table-cell">Updated</th>
                 <th className="pb-2 pr-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Remarks</th>
                 {canEdit && <th className="pb-2 w-16"></th>}
               </tr>
@@ -880,6 +884,35 @@ export default function SubtasksPanel({
                       ) : (
                         <span className="text-[11px] text-slate-300">—</span>
                       )}
+                    </td>
+
+                    {/* Completed */}
+                    <td className="py-2.5 pr-3 hidden xl:table-cell">
+                      {subtask.completedAt ? (
+                        <span className="text-[11px] text-emerald-600 font-medium whitespace-nowrap">
+                          {fmtDateTime(subtask.completedAt)}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Completed By */}
+                    <td className="py-2.5 pr-3 hidden xl:table-cell">
+                      {subtask.completedBy ? (
+                        <span className="text-[11px] text-emerald-600 font-bold truncate block max-w-[8rem]">
+                          {subtask.completedBy.name}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Updated */}
+                    <td className="py-2.5 pr-3 hidden xl:table-cell">
+                      <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                        {fmtDateTime(subtask.updatedAt)}
+                      </span>
                     </td>
 
                     {/* Remarks */}

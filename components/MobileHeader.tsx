@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Menu, Settings } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Settings } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Sidebar from '@/components/Sidebar'
 import NotificationBell from '@/components/NotificationBell'
@@ -18,8 +18,21 @@ interface MobileHeaderProps {
   children?: React.ReactNode
 }
 
+const SIDEBAR_EVENT = 'emerald:open-sidebar'
+
+export function openMobileSidebar() {
+  window.dispatchEvent(new Event(SIDEBAR_EVENT))
+}
+
 export default function MobileHeader({ user, children }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  const handleOpen = useCallback(() => setIsOpen(true), [])
+
+  useEffect(() => {
+    window.addEventListener(SIDEBAR_EVENT, handleOpen)
+    return () => window.removeEventListener(SIDEBAR_EVENT, handleOpen)
+  }, [handleOpen])
 
   return (
     <>
@@ -27,18 +40,15 @@ export default function MobileHeader({ user, children }: MobileHeaderProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsOpen(true)}
-            className="p-1.5 -ml-1 text-slate-550 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 active:scale-95 border border-transparent hover:border-slate-205"
+            className="flex items-center gap-2 -ml-1 p-1 rounded-xl hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 active:scale-95"
             aria-label="Open navigation menu"
           >
-            <Menu className="w-5 h-5" />
-          </button>
-          
-          <div className="flex items-center gap-2">
             <div className="w-7.5 h-7.5 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-600/30">
               <Settings className="w-4 h-4 text-white animate-spin-slow" />
             </div>
-            <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none">EMERALD MAINTENANCE</span>
-          </div>
+            <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none hidden sm:inline">EMERALD MAINTENANCE</span>
+            <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none sm:hidden">EMERALD</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -47,12 +57,10 @@ export default function MobileHeader({ user, children }: MobileHeaderProps) {
         </div>
       </header>
 
-      {/* Modern Drawer implementation with AnimatePresence */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop with blur */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -60,9 +68,7 @@ export default function MobileHeader({ user, children }: MobileHeaderProps) {
               className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 lg:hidden"
               onClick={() => setIsOpen(false)}
             />
-
-            {/* Sidebar drawer container */}
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, ClipboardList, Package, MessageCircle, MoreHorizontal, Plus, ScanLine } from 'lucide-react'
 import { motion } from 'motion/react'
+import { openMobileSidebar } from '@/components/MobileHeader'
 
 type Role = 'ADMIN' | 'MANAGER' | 'TECHNICIAN' | 'REQUESTER' | 'VIEWER'
 
@@ -22,10 +23,11 @@ export default function BottomNav({ role }: { role?: Role }) {
           { href: '/work-orders', label: 'Work Orders', icon: ClipboardList },
           { href: '/assets', label: 'Assets', icon: Package },
           { href: '/messages', label: 'Messages', icon: MessageCircle },
-          { href: '/more', label: 'More', icon: MoreHorizontal },
+          { label: 'More', icon: MoreHorizontal, onClick: openMobileSidebar },
         ]
 
-  const isActive = (href: string) => {
+  const isActive = (href?: string) => {
+    if (!href) return false
     if (href === '/overview') return pathname === '/overview' || pathname === '/dashboard'
     if (href === '/request') return pathname === '/request' || pathname?.startsWith('/request/')
     return pathname?.startsWith(href)
@@ -39,6 +41,21 @@ export default function BottomNav({ role }: { role?: Role }) {
             {navItems.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
+
+              if ('onClick' in item) {
+                return (
+                  <button
+                    key={item.label}
+                    onClick={item.onClick}
+                    className={`relative flex flex-col items-center justify-center flex-1 h-full transition-all text-slate-400`}
+                  >
+                    <Icon className="w-5 h-5 mb-1 transition-transform" />
+                    <span className="text-[10px] font-medium tracking-tight">
+                      {item.label}
+                    </span>
+                  </button>
+                )
+              }
 
               return (
                 <Link

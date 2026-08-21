@@ -9,6 +9,7 @@ import PMGenerateButton from '@/components/PMGenerateButton'
 import PMToggleButton from '@/components/PMToggleButton'
 import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
+import PMEditButton from '@/components/PMEditButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
 import ActivityTimeline from '@/components/ActivityTimeline'
 import { fmt, daysUntil } from '@/lib/utils'
@@ -106,19 +107,31 @@ export default async function PMDetailPage({
   if (!schedule) notFound()
 
   // Plant isolation: page-level view guard (cross-plant schedules render as 404)
-  if (user) {
-    const allowedIds = await getUserLocationIds(user.userId)
-    if (allowedIds) {
-      const scheduleLocations = new Set<string>()
-      if (schedule.locationId) scheduleLocations.add(schedule.locationId)
-      if (schedule.asset?.locationId) scheduleLocations.add(schedule.asset.locationId)
-      for (const a of schedule.assets) {
-        if (a.asset.locationId) scheduleLocations.add(a.asset.locationId)
-      }
-      const hasAccess = [...scheduleLocations].some(id => allowedIds.includes(id))
-      if (!hasAccess) notFound()
+  const allowedIds = user ? await getUserLocationIds(user.userId) : null
+  if (allowedIds) {
+    const scheduleLocations = new Set<string>()
+    if (schedule.locationId) scheduleLocations.add(schedule.locationId)
+    if (schedule.asset?.locationId) scheduleLocations.add(schedule.asset.locationId)
+    for (const a of schedule.assets) {
+      if (a.asset.locationId) scheduleLocations.add(a.asset.locationId)
     }
+    const hasAccess = [...scheduleLocations].some(id => allowedIds.includes(id))
+    if (!hasAccess) notFound()
   }
+
+  // Edit requires access to ALL locations in the schedule (no partial editing)
+  const canEditSchedule = (() => {
+    if (!canEditPM) return false
+    if (user?.role === 'ADMIN') return true
+    if (!allowedIds) return true
+    const scheduleLocations = new Set<string>()
+    if (schedule.locationId) scheduleLocations.add(schedule.locationId)
+    if (schedule.asset?.locationId) scheduleLocations.add(schedule.asset.locationId)
+    for (const a of schedule.assets) {
+      if (a.asset.locationId) scheduleLocations.add(a.asset.locationId)
+    }
+    return [...scheduleLocations].every(locId => allowedIds.includes(locId))
+  })()
 
   // Resolve target assets: junction rows win, fall back to the legacy single assetId
   const targetAssets = schedule.assets.length > 0
@@ -167,9 +180,7 @@ export default async function PMDetailPage({
         action={
           canEditPM || canCreatePM ? (
             <div className="flex gap-2">
-              {canEditPM && <Link href={`/preventive-maintenance/${schedule.id}/edit`} className="btn-secondary text-sm">
-                Edit schedule
-              </Link>}
+              {canEditPM && <PMEditButton scheduleId={schedule.id} canEditSchedule={canEditSchedule} />}
               {canCreatePM && <PMCopyButton scheduleId={schedule.id} />}
             </div>
           ) : undefined
@@ -193,7 +204,7 @@ export default async function PMDetailPage({
                 : `In ${days} day${days !== 1 ? 's' : ''}`}
             </p>
 
-            {canEditPM && (
+            {canEditSchedule && (
               <PMGenerateButton
                 scheduleId={schedule.id}
                 assetName={targetName}
@@ -205,7 +216,7 @@ export default async function PMDetailPage({
           </div>
 
           {/* Preview upcoming WOs */}
-          {canEditPM && schedule.schedulingHorizon > 1 && (
+          {canEditSchedule && schedule.schedulingHorizon > 1 && (
             <PMPreviewPanel scheduleId={schedule.id} />
           )}
 
@@ -376,7 +387,7 @@ export default async function PMDetailPage({
           )}
 
           {/* Toggle active */}
-          {canEditPM && (
+          {canEditSchedule && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 text-sm mb-2">Schedule active</h2>
               <p className="text-xs text-gray-500 mb-3">
@@ -412,7 +423,7 @@ export default async function PMDetailPage({
             {workOrders.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-sm text-gray-400">No work orders generated yet</p>
-                {canGenerate && canEditPM && (
+                {canGenerate && canEditSchedule && (
                   <p className="text-xs text-gray-400 mt-1">Click "Generate work order" to create the first one</p>
                 )}
               </div>

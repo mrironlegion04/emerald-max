@@ -35,7 +35,8 @@ export default async function EditPMPage({
           orderBy: { order: 'asc' },
           select: { title: true, description: true, priority: true, order: true, assignedToId: true, assignedTeamId: true, required: true },
         },
-        assets: { select: { assetId: true } },
+        asset: { select: { id: true, locationId: true } },
+        assets: { select: { asset: { select: { id: true, locationId: true } } } },
       },
     }),
     prisma.asset.findMany({
@@ -62,9 +63,16 @@ export default async function EditPMPage({
 
   if (!schedule) notFound()
 
-  // Plant isolation: only users who can write to THIS schedule's location may reach the edit form
-  if (user && scopeIds && (!schedule.locationId || !scopeIds.includes(schedule.locationId))) {
-    redirect(`/preventive-maintenance/${id}`)
+  // Plant isolation: managers must have access to ALL locations in the schedule to edit
+  if (user && scopeIds) {
+    const scheduleLocations = new Set<string>()
+    if (schedule.locationId) scheduleLocations.add(schedule.locationId)
+    if (schedule.asset?.locationId) scheduleLocations.add(schedule.asset.locationId)
+    for (const a of schedule.assets) {
+      if (a.asset.locationId) scheduleLocations.add(a.asset.locationId)
+    }
+    const allInScope = [...scheduleLocations].every(locId => scopeIds.includes(locId))
+    if (!allInScope) redirect(`/preventive-maintenance/${id}`)
   }
 
   const initialData = {
@@ -79,7 +87,7 @@ export default async function EditPMPage({
     nextDueDate:         new Date(schedule.nextDueDate).toISOString().split('T')[0],
     assetId:             schedule.assetId       ?? '',
     assetIds:            schedule.assets.length > 0
-      ? schedule.assets.map(a => a.assetId)
+      ? schedule.assets.map(a => a.asset.id)
       : (schedule.assetId ? [schedule.assetId] : []),
     locationId:          schedule.locationId    ?? '',
     locationScope:       schedule.locationScope ?? 'ALL_ASSETS',

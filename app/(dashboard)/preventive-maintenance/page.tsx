@@ -262,7 +262,11 @@ export default async function PMPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600 text-sm">
-                        <span>Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}</span>
+                        {s.triggerType !== 'EVENT' ? (
+                          <span>Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">Event-based</span>
+                        )}
                         {s.scheduleBehavior === 'FLOATING' && (
                           <span className="ml-1 inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-semibold">Floating</span>
                         )}
@@ -390,7 +394,10 @@ export default async function PMPage({
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurrence</span>
                       <span className="text-slate-700 font-bold flex items-center gap-1.5">
-                        🔄 Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}
+                        {s.triggerType !== 'EVENT'
+                          ? <>🔄 Every {s.interval > 1 ? `${s.interval} ` : ''}{freqLabels[s.frequency].toLowerCase()}</>
+                          : '⚡ Event-based'
+                        }
                       </span>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {s.scheduleBehavior === 'FLOATING' && (

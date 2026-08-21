@@ -176,7 +176,7 @@ export default async function PMDetailPage({
       </div>
       <PageHeader
         title={schedule.title}
-        subtitle={`${schedule.pmNumber ? `${schedule.pmNumber} · ` : ''}${targetName} · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}`}
+        subtitle={`${schedule.pmNumber ? `${schedule.pmNumber} · ` : ''}${targetName}${schedule.triggerType !== 'EVENT' ? ` · Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` : ''}`}
         action={
           canEditPM || canCreatePM ? (
             <div className="flex gap-2">
@@ -255,7 +255,9 @@ export default async function PMDetailPage({
                   { label: 'Location', value: schedule.location.name },
                   { label: 'Scope', value: schedule.locationScope === 'ALL_ASSETS' ? 'All Assets Checklist' : 'General Maintenance' },
                 ] : []),
-                { label: 'Frequency',  value: `Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` },
+                ...(schedule.triggerType !== 'EVENT' ? [
+                  { label: 'Frequency',  value: `Every ${schedule.interval > 1 ? `${schedule.interval} ` : ''}${freqLabels[schedule.frequency].toLowerCase()}` },
+                ] : []),
                 ...(schedule.recurrenceRule && schedule.frequency === 'MONTHLY' ? [
                   { label: 'Recurrence', value: formatRecurrence(schedule.recurrenceRule as unknown as RecurrenceRuleLike, schedule.interval) },
                 ] : []),

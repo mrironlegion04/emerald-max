@@ -23,6 +23,7 @@ interface SearchParams {
   skipFrom?:    string
   skipTo?:      string
   skipStatus?:  string
+  showDeleted?: string
   page?:        string
 }
 
@@ -48,8 +49,11 @@ export default async function PMPage({
   const pickerScopeIds = user ? await getWriteScopeIds(user) : null
   const locationFilter = user ? await buildLocationFilter(user) : null
 
+  const showDeleted = params.showDeleted === 'true'
+
   // Build Prisma where clause
   const where: Record<string, unknown> = {}
+  if (!showDeleted) where.isDeleted = false
   if (activeScope.scopeIds) {
     where.AND = [{
       OR: [
@@ -224,7 +228,8 @@ export default async function PMPage({
                     <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900">{s.title}</p>
+                          <p className={`font-medium text-gray-900 ${s.isDeleted ? 'line-through text-gray-400' : ''}`}>{s.title}</p>
+                          {s.isDeleted && <Badge label="Archived" variant="red" />}
                           {s.pmNumber && (
                             <span className="inline-flex items-center px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200/60">
                               {s.pmNumber}
@@ -307,7 +312,7 @@ export default async function PMPage({
                         <div className="flex items-center gap-2 justify-end">
                           <Link href={`/preventive-maintenance/${s.id}`}
                             className="text-xs text-blue-600 hover:underline font-medium">View</Link>
-                          {canEditPM && (
+                          {canEditPM && !s.isDeleted && (
                             <Link href={`/preventive-maintenance/${s.id}/edit`}
                               className="text-xs text-gray-500 hover:underline font-medium">Edit</Link>
                           )}
@@ -339,9 +344,10 @@ export default async function PMPage({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Link href={`/preventive-maintenance/${s.id}`} className="font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 block truncate">
+                        <Link href={`/preventive-maintenance/${s.id}`} className={`font-extrabold text-slate-900 text-sm leading-snug hover:text-blue-600 block truncate ${s.isDeleted ? 'line-through text-gray-400' : ''}`}>
                           {s.title}
                         </Link>
+                        {s.isDeleted && <Badge label="Archived" variant="red" />}
                         {s.pmNumber && (
                           <span className="inline-flex items-center px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono font-bold border border-slate-200/60 flex-shrink-0">
                             {s.pmNumber}
@@ -457,7 +463,7 @@ export default async function PMPage({
                     >
                       View Schedule
                     </Link>
-                    {canEditPM && (
+                    {canEditPM && !s.isDeleted && (
                       <Link
                         href={`/preventive-maintenance/${s.id}/edit`}
                         className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition-all border border-blue-100"

@@ -8,6 +8,7 @@ import { WO_STATUS_LABELS } from '@/lib/work-order-status'
 import PMGenerateButton from '@/components/PMGenerateButton'
 import PMToggleButton from '@/components/PMToggleButton'
 import DeletePMScheduleButton from '@/components/DeletePMScheduleButton'
+import RestorePMScheduleButton from '@/components/RestorePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
 import PMEditButton from '@/components/PMEditButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
@@ -204,7 +205,7 @@ export default async function PMDetailPage({
                 : `In ${days} day${days !== 1 ? 's' : ''}`}
             </p>
 
-            {canEditSchedule && (
+            {canEditSchedule && !schedule.isDeleted && (
               <PMGenerateButton
                 scheduleId={schedule.id}
                 assetName={targetName}
@@ -226,7 +227,10 @@ export default async function PMDetailPage({
             <dl className="space-y-3">
               {[
                 { label: 'Status',     value: (
-                  <Badge label={schedule.isActive ? 'Active' : 'Inactive'} variant={schedule.isActive ? 'green' : 'gray'} />
+                  <div className="flex gap-1.5">
+                    {schedule.isDeleted && <Badge label="Archived" variant="red" />}
+                    <Badge label={schedule.isActive ? 'Active' : 'Inactive'} variant={schedule.isActive ? 'green' : 'gray'} />
+                  </div>
                 )},
                 ...(schedule.pmNumber ? [{ label: 'PM Number', value: <span className="font-mono text-xs font-bold text-slate-600">{schedule.pmNumber}</span> }] : []),
                 ...(targetAssets.length === 1 ? [
@@ -389,7 +393,7 @@ export default async function PMDetailPage({
           )}
 
           {/* Toggle active */}
-          {canEditSchedule && (
+          {canEditSchedule && !schedule.isDeleted && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900 text-sm mb-2">Schedule active</h2>
               <p className="text-xs text-gray-500 mb-3">
@@ -404,11 +408,23 @@ export default async function PMDetailPage({
           {/* Danger zone */}
           {user?.role === 'ADMIN' && (
             <div className="bg-white rounded-xl border border-red-100 p-5">
-              <h2 className="font-semibold text-red-700 text-sm mb-2">Danger zone</h2>
-              <p className="text-xs text-gray-500 mb-3">
-                Deleting this preventive maintenance schedule will permanently remove it. Future work orders will not be generated automatically.
-              </p>
-              <DeletePMScheduleButton scheduleId={schedule.id} scheduleName={schedule.title} />
+              {schedule.isDeleted ? (
+                <>
+                  <h2 className="font-semibold text-red-700 text-sm mb-2">Restore schedule</h2>
+                  <p className="text-xs text-gray-500 mb-3">
+                    This schedule is archived. Restoring it will make it visible in the list and resume WO generation.
+                  </p>
+                  <RestorePMScheduleButton scheduleId={schedule.id} scheduleName={schedule.title} />
+                </>
+              ) : (
+                <>
+                  <h2 className="font-semibold text-red-700 text-sm mb-2">Danger zone</h2>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Archiving this preventive maintenance schedule will hide it from the list. Work orders will be preserved.
+                  </p>
+                  <DeletePMScheduleButton scheduleId={schedule.id} scheduleName={schedule.title} />
+                </>
+              )}
             </div>
           )}
         </div>

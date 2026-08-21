@@ -857,12 +857,21 @@ model MaintenanceSchedule {
   skipLogs            PmSkipLog[]        @relation("PmSkipLogSchedule")
   skipCount           Int       @default(0)
   lastSkippedAt       DateTime?
+
+  // Soft-delete (archive) support
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  deletedBy   String?
+  restoredAt  DateTime?
+  restoredBy  String?
+
   createdById         String?
   createdBy           User?              @relation("PMCreatedBy", fields: [createdById], references: [id])
 
   @@index([locationId])
   @@index([assetId])
   @@index([triggerType, isActive])
+  @@index([isDeleted])
   @@map("maintenance_schedules")
 }
 

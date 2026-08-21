@@ -226,6 +226,10 @@ export async function generateWOsForSchedule(
     result.errors.push('Schedule is inactive')
     return result
   }
+  if (schedule.isDeleted) {
+    result.errors.push('Schedule is archived')
+    return result
+  }
 
   // Resolve target assets: junction rows win, fall back to the legacy single assetId
   const targetAssets = schedule.assets.length > 0
@@ -538,9 +542,11 @@ export async function handleWOCompletion(workOrderId: string) {
       nextDueDate: true,
       recurrenceRule: true,
       endDate: true,
+      isDeleted: true,
     },
   })
   if (!schedule || schedule.scheduleBehavior !== 'FLOATING') return
+  if (schedule.isDeleted) return
 
   // Reschedule from completion date
   const completedAt = new Date()

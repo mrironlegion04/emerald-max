@@ -84,15 +84,21 @@ const pmSchema = z.object({
   path: ["assetId"]
 })
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const locationFilter = await buildLocationFilter(user)
+    const includeDeleted = request.nextUrl.searchParams.get('includeDeleted') === 'true'
+
+    const where = {
+      ...(locationFilter || {}),
+      ...(includeDeleted ? {} : { isDeleted: false }),
+    }
 
     const schedules = await prisma.maintenanceSchedule.findMany({
-      where: locationFilter || undefined,
+      where,
       include: {
         asset:    { select: { id: true, name: true, assetCode: true } },
         location: { select: { id: true, name: true } },

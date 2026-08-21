@@ -62,6 +62,7 @@ export default async function EditPMPage({
   ])
 
   if (!schedule) notFound()
+  if (schedule.isDeleted) redirect(`/preventive-maintenance/${id}`)
 
   // Plant isolation: managers must have access to ALL locations in the schedule to edit
   if (user && scopeIds) {

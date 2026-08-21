@@ -43,7 +43,7 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
     startTransition(() => router.push(`${pathname}?${params.toString()}`))
   }, [router, pathname, searchParams])
 
-  const advancedKeys = ['assetId','dueDateFrom','dueDateTo','skipStatus','skipFrom','skipTo']
+  const advancedKeys = ['assetId','dueDateFrom','dueDateTo','skipStatus','skipFrom','skipTo','showDeleted']
   const filterKeys   = ['frequency','isActive','overdueOnly','skipFrom','skipTo','skipStatus', ...advancedKeys]
   const hasAdvanced  = advancedKeys.some(k => searchParams.get(k))
   const activeCount  = filterKeys.filter(k => !!searchParams.get(k)).length
@@ -127,6 +127,18 @@ export default function AdvancedPMFilters({ assets, canExport = true }: Props) {
             className="w-5 h-5 text-red-600 rounded border-slate-300"
           />
           Overdue Only
+        </label>
+      </div>
+
+      <div id="drawer-pm-archived" className="pt-3 border-t border-dashed border-slate-150">
+        <label className="flex items-center gap-3 text-sm text-slate-700 cursor-pointer select-none font-medium">
+          <input
+            type="checkbox"
+            checked={searchParams.get('showDeleted') === 'true'}
+            onChange={e => update('showDeleted', e.target.checked ? 'true' : '')}
+            className="w-5 h-5 text-red-600 rounded border-slate-300"
+          />
+          Show archived
         </label>
       </div>
 

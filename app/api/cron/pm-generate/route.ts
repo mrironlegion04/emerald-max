@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     // Find all active TIME-based schedules that are due
     const dueSchedules = await prisma.maintenanceSchedule.findMany({
       where: {
+        isDeleted: false,
         isActive: true,
         triggerType: 'TIME',
         nextDueDate: { lte: now },
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     // Also handle METER-based schedules that have crossed their threshold
     const meterSchedules = await prisma.maintenanceSchedule.findMany({
       where: {
+        isDeleted: false,
         isActive: true,
         triggerType: 'METER',
         meterId: { not: null },
@@ -101,6 +103,7 @@ export async function POST(request: NextRequest) {
     // Also handle TIME_OR_METER schedules — fire if EITHER time OR meter condition is met
     const timeOrMeterSchedules = await prisma.maintenanceSchedule.findMany({
       where: {
+        isDeleted: false,
         isActive: true,
         triggerType: 'TIME_OR_METER',
       },

@@ -136,6 +136,7 @@ export async function PUT(
 
     const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (existing.isDeleted) return NextResponse.json({ error: 'Cannot edit an archived schedule. Restore it first.' }, { status: 400 })
 
     const locationFilter = await buildLocationFilter(user)
     if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
@@ -315,13 +316,21 @@ export async function DELETE(
     const { id } = await params
     const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (existing.isDeleted) return NextResponse.json({ error: 'Schedule is already archived' }, { status: 400 })
 
     const locationFilter = await buildLocationFilter(user)
     if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await prisma.maintenanceSchedule.delete({ where: { id } })
+    await prisma.maintenanceSchedule.update({
+      where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: user.userId,
+      },
+    })
 
     await writeAudit({
       action: 'DELETE',
@@ -337,5 +346,61 @@ export async function DELETE(
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user || !(await hasPermission(user, 'pm:edit'))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+    if (!(await hasScopeActionFlag(user, 'canManagePM'))) {
+      return NextResponse.json({ error: 'Your scope does not allow managing PM schedules' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    if (body.action !== 'restore') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    const { id } = await params
+    const existing = await prisma.maintenanceSchedule.findUnique({ where: { id } })
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!existing.isDeleted) return NextResponse.json({ error: 'Schedule is not archived' }, { status: 400 })
+
+    const locationFilter = await buildLocationFilter(user)
+    if (locationFilter && (!existing.locationId || !(locationFilter.locationId as { in: string[] }).in.includes(existing.locationId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const restored = await prisma.maintenanceSchedule.update({
+      where: { id },
+      data: {
+        isDeleted: false,
+        deletedAt: null,
+        restoredAt: new Date(),
+        restoredBy: user.userId,
+      },
+    })
+
+    await writeAudit({
+      action: 'UPDATE',
+      entity: 'MaintenanceSchedule',
+      entityId: id,
+      entityName: existing.title,
+      changes: { isDeleted: { before: true, after: false } },
+      userId: user.userId,
+      userName: user.name,
+      userEmail: user.email,
+    })
+
+    return NextResponse.json(restored)
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Failed to restore schedule' }, { status: 500 })
   }
 }

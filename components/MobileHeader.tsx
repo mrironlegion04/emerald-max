@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings } from 'lucide-react'
+import { Cog } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import Sidebar from '@/components/Sidebar'
 import NotificationBell from '@/components/NotificationBell'
@@ -44,7 +44,7 @@ export default function MobileHeader({ user, children }: MobileHeaderProps) {
             aria-label="Open navigation menu"
           >
             <div className="w-7.5 h-7.5 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-600/30">
-              <Settings className="w-4 h-4 text-white animate-spin-slow" />
+              <Cog className="w-4 h-4 text-white animate-spin-slow" />
             </div>
             <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none hidden sm:inline">EMERALD MAINTENANCE</span>
             <span className="font-extrabold text-slate-900 text-sm tracking-wider font-sans leading-none sm:hidden">EMERALD</span>

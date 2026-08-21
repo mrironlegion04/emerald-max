@@ -108,7 +108,16 @@ export default async function PMDetailPage({
   // Plant isolation: page-level view guard (cross-plant schedules render as 404)
   if (user) {
     const allowedIds = await getUserLocationIds(user.userId)
-    if (allowedIds && (!schedule.locationId || !allowedIds.includes(schedule.locationId))) notFound()
+    if (allowedIds) {
+      const scheduleLocations = new Set<string>()
+      if (schedule.locationId) scheduleLocations.add(schedule.locationId)
+      if (schedule.asset?.locationId) scheduleLocations.add(schedule.asset.locationId)
+      for (const a of schedule.assets) {
+        if (a.asset.locationId) scheduleLocations.add(a.asset.locationId)
+      }
+      const hasAccess = [...scheduleLocations].some(id => allowedIds.includes(id))
+      if (!hasAccess) notFound()
+    }
   }
 
   // Resolve target assets: junction rows win, fall back to the legacy single assetId

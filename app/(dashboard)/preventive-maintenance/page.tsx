@@ -51,9 +51,19 @@ export default async function PMPage({
   // Build Prisma where clause
   const where: Record<string, unknown> = {}
   if (activeScope.scopeIds) {
-    where.AND = [{ locationId: { in: activeScope.scopeIds } }]
+    where.AND = [{
+      OR: [
+        { locationId: { in: activeScope.scopeIds } },
+        { asset: { locationId: { in: activeScope.scopeIds } } },
+      ]
+    }]
   } else if (locationFilter) {
-    where.AND = [locationFilter]
+    where.AND = [{
+      OR: [
+        locationFilter,
+        { asset: { locationId: locationFilter.locationId } },
+      ]
+    }]
   }
   if (params.frequency)                where.frequency = params.frequency
   if (params.isActive !== undefined && params.isActive !== '')

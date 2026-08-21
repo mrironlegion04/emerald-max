@@ -509,7 +509,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         <p className="text-[11px] text-slate-400 font-medium -mt-3">
           Times are optional and only tell the technician when to work — due status is based on the calendar date only.
         </p>
-        {form.type === 'BREAKDOWN' && inputRow('Machine down since', false,
+        {inputRow('Machine down since', false,
           <>
             <input
               type="datetime-local"
@@ -525,7 +525,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             </p>
           </>
         )}
-        {form.type === 'BREAKDOWN' && inputRow('Back up time', false,
+        {form.downtimeStartedAt && inputRow('Back up time', false,
           <>
             <input
               type="datetime-local"

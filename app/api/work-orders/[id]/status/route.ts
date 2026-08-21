@@ -28,8 +28,8 @@ const statusSchema = z.object({
   completedAt: z.string().optional(),
   requestedCompletionTime:  z.string().optional(),
   requestedCompletionNotes: z.string().optional(),
-  downtimeStartedAt: z.string().optional(),
-  downtimeEndedAt:   z.string().optional(),
+  downtimeStartedAt: z.string().nullable().optional(),
+  downtimeEndedAt:   z.string().nullable().optional(),
   heldAt:            z.string().optional(),
 })
 
@@ -281,7 +281,9 @@ export async function PATCH(
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost
       if (downtimeStartedAt) updateData.downtimeStartedAt = new Date(downtimeStartedAt)
+      else if (downtimeStartedAt === null) updateData.downtimeStartedAt = null
       if (downtimeEndedAt) updateData.downtimeEndedAt = new Date(downtimeEndedAt)
+      else if (downtimeEndedAt === null) updateData.downtimeEndedAt = null
     }
     
     // Final completion (admin/manager approving)
@@ -302,7 +304,9 @@ export async function PATCH(
       if (laborHours) updateData.laborHours = laborHours
       if (laborCost) updateData.laborCost = laborCost
       if (downtimeStartedAt) updateData.downtimeStartedAt = new Date(downtimeStartedAt)
+      else if (downtimeStartedAt === null) updateData.downtimeStartedAt = null
       if (downtimeEndedAt) updateData.downtimeEndedAt = new Date(downtimeEndedAt)
+      else if (downtimeEndedAt === null) updateData.downtimeEndedAt = null
     }
 
     // Rejection: PENDING_APPROVAL → IN_PROGRESS

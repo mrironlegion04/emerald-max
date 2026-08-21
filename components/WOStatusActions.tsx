@@ -329,8 +329,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           startedAt: startedAtValue ? new Date(startedAtValue).toISOString() : undefined,
           requestedCompletionTime: new Date(requestedTime).toISOString(),
           requestedCompletionNotes: requestNotes || undefined,
-          downtimeStartedAt: downSince ? new Date(downSince).toISOString() : undefined,
-          downtimeEndedAt: backUpAt ? new Date(backUpAt).toISOString() : undefined,
+          downtimeStartedAt: downSince ? new Date(downSince).toISOString() : null,
+          downtimeEndedAt: downSince && backUpAt ? new Date(backUpAt).toISOString() : null,
         }),
       })
       const data = await res.json()
@@ -385,8 +385,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           startedAt: adjustedStartAt ? new Date(adjustedStartAt).toISOString() : undefined,
           laborHours: adjustedLaborHours ? parseFloat(adjustedLaborHours) : undefined,
           laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
-          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
-          downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
+          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : null,
+          downtimeEndedAt: adjustedDownSince && adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : null,
           notes: notes || undefined,
           resolution: resolution || undefined,
         }),
@@ -461,8 +461,8 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
           startedAt: adjustedStartAt ? new Date(adjustedStartAt).toISOString() : undefined,
           laborHours: adjustedLaborHours ? parseFloat(adjustedLaborHours) : undefined,
           laborCost:  adjustedLaborCost  ? parseFloat(adjustedLaborCost)  : undefined,
-          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : undefined,
-          downtimeEndedAt: adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : undefined,
+          downtimeStartedAt: adjustedDownSince ? new Date(adjustedDownSince).toISOString() : null,
+          downtimeEndedAt: adjustedDownSince && adjustedBackUpAt ? new Date(adjustedBackUpAt).toISOString() : null,
           resolution: resolution || undefined,
         }),
       })
@@ -688,12 +688,14 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                       onChange={e => setAdjustedDownSince(e.target.value)}
                       className="input-field text-xs bg-white border-slate-200 w-full" />
                   </div>
+                  {adjustedDownSince && (
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Back up at</label>
                     <input type="datetime-local" value={adjustedBackUpAt}
                       onChange={e => setAdjustedBackUpAt(e.target.value)}
                       className="input-field text-xs bg-white border-slate-200 w-full" />
                   </div>
+                  )}
                 </div>
                 {resolutionField}
                 <div className="flex gap-2 pt-1">
@@ -840,12 +842,14 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                 onChange={e => setDownSince(e.target.value)}
                 className="input-field text-xs bg-white border-slate-200" />
             </div>
+            {downSince && (
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Back up at</label>
               <input type="datetime-local" value={backUpAt}
                 onChange={e => setBackUpAt(e.target.value)}
                 className="input-field text-xs bg-white border-slate-200" />
             </div>
+            )}
           </div>
           {downSince && backUpAt && (() => {
             const ms = new Date(backUpAt).getTime() - new Date(downSince).getTime()
@@ -926,12 +930,14 @@ export default function WOStatusActions({ woId, currentStatus, userRole, userId,
                 onChange={e => setAdjustedDownSince(e.target.value)}
                 className="input-field text-xs bg-white border-slate-200" />
             </div>
+            {adjustedDownSince && (
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Back up at</label>
               <input type="datetime-local" value={adjustedBackUpAt}
                 onChange={e => setAdjustedBackUpAt(e.target.value)}
                 className="input-field text-xs bg-white border-slate-200" />
             </div>
+            )}
           </div>
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Final Action</label>

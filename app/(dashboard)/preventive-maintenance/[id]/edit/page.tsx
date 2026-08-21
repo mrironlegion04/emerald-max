@@ -50,7 +50,7 @@ export default async function EditPMPage({
     }),
     prisma.user.findMany({
       where:   { isActive: true, ...(userFilter ?? {}) },
-      select:  { id: true, name: true, email: true },
+      select:  { id: true, name: true, email: true, username: true },
       orderBy: { name: 'asc' },
     }),
     prisma.team.findMany({

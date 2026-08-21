@@ -6,6 +6,7 @@ import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download } fro
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import { parseCSV } from '@/lib/csv'
+import * as XLSX from 'xlsx'
 
 interface SimpleMeter {
   id: string
@@ -39,6 +40,7 @@ interface SimpleUser {
   id: string
   name: string
   email: string
+  username: string | null
 }
 
 interface SimpleTeam {
@@ -315,71 +317,93 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   const [importMsg, setImportMsg] = useState('')
 
   function downloadTaskCsvSample() {
-    const csv = [
-      'title,description,priority,assigned_to,assigned_team,required',
-      'Check belt tension,Inspect and adjust tension,,Ankit Mehta,,required',
-      'Lubricate bearings,,medium,,Maintenance Team,required',
-      'Replace worn seals,Check seal condition and replace if damaged,high,,Mechanical,optional',
-    ].join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'pm-task-template.csv'
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 0)
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['title', 'description', 'priority', 'assigned_to', 'assigned_team', 'required'],
+      ['Check belt tension', 'Inspect and adjust tension', '', 'Ankit Mehta', '', 'yes'],
+      ['Lubricate bearings', '', 'medium', '', 'Maintenance Team', 'yes'],
+      ['Replace worn seals', 'Check seal condition and replace if damaged', 'high', '', 'Mechanical', 'no'],
+    ])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Tasks')
+    XLSX.writeFile(wb, 'pm-task-template.xlsx')
   }
 
-  function handleTaskCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleTaskFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const records = parseCSV(String(reader.result ?? ''))
-      if (records.length === 0) { setImportMsg('No rows found in the CSV. Check the file and try again.'); return }
-      let skipped = 0
-      let unmatched = 0
-      const mapped: PMTask[] = []
-      for (const row of records) {
-        const title = (row.title ?? '').trim()
-        if (!title) { skipped++; continue }
-        const assigneeRaw = (row.assigned_to ?? row.assignee ?? '').trim()
-        let assignedToId = ''
-        if (assigneeRaw) {
-          const target = assigneeRaw.toLowerCase()
-          const byEmail = users.find(u => u.email.toLowerCase() === target)
-          const match = byEmail ?? users.find(u => u.name.toLowerCase() === target)
-          if (match) assignedToId = match.id
-          else unmatched++
-        }
-        const teamRaw = (row.assigned_team ?? row.team ?? '').trim()
-        let assignedTeamId = ''
-        if (teamRaw) {
-          const target = teamRaw.toLowerCase()
-          const match = teams.find(t => t.name.toLowerCase() === target)
-          if (match) assignedTeamId = match.id
-        }
-        const priorityRaw = (row.priority ?? '').trim().toUpperCase()
-        const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-        const priority = validPriorities.includes(priorityRaw) ? priorityRaw : 'MEDIUM'
-        mapped.push({
-          title,
-          description: (row.description ?? '').trim(),
-          priority,
-          assignedToId,
-          assignedTeamId,
-          required: /^(yes|true|1|required)$/i.test((row.required ?? '').trim()),
-        })
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext === 'csv') {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const records = parseCSV(String(reader.result ?? ''))
+        processImportedRows(records)
       }
-      if (mapped.length === 0) { setImportMsg('No usable rows found (all titles were empty). Nothing added.'); return }
-      setTasks(prev => [...prev, ...mapped])
-      setImportMsg(
-        `Imported ${mapped.length} task${mapped.length === 1 ? '' : 's'}` +
-        (skipped ? `, skipped ${skipped} empty row${skipped === 1 ? '' : 's'}` : '') +
-        (unmatched ? `, ${unmatched} assignee${unmatched === 1 ? '' : 's'} not found (left unassigned)` : '') + '.'
-      )
+      reader.readAsText(file)
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const wb = XLSX.read(reader.result, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
+        const records = rows.map(row => {
+          const obj: Record<string, string> = {}
+          for (const [k, v] of Object.entries(row)) {
+            obj[k.trim().toLowerCase().replace(/\s+/g, '_')] = String(v ?? '').trim()
+          }
+          return obj
+        })
+        processImportedRows(records)
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      setImportMsg('Unsupported file type. Please upload a .csv or .xlsx file.')
     }
-    reader.readAsText(file)
+  }
+
+  function processImportedRows(records: Record<string, string>[]) {
+    if (records.length === 0) { setImportMsg('No rows found in the file. Check the file and try again.'); return }
+    let skipped = 0
+    let unmatched = 0
+    const mapped: PMTask[] = []
+    for (const row of records) {
+      const title = (row.title ?? '').trim()
+      if (!title) { skipped++; continue }
+      const assigneeRaw = (row.assigned_to ?? row.assignee ?? '').trim()
+      let assignedToId = ''
+      if (assigneeRaw) {
+        const target = assigneeRaw.toLowerCase()
+        const match = users.find(u => u.username?.toLowerCase() === target)
+          ?? users.find(u => u.email.toLowerCase() === target)
+        if (match) assignedToId = match.id
+        else unmatched++
+      }
+      const teamRaw = (row.assigned_team ?? row.team ?? '').trim()
+      let assignedTeamId = ''
+      if (teamRaw) {
+        const target = teamRaw.toLowerCase()
+        const match = teams.find(t => t.name.toLowerCase() === target)
+        if (match) assignedTeamId = match.id
+      }
+      const priorityRaw = (row.priority ?? '').trim().toUpperCase()
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+      const priority = validPriorities.includes(priorityRaw) ? priorityRaw : 'MEDIUM'
+      mapped.push({
+        title,
+        description: (row.description ?? '').trim(),
+        priority,
+        assignedToId,
+        assignedTeamId,
+        required: /^(yes|true|1|required)$/i.test((row.required ?? '').trim()),
+      })
+    }
+    if (mapped.length === 0) { setImportMsg('No usable rows found (all titles were empty). Nothing added.'); return }
+    setTasks(prev => [...prev, ...mapped])
+    setImportMsg(
+      `Imported ${mapped.length} task${mapped.length === 1 ? '' : 's'}` +
+      (skipped ? `, skipped ${skipped} empty row${skipped === 1 ? '' : 's'}` : '') +
+      (unmatched ? `, ${unmatched} assignee${unmatched === 1 ? '' : 's'} not found (left unassigned)` : '') + '.'
+    )
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -1087,7 +1111,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-800"
           >
             <Upload className="w-4 h-4" />
-            Upload CSV
+            Upload File
           </button>
           <button
             type="button"
@@ -1095,12 +1119,12 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
           >
             <Download className="w-4 h-4" />
-            Sample CSV
+            Sample Template
           </button>
-          <input ref={taskCsvInputRef} type="file" accept=".csv" className="hidden" onChange={handleTaskCsvFile} />
+          <input ref={taskCsvInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleTaskFile} />
         </div>
         <p className="text-xs text-gray-400">
-          CSV columns: title, description, priority (low/medium/high/critical), assigned_to (name or email), assigned_team (name), required (yes/no). Imported tasks are appended to this template.
+          Columns: title, description, priority (low/medium/high/critical), assigned_to (username, email, or name), assigned_team (name), required (yes/no). Supports .csv and .xlsx files.
         </p>
         {importMsg && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">{importMsg}</p>}
       </div>

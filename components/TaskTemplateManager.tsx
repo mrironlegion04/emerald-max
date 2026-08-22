@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, RotateCcw, X, ClipboardList } from 'lucide-react'
+import { Plus, Trash2, RotateCcw, X, ClipboardList, Search } from 'lucide-react'
 import Badge from './Badge'
 
 interface TaskTemplateTask {
@@ -23,18 +23,17 @@ interface TaskTemplate {
   _count: { tasks: number; pmSchedules: number }
 }
 
-const priorityColors: Record<string, string> = {
-  CRITICAL: 'bg-red-100 text-red-700',
-  HIGH: 'bg-orange-100 text-orange-700',
-  MEDIUM: 'bg-blue-50 text-blue-600',
-  LOW: 'bg-gray-100 text-gray-500',
+interface Props {
+  initialTemplates: TaskTemplate[]
 }
 
-export default function TaskTemplateManager() {
+export default function TaskTemplateManager({ initialTemplates }: Props) {
   const router = useRouter()
-  const [templates, setTemplates] = useState<TaskTemplate[]>([])
+  const [templates] = useState<TaskTemplate[]>(initialTemplates)
   const [showDeleted, setShowDeleted] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [archivedTemplates, setArchivedTemplates] = useState<TaskTemplate[]>([])
+  const [loadingArchived, setLoadingArchived] = useState(false)
+  const [search, setSearch] = useState('')
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -46,16 +45,30 @@ export default function TaskTemplateManager() {
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = showDeleted ? '?includeDeleted=true' : ''
-      const res = await fetch(`/api/task-templates${params}`)
-      if (res.ok) setTemplates(await res.json())
-    } finally { setLoading(false) }
-  }, [showDeleted])
+  const filteredActive = templates.filter(t =>
+    t.name.toLowerCase().includes(search.toLowerCase()) ||
+    (t.description ?? '').toLowerCase().includes(search.toLowerCase())
+  )
+  const filteredArchived = archivedTemplates.filter(t =>
+    t.name.toLowerCase().includes(search.toLowerCase()) ||
+    (t.description ?? '').toLowerCase().includes(search.toLowerCase())
+  )
 
-  useEffect(() => { fetchTemplates() }, [fetchTemplates])
+  const toggleShowDeleted = useCallback(async () => {
+    const next = !showDeleted
+    setShowDeleted(next)
+    if (next && archivedTemplates.length === 0) {
+      setLoadingArchived(true)
+      try {
+        const res = await fetch('/api/task-templates?includeDeleted=true')
+        if (res.ok) {
+          const all = await res.json()
+          setArchivedTemplates(all.filter((t: TaskTemplate) => t.isDeleted))
+        }
+      } catch { /* keep empty */ }
+      setLoadingArchived(false)
+    }
+  }, [showDeleted, archivedTemplates.length])
 
   function openCreate() {
     setEditId(null)
@@ -101,6 +114,16 @@ export default function TaskTemplateManager() {
     setEditTasks(prev => prev.filter((_, i) => i !== index))
   }
 
+  function moveTask(index: number, direction: -1 | 1) {
+    setEditTasks(prev => {
+      const next = [...prev]
+      const target = index + direction
+      if (target < 0 || target >= next.length) return next
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
   async function handleSave() {
     if (!editName.trim()) { setError('Name is required'); return }
     const validTasks = editTasks.filter(t => t.title.trim())
@@ -129,7 +152,6 @@ export default function TaskTemplateManager() {
         return
       }
       setModalOpen(false)
-      fetchTemplates()
       router.refresh()
     } catch { setError('Network error') }
     finally { setSaving(false) }
@@ -137,7 +159,7 @@ export default function TaskTemplateManager() {
 
   async function handleArchive(id: string) {
     const res = await fetch(`/api/task-templates/${id}`, { method: 'DELETE' })
-    if (res.ok) { fetchTemplates(); router.refresh() }
+    if (res.ok) { router.refresh() }
     setDeleteConfirmId(null)
   }
 
@@ -146,84 +168,125 @@ export default function TaskTemplateManager() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'restore' }),
     })
-    if (res.ok) { fetchTemplates(); router.refresh() }
+    if (res.ok) { router.refresh() }
   }
 
-  const activeTemplates = templates.filter(t => !t.isDeleted)
-  const archivedTemplates = templates.filter(t => t.isDeleted)
+  const hasAnyTemplates = templates.length > 0 || archivedTemplates.length > 0
+  const isSearching = search.trim().length > 0
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input type="checkbox" checked={showDeleted} onChange={e => setShowDeleted(e.target.checked)}
-              className="w-4 h-4 text-red-600 rounded border-gray-300" />
-            Show archived
-          </label>
+      {/* Search + New row */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 group">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search templates\u2026"
+            className="input-field pl-10 text-sm"
+          />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors" />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        <button onClick={openCreate} className="btn-primary text-sm flex items-center gap-1.5">
+        <button onClick={openCreate} className="btn-primary text-sm flex items-center gap-1.5 whitespace-nowrap">
           <Plus className="w-4 h-4" /> New Template
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
-      ) : templates.length === 0 ? (
+      {/* Archived toggle */}
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input type="checkbox" checked={showDeleted} onChange={toggleShowDeleted}
+            className="w-4 h-4 text-red-600 rounded border-gray-300" />
+          Show archived
+        </label>
+      </div>
+
+      {/* Active templates */}
+      {!hasAnyTemplates && !isSearching ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
           <ClipboardList className="w-8 h-8 text-gray-300 mx-auto mb-3" />
           <p className="text-sm text-gray-400">No task templates yet.</p>
           <p className="text-xs text-gray-400 mt-1">Create reusable checklists for your PM schedules.</p>
         </div>
+      ) : filteredActive.length === 0 && !showDeleted ? (
+        <div className="text-center py-10 bg-white rounded-xl border border-gray-200">
+          <p className="text-sm text-gray-400">
+            {isSearching ? `No active templates match \u201c${search}\u201d` : 'No active templates on this page.'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {activeTemplates.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
-              {activeTemplates.map(t => (
-                <div key={t.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">
-                      {t._count.tasks} task{t._count.tasks !== 1 ? 's' : ''}
-                      {t._count.pmSchedules > 0 && ` · linked to ${t._count.pmSchedules} PM`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => openEdit(t)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
-                    {deleteConfirmId === t.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => handleArchive(t.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-2 rounded">Archive</button>
-                        <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-500 hover:underline">Cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setDeleteConfirmId(t.id)} className="text-xs text-red-600 hover:text-red-700 font-medium">Archive</button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {showDeleted && archivedTemplates.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
-              <div className="px-5 py-2 bg-gray-50">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Archived</p>
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
+          {filteredActive.map(t => (
+            <div key={t.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                <p className="text-xs text-gray-400">
+                  {t._count.tasks} task{t._count.tasks !== 1 ? 's' : ''}
+                  {t._count.pmSchedules > 0 && ` \u00b7 linked to ${t._count.pmSchedules} PM${t._count.pmSchedules !== 1 ? 's' : ''}`}
+                </p>
               </div>
-              {archivedTemplates.map(t => (
-                <div key={t.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-400 line-through">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t._count.tasks} tasks</p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => openEdit(t)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
+                {deleteConfirmId === t.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => handleArchive(t.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-2 rounded">Archive</button>
+                    <button onClick={() => setDeleteConfirmId(null)} className="text-xs text-gray-500 hover:underline">Cancel</button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge label="Archived" variant="red" />
-                    <button onClick={() => handleRestore(t.id)} className="text-xs text-blue-600 hover:underline font-medium flex items-center gap-1">
-                      <RotateCcw className="w-3 h-3" /> Restore
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ) : (
+                  <button onClick={() => setDeleteConfirmId(t.id)} className="text-xs text-red-600 hover:text-red-700 font-medium">Archive</button>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Archived templates */}
+      {showDeleted && (
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
+          <div className="px-5 py-2 bg-gray-50">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Archived
+              {filteredArchived.length > 0 && ` \u00b7 ${filteredArchived.length}`}
+            </p>
+          </div>
+          {loadingArchived ? (
+            <div className="px-5 py-4">
+              <p className="text-xs text-gray-400">Loading archived\u2026</p>
+            </div>
+          ) : filteredArchived.length === 0 ? (
+            <div className="px-5 py-4">
+              <p className="text-xs text-gray-400">
+                {isSearching ? `No archived templates match \u201c${search}\u201d` : 'No archived templates.'}
+              </p>
+            </div>
+          ) : (
+            filteredArchived.map(t => (
+              <div key={t.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-400 line-through">{t.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {t._count.tasks} task{t._count.tasks !== 1 ? 's' : ''}
+                    {t._count.pmSchedules > 0 && ` \u00b7 linked to ${t._count.pmSchedules} PM${t._count.pmSchedules !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge label="Archived" variant="red" />
+                  <button onClick={() => handleRestore(t.id)} className="text-xs text-blue-600 hover:underline font-medium flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Restore
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -255,6 +318,7 @@ export default function TaskTemplateManager() {
                 {editTasks.map((task, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2">
+                      <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">{i + 1}</span>
                       <input type="text" value={task.title} onChange={e => updateTask(i, 'title', e.target.value)}
                         placeholder="Task title" className="input-field flex-1 text-sm" />
                       <select value={task.priority} onChange={e => updateTask(i, 'priority', e.target.value)}
@@ -269,15 +333,25 @@ export default function TaskTemplateManager() {
                           className="w-3.5 h-3.5 rounded" />
                         Req
                       </label>
-                      <button onClick={() => removeTask(i)} className="text-gray-400 hover:text-red-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button type="button" onClick={() => moveTask(i, -1)} disabled={i === 0}
+                          className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+                        </button>
+                        <button type="button" onClick={() => moveTask(i, 1)} disabled={i === editTasks.length - 1}
+                          className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        <button type="button" onClick={() => removeTask(i)} className="p-0.5 text-gray-400 hover:text-red-500">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <input type="text" value={task.description} onChange={e => updateTask(i, 'description', e.target.value)}
                       placeholder="Optional description" className="input-field w-full text-xs" />
                   </div>
                 ))}
-                <button onClick={addTask} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
+                <button type="button" onClick={addTask} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
                   <Plus className="w-4 h-4" /> Add task
                 </button>
               </div>

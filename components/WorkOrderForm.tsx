@@ -443,93 +443,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
         </div>
       )}
 
-      {/* Core info */}
-      <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-5 bg-white">
-        <h2 className="font-bold text-slate-805 text-sm tracking-tight pb-3 border-b border-slate-100">Work order details</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {inputRow('Type', false,
-            <div className="space-y-1">
-              <select value={form.type} onChange={e => set('type', e.target.value)} disabled={isPMGenerated} className="input-field text-xs sm:text-sm bg-white disabled:bg-gray-50 disabled:text-slate-400">
-                {typeOptions.map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}
-              </select>
-              {isPMGenerated && (
-                <p className="text-[11px] text-slate-400 font-medium">Managed by the PM schedule — cannot be changed.</p>
-              )}
-            </div>
-          )}
-          {inputRow('Priority', false,
-            <>
-              <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-                {priorityOptions.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}
-              </select>
-              {lastAutoPriority.current && (
-                <p className="text-[11px] text-emerald-700 font-semibold mt-1">Auto-set from issue severity</p>
-              )}
-            </>
-          )}
-          {inputRow('Resolution', false,
-            <select value={form.resolution} onChange={e => set('resolution', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
-              <option value="">None</option>
-              {resolutionOptions.map(r => <option key={r} value={r}>{resolutionLabels[r]}</option>)}
-            </select>
-          )}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {inputRow('Start date', false,
-            <div className="flex gap-2">
-              <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
-                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
-              <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
-                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
-            </div>
-          )}
-          {inputRow('Due date', false,
-            <div className="flex gap-2">
-              <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
-                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
-              <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
-                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
-            </div>
-          )}
-        </div>
-        <p className="text-[11px] text-slate-400 font-medium -mt-3">
-          Times are optional and only tell the technician when to work — due status is based on the calendar date only.
-        </p>
-        {inputRow('Machine down since', false,
-          <>
-            <input
-              type="datetime-local"
-              value={form.downtimeStartedAt}
-              onChange={e => {
-                set('downtimeStartedAt', e.target.value)
-                if (!e.target.value) set('downtimeEndedAt', '')
-              }}
-              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-400 font-medium mt-1">
-              When the machine actually went down. If unknown, leave blank — the tech can record it when work starts.
-            </p>
-          </>
-        )}
-        {form.downtimeStartedAt && inputRow('Back up time', false,
-          <>
-            <input
-              type="datetime-local"
-              value={form.downtimeEndedAt}
-              onChange={e => set('downtimeEndedAt', e.target.value)}
-              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
-            />
-            <p className="text-[11px] text-slate-400 font-medium mt-1">
-              When the machine was back up. Optional here — if the machine is still down, leave blank and record it on completion.
-            </p>
-          </>
-        )}
-        {inputRow('Description', false,
-          <textarea value={form.description} onChange={e => set('description', e.target.value)}
-            className="input-field text-xs sm:text-sm resize-none" rows={3} placeholder="Describe the work to be done..." />
-        )}
-      </div>
-
       {/* Assignment */}
       <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-5 bg-white">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
@@ -626,7 +539,7 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
               <select value={form.teamId} onChange={e => set('teamId', e.target.value)} className="input-field text-xs sm:text-sm bg-white cursor-pointer" required>
                 <option value="">Select team...</option>
                 {recommendedTeams.length > 0 && (
-                  <optgroup label="⭐ Recommended">
+                  <optgroup label="&#11088; Recommended">
                     {recommendedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </optgroup>
                 )}
@@ -639,12 +552,99 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
             )}
             {inputRow('Individual', false,
               <select value={form.assignedToId} onChange={e => set('assignedToId', e.target.value)} className="input-field text-xs sm:text-sm bg-white cursor-pointer">
-                <option value="">— Unassigned —</option>
+                <option value="">&#8212; Unassigned &#8212;</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
               </select>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Core info */}
+      <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-5 bg-white">
+        <h2 className="font-bold text-slate-805 text-sm tracking-tight pb-3 border-b border-slate-100">Work order details</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {inputRow('Type', false,
+            <div className="space-y-1">
+              <select value={form.type} onChange={e => set('type', e.target.value)} disabled={isPMGenerated} className="input-field text-xs sm:text-sm bg-white disabled:bg-gray-50 disabled:text-slate-400">
+                {typeOptions.map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}
+              </select>
+              {isPMGenerated && (
+                <p className="text-[11px] text-slate-400 font-medium">Managed by the PM schedule &#8212; cannot be changed.</p>
+              )}
+            </div>
+          )}
+          {inputRow('Priority', false,
+            <>
+              <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field text-xs sm:text-sm bg-white">
+                {priorityOptions.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}
+              </select>
+              {lastAutoPriority.current && (
+                <p className="text-[11px] text-emerald-700 font-semibold mt-1">Auto-set from issue severity</p>
+              )}
+            </>
+          )}
+          {inputRow('Resolution', false,
+            <select value={form.resolution} onChange={e => set('resolution', e.target.value)} className="input-field text-xs sm:text-sm bg-white">
+              <option value="">None</option>
+              {resolutionOptions.map(r => <option key={r} value={r}>{resolutionLabels[r]}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {inputRow('Start date', false,
+            <div className="flex gap-2">
+              <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+              <input type="time" value={form.startTime} onChange={e => set('startTime', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
+            </div>
+          )}
+          {inputRow('Due date', false,
+            <div className="flex gap-2">
+              <input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer flex-1" />
+              <input type="time" value={form.dueTime} onChange={e => set('dueTime', e.target.value)}
+                className="input-field text-xs sm:text-sm bg-white cursor-pointer w-28!" />
+            </div>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-400 font-medium -mt-3">
+          Times are optional and only tell the technician when to work &#8212; due status is based on the calendar date only.
+        </p>
+        {inputRow('Machine down since', false,
+          <>
+            <input
+              type="datetime-local"
+              value={form.downtimeStartedAt}
+              onChange={e => {
+                set('downtimeStartedAt', e.target.value)
+                if (!e.target.value) set('downtimeEndedAt', '')
+              }}
+              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-400 font-medium mt-1">
+              When the machine actually went down. If unknown, leave blank &#8212; the tech can record it when work starts.
+            </p>
+          </>
+        )}
+        {form.downtimeStartedAt && inputRow('Back up time', false,
+          <>
+            <input
+              type="datetime-local"
+              value={form.downtimeEndedAt}
+              onChange={e => set('downtimeEndedAt', e.target.value)}
+              className="input-field text-xs sm:text-sm bg-white cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-400 font-medium mt-1">
+              When the machine was back up. Optional here &#8212; if the machine is still down, leave blank and record it on completion.
+            </p>
+          </>
+        )}
+        {inputRow('Description', false,
+          <textarea value={form.description} onChange={e => set('description', e.target.value)}
+            className="input-field text-xs sm:text-sm resize-none" rows={3} placeholder="Describe the work to be done..." />
+        )}
       </div>
 
       {/* Issue selector — shown when an asset or location is selected */}

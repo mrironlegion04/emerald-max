@@ -301,8 +301,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
     if (newTitle && newTitle !== form.title) setForm(prev => ({ ...prev, title: newTitle }))
   }, [isEdit, form.assetId, form.type, form.issueId, form.customIssue, form.selectedAssetIds, issueGroups, form.title])
 
-  const suggestedTitle = generateTitle(form.assetId ? [form.assetId] : [], form.selectedAssetIds, form.type, form.issueId, form.customIssue)
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setSaving(true)
@@ -448,18 +446,6 @@ export default function WorkOrderForm({ assets, locations, users, teams = [], in
       {/* Core info */}
       <div className="premium-card p-5 sm:p-6 border border-slate-200/50 shadow-sm space-y-5 bg-white">
         <h2 className="font-bold text-slate-805 text-sm tracking-tight pb-3 border-b border-slate-100">Work order details</h2>
-        {inputRow('Title', true,
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={form.title}
-              readOnly
-              placeholder={suggestedTitle || 'Enter work order title...'}
-              className="input-field text-xs sm:text-sm bg-gray-50"
-            />
-            <p className="text-[11px] text-slate-400 font-medium">Auto-generated from your selections.</p>
-          </div>
-        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {inputRow('Type', false,
             <div className="space-y-1">

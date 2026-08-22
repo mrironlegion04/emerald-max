@@ -204,12 +204,6 @@ export default function RequesterRequestEditForm({ woId, initial }: Props) {
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Request title</label>
-        <input type="text" value={form.title} readOnly className="input-field bg-gray-50" placeholder="Auto-generated from your selections" />
-        <p className="text-[11px] text-gray-400 mt-1">Auto-generated from your selections.</p>
-      </div>
-
-      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
         <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
       </div>

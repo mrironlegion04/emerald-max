@@ -267,24 +267,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Request title <span className="text-red-500">*</span></label>
-              <input type="text" value={form.title} readOnly className="input-field bg-gray-50" placeholder="Auto-generated after selecting the issue" />
-              <p className="text-[11px] text-gray-400 mt-1">Auto-generated from your selections.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
-              <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Work order type <span className="text-red-500">*</span></label>
-              <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field" required>
-                <option value="">Select type</option>
-                <option value="BREAKDOWN">Breakdown</option>
-                <option value="PREVENTIVE">Preventive</option>
-                <option value="PREDICTIVE">Predictive</option>
-              </select>
-            </div>
             {currentUser && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Asset <span className="text-red-500">*</span></label>
@@ -292,6 +274,40 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
                 <p className="text-[11px] text-gray-400 mt-1">Select the asset this request is about. Location auto-fills from it.</p>
               </div>
             )}
+            {currentUser && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                {form.assetId ? (
+                  form.location ? (
+                    <div className="input-field bg-gray-50 text-gray-500 flex items-center gap-2">
+                      <span className="truncate">{form.location}</span>
+                    </div>
+                  ) : (
+                    <div className="input-field bg-gray-50 text-gray-400">
+                      This asset has no location assigned
+                    </div>
+                  )
+                ) : (
+                  <div className="input-field bg-gray-50 text-gray-400">
+                    Select an asset to see its location
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400 mt-1">Read-only — location comes from the selected asset.</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+              <textarea value={form.description} onChange={e => set('description', e.target.value)} className="input-field resize-none" rows={4} placeholder="Please describe the problem in detail..." required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Work order type <span className="text-red-500">*</span></label>
+              <select value={form.type} onChange={e => set('type', e.target.value)} className="input-field" required>
+                <option value="">Select type</option>
+                <option value="BREAKDOWN">Breakdown</option>
+                <option value="PREVENTIVE">Preventive</option>
+                <option value="PREDICTIVE">Predictive</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Issue <span className="text-red-500">*</span></label>
               {activeGroup && (
@@ -325,27 +341,6 @@ export default function PublicRequestForm({ currentUser, initialAssetId }: { cur
               )}
               <p className="text-[11px] text-gray-400 mt-1">What problem are you reporting? Issues are suggested from the asset's category. Priority is suggested from the issue severity.</p>
             </div>
-            {currentUser && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                {form.assetId ? (
-                  form.location ? (
-                    <div className="input-field bg-gray-50 text-gray-500 flex items-center gap-2">
-                      <span className="truncate">{form.location}</span>
-                    </div>
-                  ) : (
-                    <div className="input-field bg-gray-50 text-gray-400">
-                      This asset has no location assigned
-                    </div>
-                  )
-                ) : (
-                  <div className="input-field bg-gray-50 text-gray-400">
-                    Select an asset to see its location
-                  </div>
-                )}
-                <p className="text-[11px] text-gray-400 mt-1">Read-only — location comes from the selected asset.</p>
-              </div>
-            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
               <select value={form.priority} onChange={e => handlePriorityChange(e.target.value)} className="input-field">

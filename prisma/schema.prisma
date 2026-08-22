@@ -206,8 +206,9 @@ model Team {
   workOrders WorkOrder[]
   subtasks   Subtask[]    @relation("SubtasksAssignedToTeam")
    pmSchedules MaintenanceSchedule[] @relation("PMTeamAssigned")
-   pmTasks     PmScheduleTask[]    @relation("PmTaskAssignedTeam")
-   woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
+    pmTasks     PmScheduleTask[]    @relation("PmTaskAssignedTeam")
+    assignedTaskTemplateTasks TaskTemplateTask[] @relation("TaskTemplateTaskAssignedTeam")
+    woPerformers WorkOrderPerformer[] @relation("WOPerformerTeam")
 
   @@map("teams")
 }
@@ -312,6 +313,8 @@ model User {
   createdPMSchedules    MaintenanceSchedule[]   @relation("PMCreatedBy")
   assignedPMSchedules   MaintenanceSchedule[]   @relation("PMAssignedTo")
   assignedPMTasks       PmScheduleTask[]        @relation("PMTaskAssignedTo")
+  createdTaskTemplates  TaskTemplate[]          @relation("TaskTemplateCreatedBy")
+  assignedTaskTemplateTasks TaskTemplateTask[]  @relation("TaskTemplateTaskAssignedTo")
   statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
   repairSessionsStarted   RepairSession[] @relation("RepairSessionStartedBy")
   repairSessionsCompleted RepairSession[] @relation("RepairSessionCompletedBy")
@@ -854,6 +857,7 @@ model MaintenanceSchedule {
   locationScope       LocationScope?
   workOrders          WorkOrder[]        @relation("PMScheduleWorkOrders")
   tasks               PmScheduleTask[]   @relation("PMScheduleTasks")
+  templateLinks       PmScheduleTemplate[]
   skipLogs            PmSkipLog[]        @relation("PmSkipLogSchedule")
   skipCount           Int       @default(0)
   lastSkippedAt       DateTime?
@@ -923,6 +927,65 @@ model PmScheduleTask {
 
   @@index([scheduleId])
   @@map("pm_schedule_tasks")
+}
+
+model TaskTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+
+  // Soft-delete (archive) support
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+  deletedBy   String?
+  restoredAt  DateTime?
+  restoredBy  String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
+
+  tasks       TaskTemplateTask[]
+  pmSchedules PmScheduleTemplate[]
+
+  @@index([isDeleted])
+  @@map("task_templates")
+}
+
+model TaskTemplateTask {
+  id            String            @id @default(cuid())
+  title         String
+  description   String?
+  priority      WorkOrderPriority @default(MEDIUM)
+  order         Int               @default(0)
+  required      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  templateId    String
+  template      TaskTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  assignedToId  String?
+  assignedTo    User?             @relation("TaskTemplateTaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedTeamId String?
+  assignedTeam  Team?             @relation("TaskTemplateTaskAssignedTeam", fields: [assignedTeamId], references: [id], onDelete: SetNull)
+
+  @@index([templateId])
+  @@map("task_template_tasks")
+}
+
+model PmScheduleTemplate {
+  scheduleId String
+  schedule   MaintenanceSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  templateId String
+  template   TaskTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  order      Int                 @default(0)
+
+  @@id([scheduleId, templateId])
+  @@index([templateId])
+  @@map("pm_schedule_templates")
 }
 
 model AuditLog {

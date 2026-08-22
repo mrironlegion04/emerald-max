@@ -79,6 +79,8 @@ const pmSchema = z.object({
   externalId:           z.string().nullable().optional(),
   // Task template — copied to every generated work order as subtasks
   tasks:                z.array(pmTaskSchema).optional().default([]),
+  // Linked task templates from the library
+  templateIds:          z.array(z.string()).optional().default([]),
 }).refine(data => data.assetId || data.locationId || (data.assetIds && data.assetIds.length > 0), {
   message: "Either Asset or Location must be selected",
   path: ["assetId"]
@@ -206,6 +208,9 @@ export async function POST(request: NextRequest) {
             required:        t.required,
           })),
         },
+        templateLinks: data.templateIds.length > 0
+          ? { create: data.templateIds.map((templateId, i) => ({ templateId, order: i })) }
+          : undefined,
       },
       include: {
         tasks: { orderBy: { order: 'asc' as const } },

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
+import TaskTemplatePicker from './TaskTemplatePicker'
 import { parseCSV } from '@/lib/csv'
 import * as XLSX from 'xlsx'
 
@@ -214,6 +215,9 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   const [tasks, setTasks] = useState<PMTask[]>(
     (initialData as any)?.tasks ?? []
+  )
+  const [templateIds, setTemplateIds] = useState<string[]>(
+    (initialData as any)?.templateIds ?? []
   )
   const [showAllTasks, setShowAllTasks] = useState(false)
   const VISIBLE_TASKS = 10
@@ -452,6 +456,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             assignedTeamId: t.assignedTeamId || null,
             required: t.required,
           })),
+        templateIds,
       }
       const url    = isEdit ? `/api/pm/${scheduleId}` : '/api/pm'
       const method = isEdit ? 'PUT' : 'POST'
@@ -973,13 +978,20 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         <div className="flex items-center gap-2">
           <ListChecks className="w-4 h-4 text-emerald-600" />
           <h2 className="font-semibold text-gray-900 text-sm">Task Template</h2>
-          {tasks.length > 0 && (
-            <span className="text-xs text-gray-400 font-medium">({tasks.length})</span>
+          {(tasks.length > 0 || templateIds.length > 0) && (
+            <span className="text-xs text-gray-400 font-medium">({tasks.length + templateIds.length})</span>
           )}
         </div>
         <p className="text-xs text-gray-500">
-          These tasks are copied onto every work order generated from this schedule as subtasks.
+          Linked templates and additional tasks are copied onto every work order generated from this schedule as subtasks.
         </p>
+
+        {/* Linked task templates */}
+        <TaskTemplatePicker selectedIds={templateIds} onChange={setTemplateIds} />
+
+        {/* Additional inline tasks */}
+        <div className="pt-3 border-t border-dashed border-gray-200">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Additional Tasks</p>
 
         {tasks.length > 0 && (() => {
           const visibleTasks = showAllTasks ? tasks : tasks.slice(0, VISIBLE_TASKS)
@@ -1122,6 +1134,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
             Sample Template
           </button>
           <input ref={taskCsvInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleTaskFile} />
+        </div>
         </div>
         <p className="text-xs text-gray-400">
           Columns: title, description, priority (low/medium/high/critical), assigned_to (username, email, or name), assigned_team (name), required (yes/no). Supports .csv and .xlsx files.

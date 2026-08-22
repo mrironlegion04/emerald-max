@@ -215,6 +215,16 @@ export async function generateWOsForSchedule(
       },
       location: { select: { id: true, name: true } },
       tasks: { orderBy: { order: 'asc' as const } },
+      templateLinks: {
+        orderBy: { order: 'asc' },
+        include: {
+          template: {
+            include: {
+              tasks: { orderBy: { order: 'asc' } },
+            },
+          },
+        },
+      },
     },
   })
 
@@ -458,19 +468,40 @@ export async function generateWOsForSchedule(
             },
           })
 
-          // Copy the schedule's task template into subtasks on the generated WO
-          if (schedule.tasks.length > 0) {
-            await tx.subtask.createMany({
-              data: schedule.tasks.map(t => ({
+          // Copy template tasks + inline tasks into subtasks on the generated WO
+          const allTasks: { title: string; description: string | null; priority: any; order: number; required: boolean; assignedToId: string | null; assignedTeamId: string | null }[] = []
+          // Template tasks first (in junction order)
+          for (const link of schedule.templateLinks) {
+            for (const t of link.template.tasks) {
+              allTasks.push({
                 title:           t.title,
                 description:     t.description ?? null,
                 priority:        t.priority,
-                order:           t.order,
+                order:           allTasks.length,
                 required:        t.required,
                 assignedToId:    t.assignedToId ?? null,
                 assignedTeamId:  t.assignedTeamId ?? null,
-                workOrderId:     wo.id,
-                createdById:     options?.userId ?? null,
+              })
+            }
+          }
+          // Inline tasks after templates
+          for (const t of schedule.tasks) {
+            allTasks.push({
+              title:           t.title,
+              description:     t.description ?? null,
+              priority:        t.priority,
+              order:           allTasks.length,
+              required:        t.required,
+              assignedToId:    t.assignedToId ?? null,
+              assignedTeamId:  t.assignedTeamId ?? null,
+            })
+          }
+          if (allTasks.length > 0) {
+            await tx.subtask.createMany({
+              data: allTasks.map(t => ({
+                ...t,
+                workOrderId:  wo.id,
+                createdById:  options?.userId ?? null,
               })),
             })
           }

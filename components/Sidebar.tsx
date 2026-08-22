@@ -173,6 +173,12 @@ const libraryGroupItems = [
     icon: <AlertCircle className="w-4 h-4" />,
     adminOnly: true,
   },
+  {
+    label: 'Task Templates',
+    href: '/settings/task-templates',
+    icon: <ClipboardCheck className="w-4 h-4" />,
+    adminOnly: true,
+  },
 ]
 
 // Slim Settings group (only non-library admin items)

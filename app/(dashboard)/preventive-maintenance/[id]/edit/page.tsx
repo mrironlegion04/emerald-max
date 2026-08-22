@@ -35,6 +35,9 @@ export default async function EditPMPage({
           orderBy: { order: 'asc' },
           select: { title: true, description: true, priority: true, order: true, assignedToId: true, assignedTeamId: true, required: true },
         },
+        templateLinks: {
+          select: { templateId: true },
+        },
         asset: { select: { id: true, locationId: true } },
         assets: { select: { asset: { select: { id: true, locationId: true } } } },
       },
@@ -113,6 +116,7 @@ export default async function EditPMPage({
       assignedTeamId: t.assignedTeamId ?? '',
       required:     t.required ?? true,
     })),
+    templateIds:        (schedule.templateLinks ?? []).map(l => l.templateId),
   }
 
   return (

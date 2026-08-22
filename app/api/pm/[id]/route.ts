@@ -78,6 +78,8 @@ const updateSchema = z.object({
   externalId:           z.string().nullable().optional(),
   // Task template — replace-all semantics when provided
   tasks:                z.array(pmTaskSchema).optional(),
+  // Linked task templates from the library — replace-all semantics
+  templateIds:          z.array(z.string()).optional(),
 })
 
 export async function GET(
@@ -100,6 +102,22 @@ export async function GET(
           include: {
             assignedTo: { select: { id: true, name: true } },
             assignedTeam: { select: { id: true, name: true } },
+          },
+        },
+        templateLinks: {
+          orderBy: { order: 'asc' },
+          include: {
+            template: {
+              include: {
+                tasks: {
+                  orderBy: { order: 'asc' },
+                  include: {
+                    assignedTo: { select: { id: true, name: true } },
+                    assignedTeam: { select: { id: true, name: true } },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -218,6 +236,14 @@ export async function PUT(
         if (finalAssetIds.length > 0) {
           await tx.maintenanceScheduleAsset.createMany({
             data: finalAssetIds.map(assetId => ({ scheduleId: id, assetId })),
+          })
+        }
+      }
+      if (data.templateIds !== undefined) {
+        await tx.pmScheduleTemplate.deleteMany({ where: { scheduleId: id } })
+        if (data.templateIds.length > 0) {
+          await tx.pmScheduleTemplate.createMany({
+            data: data.templateIds.map((templateId, i) => ({ scheduleId: id, templateId, order: i })),
           })
         }
       }

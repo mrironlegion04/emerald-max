@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, RotateCcw, X, ClipboardList, Search, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, GripVertical } from 'lucide-react'
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import * as XLSX from 'xlsx'
 import Badge from './Badge'
 
@@ -32,6 +35,36 @@ interface Props {
 }
 
 type SortField = 'name' | 'tasks' | 'pmSchedules' | 'updatedAt'
+
+function SortableRow({ id, index, onRemove, expanded, onToggle, children, priority, required, title }: {
+  id: string; index: number; onRemove: () => void; expanded: boolean; onToggle: () => void;
+  children: React.ReactNode; priority: string; required: boolean; title: string
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  }
+  const priorityColor = priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
+  return (
+    <div ref={setNodeRef} style={style} className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 cursor-pointer select-none" onClick={onToggle}>
+        <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
+          <GripVertical className="w-4 h-4 text-gray-300" />
+        </div>
+        <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{index + 1}</span>
+        <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{title || <span className="italic text-gray-400">Untitled task</span>}</span>
+        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{priority}</span>
+        {required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+        <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </div>
+      {expanded && children}
+    </div>
+  )
+}
 type SortDir = 'asc' | 'desc'
 
 export default function TaskTemplateManager({ initialTemplates }: Props) {
@@ -122,6 +155,19 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
 
   function openCreate() {
     setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setTaskSearch(''); setExpandedTasks(new Set()); setError(''); setModalOpen(true)
+  }
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  )
+
+  function handleTaskDragEnd(event: any) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = Number(active.id)
+    const newIndex = Number(over.id)
+    setEditTasks(prev => arrayMove(prev, oldIndex, newIndex))
   }
 
   async function openEdit(t: TaskTemplate) {
@@ -524,60 +570,65 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                         (t.description ?? '').toLowerCase().includes(taskSearch.toLowerCase())
                       )
                     : editTasks.map((t, i) => ({ t, i }))
-                  return filtered.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-3 text-center">No tasks match &ldquo;{taskSearch}&rdquo;</p>
-                  ) : (
-                    filtered.map(({ t: task, i }) => {
+                  if (filtered.length === 0) {
+                    return <p className="text-xs text-gray-400 py-3 text-center">No tasks match &ldquo;{taskSearch}&rdquo;</p>
+                  }
+                  const isSearching = !!taskSearch.trim()
+                  const taskContent = filtered.map(({ t: task, i }) => {
                     const expanded = expandedTasks.has(i)
                     const priorityColor = task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
-                    return (
-                  <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-                    {/* Collapsed header — always visible */}
-                    <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 cursor-pointer select-none" onClick={() => { const next = new Set(expandedTasks); expanded ? next.delete(i) : next.add(i); setExpandedTasks(next) }}>
-                      <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                      <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
-                      <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled task</span>}</span>
-                      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
-                      {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-                      <button type="button" onClick={e => { e.stopPropagation(); removeTask(i) }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                      <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                    </div>
-                    {/* Expanded details */}
-                    {expanded && (
-                    <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100">
-                      <input type="text" value={task.title} onChange={e => updateTask(i, 'title', e.target.value)} placeholder="Task title" className="input-field w-full text-sm" />
-                      <input type="text" value={task.description} onChange={e => updateTask(i, 'description', e.target.value)} placeholder="Optional description" className="input-field w-full text-xs" />
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                        <select value={task.priority} onChange={e => updateTask(i, 'priority', e.target.value)} className="input-field w-24 sm:w-28 text-xs">
-                          <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
-                        </select>
-                        <label className="flex items-center gap-1 text-xs text-gray-500 select-none">
-                          <input type="checkbox" checked={task.required} onChange={e => updateTask(i, 'required', e.target.checked)} className="w-3.5 h-3.5 rounded" />
-                          Required
-                        </label>
-                        <div className="flex items-center gap-0.5 flex-shrink-0 ml-auto">
-                          <button type="button" onClick={() => moveTask(i, -1)} disabled={i === 0} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
-                            <ArrowUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button type="button" onClick={() => moveTask(i, 1)} disabled={i === editTasks.length - 1} className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
-                            <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
+                    if (isSearching) {
+                      return (
+                        <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50">
+                            <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
+                            <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled</span>}</span>
+                            <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
+                            {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                        <select value={task.assignedToId} onChange={e => updateTask(i, 'assignedToId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
-                          <option value="">-- User --</option>
-                          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                        </select>
-                        <select value={task.assignedTeamId} onChange={e => updateTask(i, 'assignedTeamId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
-                          <option value="">-- Team --</option>
-                          {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    )}
-                  </div>
-                )})
+                      )
+                    }
+                    return (
+                      <SortableRow
+                        key={i} id={String(i)} index={i} expanded={expanded}
+                        onToggle={() => { const next = new Set(expandedTasks); expanded ? next.delete(i) : next.add(i); setExpandedTasks(next) }}
+                        onRemove={() => removeTask(i)}
+                        priority={task.priority} required={task.required} title={task.title}
+                      >
+                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100">
+                          <input type="text" value={task.title} onChange={e => updateTask(i, 'title', e.target.value)} placeholder="Task title" className="input-field w-full text-sm" />
+                          <input type="text" value={task.description} onChange={e => updateTask(i, 'description', e.target.value)} placeholder="Optional description" className="input-field w-full text-xs" />
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <select value={task.priority} onChange={e => updateTask(i, 'priority', e.target.value)} className="input-field w-24 sm:w-28 text-xs">
+                              <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
+                            </select>
+                            <label className="flex items-center gap-1 text-xs text-gray-500 select-none">
+                              <input type="checkbox" checked={task.required} onChange={e => updateTask(i, 'required', e.target.checked)} className="w-3.5 h-3.5 rounded" />
+                              Required
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <select value={task.assignedToId} onChange={e => updateTask(i, 'assignedToId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
+                              <option value="">-- User --</option>
+                              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            </select>
+                            <select value={task.assignedTeamId} onChange={e => updateTask(i, 'assignedTeamId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
+                              <option value="">-- Team --</option>
+                              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </SortableRow>
+                    )
+                  })
+                  if (isSearching) return <div className="space-y-2">{taskContent}</div>
+                  return (
+                    <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleTaskDragEnd}>
+                      <SortableContext items={filtered.map(({ i }) => String(i))} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">{taskContent}</div>
+                      </SortableContext>
+                    </DndContext>
                   )
                 })()}
                 <button type="button" onClick={addTask} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">

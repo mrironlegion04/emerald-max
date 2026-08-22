@@ -192,13 +192,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
     setEditTasks(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
   }
   function removeTask(index: number) { setEditTasks(prev => prev.filter((_, i) => i !== index)) }
-  function moveTask(index: number, direction: -1 | 1) {
-    setEditTasks(prev => {
-      const next = [...prev]; const target = index + direction
-      if (target < 0 || target >= next.length) return next
-      ;[next[index], next[target]] = [next[target], next[index]]; return next
-    })
-  }
 
   async function handleSave() {
     if (!editName.trim()) { setError('Name is required'); return }

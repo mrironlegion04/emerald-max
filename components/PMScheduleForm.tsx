@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
+import { Plus, X, Layers, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -351,18 +351,6 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   function removeTask(index: number) {
     setTasks(prev => prev.filter((_, i) => i !== index))
     setExpandedTasks(prev => { const n = new Set(prev); n.delete(index); return n })
-  }
-
-  function moveTask(index: number, dir: -1 | 1) {
-    setTasks(prev => {
-      const next = [...prev]
-      const target = index + dir
-      if (target < 0 || target >= next.length) return prev
-      const tmp = next[index]
-      next[index] = next[target]
-      next[target] = tmp
-      return next
-    })
   }
 
   // CSV bulk-import into the task template (appends to existing tasks)

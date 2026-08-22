@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
+import { Plus, X, Layers, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2, PenLine } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -12,9 +12,9 @@ import TaskTemplatePicker from './TaskTemplatePicker'
 import { parseCSV } from '@/lib/csv'
 import * as XLSX from 'xlsx'
 
-function PmSortableTask({ id, idx, task, users, teams, expanded, onToggle, onRemove, children }: {
-  id: string; idx: number; task: any; users: any[]; teams: any[]; expanded: boolean;
-  onToggle: () => void; onRemove: () => void; children: React.ReactNode
+function PmSortableTask({ id, idx, task, users, teams, onEdit, onRemove }: {
+  id: string; idx: number; task: any; users: any[]; teams: any[];
+  onEdit: () => void; onRemove: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 50 : undefined }
@@ -22,21 +22,18 @@ function PmSortableTask({ id, idx, task, users, teams, expanded, onToggle, onRem
   const user = users.find((u: any) => u.id === task.assignedToId)
   const team = teams.find((t: any) => t.id === task.assignedTeamId)
   return (
-    <div ref={setNodeRef} style={style} className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 cursor-pointer select-none" onClick={onToggle}>
-        <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4 text-gray-300" />
-        </div>
-        <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{idx + 1}</span>
-        <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled task</span>}</span>
-        {user && <span className="hidden sm:block flex-shrink-0 text-xs text-gray-400">{user.name}</span>}
-        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
-        {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-        {team && <span className="hidden md:block flex-shrink-0 text-xs text-gray-400">{team.name}</span>}
-        <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-4 h-4 text-gray-300" />
       </div>
-      {expanded && children}
+      <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{idx + 1}</span>
+      <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled task</span>}</span>
+      {user && <span className="hidden sm:block flex-shrink-0 text-xs text-gray-400">{user.name}</span>}
+      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
+      {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+      {team && <span className="hidden md:block flex-shrink-0 text-xs text-gray-400">{team.name}</span>}
+      <button type="button" onClick={onEdit} className="flex-shrink-0 p-1 text-gray-300 hover:text-blue-500" title="Edit task"><PenLine className="w-3.5 h-3.5" /></button>
+      <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
     </div>
   )
 }
@@ -253,7 +250,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   )
   const [showAllTasks, setShowAllTasks] = useState(false)
   const [taskSearch, setTaskSearch] = useState('')
-  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
+  const [editingTaskIdx, setEditingTaskIdx] = useState<number | null>(null)
   const VISIBLE_TASKS = 10
 
   const [saving, setSaving] = useState(false)
@@ -341,7 +338,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   function addTask() {
     setTasks(prev => [...prev, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', assignedTeamId: '', required: true }])
-    setExpandedTasks(prev => new Set([...prev, tasks.length]))
+    setEditingTaskIdx(tasks.length)
   }
 
   function updateTask(index: number, field: keyof PMTask, value: string | boolean) {
@@ -350,7 +347,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   function removeTask(index: number) {
     setTasks(prev => prev.filter((_, i) => i !== index))
-    setExpandedTasks(prev => { const n = new Set(prev); n.delete(index); return n })
+    setEditingTaskIdx(prev => prev === index ? null : prev !== null && prev > index ? prev - 1 : prev)
   }
 
   // CSV bulk-import into the task template (appends to existing tasks)
@@ -508,7 +505,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     finally  { setSaving(false) }
   }
 
-  return (
+  return (<>
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
@@ -1051,37 +1048,11 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           const hiddenCount = searchedTasks ? 0 : tasks.length - VISIBLE_TASKS
           const isSearching = !!taskSearch.trim()
           const taskCards = visibleTasks.map(({ t: task, i: idx }) => {
-            const expanded = expandedTasks.has(idx)
             return (
-              <PmSortableTask key={idx} id={String(idx)} idx={idx} task={task} users={users} teams={teams} expanded={expanded}
-                onToggle={() => { const next = new Set(expandedTasks); expanded ? next.delete(idx) : next.add(idx); setExpandedTasks(next) }}
+              <PmSortableTask key={idx} id={String(idx)} idx={idx} task={task} users={users} teams={teams}
+                onEdit={() => setEditingTaskIdx(idx)}
                 onRemove={() => removeTask(idx)}
-              >
-                <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100">
-                  <input type="text" value={task.title} onChange={e => updateTask(idx, 'title', e.target.value)} placeholder="Task title (e.g. Check belt tension)" className="input-field w-full text-sm" />
-                  <textarea value={task.description} onChange={e => updateTask(idx, 'description', e.target.value)} placeholder="Description (optional)" rows={1} className="input-field w-full text-xs resize-none" />
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <select value={task.assignedToId} onChange={e => updateTask(idx, 'assignedToId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
-                      <option value="">— Unassigned —</option>
-                      {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
-                    <select value={task.priority} onChange={e => updateTask(idx, 'priority', e.target.value)} className="input-field w-28 text-xs">
-                      <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
-                    </select>
-                    <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none" title={task.required ? 'Required' : 'Optional'}>
-                      <input type="checkbox" checked={task.required} onChange={e => updateTask(idx, 'required', e.target.checked)} className="sr-only peer" />
-                      <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>{task.required ? 'Req' : 'Opt'}</span>
-                    </label>
-                  </div>
-                  {teams.length > 0 && (
-                    <select value={task.assignedTeamId} onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)} className="input-field w-full text-xs">
-                      <option value="">— No team —</option>
-                      {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  )}
-                </div>
-              </PmSortableTask>
+              />
             )
           })
           return (
@@ -1262,5 +1233,69 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
         <button type="button" onClick={() => router.back()} className="btn-secondary">Cancel</button>
       </div>
     </form>
+
+    {/* Task edit slide-over panel */}
+    {editingTaskIdx !== null && editingTaskIdx < tasks.length && (
+      <div className="fixed inset-0 z-[110] flex justify-end">
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditingTaskIdx(null)} />
+        <div className="relative bg-white shadow-2xl w-full sm:w-[28rem] flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 text-blue-600 text-xs font-bold flex items-center justify-center">{editingTaskIdx + 1}</span>
+              <h2 className="font-semibold text-gray-900 text-sm">Edit Task</h2>
+            </div>
+            <button onClick={() => setEditingTaskIdx(null)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Title</label>
+              <input type="text" value={tasks[editingTaskIdx].title} onChange={e => updateTask(editingTaskIdx, 'title', e.target.value)} placeholder="e.g. Check belt tension" className="input-field w-full" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
+              <textarea value={tasks[editingTaskIdx].description} onChange={e => updateTask(editingTaskIdx, 'description', e.target.value)} placeholder="Optional description for this task" rows={3} className="input-field w-full text-sm resize-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</label>
+                <select value={tasks[editingTaskIdx].priority} onChange={e => updateTask(editingTaskIdx, 'priority', e.target.value)} className="input-field w-full">
+                  <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Required</label>
+                <button type="button" onClick={() => updateTask(editingTaskIdx, 'required', !tasks[editingTaskIdx].required)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors w-full">
+                  <span className={`w-9 h-5 rounded-full relative transition-colors ${tasks[editingTaskIdx].required ? 'bg-emerald-600' : 'bg-gray-200'}`}>
+                    <span className={`absolute top-[2px] left-[2px] bg-white rounded-full h-4 w-4 transition-transform ${tasks[editingTaskIdx].required ? 'translate-x-4' : ''}`} />
+                  </span>
+                  <span className={`text-xs font-bold uppercase ${tasks[editingTaskIdx].required ? 'text-emerald-700' : 'text-gray-400'}`}>
+                    {tasks[editingTaskIdx].required ? 'Required' : 'Optional'}
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned User</label>
+              <select value={tasks[editingTaskIdx].assignedToId} onChange={e => updateTask(editingTaskIdx, 'assignedToId', e.target.value)} className="input-field w-full">
+                <option value="">-- Unassigned --</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned Team</label>
+              <select value={tasks[editingTaskIdx].assignedTeamId} onChange={e => updateTask(editingTaskIdx, 'assignedTeamId', e.target.value)} className="input-field w-full">
+                <option value="">-- No team --</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
+            <button onClick={() => setEditingTaskIdx(null)} className="btn-primary text-sm">Done</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }

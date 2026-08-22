@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, RotateCcw, X, ClipboardList, Search, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, GripVertical } from 'lucide-react'
+import { Plus, Trash2, RotateCcw, X, ClipboardList, Search, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, GripVertical, PenLine } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -36,9 +36,9 @@ interface Props {
 
 type SortField = 'name' | 'tasks' | 'pmSchedules' | 'updatedAt'
 
-function SortableRow({ id, index, onRemove, expanded, onToggle, children, priority, required, title }: {
-  id: string; index: number; onRemove: () => void; expanded: boolean; onToggle: () => void;
-  children: React.ReactNode; priority: string; required: boolean; title: string
+function SortableRow({ id, index, onRemove, onEdit, priority, required, title }: {
+  id: string; index: number; onRemove: () => void; onEdit: () => void;
+  priority: string; required: boolean; title: string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style: React.CSSProperties = {
@@ -49,19 +49,16 @@ function SortableRow({ id, index, onRemove, expanded, onToggle, children, priori
   }
   const priorityColor = priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
   return (
-    <div ref={setNodeRef} style={style} className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 cursor-pointer select-none" onClick={onToggle}>
-        <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4 text-gray-300" />
-        </div>
-        <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{index + 1}</span>
-        <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{title || <span className="italic text-gray-400">Untitled task</span>}</span>
-        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{priority}</span>
-        {required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-        <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-        <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-4 h-4 text-gray-300" />
       </div>
-      {expanded && children}
+      <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{index + 1}</span>
+      <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{title || <span className="italic text-gray-400">Untitled task</span>}</span>
+      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{priority}</span>
+      {required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+      <button type="button" onClick={onEdit} className="flex-shrink-0 p-1 text-gray-300 hover:text-blue-500" title="Edit task"><PenLine className="w-3.5 h-3.5" /></button>
+      <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
     </div>
   )
 }
@@ -84,7 +81,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
   const [editDescription, setEditDescription] = useState('')
   const [editTasks, setEditTasks] = useState<TaskTemplateTask[]>([])
   const [taskSearch, setTaskSearch] = useState('')
-  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
+  const [editingTaskIdx, setEditingTaskIdx] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -154,7 +151,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
   }, [showDeleted, archivedTemplates.length])
 
   function openCreate() {
-    setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setTaskSearch(''); setExpandedTasks(new Set()); setError(''); setModalOpen(true)
+    setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setTaskSearch(''); setEditingTaskIdx(null); setError(''); setModalOpen(true)
   }
 
   const dndSensors = useSensors(
@@ -171,7 +168,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
   }
 
   async function openEdit(t: TaskTemplate) {
-    setEditId(t.id); setEditName(t.name); setEditDescription(t.description ?? ''); setTaskSearch(''); setExpandedTasks(new Set()); setError('')
+    setEditId(t.id); setEditName(t.name); setEditDescription(t.description ?? ''); setTaskSearch(''); setEditingTaskIdx(null); setError('')
     const res = await fetch(`/api/task-templates/${t.id}`)
     if (res.ok) {
       const data = await res.json()
@@ -179,14 +176,13 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
         title: task.title, description: task.description ?? '', priority: task.priority,
         assignedToId: task.assignedToId ?? '', assignedTeamId: task.assignedTeamId ?? '', required: task.required,
       })))
-      setExpandedTasks(new Set(data.tasks.map((_: any, i: number) => i)))
     }
     setModalOpen(true)
   }
 
   function addTask() {
     setEditTasks(prev => [...prev, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', assignedTeamId: '', required: true }])
-    setExpandedTasks(prev => new Set([...prev, editTasks.length]))
+    setEditingTaskIdx(editTasks.length)
   }
   function updateTask(index: number, field: keyof TaskTemplateTask, value: string | boolean) {
     setEditTasks(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
@@ -567,59 +563,29 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                     return <p className="text-xs text-gray-400 py-3 text-center">No tasks match &ldquo;{taskSearch}&rdquo;</p>
                   }
                   const isSearching = !!taskSearch.trim()
-                  const taskContent = filtered.map(({ t: task, i }) => {
-                    const expanded = expandedTasks.has(i)
-                    const priorityColor = task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
+                  const taskRows = filtered.map(({ t: task, i }) => {
                     if (isSearching) {
+                      const pc = task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
                       return (
-                        <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50">
-                            <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
-                            <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled</span>}</span>
-                            <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
-                            {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-                          </div>
+                        <div key={i} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 opacity-70">
+                          <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
+                          <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || 'Untitled'}</span>
+                          <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${pc}`}>{task.priority}</span>
+                          {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+                          <button type="button" onClick={() => setEditingTaskIdx(i)} className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-500" title="Edit"><PenLine className="w-3.5 h-3.5" /></button>
                         </div>
                       )
                     }
                     return (
-                      <SortableRow
-                        key={i} id={String(i)} index={i} expanded={expanded}
-                        onToggle={() => { const next = new Set(expandedTasks); expanded ? next.delete(i) : next.add(i); setExpandedTasks(next) }}
-                        onRemove={() => removeTask(i)}
-                        priority={task.priority} required={task.required} title={task.title}
-                      >
-                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100">
-                          <input type="text" value={task.title} onChange={e => updateTask(i, 'title', e.target.value)} placeholder="Task title" className="input-field w-full text-sm" />
-                          <input type="text" value={task.description} onChange={e => updateTask(i, 'description', e.target.value)} placeholder="Optional description" className="input-field w-full text-xs" />
-                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                            <select value={task.priority} onChange={e => updateTask(i, 'priority', e.target.value)} className="input-field w-24 sm:w-28 text-xs">
-                              <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
-                            </select>
-                            <label className="flex items-center gap-1 text-xs text-gray-500 select-none">
-                              <input type="checkbox" checked={task.required} onChange={e => updateTask(i, 'required', e.target.checked)} className="w-3.5 h-3.5 rounded" />
-                              Required
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                            <select value={task.assignedToId} onChange={e => updateTask(i, 'assignedToId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
-                              <option value="">-- User --</option>
-                              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                            </select>
-                            <select value={task.assignedTeamId} onChange={e => updateTask(i, 'assignedTeamId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
-                              <option value="">-- Team --</option>
-                              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                      </SortableRow>
+                      <SortableRow key={i} id={String(i)} index={i} onRemove={() => removeTask(i)}
+                        onEdit={() => setEditingTaskIdx(i)} priority={task.priority} required={task.required} title={task.title} />
                     )
                   })
-                  if (isSearching) return <div className="space-y-2">{taskContent}</div>
+                  if (isSearching) return <div className="space-y-2">{taskRows}</div>
                   return (
                     <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleTaskDragEnd}>
                       <SortableContext items={filtered.map(({ i }) => String(i))} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">{taskContent}</div>
+                        <div className="space-y-2">{taskRows}</div>
                       </SortableContext>
                     </DndContext>
                   )
@@ -633,6 +599,69 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
             <div className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
               <button onClick={() => setModalOpen(false)} className="btn-secondary text-sm">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Create'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task edit slide-over panel */}
+      {editingTaskIdx !== null && editingTaskIdx < editTasks.length && (
+        <div className="fixed inset-0 z-[110] flex justify-end">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditingTaskIdx(null)} />
+          <div className="relative bg-white shadow-2xl w-full sm:w-[28rem] flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 text-blue-600 text-xs font-bold flex items-center justify-center">{editingTaskIdx + 1}</span>
+                <h2 className="font-semibold text-gray-900 text-sm">Edit Task</h2>
+              </div>
+              <button onClick={() => setEditingTaskIdx(null)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Title</label>
+                <input type="text" value={editTasks[editingTaskIdx].title} onChange={e => updateTask(editingTaskIdx, 'title', e.target.value)} placeholder="e.g. Check belt tension" className="input-field w-full" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
+                <textarea value={editTasks[editingTaskIdx].description} onChange={e => updateTask(editingTaskIdx, 'description', e.target.value)} placeholder="Optional description for this task" rows={3} className="input-field w-full text-sm resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</label>
+                  <select value={editTasks[editingTaskIdx].priority} onChange={e => updateTask(editingTaskIdx, 'priority', e.target.value)} className="input-field w-full">
+                    <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Required</label>
+                  <button type="button" onClick={() => updateTask(editingTaskIdx, 'required', !editTasks[editingTaskIdx].required)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors w-full">
+                    <span className={`w-9 h-5 rounded-full relative transition-colors ${editTasks[editingTaskIdx].required ? 'bg-emerald-600' : 'bg-gray-200'}`}>
+                      <span className={`absolute top-[2px] left-[2px] bg-white rounded-full h-4 w-4 transition-transform ${editTasks[editingTaskIdx].required ? 'translate-x-4' : ''}`} />
+                    </span>
+                    <span className={`text-xs font-bold uppercase ${editTasks[editingTaskIdx].required ? 'text-emerald-700' : 'text-gray-400'}`}>
+                      {editTasks[editingTaskIdx].required ? 'Required' : 'Optional'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned User</label>
+                <select value={editTasks[editingTaskIdx].assignedToId} onChange={e => updateTask(editingTaskIdx, 'assignedToId', e.target.value)} className="input-field w-full">
+                  <option value="">-- Unassigned --</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned Team</label>
+                <select value={editTasks[editingTaskIdx].assignedTeamId} onChange={e => updateTask(editingTaskIdx, 'assignedTeamId', e.target.value)} className="input-field w-full">
+                  <option value="">-- No team --</option>
+                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
+              <button onClick={() => setEditingTaskIdx(null)} className="btn-primary text-sm">Done</button>
             </div>
           </div>
         </div>

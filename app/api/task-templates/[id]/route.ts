@@ -28,16 +28,18 @@ export async function GET(
     const { id } = await params
     const template = await prisma.taskTemplate.findUnique({
       where: { id },
-      include: {
-        tasks: {
-          orderBy: { order: 'asc' },
-          include: {
-            assignedTo: { select: { id: true, name: true } },
-            assignedTeam: { select: { id: true, name: true } },
+        include: {
+          tasks: {
+            orderBy: { order: 'asc' },
+            include: {
+              assignedTo: { select: { id: true, name: true } },
+              assignedTeam: { select: { id: true, name: true } },
+            },
           },
+          createdBy: { select: { id: true, name: true } },
+          updatedBy: { select: { id: true, name: true } },
+          _count: { select: { tasks: true, pmSchedules: true } },
         },
-        _count: { select: { tasks: true, pmSchedules: true } },
-      },
     })
     if (!template) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(template)
@@ -86,6 +88,7 @@ export async function PUT(
         data: {
           ...(data.name        !== undefined && { name: data.name }),
           ...(data.description !== undefined && { description: data.description }),
+          updatedById: user.userId,
         },
         include: {
           tasks: { orderBy: { order: 'asc' } },

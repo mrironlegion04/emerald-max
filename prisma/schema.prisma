@@ -314,6 +314,7 @@ model User {
   assignedPMSchedules   MaintenanceSchedule[]   @relation("PMAssignedTo")
   assignedPMTasks       PmScheduleTask[]        @relation("PMTaskAssignedTo")
   createdTaskTemplates  TaskTemplate[]          @relation("TaskTemplateCreatedBy")
+  updatedTaskTemplates  TaskTemplate[]          @relation("TaskTemplateUpdatedBy")
   assignedTaskTemplateTasks TaskTemplateTask[]  @relation("TaskTemplateTaskAssignedTo")
   statusChanges         WorkOrderStatusHistory[] @relation("StatusChangedBy")
   repairSessionsStarted   RepairSession[] @relation("RepairSessionStartedBy")
@@ -946,6 +947,9 @@ model TaskTemplate {
 
   createdById String?
   createdBy   User?    @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
+
+  updatedById String?
+  updatedBy   User?    @relation("TaskTemplateUpdatedBy", fields: [updatedById], references: [id])
 
   tasks       TaskTemplateTask[]
   pmSchedules PmScheduleTemplate[]

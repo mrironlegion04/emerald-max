@@ -31,6 +31,8 @@ export default async function TaskTemplatesPage({
       take: ITEMS_PER_PAGE,
       include: {
         _count: { select: { tasks: true, pmSchedules: true } },
+        createdBy: { select: { id: true, name: true } },
+        updatedBy: { select: { id: true, name: true } },
       },
       }),
     prisma.taskTemplate.count({ where: { isDeleted: false } }),
@@ -39,6 +41,9 @@ export default async function TaskTemplatesPage({
   const serializedTemplates = templates.map(t => ({
     ...t,
     createdAt: t.createdAt.toISOString(),
+    updatedAt: t.updatedAt.toISOString(),
+    createdBy: t.createdBy ? { id: t.createdBy.id, name: t.createdBy.name } : null,
+    updatedBy: t.updatedBy ? { id: t.updatedBy.id, name: t.updatedBy.name } : null,
   }))
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)

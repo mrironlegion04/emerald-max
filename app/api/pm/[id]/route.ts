@@ -168,6 +168,18 @@ export async function PUT(
     })
     const existingAssetIds = existingAssetRows.map(r => r.assetId)
 
+    // Capture existing tasks + templates for change tracking
+    const existingTasks = await prisma.pmScheduleTask.findMany({
+      where: { scheduleId: id },
+      orderBy: { order: 'asc' },
+      select: { title: true, description: true, priority: true, assignedToId: true, assignedTeamId: true, required: true },
+    })
+    const existingTemplateRows = await prisma.pmScheduleTemplate.findMany({
+      where: { scheduleId: id },
+      select: { templateId: true },
+    })
+    const existingTemplateIds = existingTemplateRows.map(r => r.templateId)
+
     const finalAssetIds =
       data.assetIds !== undefined
         ? data.assetIds
@@ -311,6 +323,48 @@ export async function PUT(
         entityId: schedule.id,
         entityName: schedule.title,
         changes,
+        userId: user.userId,
+        userName: user.name,
+        userEmail: user.email,
+      })
+    }
+
+    // Track tasks, assets, templates separately (not direct schedule fields)
+    const nestedChanges: Record<string, { before: any; after: any }> = {}
+    if (data.tasks !== undefined) {
+      const newTasks = data.tasks.map(t => ({
+        title: t.title, description: t.description ?? null, priority: t.priority,
+        assignedToId: t.assignedToId ?? null, assignedTeamId: t.assignedTeamId ?? null, required: t.required,
+      }))
+      const oldTasks = existingTasks.map(t => ({
+        title: t.title, description: t.description ?? null, priority: t.priority,
+        assignedToId: t.assignedToId ?? null, assignedTeamId: t.assignedTeamId ?? null, required: t.required,
+      }))
+      if (JSON.stringify(oldTasks) !== JSON.stringify(newTasks)) {
+        nestedChanges.tasks = { before: oldTasks.length, after: newTasks.length }
+      }
+    }
+    if (data.assetIds !== undefined) {
+      const oldSorted = [...existingAssetIds].sort()
+      const newSorted = [...finalAssetIds].sort()
+      if (JSON.stringify(oldSorted) !== JSON.stringify(newSorted)) {
+        nestedChanges.assets = { before: oldSorted.length, after: newSorted.length }
+      }
+    }
+    if (data.templateIds !== undefined) {
+      const oldSorted = [...existingTemplateIds].sort()
+      const newSorted = [...data.templateIds].sort()
+      if (JSON.stringify(oldSorted) !== JSON.stringify(newSorted)) {
+        nestedChanges.templates = { before: oldSorted.length, after: newSorted.length }
+      }
+    }
+    if (Object.keys(nestedChanges).length > 0) {
+      await writeAudit({
+        action: 'UPDATE',
+        entity: 'MaintenanceSchedule',
+        entityId: schedule.id,
+        entityName: schedule.title,
+        changes: nestedChanges,
         userId: user.userId,
         userName: user.name,
         userEmail: user.email,

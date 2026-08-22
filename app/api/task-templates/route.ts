@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
       where: includeDeleted ? undefined : { isDeleted: false },
       include: {
         _count: { select: { tasks: true, pmSchedules: true } },
+        createdBy: { select: { id: true, name: true } },
+        updatedBy: { select: { id: true, name: true } },
       },
       orderBy: { name: 'asc' },
     })
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
       include: {
         tasks: { orderBy: { order: 'asc' } },
         _count: { select: { tasks: true, pmSchedules: true } },
+        createdBy: { select: { id: true, name: true } },
       },
     })
 

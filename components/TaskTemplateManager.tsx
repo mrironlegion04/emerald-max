@@ -50,6 +50,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editTasks, setEditTasks] = useState<TaskTemplateTask[]>([])
+  const [taskSearch, setTaskSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -119,11 +120,11 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
   }, [showDeleted, archivedTemplates.length])
 
   function openCreate() {
-    setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setError(''); setModalOpen(true)
+    setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setTaskSearch(''); setError(''); setModalOpen(true)
   }
 
   async function openEdit(t: TaskTemplate) {
-    setEditId(t.id); setEditName(t.name); setEditDescription(t.description ?? ''); setError('')
+    setEditId(t.id); setEditName(t.name); setEditDescription(t.description ?? ''); setTaskSearch(''); setError('')
     const res = await fetch(`/api/task-templates/${t.id}`)
     if (res.ok) {
       const data = await res.json()
@@ -312,7 +313,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
       {/* Search + Actions */}
       <div className="space-y-3">
         <div className="relative group">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates\u2026" className="input-field pl-10 text-sm" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." className="input-field pl-10 text-sm" />
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-focus-within:text-blue-500 transition-colors" />
           {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>}
         </div>
@@ -365,7 +366,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                     {t.description && <p className="text-xs text-gray-400 truncate max-w-xs">{t.description}</p>}
                   </td>
                   <td className="px-5 py-3.5 text-gray-600">{t._count.tasks}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{t._count.pmSchedules > 0 ? t._count.pmSchedules : <span className="text-gray-300">\u2014</span>}</td>
+                  <td className="px-5 py-3.5 text-gray-600">{t._count.pmSchedules > 0 ? t._count.pmSchedules : <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3.5 text-gray-500 text-xs">
                     <div>{new Date(t.updatedAt).toLocaleDateString()}</div>
                     {t.updatedBy && <div className="text-gray-400">{t.updatedBy.name}</div>}
@@ -428,7 +429,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Archived{filteredArchived.length > 0 && ` \u00b7 ${filteredArchived.length}`}</p>
           </div>
           {loadingArchived ? (
-            <div className="px-4 py-4 sm:px-5"><p className="text-xs text-gray-400">Loading archived\u2026</p></div>
+            <div className="px-4 py-4 sm:px-5"><p className="text-xs text-gray-400">Loading archived...</p></div>
           ) : filteredArchived.length === 0 ? (
             <div className="px-4 py-4 sm:px-5"><p className="text-xs text-gray-400">{isSearching ? `No archived templates match \u201c${search}\u201d` : 'No archived templates.'}</p></div>
           ) : (
@@ -503,8 +504,27 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                 <input type="text" value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Optional description" className="input-field w-full text-sm" />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tasks ({editTasks.length})</label>
-                {editTasks.map((task, i) => (
+                <div className="flex items-center justify-between gap-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tasks ({editTasks.length})</label>
+                  {editTasks.length > 5 && (
+                    <div className="relative group flex-1 max-w-[200px]">
+                      <input type="text" value={taskSearch} onChange={e => setTaskSearch(e.target.value)} placeholder="Search tasks..." className="input-field pl-7 text-xs py-1" />
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                      {taskSearch && <button onClick={() => setTaskSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>}
+                    </div>
+                  )}
+                </div>
+                {(() => {
+                  const filtered = taskSearch.trim()
+                    ? editTasks.map((t, i) => ({ t, i })).filter(({ t }) =>
+                        t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+                        (t.description ?? '').toLowerCase().includes(taskSearch.toLowerCase())
+                      )
+                    : editTasks.map((t, i) => ({ t, i }))
+                  return filtered.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-3 text-center">No tasks match &ldquo;{taskSearch}&rdquo;</p>
+                  ) : (
+                    filtered.map(({ t: task, i }) => (
                   <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
@@ -540,7 +560,9 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                       </select>
                     </div>
                   </div>
-                ))}
+                ))
+                  )
+                })()}
                 <button type="button" onClick={addTask} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
                   <Plus className="w-4 h-4" /> Add task
                 </button>

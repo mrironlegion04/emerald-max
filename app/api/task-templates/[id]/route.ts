@@ -66,6 +66,8 @@ export async function PUT(
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (existing.isDeleted) return NextResponse.json({ error: 'Cannot edit an archived template. Restore it first.' }, { status: 400 })
 
+    const existingTaskCount = await prisma.taskTemplateTask.count({ where: { templateId: id } })
+
     const template = await prisma.$transaction(async tx => {
       if (data.tasks !== undefined) {
         await tx.taskTemplateTask.deleteMany({ where: { templateId: id } })
@@ -97,11 +99,23 @@ export async function PUT(
       })
     })
 
+    const changes: Record<string, { before: unknown; after: unknown }> = {}
+    if (data.name !== undefined && existing.name !== template.name) {
+      changes.name = { before: existing.name, after: template.name }
+    }
+    if (data.description !== undefined && JSON.stringify(existing.description) !== JSON.stringify(template.description)) {
+      changes.description = { before: existing.description, after: template.description }
+    }
+    if (data.tasks !== undefined && existingTaskCount !== template._count.tasks) {
+      changes.tasks = { before: existingTaskCount, after: template._count.tasks }
+    }
+
     await writeAudit({
       action: 'UPDATE',
       entity: 'TaskTemplate',
       entityId: id,
       entityName: template.name,
+      ...(Object.keys(changes).length > 0 && { changes }),
       userId: user.userId,
       userName: user.name,
       userEmail: user.email,

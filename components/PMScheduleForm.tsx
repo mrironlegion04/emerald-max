@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download } from 'lucide-react'
+import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download, Search } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import TaskTemplatePicker from './TaskTemplatePicker'
@@ -220,6 +220,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
     (initialData as any)?.templateIds ?? []
   )
   const [showAllTasks, setShowAllTasks] = useState(false)
+  const [taskSearch, setTaskSearch] = useState('')
   const VISIBLE_TASKS = 10
 
   const [saving, setSaving] = useState(false)
@@ -991,14 +992,30 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
         {/* Additional inline tasks */}
         <div className="pt-3 border-t border-dashed border-gray-200">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Additional Tasks</p>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Additional Tasks</p>
+            {tasks.length > 5 && (
+              <div className="relative group flex-1 max-w-[200px]">
+                <input type="text" value={taskSearch} onChange={e => setTaskSearch(e.target.value)} placeholder="Search tasks..." className="input-field pl-7 text-xs py-1" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                {taskSearch && <button type="button" onClick={() => setTaskSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>}
+              </div>
+            )}
+          </div>
 
         {tasks.length > 0 && (() => {
-          const visibleTasks = showAllTasks ? tasks : tasks.slice(0, VISIBLE_TASKS)
-          const hiddenCount = tasks.length - VISIBLE_TASKS
+          const searchedTasks = taskSearch.trim()
+            ? tasks.map((t, i) => ({ t, i })).filter(({ t }) =>
+                t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
+                (t.description ?? '').toLowerCase().includes(taskSearch.toLowerCase())
+              )
+            : null
+          const baseTasks = searchedTasks ?? tasks.map((t, i) => ({ t, i }))
+          const visibleTasks = showAllTasks || searchedTasks ? baseTasks : baseTasks.slice(0, VISIBLE_TASKS)
+          const hiddenCount = searchedTasks ? 0 : tasks.length - VISIBLE_TASKS
           return (
             <div className="max-h-[32rem] overflow-y-auto -mx-1 px-1 space-y-3">
-              {visibleTasks.map((task, idx) => (
+              {visibleTasks.map(({ t: task, i: idx }) => (
                 <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
                   {/* Row 1: number, title, user, priority, required, actions */}
                   <div className="flex items-center gap-2">
@@ -1095,7 +1112,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
                   Show {hiddenCount} more task{hiddenCount !== 1 ? 's' : ''}
                 </button>
               )}
-              {showAllTasks && tasks.length > VISIBLE_TASKS && (
+              {showAllTasks && tasks.length > VISIBLE_TASKS && !taskSearch.trim() && (
                 <button
                   type="button"
                   onClick={() => setShowAllTasks(false)}

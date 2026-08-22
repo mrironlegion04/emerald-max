@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download, Search } from 'lucide-react'
+import { Plus, X, Layers, ArrowUp, ArrowDown, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
 import AssetTreeSelect from './AssetTreeSelect'
 import LocationSelect from './LocationSelect'
 import TaskTemplatePicker from './TaskTemplatePicker'
@@ -221,6 +221,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   )
   const [showAllTasks, setShowAllTasks] = useState(false)
   const [taskSearch, setTaskSearch] = useState('')
+  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
   const VISIBLE_TASKS = 10
 
   const [saving, setSaving] = useState(false)
@@ -295,6 +296,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
   // Task template management
   function addTask() {
     setTasks(prev => [...prev, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', assignedTeamId: '', required: true }])
+    setExpandedTasks(prev => new Set([...prev, tasks.length]))
   }
 
   function updateTask(index: number, field: keyof PMTask, value: string | boolean) {
@@ -303,6 +305,7 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
 
   function removeTask(index: number) {
     setTasks(prev => prev.filter((_, i) => i !== index))
+    setExpandedTasks(prev => { const n = new Set(prev); n.delete(index); return n })
   }
 
   function moveTask(index: number, dir: -1 | 1) {
@@ -1014,95 +1017,58 @@ export default function PMScheduleForm({ assets, locations, users = [], teams = 
           const visibleTasks = showAllTasks || searchedTasks ? baseTasks : baseTasks.slice(0, VISIBLE_TASKS)
           const hiddenCount = searchedTasks ? 0 : tasks.length - VISIBLE_TASKS
           return (
-            <div className="max-h-[32rem] overflow-y-auto -mx-1 px-1 space-y-3">
-              {visibleTasks.map(({ t: task, i: idx }) => (
-                <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2.5">
-                  {/* Row 1: number, title, user, priority, required, actions */}
-                  <div className="flex items-center gap-2">
-                    <span className="flex-shrink-0 w-6 text-center text-xs font-bold text-gray-400">
-                      {idx + 1}
-                    </span>
-                    <input
-                      type="text"
-                      value={task.title}
-                      onChange={e => updateTask(idx, 'title', e.target.value)}
-                      placeholder="Task title (e.g. Check belt tension)"
-                      className="input-field flex-1"
-                    />
-                    <select
-                      value={task.assignedToId}
-                      onChange={e => updateTask(idx, 'assignedToId', e.target.value)}
-                      className="input-field w-36"
-                    >
-                      <option value="">— Unassigned —</option>
-                      {users.map(u => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={task.priority}
-                      onChange={e => updateTask(idx, 'priority', e.target.value)}
-                      className="input-field w-28"
-                    >
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                      <option value="CRITICAL">Critical</option>
-                    </select>
-                    <label
-                      className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none"
-                      title={task.required ? 'Required — must be completed to close work orders' : 'Optional — does not block work order completion'}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={task.required}
-                        onChange={e => updateTask(idx, 'required', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>
-                        {task.required ? 'Req' : 'Opt'}
-                      </span>
-                    </label>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button type="button" onClick={() => moveTask(idx, -1)} disabled={idx === 0}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
-                        <ArrowUp className="w-4 h-4" />
-                      </button>
-                      <button type="button" onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
-                        <ArrowDown className="w-4 h-4" />
-                      </button>
-                      <button type="button" onClick={() => removeTask(idx)}
-                        className="p-1.5 rounded-md text-red-500 hover:bg-red-50" title="Remove task">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+            <div className="max-h-[32rem] overflow-y-auto -mx-1 px-1 space-y-2">
+              {visibleTasks.map(({ t: task, i: idx }) => {
+                const expanded = expandedTasks.has(idx)
+                const priorityColor = task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
+                return (
+                <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Collapsed header */}
+                  <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 cursor-pointer select-none" onClick={() => { const next = new Set(expandedTasks); expanded ? next.delete(idx) : next.add(idx); setExpandedTasks(next) }}>
+                    <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                    <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{idx + 1}</span>
+                    <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || <span className="italic text-gray-400">Untitled task</span>}</span>
+                    {task.assignedToId && (() => { const u = users.find(u => u.id === task.assignedToId); return u ? <span className="hidden sm:block flex-shrink-0 text-xs text-gray-400">{u.name}</span> : null })()}
+                    <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
+                    {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
+                    {task.assignedTeamId && (() => { const tm = teams.find(t => t.id === task.assignedTeamId); return tm ? <span className="hidden md:block flex-shrink-0 text-xs text-gray-400">{tm.name}</span> : null })()}
+                    <button type="button" onClick={e => { e.stopPropagation(); removeTask(idx) }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                   </div>
-                  {/* Row 2: description + team */}
-                  <div className="flex items-start gap-2 pl-8">
-                    <textarea
-                      value={task.description}
-                      onChange={e => updateTask(idx, 'description', e.target.value)}
-                      placeholder="Description (optional)"
-                      rows={1}
-                      className="input-field flex-1 text-xs resize-none"
-                    />
+                  {/* Expanded details */}
+                  {expanded && (
+                  <div className="px-3 pb-3 pt-1 space-y-2 border-t border-gray-100">
+                    <input type="text" value={task.title} onChange={e => updateTask(idx, 'title', e.target.value)} placeholder="Task title (e.g. Check belt tension)" className="input-field w-full text-sm" />
+                    <textarea value={task.description} onChange={e => updateTask(idx, 'description', e.target.value)} placeholder="Description (optional)" rows={1} className="input-field w-full text-xs resize-none" />
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <select value={task.assignedToId} onChange={e => updateTask(idx, 'assignedToId', e.target.value)} className="input-field text-xs flex-1 min-w-0">
+                        <option value="">— Unassigned —</option>
+                        {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      </select>
+                      <select value={task.priority} onChange={e => updateTask(idx, 'priority', e.target.value)} className="input-field w-28 text-xs">
+                        <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
+                      </select>
+                      <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer select-none" title={task.required ? 'Required' : 'Optional'}>
+                        <input type="checkbox" checked={task.required} onChange={e => updateTask(idx, 'required', e.target.checked)} className="sr-only peer" />
+                        <span className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full relative transition-colors peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${task.required ? 'text-emerald-700' : 'text-gray-400'}`}>{task.required ? 'Req' : 'Opt'}</span>
+                      </label>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button type="button" onClick={() => moveTask(idx, -1)} disabled={idx === 0} className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move up"><ArrowUp className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => moveTask(idx, 1)} disabled={idx === tasks.length - 1} className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed" title="Move down"><ArrowDown className="w-4 h-4" /></button>
+                      </div>
+                    </div>
                     {teams.length > 0 && (
-                      <select
-                        value={task.assignedTeamId}
-                        onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)}
-                        className="input-field w-36 text-xs"
-                      >
+                      <select value={task.assignedTeamId} onChange={e => updateTask(idx, 'assignedTeamId', e.target.value)} className="input-field w-full text-xs">
                         <option value="">— No team —</option>
-                        {teams.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
+                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     )}
                   </div>
+                  )}
                 </div>
-              ))}
+                )
+              })}
               {!showAllTasks && hiddenCount > 0 && (
                 <button
                   type="button"

@@ -12,6 +12,7 @@ import RestorePMScheduleButton from '@/components/RestorePMScheduleButton'
 import PMCopyButton from '@/components/PMCopyButton'
 import PMEditButton from '@/components/PMEditButton'
 import PMPreviewPanel from '@/components/PMPreviewPanel'
+import PmTaskTemplateSection from '@/components/PmTaskTemplateSection'
 import ActivityTimeline from '@/components/ActivityTimeline'
 import { fmt, daysUntil } from '@/lib/utils'
 import { utcDateOnly, fmtDateOnly } from '@/lib/date-format'
@@ -372,110 +373,10 @@ export default async function PMDetailPage({
           )}
 
           {/* Task Template */}
-          {(schedule.templateLinks.length > 0 || schedule.tasks.length > 0) && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-900 text-sm mb-1">
-                Task Template
-                <span className="ml-2 text-gray-400 font-normal">
-                  ({schedule.templateLinks.length > 0 && `${schedule.templateLinks.reduce((sum: number, l: any) => sum + l.template.tasks.length, 0)} template`}
-                  {schedule.templateLinks.length > 0 && schedule.tasks.length > 0 && ' + '}
-                  {schedule.tasks.length > 0 && `${schedule.tasks.length} inline`}
-                  {schedule.templateLinks.length === 0 && schedule.tasks.length === 0 && '0'} tasks)
-                </span>
-              </h2>
-              <p className="text-xs text-gray-400 mb-3">
-                Copied onto generated work orders as subtasks.
-              </p>
-
-              {/* Template tasks grouped by template */}
-              {schedule.templateLinks.map((link: any) => (
-                <div key={link.template.id} className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{link.template.name}</span>
-                    <span className="text-xs text-gray-400">{link.template.tasks.length} tasks</span>
-                  </div>
-                  <ol className="space-y-2 ml-1">
-                    {link.template.tasks.map((task: any, i: number) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center mt-0.5">
-                          {i + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-800">{task.title}</span>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-                              task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                              task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' :
-                              'bg-blue-50 text-blue-600'
-                            }`}>
-                              {task.priority}
-                            </span>
-                          </div>
-                          {task.description && (
-                            <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1">
-                            {task.assignedTo && (
-                              <span className="text-xs text-gray-400">→ {task.assignedTo.name}</span>
-                            )}
-                            {task.assignedTeam && (
-                              <span className="text-xs text-gray-400">team: {task.assignedTeam.name}</span>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-
-              {/* Inline tasks */}
-              {schedule.tasks.length > 0 && (
-                <div>
-                  {schedule.templateLinks.length > 0 && (
-                    <div className="flex items-center gap-2 mb-2 pt-3 border-t border-dashed border-gray-200">
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Additional Tasks</span>
-                      <span className="text-xs text-gray-400">{schedule.tasks.length} tasks</span>
-                    </div>
-                  )}
-                  <ol className="space-y-2">
-                    {schedule.tasks.map((task: any, i: number) => (
-                      <li key={i} className="flex items-start gap-3 text-sm">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold flex items-center justify-center mt-0.5">
-                          {i + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-800">{task.title}</span>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' :
-                              task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                              task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' :
-                              'bg-blue-50 text-blue-600'
-                            }`}>
-                              {task.priority}
-                            </span>
-                          </div>
-                          {task.description && (
-                            <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1">
-                            {task.assignedTo && (
-                              <span className="text-xs text-gray-400">→ {task.assignedTo.name}</span>
-                            )}
-                            {task.assignedTeam && (
-                              <span className="text-xs text-gray-400">team: {task.assignedTeam.name}</span>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </div>
-          )}
+          <PmTaskTemplateSection
+            templateLinks={schedule.templateLinks}
+            inlineTasks={schedule.tasks}
+          />
 
           {/* Toggle active */}
           {canEditSchedule && !schedule.isDeleted && (

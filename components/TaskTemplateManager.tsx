@@ -2,10 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, RotateCcw, X, ClipboardList, Search, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, GripVertical, PenLine } from 'lucide-react'
-import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { Plus, Trash2, RotateCcw, X, ClipboardList, Search, Upload, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Badge from './Badge'
 
@@ -35,33 +32,6 @@ interface Props {
 }
 
 type SortField = 'name' | 'tasks' | 'pmSchedules' | 'updatedAt'
-
-function SortableRow({ id, index, onRemove, onEdit, priority, required, title }: {
-  id: string; index: number; onRemove: () => void; onEdit: () => void;
-  priority: string; required: boolean; title: string
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : undefined,
-  }
-  const priorityColor = priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
-  return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-      <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
-        <GripVertical className="w-4 h-4 text-gray-300" />
-      </div>
-      <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{index + 1}</span>
-      <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{title || <span className="italic text-gray-400">Untitled task</span>}</span>
-      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{priority}</span>
-      {required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-      <button type="button" onClick={onEdit} className="flex-shrink-0 p-1 text-gray-300 hover:text-blue-500" title="Edit task"><PenLine className="w-3.5 h-3.5" /></button>
-      <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-    </div>
-  )
-}
 type SortDir = 'asc' | 'desc'
 
 export default function TaskTemplateManager({ initialTemplates }: Props) {
@@ -74,16 +44,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
 
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
-
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editTasks, setEditTasks] = useState<TaskTemplateTask[]>([])
-  const [taskSearch, setTaskSearch] = useState('')
-  const [editingTaskIdx, setEditingTaskIdx] = useState<number | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
@@ -149,71 +109,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
       setLoadingArchived(false)
     }
   }, [showDeleted, archivedTemplates.length])
-
-  function openCreate() {
-    setEditId(null); setEditName(''); setEditDescription(''); setEditTasks([]); setTaskSearch(''); setEditingTaskIdx(null); setError(''); setModalOpen(true)
-  }
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
-  )
-
-  function handleTaskDragEnd(event: any) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = Number(active.id)
-    const newIndex = Number(over.id)
-    setEditTasks(prev => arrayMove(prev, oldIndex, newIndex))
-  }
-
-  async function openEdit(t: TaskTemplate) {
-    setEditId(t.id); setEditName(t.name); setEditDescription(t.description ?? ''); setTaskSearch(''); setEditingTaskIdx(null); setError('')
-    const res = await fetch(`/api/task-templates/${t.id}`)
-    if (res.ok) {
-      const data = await res.json()
-      setEditTasks(data.tasks.map((task: any) => ({
-        title: task.title, description: task.description ?? '', priority: task.priority,
-        assignedToId: task.assignedToId ?? '', assignedTeamId: task.assignedTeamId ?? '', required: task.required,
-      })))
-    }
-    setModalOpen(true)
-  }
-
-  function addTask() {
-    setEditTasks(prev => [...prev, { title: '', description: '', priority: 'MEDIUM', assignedToId: '', assignedTeamId: '', required: true }])
-    setEditingTaskIdx(editTasks.length)
-  }
-  function updateTask(index: number, field: keyof TaskTemplateTask, value: string | boolean) {
-    setEditTasks(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
-  }
-  function removeTask(index: number) { setEditTasks(prev => prev.filter((_, i) => i !== index)) }
-
-  async function handleSave() {
-    if (!editName.trim()) { setError('Name is required'); return }
-    const validTasks = editTasks.filter(t => t.title.trim())
-    setSaving(true); setError('')
-    try {
-      const body = {
-        name: editName.trim(), description: editDescription.trim() || null,
-        tasks: validTasks.map(t => ({
-          title: t.title.trim(), description: t.description.trim() || null, priority: t.priority,
-          assignedToId: t.assignedToId || null, assignedTeamId: t.assignedTeamId || null, required: t.required,
-        })),
-      }
-      const url = editId ? `/api/task-templates/${editId}` : '/api/task-templates'
-      const method = editId ? 'PUT' : 'POST'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Save failed'); return }
-      setModalOpen(false)
-      if (editId) {
-        setTemplates(prev => prev.map(t => t.id === editId ? { ...t, name: body.name, description: body.description, _count: { ...t._count, tasks: validTasks.length } } : t))
-      } else {
-        const data = await res.json()
-        setTemplates(prev => [...prev, { id: data.id, name: data.name, description: data.description, isDeleted: false, createdAt: data.createdAt, updatedAt: data.createdAt, createdBy: data.createdBy ?? null, updatedBy: null, _count: { tasks: data._count?.tasks ?? validTasks.length, pmSchedules: 0 } }])
-      }
-    } catch { setError('Network error') } finally { setSaving(false) }
-  }
 
   async function handleArchive(id: string) {
     const res = await fetch(`/api/task-templates/${id}`, { method: 'DELETE' })
@@ -348,7 +243,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Search + Actions */}
       <div className="space-y-3">
         <div className="relative group">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." className="input-field pl-10 text-sm" />
@@ -356,7 +250,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
           {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={openCreate} className="btn-primary text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" /> New Template</button>
+          <button onClick={() => router.push('/settings/task-templates/new')} className="btn-primary text-sm flex items-center gap-1.5"><Plus className="w-4 h-4" /> New Template</button>
           <button onClick={() => csvInputRef.current?.click()} className="btn-secondary text-sm flex items-center gap-1.5"><Upload className="w-4 h-4" /> Import</button>
           <button onClick={downloadSample} className="btn-secondary text-sm flex items-center gap-1.5"><Download className="w-4 h-4" /> Sample</button>
           <input ref={csvInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImportFile} />
@@ -382,7 +276,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
         </div>
       )}
 
-      {/* Desktop table */}
       {filteredActive.length > 0 && (
         <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
@@ -404,14 +297,14 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                     {t.description && <p className="text-xs text-gray-400 truncate max-w-xs">{t.description}</p>}
                   </td>
                   <td className="px-5 py-3.5 text-gray-600">{t._count.tasks}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{t._count.pmSchedules > 0 ? t._count.pmSchedules : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-5 py-3.5 text-gray-600">{t._count.pmSchedules > 0 ? t._count.pmSchedules : <span className="text-gray-300">\u2014</span>}</td>
                   <td className="px-5 py-3.5 text-gray-500 text-xs">
                     <div>{new Date(t.updatedAt).toLocaleDateString()}</div>
                     {t.updatedBy && <div className="text-gray-400">{t.updatedBy.name}</div>}
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(t)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
+                      <button onClick={() => router.push(`/settings/task-templates/${t.id}/edit`)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
                       {deleteConfirmId === t.id ? (
                         <div className="flex items-center gap-1.5">
                           <button onClick={() => handleArchive(t.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-2 rounded">Archive</button>
@@ -429,7 +322,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
         </div>
       )}
 
-      {/* Mobile card list */}
       {filteredActive.length > 0 && (
         <div className="md:hidden bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
           {filteredActive.map(t => (
@@ -444,7 +336,7 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => openEdit(t)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
+                  <button onClick={() => router.push(`/settings/task-templates/${t.id}/edit`)} className="text-xs text-gray-500 hover:underline font-medium">Edit</button>
                   {deleteConfirmId === t.id ? (
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => handleArchive(t.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-2 rounded">Archive</button>
@@ -460,7 +352,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
         </div>
       )}
 
-      {/* Archived */}
       {showDeleted && (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-50">
           <div className="px-4 py-2 sm:px-5 bg-gray-50">
@@ -523,151 +414,6 @@ export default function TaskTemplateManager({ initialTemplates }: Props) {
         </div>
       )}
 
-      {/* Edit/Create modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-[100] flex sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
-          <div className="relative bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl sm:mx-4 h-full sm:h-auto sm:max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900 text-sm sm:text-base">{editId ? 'Edit Template' : 'New Template'}</h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Name</label>
-                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="e.g. HVAC Safety Checklist" className="input-field w-full text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
-                <input type="text" value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Optional description" className="input-field w-full text-sm" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tasks ({editTasks.length})</label>
-                  {editTasks.length > 5 && (
-                    <div className="relative group flex-1 max-w-[200px]">
-                      <input type="text" value={taskSearch} onChange={e => setTaskSearch(e.target.value)} placeholder="Search tasks..." className="input-field pl-7 text-xs py-1" />
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
-                      {taskSearch && <button onClick={() => setTaskSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>}
-                    </div>
-                  )}
-                </div>
-                {(() => {
-                  const filtered = taskSearch.trim()
-                    ? editTasks.map((t, i) => ({ t, i })).filter(({ t }) =>
-                        t.title.toLowerCase().includes(taskSearch.toLowerCase()) ||
-                        (t.description ?? '').toLowerCase().includes(taskSearch.toLowerCase())
-                      )
-                    : editTasks.map((t, i) => ({ t, i }))
-                  if (filtered.length === 0) {
-                    return <p className="text-xs text-gray-400 py-3 text-center">No tasks match &ldquo;{taskSearch}&rdquo;</p>
-                  }
-                  const isSearching = !!taskSearch.trim()
-                  const taskRows = filtered.map(({ t: task, i }) => {
-                    if (isSearching) {
-                      const pc = task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700' : task.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : task.priority === 'LOW' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'
-                      return (
-                        <div key={i} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 opacity-70">
-                          <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{i + 1}</span>
-                          <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{task.title || 'Untitled'}</span>
-                          <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${pc}`}>{task.priority}</span>
-                          {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
-                          <button type="button" onClick={() => setEditingTaskIdx(i)} className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-500" title="Edit"><PenLine className="w-3.5 h-3.5" /></button>
-                        </div>
-                      )
-                    }
-                    return (
-                      <SortableRow key={i} id={String(i)} index={i} onRemove={() => removeTask(i)}
-                        onEdit={() => setEditingTaskIdx(i)} priority={task.priority} required={task.required} title={task.title} />
-                    )
-                  })
-                  if (isSearching) return <div className="space-y-2">{taskRows}</div>
-                  return (
-                    <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleTaskDragEnd}>
-                      <SortableContext items={filtered.map(({ i }) => String(i))} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">{taskRows}</div>
-                      </SortableContext>
-                    </DndContext>
-                  )
-                })()}
-                <button type="button" onClick={addTask} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center justify-center gap-1.5">
-                  <Plus className="w-4 h-4" /> Add task
-                </button>
-              </div>
-              {error && <p className="text-xs text-red-600">{error}</p>}
-            </div>
-            <div className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
-              <button onClick={() => setModalOpen(false)} className="btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="btn-primary text-sm disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Create'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Task edit slide-over panel */}
-      {editingTaskIdx !== null && editingTaskIdx < editTasks.length && (
-        <div className="fixed inset-0 z-[110] flex justify-end">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditingTaskIdx(null)} />
-          <div className="relative bg-white shadow-2xl w-full sm:w-[28rem] flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-50 text-blue-600 text-xs font-bold flex items-center justify-center">{editingTaskIdx + 1}</span>
-                <h2 className="font-semibold text-gray-900 text-sm">Edit Task</h2>
-              </div>
-              <button onClick={() => setEditingTaskIdx(null)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Title</label>
-                <input type="text" value={editTasks[editingTaskIdx].title} onChange={e => updateTask(editingTaskIdx, 'title', e.target.value)} placeholder="e.g. Check belt tension" className="input-field w-full" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
-                <textarea value={editTasks[editingTaskIdx].description} onChange={e => updateTask(editingTaskIdx, 'description', e.target.value)} placeholder="Optional description for this task" rows={3} className="input-field w-full text-sm resize-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Priority</label>
-                  <select value={editTasks[editingTaskIdx].priority} onChange={e => updateTask(editingTaskIdx, 'priority', e.target.value)} className="input-field w-full">
-                    <option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Required</label>
-                  <button type="button" onClick={() => updateTask(editingTaskIdx, 'required', !editTasks[editingTaskIdx].required)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors w-full">
-                    <span className={`w-9 h-5 rounded-full relative transition-colors ${editTasks[editingTaskIdx].required ? 'bg-emerald-600' : 'bg-gray-200'}`}>
-                      <span className={`absolute top-[2px] left-[2px] bg-white rounded-full h-4 w-4 transition-transform ${editTasks[editingTaskIdx].required ? 'translate-x-4' : ''}`} />
-                    </span>
-                    <span className={`text-xs font-bold uppercase ${editTasks[editingTaskIdx].required ? 'text-emerald-700' : 'text-gray-400'}`}>
-                      {editTasks[editingTaskIdx].required ? 'Required' : 'Optional'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned User</label>
-                <select value={editTasks[editingTaskIdx].assignedToId} onChange={e => updateTask(editingTaskIdx, 'assignedToId', e.target.value)} className="input-field w-full">
-                  <option value="">-- Unassigned --</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Assigned Team</label>
-                <select value={editTasks[editingTaskIdx].assignedTeamId} onChange={e => updateTask(editingTaskIdx, 'assignedTeamId', e.target.value)} className="input-field w-full">
-                  <option value="">-- No team --</option>
-                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
-              <button onClick={() => setEditingTaskIdx(null)} className="btn-primary text-sm">Done</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Import modal */}
       {importModalOpen && (
         <div className="fixed inset-0 z-[100] flex sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { if (!importing) setImportModalOpen(false) }} />

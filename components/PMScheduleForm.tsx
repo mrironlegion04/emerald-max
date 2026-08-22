@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Layers, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2, PenLine } from 'lucide-react'
+import { Plus, X, Layers, ListChecks, Upload, Download, Search, ChevronDown, GripVertical, Trash2 } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -22,8 +22,8 @@ function PmSortableTask({ id, idx, task, users, teams, onEdit, onRemove }: {
   const user = users.find((u: any) => u.id === task.assignedToId)
   const team = teams.find((t: any) => t.id === task.assignedTeamId)
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-      <div {...attributes} {...listeners} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onClick={onEdit}>
+      <div {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-gray-300" />
       </div>
       <span className="flex-shrink-0 w-5 text-center text-xs font-bold text-gray-400">{idx + 1}</span>
@@ -32,7 +32,6 @@ function PmSortableTask({ id, idx, task, users, teams, onEdit, onRemove }: {
       <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${priorityColor}`}>{task.priority}</span>
       {task.required && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Req</span>}
       {team && <span className="hidden md:block flex-shrink-0 text-xs text-gray-400">{team.name}</span>}
-      <button type="button" onClick={onEdit} className="flex-shrink-0 p-1 text-gray-300 hover:text-blue-500" title="Edit task"><PenLine className="w-3.5 h-3.5" /></button>
       <button type="button" onClick={e => { e.stopPropagation(); onRemove() }} className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
     </div>
   )
